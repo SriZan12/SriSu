@@ -1,0 +1,84 @@
+package com.srisu.srisu.utils
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+
+object DateTimeUtils {
+
+    fun formatLocalDate(date: LocalDate): String {
+        return "${date.year}-${
+            date.monthNumber.toString().padStart(2, '0')
+        }-${date.dayOfMonth.toString().padStart(2, '0')}"
+    }
+
+    fun getDayAndMonthIndividually(dateString: String): Pair<Int, Int> {
+        val dateParts = dateString.split("-")
+        val month = dateParts[1].toInt()
+        val day = dateParts[2].toInt()
+
+        return Pair(month, day)
+    }
+
+    fun formatDateInZodiacRange(dateString: String): Int {
+        val dateParts = dateString.split("-") // Splits into ["1996", "08", "21"]
+        val month = dateParts[1].toInt()      // 8
+        val day = dateParts[2].toInt()        // 21
+
+        val dateAsNumber = month * 100 + day  // 821
+        return dateAsNumber
+    }
+
+    fun calculateAge(dateString: String?): Int? {
+        if (dateString != null) {
+            val birthDate = LocalDate.parse(dateString)
+            val currentDate =
+                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+
+            return currentDate.year - birthDate.year
+        }
+
+        return null
+    }
+
+
+    @Composable
+    fun CountdownTimer(
+        totalSeconds: Long,
+        onTick: (Long) -> Unit = {},
+        onFinish: () -> Unit,
+        content: @Composable (Long) -> Unit
+    ) {
+        var timeLeft by remember { mutableStateOf(totalSeconds) }
+
+        // These will always hold the latest versions of the lambdas passed to CountdownTimer
+        val currentOnTick by rememberUpdatedState(onTick)
+        val currentOnFinish by rememberUpdatedState(onFinish)
+
+
+        LaunchedEffect(timeLeft) {
+            if (timeLeft > 0) {
+                delay(1000L) // Wait for 1 second
+                currentOnTick(timeLeft - 1)
+                timeLeft--
+            } else {
+                if (timeLeft == 0L) {
+                    currentOnFinish()
+                }
+            }
+        }
+
+        content(timeLeft)
+    }
+
+
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName">SriSu</string>
+    <string name="txtRatingFormat"> %s / 10</string>
+    <string name="txtTMDB">TMDB</string>
+    <string name="alertTitle">Alert</string>
+    <string name="next">Next</string>
+    <string name="error">ERROR</string>
+</resources>

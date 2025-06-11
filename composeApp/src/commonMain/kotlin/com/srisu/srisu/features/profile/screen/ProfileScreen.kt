@@ -1,0 +1,355 @@
+package com.srisu.srisu.features.profile.screen
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import com.srisu.srisu.components.ReadMoreText
+import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.features.profile.state.ProfileUIState
+import com.srisu.srisu.features.profile.vm.ProfileViewModel
+import com.srisu.srisu.utils.DateTimeUtils
+import com.srisu.srisu.utils.ZodiacUtils
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
+import srisu.composeapp.generated.resources.Res
+import srisu.composeapp.generated.resources.image_placeholder
+import srisu.composeapp.generated.resources.leo
+
+@Composable
+fun ProfileScreen(
+    userProfileData: String?,
+    profileViewModel: ProfileViewModel = koinViewModel<ProfileViewModel>()
+) {
+
+    val profileUIState by profileViewModel.profileUIState.collectAsStateWithLifecycle()
+
+    Init(profileViewModel = profileViewModel, userProfileData = userProfileData)
+
+    ProfilePictureContent(
+        profileUIState = profileUIState
+    )
+
+}
+
+@Composable
+private fun Init(
+    profileViewModel: ProfileViewModel,
+    userProfileData: String?
+) {
+    LaunchedEffect(
+        key1 = Unit
+    ) {
+        //Init profile data
+        profileViewModel.updateUserProfileData(userProfileData = userProfileData)
+    }
+}
+
+@Composable
+private fun ProfilePictureContent(profileUIState: ProfileUIState) {
+
+    val userProfileData = profileUIState.userProfileData
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFADADD))
+    ) {
+        item {
+            ProfilePictureCompo(
+                profileUrl = userProfileData?.profilePhoto,
+                onSendRequest = {}
+            )
+        }
+
+        item {
+            // Name and Age
+            val age = DateTimeUtils.calculateAge(userProfileData?.dob)
+
+            UserInfo(
+                name = userProfileData?.fullName,
+                age = age,
+                zodiacSign = userProfileData?.zodiacSign,
+                city = userProfileData?.city,
+                country = userProfileData?.country
+            )
+        }
+
+        item {
+            //Interest
+            val interests = userProfileData?.userInterests
+            InterestCompo(interests = interests)
+        }
+
+        item {
+            AboutCompo(
+                bio = userProfileData?.bio
+            )
+        }
+
+        item {
+            // Gallery
+            Text(
+                "Gallery",
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        item {
+            GallerySection(
+                photos = userProfileData?.userPhotos
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ProfilePictureCompo(
+    profileUrl: String? = null,
+    onSendRequest: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+        if (profileUrl == null) {
+            Image(
+                painter = painterResource(Res.drawable.image_placeholder),
+                contentDescription = "profile placeholder",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )
+        } else {
+            AsyncImage(
+                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                contentDescription = "Profile Picture",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )
+        }
+        IconButton(
+            onClick = { /* Like action */ },
+            modifier = Modifier
+                .size(48.dp)
+                .align(Alignment.BottomCenter)
+                .offset(y = 24.dp)
+                .background(Color.White, shape = CircleShape),
+            colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFFFA500))
+        ) {
+            Icon(
+                modifier = Modifier.size(32.dp),
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Like",
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun UserInfo(
+    name: String?,
+    age: Int?,
+    zodiacSign: String?,
+    city: String?,
+    country: String?
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = name ?: "",
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Text("(${age})", style = MaterialTheme.typography.titleMedium)
+
+        val zodiacSignImage = ZodiacUtils.getZodiacSignImage(zodiacSign?.trim() ?: "")
+        Image(
+            painter = painterResource(resource = zodiacSignImage ?: Res.drawable.leo),
+            contentDescription = "zodiac sign",
+            modifier = Modifier.size(32.dp)
+        )
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 16.dp)
+    ) {
+        Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = Color.Black)
+        Text(
+            "${city ?: "Some City"}, ${country ?: "Some Country"} ",
+            style = MaterialTheme.typography.titleSmall
+        )
+    }
+}
+
+@Composable
+fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)
+    ) {
+        if (!interests.isNullOrEmpty()) {
+
+            Text(
+                "Interest",
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+
+            LazyRow(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
+            ) {
+                items(interests) { interest ->
+                    interest?.let {
+                        if (!interest.name.isNullOrEmpty()) {
+                            InterestChip(label = interest.name)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InterestChip(label: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .padding(end = 8.dp)
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun AboutCompo(
+    bio: String?
+) {
+    // About Section
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    ) {
+        Text(
+            "About",
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ReadMoreText(
+            modifier = Modifier,
+            text = bio ?: "No bio",
+            style = MaterialTheme.typography.bodyMedium,
+            expandableTextStyle = MaterialTheme.typography.titleMedium
+        )
+
+    }
+}
+
+@Preview
+@Composable
+fun GallerySection(
+    photos: List<UserSuggestionResponse.Result.UserPhoto?>?
+) {
+
+    val listPhotos = listOf(
+        "https://media.istockphoto.com/id/1197578214/photo/beautiful-young-woman.jpg?s=1024x1024&w=is&k=20&c=au0eZV8dc7lE2VC8ghRF8igL19OxPBXbKvKzcmyjeQE=",
+        "https://media.istockphoto.com/id/184888055/photo/beautiful-young-woman-smiling.jpg?s=1024x1024&w=is&k=20&c=Veh-hAfi6G3HSkdRPHyoFdjFWdGfYB9S6kd4LkihkkM=",
+        "https://media.istockphoto.com/id/185123021/photo/portrait-of-a-beautiful-brunette-woman.jpg?s=1024x1024&w=is&k=20&c=tj3AIS7iGpwkr1QgY0w90prerVhUSFA-QrAOMby9x1E=",
+        "https://media.istockphoto.com/id/1197578214/photo/beautiful-young-woman.jpg?s=1024x1024&w=is&k=20&c=au0eZV8dc7lE2VC8ghRF8igL19OxPBXbKvKzcmyjeQE=",
+        "https://media.istockphoto.com/id/184888055/photo/beautiful-young-woman-smiling.jpg?s=1024x1024&w=is&k=20&c=Veh-hAfi6G3HSkdRPHyoFdjFWdGfYB9S6kd4LkihkkM=",
+        "https://media.istockphoto.com/id/185123021/photo/portrait-of-a-beautiful-brunette-woman.jpg?s=1024x1024&w=is&k=20&c=tj3AIS7iGpwkr1QgY0w90prerVhUSFA-QrAOMby9x1E="
+    )
+
+    photos?.let {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(items = listPhotos) { photoItem ->
+                AsyncImage(
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .clip(shape = RoundedCornerShape(8.dp)),
+                    model = photoItem,
+                    contentDescription = "user_photos",
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+
+        /* Text(
+             "See all",
+             color = Color(0xFFFFA500),
+             textAlign = TextAlign.Center,
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .padding(8.dp)
+         )*/
+    }
+}
