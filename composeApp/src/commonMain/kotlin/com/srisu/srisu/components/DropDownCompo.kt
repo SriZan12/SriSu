@@ -41,9 +41,6 @@ fun CountryCodeDropDown(
         countryCode = selectedCountryCode
     )
 
-    AppLogger.log("FLAG IN THE COUNTRY DROPDOWN $flag")
-
-
     Card(
         modifier = modifier
             .wrapContentWidth()

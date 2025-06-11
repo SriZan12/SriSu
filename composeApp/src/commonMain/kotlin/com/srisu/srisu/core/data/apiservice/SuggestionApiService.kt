@@ -5,17 +5,23 @@ import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
+import com.srisu.srisu.core.data.response.suggestion.City
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import io.ktor.client.HttpClient
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.parameter
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.HttpMethod
 
 class SuggestionApiService(private val httpClient: HttpClient) {
+
+    companion object {
+        const val CITY_ENDPOINT = "https://countriesnow.space/api/v0.1/countries/cities"
+    }
 
     suspend fun getUserSuggestions(
         page: Int,
@@ -104,6 +110,16 @@ class SuggestionApiService(private val httpClient: HttpClient) {
             url("${BASE_URL}api/chat/couple-connection/received-requests/")
             parameter("page_size", pageSize)
             method = HttpMethod.Get
+        }
+    }
+
+    suspend fun getCitiesList(country: String): ResultHandler<City?> {
+        val cityRequest = HashMap<String, String>()
+        cityRequest["country"] = country
+        return httpClient.safeRequest<City?> {
+            url(CITY_ENDPOINT)
+            method = HttpMethod.Post
+            setBody(cityRequest)
         }
     }
 }

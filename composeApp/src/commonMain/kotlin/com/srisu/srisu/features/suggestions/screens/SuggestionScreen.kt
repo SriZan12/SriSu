@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -64,13 +66,16 @@ import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
 import coil3.compose.AsyncImage
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.CountrySelectionBottomSheet
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
+import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
+import com.srisu.srisu.utils.getCountryFlagFromAssets
 import com.srisu.srisu.utils.isInternetAvailable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -508,10 +513,14 @@ private fun FilterSuggestionCompo(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            CountryFilterCompo {
-                onDismiss()
-            }
+            CountryFilterCompo(
+                onReset = {
 
+                },
+                onOptionSelected = {
+
+                }
+            )
 
         }
     }
@@ -633,6 +642,7 @@ private fun AgeFilterCardCompo(
         },
         readOnly = readOnly,
         shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         textStyle = TextStyle(
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
@@ -666,30 +676,52 @@ private fun AgeFilterCardCompo(
 
 @Composable
 private fun CountryFilterCompo(
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onOptionSelected: (CountryModel) -> Unit
 ) {
+    //TODO get the country from session
+    var countryModel by remember {
+        mutableStateOf(
+            CountryModel(
+                name = "Nepal",
+                prefix = "+977",
+                code = "NP"
+            )
+        )
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         FilterTitle(headerTitle = "Country") {
             onReset()
         }
 
-//        CountryCityDropDown(
-//            modifier = Modifier.fillMaxWidth(),
-//            onOptionSelected = {
-//
-//            }
-//        )
+        CountryDropDown(
+            modifier = Modifier.fillMaxWidth(),
+            option = countryModel,
+            onOptionSelected = {
+                onOptionSelected(it)
+                countryModel = it
+            }
+        )
     }
 }
 
 @Composable
-private fun CountryCityDropDown(
+private fun CountryDropDown(
     modifier: Modifier,
-    visibleLeadingIcon: Boolean = false,
-    option: String,
-    onOptionSelected: (String) -> Unit
+    visibleLeadingIcon: Boolean = true,
+    option: CountryModel? = null,
+    onOptionSelected: (CountryModel) -> Unit
 
 ) {
+    var showCountryBottomSheet by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val flag = getCountryFlagFromAssets(
+        countryCode = option?.code ?: ""
+    )
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -698,21 +730,91 @@ private fun CountryCityDropDown(
             1.dp, color = Color.Gray
         )
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            if (visibleLeadingIcon) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    painter = painterResource(Res.drawable.country_flag),
-                    contentDescription = "Filter Icon",
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (visibleLeadingIcon) {
+                    if (flag == null) {
+                        Image(
+                            painter = painterResource(Res.drawable.country_flag),
+                            contentDescription = "country_flag",
+                            modifier = Modifier
+                                .size(24.dp)
+                        )
+                    } else {
+                        Image(
+                            bitmap = flag,
+                            contentDescription = "flag",
+                            modifier = Modifier
+                                .size(24.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    modifier = Modifier,
+                    text = option?.name ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Start
                 )
             }
 
-          /*  Text(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            )*/
+            Box(modifier = Modifier.padding(end = 8.dp)) {
+                DropDownIcon(onClick = {
+                    showCountryBottomSheet = true
+                })
+            }
+
+            CountrySelectionBottomSheet(
+                show = showCountryBottomSheet,
+                onCountrySelected = {
+                    onOptionSelected(it)
+                    showCountryBottomSheet = false
+                },
+                onClose = {
+                    showCountryBottomSheet = false
+                }
+            )
+
+
         }
     }
 }
+
+@Composable
+private fun CityDropDownCompo(){
+
+}
+
+@Composable
+private fun DropDownIcon(
+    onClick: () -> Unit
+) {
+    IconButton(
+        modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
+        onClick = {
+            onClick()
+        },
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceDim,
+            contentColor = Color.Black
+        ),
+    ) {
+        Icon(
+            modifier = Modifier.size(24.dp),
+            imageVector = Icons.Filled.KeyboardArrowDown,
+            contentDescription = "Filter Icon",
+        )
+    }
+}
+
 
 
 

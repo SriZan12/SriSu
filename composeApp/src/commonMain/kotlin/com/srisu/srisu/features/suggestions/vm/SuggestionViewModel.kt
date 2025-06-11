@@ -30,7 +30,8 @@ class SuggestionViewModel(
     val suggestionUIStates = _suggestionUIStates.asStateFlow()
 
     init {
-        getUserSuggestions()
+//        getUserSuggestions()
+        getCityList("nepal")
     }
 
     private fun success(message: String = "") {
@@ -167,6 +168,15 @@ class SuggestionViewModel(
     fun getSentRequests() {
         viewModelScope.launch {
             val loveRequests = suggestionRepository.getLoveRequests().flow.cachedIn(viewModelScope)
+        }
+    }
+
+    fun getCityList(country: String) {
+        viewModelScope.launch {
+            suggestionRepository.getCityList(country).onSuccess { response, _ ->
+
+                AppLogger.log("CITIES = $response")
+            }.onError { s, errorType -> }
         }
     }
 

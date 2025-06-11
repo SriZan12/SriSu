@@ -128,7 +128,6 @@ suspend inline fun <reified T> handleErrorResponse(response: HttpResponse): Resu
     }
 
 
-    AppLogger.log("ERROR RESPONSE = ${Json.encodeToString(errorResponse)}")
 
     errorMessage = when (response.status) {
         HttpStatusCode.BadRequest -> {
