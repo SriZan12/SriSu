@@ -73,7 +73,7 @@ fun FilterSuggestionScreen(
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFFADADD)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 ),
                 title = {
                     Text(
@@ -105,9 +105,9 @@ fun FilterSuggestionScreen(
                 onClick = {}
             )
         },
-        containerColor = Color(0xFFFADADD)
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = paddingValues).background(color = Color(0xFFFADADD))) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = paddingValues)) {
             FilterSuggestionCompo {
 
             }
@@ -119,9 +119,7 @@ fun FilterSuggestionScreen(
 private fun FilterSuggestionCompo(
     onDismiss: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), colors = CardDefaults.cardColors(
-        containerColor = Color(0xFFFADADD)
-    )) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -376,6 +374,9 @@ private fun CountryDropDown(
         onClick = {
             showCountryBottomSheet = true
         },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(
             1.dp, color = Color.Gray
