@@ -21,8 +21,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
@@ -83,7 +85,6 @@ private fun Init(
     LaunchedEffect(
         key1 = Unit
     ) {
-        //Init profile data
         profileViewModel.updateUserProfileData(userProfileData = userProfileData)
     }
 }
@@ -96,8 +97,8 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState) {
     Column (
         modifier = Modifier
             .fillMaxSize()
-//            .background(Color(0xFFFADADD))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .verticalScroll(rememberScrollState())
     ) {
             ProfilePictureCompo(
                 profileUrl = userProfileData?.profilePhoto,
@@ -131,9 +132,9 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-        /*  GallerySection(
+          GallerySection(
               photos = userProfileData?.userPhotos
-          )*/
+          )
 
     }
 }
@@ -315,16 +316,15 @@ fun GallerySection(
     )
 
     photos?.let {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+        LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(items = listPhotos) { photoItem ->
                 AsyncImage(
                     modifier = Modifier
+                        .size(200.dp)
                         .aspectRatio(1f)
                         .clip(shape = RoundedCornerShape(8.dp)),
                     model = photoItem,

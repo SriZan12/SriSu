@@ -109,9 +109,6 @@ fun SuggestionScreen(
     ) { paddingValues ->
 
         val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
-        var showFilterDialog by rememberSaveable {
-            mutableStateOf(false)
-        }
 
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues)
@@ -119,7 +116,7 @@ fun SuggestionScreen(
 
             SuggestionTopBarCompo(
                 showFilterDialog = {
-                   navigateFilterScreen()
+                    navigateFilterScreen()
                 }
             )
 
@@ -135,12 +132,6 @@ fun SuggestionScreen(
                     navigateProfileScreen(userProfileData)
                 }
             )
-
-            /* if (showFilterDialog) {
-                 FilterSuggestionDialog {
-                     showFilterDialog = false
-                 }
-             }*/
         }
 
     }
