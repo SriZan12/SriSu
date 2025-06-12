@@ -20,7 +20,7 @@ import io.ktor.http.HttpMethod
 class SuggestionApiService(private val httpClient: HttpClient) {
 
     companion object {
-        const val CITY_ENDPOINT = "https://countriesnow.space/api/v0.1/countries/cities"
+        const val CITY_ENDPOINT = "https://countriesnow.space/api/v0.1/countries/cities/"
     }
 
     suspend fun getUserSuggestions(
@@ -119,7 +119,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         return httpClient.safeRequest<City?> {
             url(CITY_ENDPOINT)
             method = HttpMethod.Post
-            setBody(cityRequest)
+//            setBody(cityRequest)
         }
     }
 }

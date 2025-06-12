@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
+import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
 import kotlinx.serialization.Serializable
 
@@ -17,6 +18,9 @@ sealed class HomeNavigation : Route {
 
     @Serializable
     data class Profile(val userProfileData: String?) : HomeNavigation()
+
+    @Serializable
+    data object Filter : HomeNavigation()
 }
 
 fun NavGraphBuilder.homeGraph(navController: NavController) {
@@ -25,14 +29,33 @@ fun NavGraphBuilder.homeGraph(navController: NavController) {
     }
 
     composable<HomeNavigation.Suggestions> {
-        SuggestionScreen { userProfileData ->
-            navController.navigate(HomeNavigation.Profile(userProfileData = userProfileData))
-        }
+        SuggestionScreen(
+            navigateFilterScreen = {
+                navController.navigate(HomeNavigation.Filter)
+            },
+            navigateProfileScreen = { userProfileData ->
+                navController.navigate(HomeNavigation.Profile(userProfileData = userProfileData))
+            }
+        )
+    }
+
+    composable<HomeNavigation.Filter> { backStackEntry ->
+        FilterSuggestionScreen(
+            onNavigateBack = {
+                navController.popBackStack()
+            }
+        )
     }
 
     composable<HomeNavigation.Profile> { backStackEntry ->
         val userProfileData = backStackEntry.arguments?.getString("userProfileData")
         ProfileScreen(userProfileData = userProfileData)
     }
+
+    composable<HomeNavigation.Profile> { backStackEntry ->
+        val userProfileData = backStackEntry.arguments?.getString("userProfileData")
+        ProfileScreen(userProfileData = userProfileData)
+    }
+
 
 }

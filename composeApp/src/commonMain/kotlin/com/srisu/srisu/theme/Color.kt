@@ -1,5 +1,6 @@
 package com.srisu.srisu.theme
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 
 //D04D59

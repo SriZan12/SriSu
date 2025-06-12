@@ -39,6 +39,7 @@ import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.getCountryFlagFromAssets
 import com.srisu.srisu.theme.backgroundGraySecondary
+import com.srisu.srisu.utils.ZodiacUtils
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.aries
@@ -309,6 +310,236 @@ fun SuccessBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CitySelectionBottomSheet(
+    show: Boolean,
+    cityList: List<String>,
+    onClose: () -> Unit,
+    onCitySelected: (String) -> Unit
+) {
+    if (show) {
+
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true
+        )
+
+        var isSearchOn by remember {
+            mutableStateOf(false)
+        }
+        var filterCityList by remember {
+            mutableStateOf(cityList)
+        }
+
+        ModalBottomSheet(
+            modifier = Modifier.fillMaxSize(),
+            sheetState = sheetState,
+            containerColor = Color.White,
+            onDismissRequest = {
+                onClose()
+            }) {
+
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                SearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    hint = "Search City",
+                    onTextChange = { query ->
+
+                        isSearchOn = true
+
+                        if (query.isEmpty() || query.isBlank()) {
+                            isSearchOn = false
+                        }
+
+                        filterCityList = cityList.filter {
+                            it.contains(query, ignoreCase = true)
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    val citiesList = if (isSearchOn) filterCityList else cityList
+
+                    items(citiesList) { item ->
+                        CitySelectionItem(
+                            city = item,
+                            onCitySelected = {
+                                onCitySelected(it)
+                            }
+                        )
+                    }
+                }
+
+            }
+        }
+    }
+
+}
+
+@Composable
+private fun CitySelectionItem(
+    city: String,
+    onCitySelected: (String) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 12.dp)
+                .clickable {
+                    onCitySelected(
+                        city
+                    )
+                },
+            verticalAlignment = CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier,
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = city,
+                    color = Color.Black,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+        }
+
+        HorizontalDivider()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ZodiacSignSelectionBottomSheet(
+    show: Boolean,
+    onZodiacSelected: (ZodiacUtils.ZodiacSign) -> Unit,
+    onClose: () -> Unit
+) {
+
+    if (show) {
+        val zodiacList = ZodiacUtils.getZodiacSignList()
+
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true
+        )
+
+        var isSearchOn by remember {
+            mutableStateOf(false)
+        }
+
+        var filterZodiacList by remember {
+            mutableStateOf(listOf<ZodiacUtils.ZodiacSign>())
+        }
+
+        ModalBottomSheet(
+            modifier = Modifier.fillMaxSize(),
+            sheetState = sheetState,
+            containerColor = Color.White,
+            onDismissRequest = {
+                onClose()
+            }) {
+
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                SearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    hint = "Search Zodiac Sign",
+                    onTextChange = { query ->
+
+                        isSearchOn = true
+
+                        if (query.isEmpty() || query.isBlank()) {
+                            isSearchOn = false
+                        }
+
+                        filterZodiacList = zodiacList.filter {
+                            it.sign.contains(query, ignoreCase = true)
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    val zodiacs = if (isSearchOn) filterZodiacList else zodiacList
+
+                    items(zodiacs) { item ->
+                        ZodiacSignSelectionItem(
+                            zodiacSign = item,
+                            onZodiacSignSelected = {
+                                onZodiacSelected(it)
+                            }
+                        )
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZodiacSignSelectionItem(
+    zodiacSign: ZodiacUtils.ZodiacSign,
+    onZodiacSignSelected: (ZodiacUtils.ZodiacSign) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 12.dp)
+                .clickable {
+                    onZodiacSignSelected(
+                        zodiacSign
+                    )
+                },
+            verticalAlignment = CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+
+
+            val zodiacLogo = ZodiacUtils.getZodiacSignImage(
+                name = zodiacSign.sign
+            )
+
+            Row(
+                modifier = Modifier,
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (zodiacLogo != null) {
+                    Image(
+                        painter = painterResource(zodiacLogo),
+                        contentDescription = "flag",
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Text(
+                    text = zodiacSign.sign ?: "",
+                    color = Color.Black,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+
+        }
+
+        HorizontalDivider()
     }
 }
 

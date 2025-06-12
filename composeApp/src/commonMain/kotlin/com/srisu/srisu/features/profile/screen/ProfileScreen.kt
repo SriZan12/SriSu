@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -92,19 +93,17 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState) {
 
     val userProfileData = profileUIState.userProfileData
 
-    LazyColumn(
+    Column (
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFADADD))
+//            .background(Color(0xFFFADADD))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
     ) {
-        item {
             ProfilePictureCompo(
                 profileUrl = userProfileData?.profilePhoto,
                 onSendRequest = {}
             )
-        }
 
-        item {
             // Name and Age
             val age = DateTimeUtils.calculateAge(userProfileData?.dob)
 
@@ -115,21 +114,15 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState) {
                 city = userProfileData?.city,
                 country = userProfileData?.country
             )
-        }
 
-        item {
             //Interest
             val interests = userProfileData?.userInterests
             InterestCompo(interests = interests)
-        }
 
-        item {
             AboutCompo(
                 bio = userProfileData?.bio
             )
-        }
 
-        item {
             // Gallery
             Text(
                 "Gallery",
@@ -137,13 +130,11 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState) {
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
-        }
 
-        item {
-            GallerySection(
-                photos = userProfileData?.userPhotos
-            )
-        }
+        /*  GallerySection(
+              photos = userProfileData?.userPhotos
+          )*/
+
     }
 }
 

@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -66,15 +68,18 @@ import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
 import coil3.compose.AsyncImage
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.CitySelectionBottomSheet
 import com.srisu.srisu.components.CountrySelectionBottomSheet
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.OfflineBottomSheetCompo
+import com.srisu.srisu.components.ZodiacSignSelectionBottomSheet
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
+import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import com.srisu.srisu.utils.getCountryFlagFromAssets
 import com.srisu.srisu.utils.isInternetAvailable
 import kotlinx.serialization.encodeToString
@@ -85,6 +90,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
 import srisu.composeapp.generated.resources.filter_icon
+import srisu.composeapp.generated.resources.pisces
 
 typealias UserProfileData = String
 
@@ -92,12 +98,14 @@ typealias UserProfileData = String
 @Composable
 fun SuggestionScreen(
     suggestionViewModel: SuggestionViewModel = koinViewModel<SuggestionViewModel>(),
-    navigateProfileScreen: (UserProfileData) -> Unit
+    navigateProfileScreen: (UserProfileData) -> Unit,
+    navigateFilterScreen: () -> Unit
 ) {
     Scaffold(
         topBar = {
 
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { paddingValues ->
 
         val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
@@ -111,7 +119,7 @@ fun SuggestionScreen(
 
             SuggestionTopBarCompo(
                 showFilterDialog = {
-                    showFilterDialog = true
+                   navigateFilterScreen()
                 }
             )
 
@@ -128,11 +136,11 @@ fun SuggestionScreen(
                 }
             )
 
-            if (showFilterDialog) {
-                FilterSuggestionDialog {
-                    showFilterDialog = false
-                }
-            }
+            /* if (showFilterDialog) {
+                 FilterSuggestionDialog {
+                     showFilterDialog = false
+                 }
+             }*/
         }
 
     }
@@ -250,7 +258,7 @@ private fun SuggestionContent(
             ) {
                 items(
                     count = suggestions.itemCount,
-                    key = { it -> suggestions[it]?.id!! },
+                    key = { suggestions[it]?.id!! },
                     contentType = suggestions.itemContentType { "Suggestion Items" },
                 ) { index ->
                     val item = suggestions[index]
@@ -470,350 +478,6 @@ fun SuggestionCardShimmerCompo(
 }
 
 
-@Composable
-private fun FilterSuggestionDialog(
-    onDismiss: () -> Unit
-) {
-    Dialog(
-        onDismissRequest = {
-            onDismiss()
-        },
-        content = {
-            FilterSuggestionCompo {
-
-            }
-        }
-    )
-}
-
-@Composable
-private fun FilterSuggestionCompo(
-    onDismiss: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
-
-            IconButton(
-                modifier = Modifier.align(Alignment.End),
-                onClick = {
-                    onDismiss()
-                },
-                colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-            ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Close Icon",
-                )
-            }
-
-            AgeFilterCompo(onReset = {
-                onDismiss()
-            })
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            CountryFilterCompo(
-                onReset = {
-
-                },
-                onOptionSelected = {
-
-                }
-            )
-
-        }
-    }
-
-}
-
-@Composable
-private fun FilterTitle(
-    headerTitle: String,
-    onReset: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = headerTitle,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        TextButton(
-            onClick = {
-                onReset()
-            },
-        ) {
-            Text(
-                text = "Reset",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AgeFilterCompo(
-    onReset: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        FilterTitle(headerTitle = "Age") {
-            onReset()
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            Text(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                text = "Min Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-            Text(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                text = "Max Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            var minAge by rememberSaveable {
-                mutableStateOf("20")
-            }
-
-            var maxAge by rememberSaveable {
-                mutableStateOf("25")
-            }
-
-            AgeFilterCardCompo(
-                modifier = Modifier.weight(1f),
-                age = minAge,
-                onValueChanged = {
-                    minAge = it
-                }
-            )
-
-            AgeFilterCardCompo(
-                modifier = Modifier.weight(1f),
-                age = maxAge,
-                onValueChanged = {
-                    maxAge = it
-                }
-            )
-        }
-    }
-
-
-}
-
-@Composable
-private fun AgeFilterCardCompo(
-    modifier: Modifier,
-    age: String,
-    readOnly: Boolean = false,
-    onValueChanged: (String) -> Unit
-) {
-
-    OutlinedTextField(
-        modifier = modifier,
-        value = age,
-        onValueChange = {
-            onValueChanged(it)
-        },
-        readOnly = readOnly,
-        shape = RoundedCornerShape(12.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = TextStyle(
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-        ),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.Gray,
-        ).copy(focusedTextColor = Color.Black),
-        trailingIcon = {
-            IconButton(
-                modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
-                onClick = {
-
-                },
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceDim,
-                    contentColor = Color.Black
-                ),
-            ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Filter Icon",
-                )
-            }
-        }
-    )
-
-
-}
-
-@Composable
-private fun CountryFilterCompo(
-    onReset: () -> Unit,
-    onOptionSelected: (CountryModel) -> Unit
-) {
-    //TODO get the country from session
-    var countryModel by remember {
-        mutableStateOf(
-            CountryModel(
-                name = "Nepal",
-                prefix = "+977",
-                code = "NP"
-            )
-        )
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        FilterTitle(headerTitle = "Country") {
-            onReset()
-        }
-
-        CountryDropDown(
-            modifier = Modifier.fillMaxWidth(),
-            option = countryModel,
-            onOptionSelected = {
-                onOptionSelected(it)
-                countryModel = it
-            }
-        )
-    }
-}
-
-@Composable
-private fun CountryDropDown(
-    modifier: Modifier,
-    visibleLeadingIcon: Boolean = true,
-    option: CountryModel? = null,
-    onOptionSelected: (CountryModel) -> Unit
-
-) {
-    var showCountryBottomSheet by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    val flag = getCountryFlagFromAssets(
-        countryCode = option?.code ?: ""
-    )
-
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = BorderStroke(
-            1.dp, color = Color.Gray
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier,
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (visibleLeadingIcon) {
-                    if (flag == null) {
-                        Image(
-                            painter = painterResource(Res.drawable.country_flag),
-                            contentDescription = "country_flag",
-                            modifier = Modifier
-                                .size(24.dp)
-                        )
-                    } else {
-                        Image(
-                            bitmap = flag,
-                            contentDescription = "flag",
-                            modifier = Modifier
-                                .size(24.dp)
-                        )
-                    }
-                }
-
-                Text(
-                    modifier = Modifier,
-                    text = option?.name ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Start
-                )
-            }
-
-            Box(modifier = Modifier.padding(end = 8.dp)) {
-                DropDownIcon(onClick = {
-                    showCountryBottomSheet = true
-                })
-            }
-
-            CountrySelectionBottomSheet(
-                show = showCountryBottomSheet,
-                onCountrySelected = {
-                    onOptionSelected(it)
-                    showCountryBottomSheet = false
-                },
-                onClose = {
-                    showCountryBottomSheet = false
-                }
-            )
-
-
-        }
-    }
-}
-
-@Composable
-private fun CityDropDownCompo(){
-
-}
-
-@Composable
-private fun DropDownIcon(
-    onClick: () -> Unit
-) {
-    IconButton(
-        modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
-        onClick = {
-            onClick()
-        },
-        colors = IconButtonDefaults.iconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceDim,
-            contentColor = Color.Black
-        ),
-    ) {
-        Icon(
-            modifier = Modifier.size(24.dp),
-            imageVector = Icons.Filled.KeyboardArrowDown,
-            contentDescription = "Filter Icon",
-        )
-    }
-}
 
 
 
