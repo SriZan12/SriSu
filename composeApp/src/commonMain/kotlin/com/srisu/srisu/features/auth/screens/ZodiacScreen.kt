@@ -35,7 +35,7 @@ import srisu.composeapp.generated.resources.leo
 fun ZodiacScreen(authViewModel: AuthViewModel) {
 
     Scaffold { innerPadding ->
-        Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surfaceContainerLowest) {
 
             Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding),

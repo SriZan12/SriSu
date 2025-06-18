@@ -15,14 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -34,11 +29,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,12 +45,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.LoadingScrim
+import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
+import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -71,8 +73,17 @@ fun ProfileScreen(
 
     Init(profileViewModel = profileViewModel, userProfileData = userProfileData)
 
+    HandleUiStates(
+        profileViewModel = profileViewModel,
+        profileUIStates = profileUIState
+
+    )
+
     ProfilePictureContent(
-        profileUIState = profileUIState
+        profileUIState = profileUIState,
+        onSendRequest = {
+            profileViewModel.sendSingleConnectionRequest()
+        }
     )
 
 }
@@ -90,51 +101,109 @@ private fun Init(
 }
 
 @Composable
-private fun ProfilePictureContent(profileUIState: ProfileUIState) {
+private fun HandleUiStates(
+    profileViewModel: ProfileViewModel,
+    profileUIStates: ProfileUIState
+) {
+
+    val isConnected = isInternetAvailable()
+    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+
+    LaunchedEffect(isConnected) {
+        showBottomSheet = !isConnected
+    }
+
+    when (val baseUIState = profileUIStates.baseUIState) {
+        is BaseUIState.Error -> {
+            ErrorDialog(
+                title = baseUIState.errorType,
+                errorMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    profileViewModel.idleScreen()
+                },
+            )
+        }
+
+        is BaseUIState.Loading -> {
+            LoadingScrim(
+                onDismissRequest = {
+                    profileViewModel.idleScreen()
+                }
+            )
+        }
+
+        is BaseUIState.Success<*> -> {
+//            val data = baseUIState.data
+            // Handle success case based on the expected type
+        }
+
+        is BaseUIState.NoInternetConnection -> {
+            showBottomSheet = baseUIState.isOffline
+        }
+
+        is BaseUIState.Idle -> Unit
+    }
+
+    if (showBottomSheet) {
+        OfflineBottomSheetCompo(
+            show = showBottomSheet,
+            onDismiss = {
+                showBottomSheet = false
+                profileViewModel.idleScreen()
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProfilePictureContent(profileUIState: ProfileUIState, onSendRequest: () -> Unit) {
 
     val userProfileData = profileUIState.userProfileData
 
-    Column (
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .verticalScroll(rememberScrollState())
     ) {
-            ProfilePictureCompo(
-                profileUrl = userProfileData?.profilePhoto,
-                onSendRequest = {}
-            )
+        ProfilePictureCompo(
+            profileUrl = userProfileData?.profilePhoto,
+            onSendRequest = {
+                onSendRequest()
+            }
+        )
 
-            // Name and Age
-            val age = DateTimeUtils.calculateAge(userProfileData?.dob)
+        // Name and Age
+        val age = DateTimeUtils.calculateAge(userProfileData?.dob)
 
-            UserInfo(
-                name = userProfileData?.fullName,
-                age = age,
-                zodiacSign = userProfileData?.zodiacSign,
-                city = userProfileData?.city,
-                country = userProfileData?.country
-            )
+        UserInfo(
+            name = userProfileData?.fullName,
+            age = age,
+            zodiacSign = userProfileData?.zodiacSign,
+            city = userProfileData?.city,
+            country = userProfileData?.country
+        )
 
-            //Interest
-            val interests = userProfileData?.userInterests
-            InterestCompo(interests = interests)
+        //Interest
+        val interests = userProfileData?.userInterests
+        InterestCompo(interests = interests)
 
-            AboutCompo(
-                bio = userProfileData?.bio
-            )
+        AboutCompo(
+            bio = userProfileData?.bio
+        )
 
-            // Gallery
-            Text(
-                "Gallery",
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+        // Gallery
+        Text(
+            "Gallery",
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
 
-          GallerySection(
-              photos = userProfileData?.userPhotos
-          )
+        GallerySection(
+            photos = userProfileData?.userPhotos
+        )
 
     }
 }
@@ -166,16 +235,18 @@ fun ProfilePictureCompo(
             )
         }
         IconButton(
-            onClick = { /* Like action */ },
+            onClick = {
+
+                onSendRequest()
+            },
             modifier = Modifier
                 .size(48.dp)
                 .align(Alignment.BottomCenter)
-                .offset(y = 24.dp)
-                .background(Color.White, shape = CircleShape),
-            colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFFFA500))
+                .offset(y = 24.dp),
+            colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Icon(
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(48.dp).padding(all = 8.dp),
                 imageVector = Icons.Default.Favorite,
                 contentDescription = "Like",
                 tint = Color.White

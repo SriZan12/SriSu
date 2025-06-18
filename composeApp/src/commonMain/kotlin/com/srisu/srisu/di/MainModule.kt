@@ -22,6 +22,7 @@ val mainModule = module {
 
     single {
         ProfileViewModel(
+            profileRepository = get(),
             connectivityObserver = get(),
         )
     }

@@ -24,29 +24,19 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,32 +45,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
 import coil3.compose.AsyncImage
 import com.srisu.srisu.baseframework.BaseUIState
-import com.srisu.srisu.components.CitySelectionBottomSheet
-import com.srisu.srisu.components.CountrySelectionBottomSheet
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.OfflineBottomSheetCompo
-import com.srisu.srisu.components.ZodiacSignSelectionBottomSheet
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
-import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
-import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
-import com.srisu.srisu.utils.getCountryFlagFromAssets
 import com.srisu.srisu.utils.isInternetAvailable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -88,9 +68,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.country_flag
+import srisu.composeapp.generated.resources.cross_love
 import srisu.composeapp.generated.resources.filter_icon
-import srisu.composeapp.generated.resources.pisces
 
 typealias UserProfileData = String
 
@@ -127,6 +106,9 @@ fun SuggestionScreen(
 
             SuggestionContent(
                 suggestionUIState = suggestionUIState,
+                onRetry = {
+                    suggestionViewModel.getUserSuggestions()
+                },
                 onNavigateProfileScreen = {
                     val userProfileData = Json.encodeToString(it)
                     navigateProfileScreen(userProfileData)
@@ -226,18 +208,15 @@ private fun SuggestionTopBarCompo(
 @Composable
 private fun SuggestionContent(
     suggestionUIState: SuggestionUIStates,
+    onRetry: () -> Unit,
     onNavigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit
 ) {
     suggestionUIState.suggestions?.let { suggestionsFlow ->
         val suggestions = suggestionsFlow.collectAsLazyPagingItems()
 
         if (suggestions.itemCount == 0) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No Suggestions",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
+            NoSuggestionComp {
+                onRetry()
             }
         } else {
             LazyVerticalStaggeredGrid(
@@ -269,6 +248,8 @@ private fun SuggestionContent(
 
                 }
             }
+
+
         }
     }
 }
@@ -463,6 +444,47 @@ fun SuggestionCardShimmerCompo(
                             .background(brush = brush)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoSuggestionComp(
+    onRetry: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Text(
+                text = "No Suggestions",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+
+
+            Image(
+                painter = painterResource(Res.drawable.cross_love),
+                contentDescription = "Love Icon",
+                modifier = Modifier.size(60.dp)
+            )
+
+            OutlinedButton(
+                onClick = { onRetry() },
+                border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
+                contentPadding = PaddingValues(vertical = 4.dp, horizontal = 24.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = "Retry",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

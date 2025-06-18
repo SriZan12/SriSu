@@ -1,6 +1,6 @@
-package com.srisu.srisu.core.data.repository
+package com.srisu.srisu.core.data.repository.auth
 
-import com.srisu.srisu.core.data.apiservice.AuthApiService
+import com.srisu.srisu.core.data.apiservice.auth.AuthApiService
 import com.srisu.srisu.core.data.dto.authdto.AuthDTO
 import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.network.ResultHandler

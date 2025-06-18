@@ -9,7 +9,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
-import com.srisu.srisu.core.data.repository.SuggestionRepository
+import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
@@ -58,7 +58,7 @@ class SuggestionViewModel(
     }
 
 
-    private fun getUserSuggestions() {
+    fun getUserSuggestions() {
 
         showLoading()
 
@@ -105,20 +105,7 @@ class SuggestionViewModel(
         }
     }
 
-    fun sendSingleConnectionRequest() {
-        viewModelScope.launch {
-            suggestionRepository.sendSingleConnectionRequest(
-                senderNumber = "+9779863938267",
-                receiverNumber = "+919720304050"
-            ).onSuccess { response, _ ->
 
-                AppLogger.log("SINGLE CONNECTION SUCCESS = ${response}")
-            }.onError { error, errorType ->
-                AppLogger.log("SINGLE CONNECTION ERROR = $error")
-                AppLogger.log("SINGLE CONNECTION ERROR TYPE = ${errorType.name}")
-            }
-        }
-    }
 
     private fun updateCoupleConnectionStatus() {
         viewModelScope.launch {

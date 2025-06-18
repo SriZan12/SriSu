@@ -7,7 +7,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.authdto.AuthDTO
 import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.local.AppDataStoreRepo
-import com.srisu.srisu.core.data.repository.AuthRepository
+import com.srisu.srisu.core.data.repository.auth.AuthRepository
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.common.CustomAuthScreen
 import com.srisu.srisu.features.auth.common.OTPScreenMetadata

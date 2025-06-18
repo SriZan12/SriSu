@@ -1,8 +1,8 @@
-package com.srisu.srisu.core.data.repository
+package com.srisu.srisu.core.data.repository.suggestion
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import com.srisu.srisu.core.data.apiservice.SuggestionApiService
+import com.srisu.srisu.core.data.apiservice.suggestion.SuggestionApiService
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
@@ -23,17 +23,6 @@ class SuggestionRepository(
         receiverNumber: String
     ): ResultHandler<CoupleConnectionResponse?> {
         return suggestionApiService.sendCoupleConnectionRequest(
-            senderNumber = senderNumber,
-            receiverNumber = receiverNumber
-        )
-    }
-
-    @Throws(Exception::class)
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String,
-        receiverNumber: String
-    ): ResultHandler<SingleConnectionResponse?> {
-        return suggestionApiService.sendSingleConnectionRequest(
             senderNumber = senderNumber,
             receiverNumber = receiverNumber
         )

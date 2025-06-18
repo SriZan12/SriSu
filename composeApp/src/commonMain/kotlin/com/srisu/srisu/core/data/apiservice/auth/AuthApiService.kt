@@ -1,4 +1,4 @@
-package com.srisu.srisu.core.data.apiservice
+package com.srisu.srisu.core.data.apiservice.auth
 
 import com.srisu.srisu.core.data.dto.authdto.AuthDTO
 import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO

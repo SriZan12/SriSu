@@ -1,6 +1,6 @@
-package com.srisu.srisu.core.data.apiservice
+package com.srisu.srisu.core.data.apiservice.suggestion
 
-import com.srisu.srisu.core.data.apiservice.AuthApiService.Companion.BASE_URL
+import com.srisu.srisu.core.data.apiservice.auth.AuthApiService.Companion.BASE_URL
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
@@ -11,7 +11,6 @@ import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import io.ktor.client.HttpClient
-import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.parameter
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -60,22 +59,6 @@ class SuggestionApiService(private val httpClient: HttpClient) {
             url("${BASE_URL}api/chat/connect-couple/${connectionId}/")
             method = HttpMethod.Put
             setBody(coupleConnectionDTO)
-        }
-    }
-
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String,
-        receiverNumber: String
-    ): ResultHandler<SingleConnectionResponse?> {
-
-        val connectionRequest: HashMap<String, String> = HashMap()
-        connectionRequest["sender_number"] = senderNumber
-        connectionRequest["receiver_number"] = receiverNumber
-
-        return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BASE_URL}api/chat/connect-single/")
-            method = HttpMethod.Post
-            setBody(connectionRequest)
         }
     }
 
