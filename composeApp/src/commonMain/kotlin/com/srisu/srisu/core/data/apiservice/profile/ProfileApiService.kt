@@ -4,6 +4,7 @@ import com.srisu.srisu.core.data.apiservice.auth.AuthApiService.Companion.BASE_U
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
+import com.srisu.srisu.core.logger.AppLogger
 import io.ktor.client.HttpClient
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -15,6 +16,8 @@ class ProfileApiService(private val httpClient: HttpClient) {
         senderNumber: String?,
         receiverNumber: String?
     ): ResultHandler<SingleConnectionResponse?> {
+
+        AppLogger.log("INSIDE SEND SINGLE CONNECTION API ")
 
         val connectionRequest: HashMap<String, String> = HashMap()
         connectionRequest["sender_number"] = senderNumber ?: ""

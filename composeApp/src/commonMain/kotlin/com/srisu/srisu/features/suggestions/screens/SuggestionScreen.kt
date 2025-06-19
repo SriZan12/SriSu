@@ -99,6 +99,8 @@ fun SuggestionScreen(
                 }
             )
 
+            Initialization(suggestionViewModel = suggestionViewModel)
+
             HandleUiStates(
                 authViewModel = suggestionViewModel,
                 authUIStates = suggestionUIState
@@ -116,6 +118,15 @@ fun SuggestionScreen(
             )
         }
 
+    }
+}
+
+@Composable
+private fun Initialization(
+    suggestionViewModel: SuggestionViewModel
+) {
+    LaunchedEffect(Unit) {
+        suggestionViewModel.getUserSuggestions()
     }
 }
 

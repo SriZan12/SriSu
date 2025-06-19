@@ -9,6 +9,9 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.ConnectivityObserver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -24,9 +27,24 @@ class ProfileViewModel(
 
     val profileUIState = _profileUIState.asStateFlow()
 
-    private fun showSuccessMessage(message: String) {
+    private fun <T> showSuccessMessage(data: T? = null, message: String) {
         this._profileUIState.value =
-            this._profileUIState.value.copy(baseUIState = BaseUIState.Success(message))
+            this._profileUIState.value.copy(
+                baseUIState = BaseUIState.Success(
+                    data = data,
+                    message = message
+                )
+            )
+    }
+
+    private fun showErrorMessage(errorType: String?, message: String?) {
+        this._profileUIState.value =
+            this._profileUIState.value.copy(
+                baseUIState = BaseUIState.Error(
+                    errorType = errorType,
+                    message = message
+                )
+            )
     }
 
     private fun showLoading() {
@@ -35,7 +53,7 @@ class ProfileViewModel(
     }
 
     fun idleScreen() {
-        this._profileUIState.value = this._profileUIState.value.copy(baseUIState = BaseUIState.Idle)
+        this._profileUIState.value = this._profileUIState.value.copy(baseUIState = BaseUIState.Idle, isRequestSentSuccessfully = true)
     }
 
     private fun showNoInternetConnection(isOffline: Boolean) {
@@ -56,28 +74,38 @@ class ProfileViewModel(
         }
     }
 
+    private fun updateIsRequestSent(isRequestSent: Boolean) {
+        _profileUIState.value =
+            _profileUIState.value.copy(isRequestSentSuccessfully = isRequestSent)
+    }
+
     fun sendSingleConnectionRequest() {
 
+        showLoading()
         viewModelScope.launch {
-
-            showLoading()
-
             val myPhoneNumber = SessionUtils().getPhoneNumber()
             val receiverNumber = profileUIState.value.userProfileData?.phoneNumber
 
             profileRepository.sendSingleConnectionRequest(
                 senderNumber = myPhoneNumber,
                 receiverNumber = receiverNumber
-            ).onSuccess { response, _ ->
-
-                AppLogger.log("SINGLE CONNECTION SUCCESS = $response")
-                idleScreen()
+            ).onSuccess { response, message ->
+                showSuccessMessage(data = response, message ?: "Request sent successfully")
+                updateIsRequestSent(isRequestSent = true)
             }.onError { error, errorType ->
-                idleScreen()
-                AppLogger.log("SINGLE CONNECTION ERROR = $error")
-                AppLogger.log("SINGLE CONNECTION ERROR TYPE = ${errorType.name}")
+                updateIsRequestSent(isRequestSent = false)
+                showErrorMessage(
+                    errorType = errorType.name,
+                    message = error
+                )
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        AppLogger.log("VM IS CLEARED")
+        //updateIsRequestSent(isRequestSent = false)
     }
 
 

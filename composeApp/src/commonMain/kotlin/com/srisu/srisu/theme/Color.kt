@@ -225,6 +225,7 @@ val surfaceContainerHighestDarkHighContrast = Color(0xFF4F4444)
 
 val backgroundGray = Color(0XFFE9E9E9)
 val backgroundGraySecondary = Color(0XFFECECEC)
+val success = Color(0xFF4BB543)
 
 
 

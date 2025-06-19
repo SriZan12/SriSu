@@ -52,10 +52,5 @@ fun NavGraphBuilder.homeGraph(navController: NavController) {
         ProfileScreen(userProfileData = userProfileData)
     }
 
-    composable<HomeNavigation.Profile> { backStackEntry ->
-        val userProfileData = backStackEntry.arguments?.getString("userProfileData")
-        ProfileScreen(userProfileData = userProfileData)
-    }
-
 
 }

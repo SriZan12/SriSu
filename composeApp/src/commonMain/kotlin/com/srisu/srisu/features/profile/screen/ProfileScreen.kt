@@ -50,7 +50,9 @@ import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
+import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.utils.DateTimeUtils
@@ -70,18 +72,22 @@ fun ProfileScreen(
 ) {
 
     val profileUIState by profileViewModel.profileUIState.collectAsStateWithLifecycle()
+    val shouldShowRequestButton by remember {
+        mutableStateOf(false)
+    }
 
     Init(profileViewModel = profileViewModel, userProfileData = userProfileData)
 
     HandleUiStates(
         profileViewModel = profileViewModel,
         profileUIStates = profileUIState
-
     )
 
     ProfilePictureContent(
         profileUIState = profileUIState,
+        shouldShowRequestButton = shouldShowRequestButton,
         onSendRequest = {
+            AppLogger.log("ON SEND REQUEST")
             profileViewModel.sendSingleConnectionRequest()
         }
     )
@@ -134,15 +140,22 @@ private fun HandleUiStates(
         }
 
         is BaseUIState.Success<*> -> {
-//            val data = baseUIState.data
-            // Handle success case based on the expected type
+            SuccessDialog(
+                successMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    profileViewModel.idleScreen()
+                },
+            )
         }
 
         is BaseUIState.NoInternetConnection -> {
             showBottomSheet = baseUIState.isOffline
         }
 
-        is BaseUIState.Idle -> Unit
+        is BaseUIState.Idle -> {
+            Unit
+        }
     }
 
     if (showBottomSheet) {
@@ -157,7 +170,11 @@ private fun HandleUiStates(
 }
 
 @Composable
-private fun ProfilePictureContent(profileUIState: ProfileUIState, onSendRequest: () -> Unit) {
+private fun ProfilePictureContent(
+    profileUIState: ProfileUIState,
+    onSendRequest: () -> Unit,
+    shouldShowRequestButton: Boolean
+) {
 
     val userProfileData = profileUIState.userProfileData
 
@@ -169,6 +186,9 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState, onSendRequest:
     ) {
         ProfilePictureCompo(
             profileUrl = userProfileData?.profilePhoto,
+            hasSentRequest = userProfileData?.crushed,
+            shouldShowRequestButton = shouldShowRequestButton,
+            isRequestSentSuccessfully = profileUIState.isRequestSentSuccessfully,
             onSendRequest = {
                 onSendRequest()
             }
@@ -212,6 +232,9 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState, onSendRequest:
 @Composable
 fun ProfilePictureCompo(
     profileUrl: String? = null,
+    hasSentRequest: Boolean? = false,
+    shouldShowRequestButton: Boolean,
+    isRequestSentSuccessfully: Boolean?,
     onSendRequest: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
@@ -234,23 +257,29 @@ fun ProfilePictureCompo(
                     .height(300.dp)
             )
         }
-        IconButton(
-            onClick = {
 
-                onSendRequest()
-            },
-            modifier = Modifier
-                .size(48.dp)
-                .align(Alignment.BottomCenter)
-                .offset(y = 24.dp),
-            colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
-        ) {
-            Icon(
-                modifier = Modifier.size(48.dp).padding(all = 8.dp),
-                imageVector = Icons.Default.Favorite,
-                contentDescription = "Like",
-                tint = Color.White
-            )
+        AppLogger.log("HAS SENT REQUEST = $hasSentRequest")
+        AppLogger.log("HAS SENT REQUEST = $isRequestSentSuccessfully")
+
+        if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
+
+            IconButton(
+                onClick = {
+                    onSendRequest()
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .align(Alignment.BottomCenter)
+                    .offset(y = 24.dp),
+                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(
+                    modifier = Modifier.size(48.dp).padding(all = 8.dp),
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Like",
+                    tint = Color.White
+                )
+            }
         }
     }
 }

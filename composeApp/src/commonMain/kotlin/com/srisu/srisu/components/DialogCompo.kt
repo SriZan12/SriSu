@@ -16,15 +16,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.srisu.srisu.theme.backgroundGray
+import com.srisu.srisu.theme.success
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.alertTitle
 
 
 @Composable
 fun ErrorDialog(
-    title: String = stringResource(Res.string.alertTitle),
-    errorMessage: String,
+    title: String? = stringResource(Res.string.alertTitle),
+    errorMessage: String? = "Error",
     show: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -40,7 +43,63 @@ fun ErrorDialog(
         ) {
             Card(
                 modifier = Modifier,
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+            ) {
+
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = title ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = errorMessage ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    CustomButtonCompo(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)
+                            .padding(top = 22.dp),
+                        label = "Close",
+                        backgroundColor = MaterialTheme.colorScheme.primary,
+                        textStyle =
+                            MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                        onClick = {
+                            onDismiss()
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SuccessDialog(
+    title: String = "SUCCESS",
+    successMessage: String,
+    show: Boolean,
+    onDismiss: () -> Unit,
+) {
+
+    if (show) {
+        Dialog(
+            onDismissRequest = { onDismiss() },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = true
+            )
+        ) {
+            Card(
+                modifier = Modifier,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
 
                 Column(
@@ -54,7 +113,7 @@ fun ErrorDialog(
                     )
 
                     Text(
-                        text = errorMessage,
+                        text = successMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -64,7 +123,7 @@ fun ErrorDialog(
                         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)
                             .padding(top = 22.dp),
                         label = "Close",
-                        backgroundColor = MaterialTheme.colorScheme.onErrorContainer,
+                        backgroundColor = success,
                         textStyle =
                             MaterialTheme.typography.titleMedium.copy(color = Color.White),
                         onClick = {

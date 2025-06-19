@@ -30,7 +30,6 @@ class SuggestionViewModel(
     val suggestionUIStates = _suggestionUIStates.asStateFlow()
 
     init {
-        getUserSuggestions()
         getCityList("nepal")
     }
 
