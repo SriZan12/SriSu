@@ -317,7 +317,7 @@ fun SuccessBottomSheet(
 @Composable
 fun CitySelectionBottomSheet(
     show: Boolean,
-    cityList: List<String>,
+    cityList: List<String?>?,
     onClose: () -> Unit,
     onCitySelected: (String) -> Unit
 ) {
@@ -354,8 +354,8 @@ fun CitySelectionBottomSheet(
                             isSearchOn = false
                         }
 
-                        filterCityList = cityList.filter {
-                            it.contains(query, ignoreCase = true)
+                        filterCityList = cityList?.filter {
+                            it?.contains(query, ignoreCase = true) == true
                         }
                     }
                 )
@@ -369,13 +369,15 @@ fun CitySelectionBottomSheet(
 
                     val citiesList = if (isSearchOn) filterCityList else cityList
 
-                    items(citiesList) { item ->
-                        CitySelectionItem(
-                            city = item,
-                            onCitySelected = {
-                                onCitySelected(it)
-                            }
-                        )
+                    items(citiesList ?: emptyList()) { item ->
+                        if (!item.isNullOrEmpty()) {
+                            CitySelectionItem(
+                                city = item,
+                                onCitySelected = {
+                                    onCitySelected(it)
+                                }
+                            )
+                        }
                     }
                 }
 

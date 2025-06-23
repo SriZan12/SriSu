@@ -17,7 +17,7 @@ class SessionUtils : KoinComponent {
         try {
             sessionData = sessionJson?.let { Json.decodeFromString<Session>(it) }
         } catch (exception: Exception) {
-            AppLogger.log("SESSION SERIALIZATION EXCEPTION")
+            AppLogger.log("SESSION SERIALIZATION EXCEPTION = ${exception.message}")
         }
 
         return sessionData

@@ -48,11 +48,11 @@ fun PhoneNumberVerificationScreen(
 ) {
     CommonAuthContainerCompo(buttonTitle = "Verify", onClick = {
         if (authViewModel.isOtpValid()) {
-//            authViewModel.verifyOtp() {
-//                navController.navigate(HomeNavigation.Home)
-//            }
+            authViewModel.verifyOtp() {
+                navController.navigate(HomeNavigation.Home)
+            }
 
-            authViewModel.navigateNextScreen()
+//            authViewModel.navigateNextScreen()
         }
 
     }) {

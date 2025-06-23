@@ -52,7 +52,11 @@ data class Session(
     @SerialName("username")
     val username: String? = null,
     @SerialName("zodiac_sign")
-    val zodiacSign: String? = null
+    val zodiacSign: String? = null,
+    @SerialName("country")
+    val country: String? = null,
+    @SerialName("city")
+    val city: String? = null
 )
 
 fun User.toSession(access: String?, refresh: String?): Session {

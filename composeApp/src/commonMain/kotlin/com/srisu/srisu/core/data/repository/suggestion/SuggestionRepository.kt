@@ -112,7 +112,7 @@ class SuggestionRepository(
     }
 
     @Throws(Exception::class)
-    suspend fun getCityList(country: String): ResultHandler<CityResponse?> {
+    suspend fun getCityList(country: String?): CityResponse? {
         return suggestionApiService.getCitiesList(country)
     }
 

@@ -154,6 +154,10 @@ object ZodiacUtils {
 
     }
 
+    fun getZodiacFromName(name: String?): ZodiacSign? {
+        return getZodiacSignList().find { it.sign == name }
+    }
+
     fun getZodiacSignImage(name: String): DrawableResource? {
         val zodiacSign = getZodiacSignList().find { it.sign == name }
         val zodiacSignLogo = zodiacSign?.logo

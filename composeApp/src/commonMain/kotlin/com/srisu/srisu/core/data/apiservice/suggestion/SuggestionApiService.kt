@@ -100,7 +100,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun getCitiesList(country: String): CityResponse? {
+    suspend fun getCitiesList(country: String?): CityResponse? {
         return httpClient.get(CITY_ENDPOINT) {
             parameter("country", country)
             contentType(ContentType.Application.Json)

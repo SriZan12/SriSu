@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,15 +50,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.toUri
 import com.srisu.srisu.components.CitySelectionBottomSheet
 import com.srisu.srisu.components.CountrySelectionBottomSheet
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.ZodiacSignSelectionBottomSheet
+import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
+import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
+import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel.Companion.MAX_AGE
+import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel.Companion.MIN_AGE
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import com.srisu.srisu.utils.getCountryFlagFromAssets
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
 import srisu.composeapp.generated.resources.pisces
@@ -66,8 +75,12 @@ import srisu.composeapp.generated.resources.pisces
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSuggestionScreen(
+    suggestionViewModel: SuggestionViewModel = koinViewModel<SuggestionViewModel>(),
     onNavigateBack: () -> Unit
 ) {
+
+    val filterUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -107,7 +120,10 @@ fun FilterSuggestionScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues = paddingValues)) {
-            FilterSuggestionCompo {
+            FilterSuggestionCompo(
+                suggestionViewModel = suggestionViewModel,
+                filterUIState = filterUIState
+            ) {
 
             }
         }
@@ -116,6 +132,8 @@ fun FilterSuggestionScreen(
 
 @Composable
 private fun FilterSuggestionCompo(
+    suggestionViewModel: SuggestionViewModel,
+    filterUIState: SuggestionUIStates,
     onDismiss: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
@@ -124,9 +142,29 @@ private fun FilterSuggestionCompo(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            AgeFilterCompo(onReset = {
-                onDismiss()
-            })
+            val minAge by filterUIState.minAge.collectAsState()
+            val maxAge by filterUIState.maxAge.collectAsState()
+
+            AgeFilterCompo(
+                onReset = {
+                    onDismiss()
+                },
+                minAge = minAge,
+                maxAge = maxAge,
+                onUpdateMinAge = {
+                    suggestionViewModel.updateMinAge(age = minAge + 1)
+                },
+                onUpdateMaxAge = {
+                    suggestionViewModel.updateMaxAge(age = maxAge + 1)
+                },
+                onChangeMinAge = {
+                    suggestionViewModel.updateMinAge(age = it)
+                },
+                onChangeMaxAge = {
+                    suggestionViewModel.updateMaxAge(age = it)
+                },
+
+                )
 
 
             CountryFilterCompo(
@@ -134,34 +172,31 @@ private fun FilterSuggestionCompo(
 
                 },
                 onOptionSelected = {
-
+                    suggestionViewModel.getCityList(it.name?.lowercase())
                 }
             )
 
+            val cities by filterUIState.cities.collectAsState()
+            val selectedCity by filterUIState.selectedCity.collectAsState()
 
             CityDropDownCompo(
                 modifier = Modifier,
-                selectedCity = "Select a city",
+                selectedCity = selectedCity,
                 onCitySelected = {
-
+                    suggestionViewModel.updateSelectedCity(it)
                 },
-                cityList = listOf("Kathmandu", "Pokhara", "Sindhuli", "Dhulikhel", "Biratnagar"),
+                cityList = cities ?: emptyList(),
                 onReset = {}
             )
 
+            val selectedZodiac by filterUIState.selectedZodiac.collectAsState()
+
             ZodiacSignCompo(
                 modifier = Modifier,
-                selectedZodiac = ZodiacSign(
-                    sign = "PISCES",
-                    logo = Res.drawable.pisces,
-                    title = "You're a Pisces",
-                    zodiacDescription = "Pisces are empathetic and artistic, known for their compassion and emotional depth. They are dreamers with a rich inner world and a desire to help others.",
-                    startMonth = 2,
-                    startDay = 19,
-                    endMonth = 3,
-                    endDay = 20
-                ),
-                onZodiacSelected = {},
+                selectedZodiac = selectedZodiac,
+                onZodiacSelected = {
+                    suggestionViewModel.updateSelectedZodiac(it)
+                },
                 onReset = {}
             )
 
@@ -203,10 +238,17 @@ private fun FilterTitle(
         }
     }
 }
+typealias age = Int
 
 @Composable
 private fun AgeFilterCompo(
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onUpdateMinAge: () -> Unit,
+    onUpdateMaxAge: () -> Unit,
+    onChangeMinAge: (age) -> Unit,
+    onChangeMaxAge: (age) -> Unit,
+    minAge: Int,
+    maxAge: Int
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         FilterTitle(headerTitle = "Age", showReset = true) {
@@ -243,27 +285,25 @@ private fun AgeFilterCompo(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            var minAge by rememberSaveable {
-                mutableStateOf("20")
-            }
-
-            var maxAge by rememberSaveable {
-                mutableStateOf("25")
-            }
-
             AgeFilterCardCompo(
                 modifier = Modifier.weight(1f),
-                age = minAge,
+                age = minAge.toString(),
                 onValueChanged = {
-                    minAge = it
+                    onChangeMinAge(it.trim().toInt())
+                },
+                onAction = {
+                    onUpdateMinAge()
                 }
             )
 
             AgeFilterCardCompo(
                 modifier = Modifier.weight(1f),
-                age = maxAge,
+                age = maxAge.toString(),
                 onValueChanged = {
-                    maxAge = it
+                    onChangeMaxAge(it.trim().toInt())
+                },
+                onAction = {
+                    onUpdateMaxAge()
                 }
             )
         }
@@ -277,14 +317,17 @@ private fun AgeFilterCardCompo(
     modifier: Modifier,
     age: String,
     readOnly: Boolean = false,
-    onValueChanged: (String) -> Unit
+    onValueChanged: (String) -> Unit,
+    onAction: () -> Unit,
 ) {
 
     OutlinedTextField(
         modifier = modifier,
         value = age,
         onValueChange = {
-            onValueChanged(it)
+            if (it.isNotEmpty() && it.toInt() in MIN_AGE..MAX_AGE) {
+                onValueChanged(it)
+            }
         },
         readOnly = readOnly,
         shape = RoundedCornerShape(12.dp),
@@ -301,7 +344,7 @@ private fun AgeFilterCardCompo(
             IconButton(
                 modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
                 onClick = {
-
+                    onAction()
                 },
                 colors = IconButtonDefaults.iconButtonColors(
                     contentColor = Color.Black
@@ -444,7 +487,7 @@ fun CityDropDownCompo(
     modifier: Modifier = Modifier,
     selectedCity: String?,
     onCitySelected: (String) -> Unit,
-    cityList: List<String>,
+    cityList: List<String?>?,
     onReset: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -492,7 +535,7 @@ fun CityDropDownCompo(
                     onClose = {
                         expanded = false
                     },
-                    cityList = listOf("Kathmandu", "Pokhara", "Sindhuli", "Dhulikhel", "Biratnagar")
+                    cityList = cityList
                 )
             }
         }
