@@ -56,6 +56,11 @@ class SuggestionViewModel(
         return connectivityObserver.isConnected.value
     }
 
+    fun updateCities(cities: List<String?>?) {
+        _suggestionUIStates.value =
+            _suggestionUIStates.value.copy(cities = MutableStateFlow(cities))
+    }
+
 
     fun getUserSuggestions() {
 
@@ -103,7 +108,6 @@ class SuggestionViewModel(
             }
         }
     }
-
 
 
     private fun updateCoupleConnectionStatus() {
@@ -159,10 +163,7 @@ class SuggestionViewModel(
 
     fun getCityList(country: String) {
         viewModelScope.launch {
-            suggestionRepository.getCityList(country).onSuccess { response, _ ->
-
-                AppLogger.log("CITIES = $response")
-            }.onError { s, errorType -> }
+            suggestionRepository.getCityList(country)
         }
     }
 

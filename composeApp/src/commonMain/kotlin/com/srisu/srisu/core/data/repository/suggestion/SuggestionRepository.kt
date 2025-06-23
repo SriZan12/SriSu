@@ -7,7 +7,7 @@ import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.network.ResultHandler
-import com.srisu.srisu.core.data.response.suggestion.City
+import com.srisu.srisu.core.data.response.suggestion.CityResponse
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
@@ -112,7 +112,7 @@ class SuggestionRepository(
     }
 
     @Throws(Exception::class)
-    suspend fun getCityList(country: String): ResultHandler<City?> {
+    suspend fun getCityList(country: String): ResultHandler<CityResponse?> {
         return suggestionApiService.getCitiesList(country)
     }
 
