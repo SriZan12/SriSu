@@ -30,7 +30,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -56,25 +55,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.toUri
 import com.srisu.srisu.components.CitySelectionBottomSheet
 import com.srisu.srisu.components.CountrySelectionBottomSheet
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.ZodiacSignSelectionBottomSheet
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
-import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel.Companion.MAX_AGE
-import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel.Companion.MIN_AGE
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import com.srisu.srisu.utils.getCountryFlagFromAssets
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
-import srisu.composeapp.generated.resources.pisces
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -325,10 +319,34 @@ fun AgeFilterCompo(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(32.dp)
         ) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = "Min Age",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.Gray,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Start
+            )
+            Text(
+                modifier = Modifier.weight(1f),
+                text = "Max Age",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.Gray,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Start
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+
             AgeFilterDropdownCardCompo(
                 modifier = Modifier.weight(1f),
                 selectedAge = minAge,
-                headerTitle = "Min Age",
                 onAgeSelected = { selected ->
                     if (selected <= maxAge) onChangeMinAge(selected)
                 }
@@ -337,7 +355,6 @@ fun AgeFilterCompo(
             AgeFilterDropdownCardCompo(
                 modifier = Modifier.weight(1f),
                 selectedAge = maxAge,
-                headerTitle = "Max Age",
                 onAgeSelected = { selected ->
                     if (selected >= minAge) onChangeMaxAge(selected)
                 }
@@ -352,7 +369,6 @@ fun AgeFilterCompo(
 fun AgeFilterDropdownCardCompo(
     modifier: Modifier,
     selectedAge: Int,
-    headerTitle: String,
     onAgeSelected: (Int) -> Unit
 ) {
     val ageOptions = (16..35).toList()
@@ -363,27 +379,41 @@ fun AgeFilterDropdownCardCompo(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier
     ) {
-        OutlinedTextField(
-            readOnly = true,
-            value = selectedAge.toString(),
-            onValueChange = {},
-            label = { Text(headerTitle) },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        Card(
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
             shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color.Black
-            )
-        )
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            onClick = {
+                expanded = !expanded
+            },
+            border = BorderStroke(1.dp, color = Color.Gray)
+        ) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedAge.toString(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Start
+                )
+
+                DropDownIcon {
+                    expanded = !expanded
+                }
+            }
+
+        }
 
         ExposedDropdownMenu(
             expanded = expanded,
             shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.height(200.dp),
             onDismissRequest = { expanded = false }
         ) {
             ageOptions.forEach { age ->
@@ -394,7 +424,8 @@ fun AgeFilterDropdownCardCompo(
                     onClick = {
                         onAgeSelected(age)
                         expanded = false
-                    }
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
         }
@@ -598,7 +629,7 @@ fun CityDropDownCompo(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 14.dp, horizontal = 8.dp),
+                        .padding(vertical = 14.dp, horizontal = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
