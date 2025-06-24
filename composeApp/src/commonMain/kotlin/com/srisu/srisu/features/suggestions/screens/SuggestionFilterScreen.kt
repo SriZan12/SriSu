@@ -21,11 +21,16 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -151,20 +156,13 @@ private fun FilterSuggestionCompo(
                 },
                 minAge = minAge,
                 maxAge = maxAge,
-                onUpdateMinAge = {
-                    suggestionViewModel.updateMinAge(age = minAge + 1)
-                },
-                onUpdateMaxAge = {
-                    suggestionViewModel.updateMaxAge(age = maxAge + 1)
-                },
                 onChangeMinAge = {
-                    suggestionViewModel.updateMinAge(age = it)
+                    suggestionViewModel.updateMinAge(it)
                 },
                 onChangeMaxAge = {
-                    suggestionViewModel.updateMaxAge(age = it)
-                },
-
-                )
+                    suggestionViewModel.updateMaxAge(it)
+                }
+            )
 
 
             CountryFilterCompo(
@@ -238,15 +236,14 @@ private fun FilterTitle(
         }
     }
 }
-typealias age = Int
 
-@Composable
+/*@Composable
 private fun AgeFilterCompo(
     onReset: () -> Unit,
     onUpdateMinAge: () -> Unit,
     onUpdateMaxAge: () -> Unit,
-    onChangeMinAge: (age) -> Unit,
-    onChangeMaxAge: (age) -> Unit,
+    onChangeMinAge: (Int) -> Unit,
+    onChangeMaxAge: (Int) -> Unit,
     minAge: Int,
     maxAge: Int
 ) {
@@ -260,7 +257,7 @@ private fun AgeFilterCompo(
             horizontalArrangement = Arrangement.spacedBy(32.dp)
         ) {
             Text(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.weight(1f),
                 text = "Min Age",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray,
@@ -268,7 +265,7 @@ private fun AgeFilterCompo(
                 textAlign = TextAlign.Start
             )
             Text(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.weight(1f),
                 text = "Max Age",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray,
@@ -284,33 +281,126 @@ private fun AgeFilterCompo(
             horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             AgeFilterCardCompo(
                 modifier = Modifier.weight(1f),
                 age = minAge.toString(),
                 onValueChanged = {
-                    onChangeMinAge(it.trim().toInt())
+                    it.toIntOrNull()?.let { safeInt -> onChangeMinAge(safeInt) }
                 },
                 onAction = {
-                    onUpdateMinAge()
-                }
+                    if (minAge + 1 <= maxAge) onUpdateMinAge()
+                },
+                canIncrement = minAge + 1 <= maxAge
             )
 
             AgeFilterCardCompo(
                 modifier = Modifier.weight(1f),
                 age = maxAge.toString(),
                 onValueChanged = {
-                    onChangeMaxAge(it.trim().toInt())
+                    it.toIntOrNull()?.let { safeInt -> onChangeMaxAge(safeInt) }
                 },
                 onAction = {
-                    onUpdateMaxAge()
+                    if (maxAge + 1 <= MAX_AGE) onUpdateMaxAge()
+                },
+                canIncrement = maxAge + 1 <= MAX_AGE
+            )
+        }
+    }
+}*/
+
+@Composable
+fun AgeFilterCompo(
+    onReset: () -> Unit,
+    onChangeMinAge: (Int) -> Unit,
+    onChangeMaxAge: (Int) -> Unit,
+    minAge: Int,
+    maxAge: Int
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        FilterTitle(headerTitle = "Age", showReset = true) {
+            onReset()
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            AgeFilterDropdownCardCompo(
+                modifier = Modifier.weight(1f),
+                selectedAge = minAge,
+                headerTitle = "Min Age",
+                onAgeSelected = { selected ->
+                    if (selected <= maxAge) onChangeMinAge(selected)
+                }
+            )
+
+            AgeFilterDropdownCardCompo(
+                modifier = Modifier.weight(1f),
+                selectedAge = maxAge,
+                headerTitle = "Max Age",
+                onAgeSelected = { selected ->
+                    if (selected >= minAge) onChangeMaxAge(selected)
                 }
             )
         }
     }
-
-
 }
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AgeFilterDropdownCardCompo(
+    modifier: Modifier,
+    selectedAge: Int,
+    headerTitle: String,
+    onAgeSelected: (Int) -> Unit
+) {
+    val ageOptions = (16..35).toList()
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = selectedAge.toString(),
+            onValueChange = {},
+            label = { Text(headerTitle) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Gray,
+                focusedTextColor = Color.Black
+            )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.height(200.dp),
+            onDismissRequest = { expanded = false }
+        ) {
+            ageOptions.forEach { age ->
+                DropdownMenuItem(
+                    text = {
+                        Text(age.toString())
+                    },
+                    onClick = {
+                        onAgeSelected(age)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun AgeFilterCardCompo(
@@ -319,15 +409,13 @@ private fun AgeFilterCardCompo(
     readOnly: Boolean = false,
     onValueChanged: (String) -> Unit,
     onAction: () -> Unit,
+    canIncrement: Boolean
 ) {
-
     OutlinedTextField(
         modifier = modifier,
         value = age,
         onValueChange = {
-            if (it.isNotEmpty() && it.toInt() in MIN_AGE..MAX_AGE) {
-                onValueChanged(it)
-            }
+            onValueChanged(it)
         },
         readOnly = readOnly,
         shape = RoundedCornerShape(12.dp),
@@ -342,25 +430,25 @@ private fun AgeFilterCardCompo(
         ).copy(focusedTextColor = Color.Black),
         trailingIcon = {
             IconButton(
-                modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
                 onClick = {
-                    onAction()
+                    if (canIncrement) onAction()
                 },
+                enabled = canIncrement,
+                modifier = Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)),
                 colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = Color.Black
+                    contentColor = if (canIncrement) Color.Black else Color.LightGray
                 ),
             ) {
                 Icon(
-                    modifier = Modifier.size(24.dp),
                     imageVector = Icons.Filled.AddCircle,
-                    contentDescription = "Filter Icon",
+                    contentDescription = "Increase Age",
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
     )
-
-
 }
+
 
 @Composable
 private fun CountryFilterCompo(

@@ -97,18 +97,21 @@ class SuggestionViewModel(
     }
 
     fun updateMinAge(age: Int) {
-        if (age >= MIN_AGE) {
+        val maxAge = _suggestionUIStates.value.maxAge.value
+        if (age in MIN_AGE..maxAge) {
             _suggestionUIStates.value =
                 _suggestionUIStates.value.copy(minAge = MutableStateFlow(age))
         }
     }
 
     fun updateMaxAge(age: Int) {
-//        if (age <= MAX_AGE) {
+        val minAge = _suggestionUIStates.value.minAge.value
+        if (age in minAge..MAX_AGE) {
             _suggestionUIStates.value =
                 _suggestionUIStates.value.copy(maxAge = MutableStateFlow(age))
-//        }
+        }
     }
+
 
     fun updateSelectedCity(city: String) {
         _suggestionUIStates.value =
