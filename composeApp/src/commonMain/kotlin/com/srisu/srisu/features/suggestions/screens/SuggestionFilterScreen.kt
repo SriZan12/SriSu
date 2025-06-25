@@ -100,10 +100,10 @@ fun FilterSuggestionScreen(
 @Composable
 private fun Initialization(
     suggestionViewModel: SuggestionViewModel
-){
-    LaunchedEffect(Unit){
+) {
+    LaunchedEffect(Unit) {
         suggestionViewModel.getPreferences()
-        suggestionViewModel.getCityList()
+//        suggestionViewModel.getCityList()
     }
 }
 
@@ -225,6 +225,9 @@ private fun SuggestionFilterContent(
                 suggestionUIStates = suggestionUIStates
             ) {
                 suggestionViewModel.clearFilters()
+                suggestionViewModel.updateUserPreferences(isClear = true) {
+                    onNavigateBack()
+                }
             }
         }
     }
@@ -577,8 +580,9 @@ fun CityDropDownCompo(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val city = if (selectedCity.isNullOrEmpty()) "Select City" else selectedCity
                     Text(
-                        text = selectedCity ?: "Select City",
+                        text = city,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Start
@@ -643,7 +647,7 @@ private fun ZodiacSignCompo(
 
                     Text(
                         modifier = Modifier,
-                        text = selectedZodiac?.sign ?: "",
+                        text = selectedZodiac?.sign ?: "Select Zodiac Sign",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Start

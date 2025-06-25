@@ -59,22 +59,14 @@ suspend inline fun <reified T> HttpClient.safeRequest(
 suspend inline fun <reified T> handleResponse(response: HttpResponse): ResultHandler<T?> {
     return when {
         response.status.isSuccess() -> {
-            try {
-                val defaultResponse: DefaultResponse<T> = response.body()
-                ResultHandler(
-                    NetworkAPIResult.Success(
-                        response = defaultResponse.data,
-                        message = defaultResponse.message
-                    )
+            val defaultResponse: DefaultResponse<T> = response.body()
+            ResultHandler(
+                NetworkAPIResult.Success(
+                    response = defaultResponse.data,
+                    message = defaultResponse.message
                 )
-            } catch (e: Exception){
-                ResultHandler(
-                    NetworkAPIResult.Success(
-                        response = response.body()
-                    )
-                )
-            }
-            
+            )
+
         }
 
 

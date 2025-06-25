@@ -101,7 +101,7 @@ object ZodiacUtils {
                 endDay = 22
             ),
             ZodiacSign(
-                sign = "SCORPIUS",
+                sign = "SCORPIO",
                 logo = Res.drawable.scorpio,
                 title = "You're a Scorpio",
                 zodiacDescription = "Scorpios are passionate and determined, with a deep emotional intensity. They are loyal and protective, but can also be mysterious and ambitious.",

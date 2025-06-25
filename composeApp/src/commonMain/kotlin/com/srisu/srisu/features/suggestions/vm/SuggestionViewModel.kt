@@ -131,8 +131,8 @@ class SuggestionViewModel(
     }
 
     fun clearFilters() {
-        updateMinAge(age = 16)
-        updateMaxAge(age = 16)
+        updateMinAge(age = MIN_AGE)
+        updateMaxAge(age = MAX_AGE)
         updateSelectedCountry(country = null)
         updateSelectedCity(null)
         updateSelectedZodiac(null)
@@ -140,12 +140,12 @@ class SuggestionViewModel(
 
     private fun setSession() {
         val session = SessionUtils().getSession()
+        AppLogger.log("SESSION = ${session}")
         updateSession(session = session)
     }
 
     private fun setUserPreferencesData(userPreferences: UserPreferenceResponse?) {
         val session = suggestionUIStates.value.session
-
 
         //set min and max age.
         val minAge = userPreferences?.minAge ?: suggestionUIStates.value.minAge
@@ -155,15 +155,16 @@ class SuggestionViewModel(
 
         // set country
         val country = getCountryModelFromName(userPreferences?.country ?: session?.country)
+        AppLogger.log("COUNTRY MODEL = $country")
         updateSelectedCountry(country = country)
 
         //set city
-        val city = userPreferences?.city ?: "Select a city"
+        val city = userPreferences?.city ?: ""
         updateSelectedCity(city = city)
 
         // set zodiac sign.
         val zodiac =
-            ZodiacUtils.getZodiacFromName(userPreferences?.zodiacSign ?: session?.zodiacSign)
+            ZodiacUtils.getZodiacFromName(userPreferences?.zodiac_sign ?: "")
         updateSelectedZodiac(zodiac = zodiac)
     }
 
@@ -200,7 +201,6 @@ class SuggestionViewModel(
         viewModelScope.launch {
             suggestionRepository.getUserPreferences().onSuccess { response, _ ->
                 updateUserPreferences(response)
-                AppLogger.log("REPONSE PREF = ${response}")
                 setUserPreferencesData(userPreferences = response)
             }.onError { _, _ ->
                 idleScreen()
@@ -214,7 +214,7 @@ class SuggestionViewModel(
                 user = suggestionUIStates.value.session?.id,
                 city = suggestionUIStates.value.selectedCity,
                 country = suggestionUIStates.value.selectedCountry?.name,
-                zodiacSign = suggestionUIStates.value.selectedZodiac?.title?.uppercase(),
+                zodiacSign = suggestionUIStates.value.selectedZodiac?.sign?.uppercase(),
                 minAge = suggestionUIStates.value.minAge,
                 maxAge = suggestionUIStates.value.maxAge
             )
@@ -234,17 +234,31 @@ class SuggestionViewModel(
     }
 
     fun updateUserPreferences(
+        isClear: Boolean = false,
         onPreferencesSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-            val userPreferenceDTO = UserPreferenceDTO(
-                user = suggestionUIStates.value.session?.id,
-                city = suggestionUIStates.value.selectedCity,
-                country = suggestionUIStates.value.selectedCountry?.name,
-                zodiacSign = suggestionUIStates.value.selectedZodiac?.title?.uppercase(),
-                minAge = suggestionUIStates.value.minAge,
-                maxAge = suggestionUIStates.value.maxAge
-            )
+            val userPreferenceDTO =
+                if (!isClear) {
+                    UserPreferenceDTO(
+                        user = suggestionUIStates.value.session?.id,
+                        city = suggestionUIStates.value.selectedCity,
+                        country = suggestionUIStates.value.selectedCountry?.name,
+                        zodiacSign = suggestionUIStates.value.selectedZodiac?.sign?.uppercase(),
+                        minAge = suggestionUIStates.value.minAge,
+                        maxAge = suggestionUIStates.value.maxAge
+                    )
+                } else {
+                    UserPreferenceDTO(
+                        user = suggestionUIStates.value.session?.id,
+                        minAge = MIN_AGE,
+                        maxAge = MAX_AGE,
+                        city = null,
+                        country = null,
+                        zodiacSign = null,
+                    )
+                }
+
             val prefId = suggestionUIStates.value.userPreferences?.id
             suggestionRepository.updateUserPreferences(
                 userPreferenceDTO = userPreferenceDTO,

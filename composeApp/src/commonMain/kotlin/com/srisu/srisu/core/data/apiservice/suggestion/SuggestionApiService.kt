@@ -12,6 +12,7 @@ import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.core.logger.AppLogger
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -44,6 +45,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
             url("${BASE_URL}api/auth/user-preferences/me/")
+            contentType(ContentType.Application.Json)
             method = HttpMethod.Get
         }
     }
@@ -63,7 +65,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         prefId: Int?
     ): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BASE_URL}api/auth/user-preferences/${prefId}")
+            url("${BASE_URL}api/auth/user-preferences/${prefId}/")
             method = HttpMethod.Put
             setBody(
                 userPreferenceDTO
