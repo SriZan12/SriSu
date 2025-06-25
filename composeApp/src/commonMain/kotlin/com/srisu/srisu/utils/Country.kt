@@ -23,4 +23,8 @@ object Country {
         }
     }
 
+    fun getCountryModelFromName(country: String?): CountryModel? {
+        return getAllCountriesFromJson()?.find { it.name == country }
+    }
+
 }

@@ -5,25 +5,27 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
+import com.srisu.srisu.App
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
+import com.srisu.srisu.core.data.dto.suggestion.UserPreferenceDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
+import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.ConnectivityObserver
-import com.srisu.srisu.utils.Country
+import com.srisu.srisu.utils.Country.getCountryModelFromName
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.component.get
 
 /**
  * This VM will be used by both SuggestionScreen and FilterSuggestionScreen
@@ -46,21 +48,7 @@ class SuggestionViewModel(
     val suggestionUIStates = _suggestionUIStates.asStateFlow()
 
     init {
-        val session = SessionUtils().getSession()
-        updateSession(session = session)
-        updateSelectedCountry(
-            country = CountryModel(
-                name = session?.country,
-                prefix = null,
-                code = null
-            )
-        )
-        getCityList(
-            session?.country?.lowercase()
-        )
-        updateSelectedZodiac(
-            zodiac = ZodiacUtils.getZodiacFromName(session?.zodiacSign)
-        )
+        setSession()
     }
 
     private fun success(message: String = "") {
@@ -71,6 +59,16 @@ class SuggestionViewModel(
     private fun showLoading() {
         _suggestionUIStates.value =
             _suggestionUIStates.value.copy(baseUIState = BaseUIState.Loading)
+    }
+
+    private fun showMessage(errorType: String, message: String) {
+        _suggestionUIStates.value =
+            _suggestionUIStates.value.copy(
+                baseUIState = BaseUIState.Error(
+                    errorType = errorType,
+                    message = message
+                )
+            )
     }
 
     fun idleScreen() {
@@ -86,46 +84,87 @@ class SuggestionViewModel(
         return connectivityObserver.isConnected.value
     }
 
-    fun updateSession(session: Session?) {
+    private fun updateSession(session: Session?) {
         _suggestionUIStates.value =
-            _suggestionUIStates.value.copy(session = MutableStateFlow(session))
+            _suggestionUIStates.value.copy(session = session)
     }
 
-    fun updateCities(cities: List<String?>?) {
+    private fun updateCities(cities: List<String?>?) {
         _suggestionUIStates.value =
-            _suggestionUIStates.value.copy(cities = MutableStateFlow(cities))
+            _suggestionUIStates.value.copy(cities = cities)
     }
 
     fun updateMinAge(age: Int) {
-        val maxAge = _suggestionUIStates.value.maxAge.value
-        if (age in MIN_AGE..maxAge) {
+        val maxAge = _suggestionUIStates.value.maxAge
+        if (age <= maxAge && age in MIN_AGE..maxAge) {
             _suggestionUIStates.value =
-                _suggestionUIStates.value.copy(minAge = MutableStateFlow(age))
+                _suggestionUIStates.value.copy(minAge = age)
         }
     }
 
     fun updateMaxAge(age: Int) {
-        val minAge = _suggestionUIStates.value.minAge.value
-        if (age in minAge..MAX_AGE) {
+        val minAge = _suggestionUIStates.value.minAge
+        if (age >= minAge && age in minAge..MAX_AGE) {
             _suggestionUIStates.value =
-                _suggestionUIStates.value.copy(maxAge = MutableStateFlow(age))
+                _suggestionUIStates.value.copy(maxAge = age)
         }
     }
 
-
-    fun updateSelectedCity(city: String) {
+    fun updateSelectedCity(city: String?) {
         _suggestionUIStates.value =
-            _suggestionUIStates.value.copy(selectedCity = MutableStateFlow(city))
+            _suggestionUIStates.value.copy(selectedCity = city)
     }
 
     fun updateSelectedZodiac(zodiac: ZodiacSign?) {
         _suggestionUIStates.value =
-            _suggestionUIStates.value.copy(selectedZodiac = MutableStateFlow(zodiac))
+            _suggestionUIStates.value.copy(selectedZodiac = zodiac)
     }
 
-    fun updateSelectedCountry(country: CountryModel) {
+    fun updateSelectedCountry(country: CountryModel?) {
         _suggestionUIStates.value =
-            _suggestionUIStates.value.copy(selectedCountry = MutableStateFlow(country))
+            _suggestionUIStates.value.copy(selectedCountry = country)
+    }
+
+    private fun updateUserPreferences(userPreferenceResponse: UserPreferenceResponse?) {
+        _suggestionUIStates.value =
+            _suggestionUIStates.value.copy(userPreferences = userPreferenceResponse)
+    }
+
+    fun clearFilters() {
+        updateMinAge(age = 16)
+        updateMaxAge(age = 16)
+        updateSelectedCountry(country = null)
+        updateSelectedCity(null)
+        updateSelectedZodiac(null)
+    }
+
+    private fun setSession() {
+        val session = SessionUtils().getSession()
+        updateSession(session = session)
+    }
+
+    private fun setUserPreferencesData(userPreferences: UserPreferenceResponse?) {
+        val session = suggestionUIStates.value.session
+
+
+        //set min and max age.
+        val minAge = userPreferences?.minAge ?: suggestionUIStates.value.minAge
+        val maxAge = userPreferences?.maxAge ?: suggestionUIStates.value.maxAge
+        updateMinAge(age = minAge)
+        updateMaxAge(age = maxAge)
+
+        // set country
+        val country = getCountryModelFromName(userPreferences?.country ?: session?.country)
+        updateSelectedCountry(country = country)
+
+        //set city
+        val city = userPreferences?.city ?: "Select a city"
+        updateSelectedCity(city = city)
+
+        // set zodiac sign.
+        val zodiac =
+            ZodiacUtils.getZodiacFromName(userPreferences?.zodiacSign ?: session?.zodiacSign)
+        updateSelectedZodiac(zodiac = zodiac)
     }
 
 
@@ -155,6 +194,73 @@ class SuggestionViewModel(
             }).flow.cachedIn(viewModelScope)
 
         _suggestionUIStates.value = _suggestionUIStates.value.copy(suggestions = pagerFlow)
+    }
+
+    fun getPreferences() {
+        viewModelScope.launch {
+            suggestionRepository.getUserPreferences().onSuccess { response, _ ->
+                updateUserPreferences(response)
+                AppLogger.log("REPONSE PREF = ${response}")
+                setUserPreferencesData(userPreferences = response)
+            }.onError { _, _ ->
+                idleScreen()
+            }
+        }
+    }
+
+    fun setUserPreferences(onPreferencesSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val userPreferenceDTO = UserPreferenceDTO(
+                user = suggestionUIStates.value.session?.id,
+                city = suggestionUIStates.value.selectedCity,
+                country = suggestionUIStates.value.selectedCountry?.name,
+                zodiacSign = suggestionUIStates.value.selectedZodiac?.title?.uppercase(),
+                minAge = suggestionUIStates.value.minAge,
+                maxAge = suggestionUIStates.value.maxAge
+            )
+
+            suggestionRepository.setUserPreferences(userPreferenceDTO = userPreferenceDTO)
+                .onSuccess { response, _ ->
+                    updateUserPreferences(userPreferenceResponse = response)
+                    onPreferencesSuccess()
+                }.onError { error, errorType ->
+                    showMessage(
+                        errorType = errorType.name.uppercase(),
+                        message = error.toString()
+                    )
+                }
+
+        }
+    }
+
+    fun updateUserPreferences(
+        onPreferencesSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val userPreferenceDTO = UserPreferenceDTO(
+                user = suggestionUIStates.value.session?.id,
+                city = suggestionUIStates.value.selectedCity,
+                country = suggestionUIStates.value.selectedCountry?.name,
+                zodiacSign = suggestionUIStates.value.selectedZodiac?.title?.uppercase(),
+                minAge = suggestionUIStates.value.minAge,
+                maxAge = suggestionUIStates.value.maxAge
+            )
+            val prefId = suggestionUIStates.value.userPreferences?.id
+            suggestionRepository.updateUserPreferences(
+                userPreferenceDTO = userPreferenceDTO,
+                prefId = prefId
+            )
+                .onSuccess { response, _ ->
+                    updateUserPreferences(response)
+                    onPreferencesSuccess()
+                }.onError { error, errorType ->
+                    showMessage(
+                        errorType = errorType.name.uppercase(),
+                        message = error.toString()
+                    )
+                }
+
+        }
     }
 
 
@@ -219,14 +325,16 @@ class SuggestionViewModel(
 
     fun getSentRequests() {
         viewModelScope.launch {
-            val loveRequests = suggestionRepository.getLoveRequests().flow.cachedIn(viewModelScope)
+            val loveRequests =
+                suggestionRepository.getLoveRequests().flow.cachedIn(viewModelScope)
         }
     }
 
-    fun getCityList(country: String?) {
+    fun getCityList(country: String? = null) {
         viewModelScope.launch {
-            val cities = suggestionRepository.getCityList(country)
-
+            val cities = suggestionRepository.getCityList(
+                country = country ?: suggestionUIStates.value.session?.country
+            )
             if (cities?.error == false) {
                 updateCities(cities = cities.data)
             }

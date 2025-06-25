@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,11 +13,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -38,7 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,38 +46,130 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.CitySelectionBottomSheet
 import com.srisu.srisu.components.CountrySelectionBottomSheet
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.LoadingScrim
+import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.ZodiacSignSelectionBottomSheet
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import com.srisu.srisu.utils.getCountryFlagFromAssets
+import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSuggestionScreen(
     suggestionViewModel: SuggestionViewModel = koinViewModel<SuggestionViewModel>(),
     onNavigateBack: () -> Unit
 ) {
 
-    val filterUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
+    val suggestionUIStates by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
 
+    Initialization(
+        suggestionViewModel = suggestionViewModel
+    )
+
+    HandleUiStates(
+        suggestionVM = suggestionViewModel,
+        suggestionUIStates = suggestionUIStates
+    )
+
+    SuggestionFilterContent(
+        suggestionViewModel = suggestionViewModel,
+        suggestionUIStates = suggestionUIStates,
+        onNavigateBack = onNavigateBack
+    )
+
+}
+
+@Composable
+private fun Initialization(
+    suggestionViewModel: SuggestionViewModel
+){
+    LaunchedEffect(Unit){
+        suggestionViewModel.getPreferences()
+        suggestionViewModel.getCityList()
+    }
+}
+
+@Composable
+private fun HandleUiStates(
+    suggestionVM: SuggestionViewModel,
+    suggestionUIStates: SuggestionUIStates
+) {
+
+    val isConnected = isInternetAvailable()
+    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+
+    LaunchedEffect(isConnected) {
+        showBottomSheet = !isConnected
+    }
+
+    when (val baseUIState = suggestionUIStates.baseUIState) {
+        is BaseUIState.Error -> {
+            ErrorDialog(
+                title = baseUIState.errorType,
+                errorMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    suggestionVM.idleScreen()
+                },
+            )
+        }
+
+        is BaseUIState.Loading -> {
+            LoadingScrim(
+                onDismissRequest = {
+
+                }
+            )
+        }
+
+        is BaseUIState.Success<*> -> {
+//            val data = baseUIState.data
+            // Handle success case based on the expected type
+        }
+
+        is BaseUIState.NoInternetConnection -> {
+            showBottomSheet = baseUIState.isOffline
+        }
+
+        is BaseUIState.Idle -> Unit
+    }
+
+    if (showBottomSheet) {
+        OfflineBottomSheetCompo(
+            show = showBottomSheet,
+            onDismiss = {
+                showBottomSheet = false
+                suggestionVM.idleScreen()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SuggestionFilterContent(
+    suggestionViewModel: SuggestionViewModel,
+    suggestionUIStates: SuggestionUIStates,
+    onNavigateBack: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -113,17 +203,28 @@ fun FilterSuggestionScreen(
             PrimaryButtonCompo(
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(all = 12.dp),
                 label = "Apply Filter",
-                onClick = {}
+                onClick = {
+                    if (suggestionUIStates.userPreferences == null) {
+                        suggestionViewModel.setUserPreferences {
+                            onNavigateBack()
+                        }
+                    } else {
+                        suggestionViewModel.updateUserPreferences {
+                            onNavigateBack()
+                        }
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { paddingValues ->
+
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues = paddingValues)) {
             FilterSuggestionCompo(
                 suggestionViewModel = suggestionViewModel,
-                filterUIState = filterUIState
+                suggestionUIStates = suggestionUIStates
             ) {
-
+                suggestionViewModel.clearFilters()
             }
         }
     }
@@ -132,8 +233,8 @@ fun FilterSuggestionScreen(
 @Composable
 private fun FilterSuggestionCompo(
     suggestionViewModel: SuggestionViewModel,
-    filterUIState: SuggestionUIStates,
-    onDismiss: () -> Unit
+    suggestionUIStates: SuggestionUIStates,
+    onClearFilter: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
         Column(
@@ -141,12 +242,12 @@ private fun FilterSuggestionCompo(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            val minAge by filterUIState.minAge.collectAsState()
-            val maxAge by filterUIState.maxAge.collectAsState()
+            val minAge = suggestionUIStates.minAge
+            val maxAge = suggestionUIStates.maxAge
 
             AgeFilterCompo(
-                onReset = {
-                    onDismiss()
+                onClearFilter = {
+                    onClearFilter()
                 },
                 minAge = minAge,
                 maxAge = maxAge,
@@ -160,16 +261,17 @@ private fun FilterSuggestionCompo(
 
 
             CountryFilterCompo(
-                onReset = {
-
+                selectedCountry = suggestionUIStates.selectedCountry,
+                onClearFilter = {
                 },
                 onOptionSelected = {
+                    suggestionViewModel.updateSelectedCountry(it)
                     suggestionViewModel.getCityList(it.name?.lowercase())
                 }
             )
 
-            val cities by filterUIState.cities.collectAsState()
-            val selectedCity by filterUIState.selectedCity.collectAsState()
+            val cities = suggestionUIStates.cities
+            val selectedCity = suggestionUIStates.selectedCity
 
             CityDropDownCompo(
                 modifier = Modifier,
@@ -178,10 +280,10 @@ private fun FilterSuggestionCompo(
                     suggestionViewModel.updateSelectedCity(it)
                 },
                 cityList = cities ?: emptyList(),
-                onReset = {}
+                onClearFilter = {}
             )
 
-            val selectedZodiac by filterUIState.selectedZodiac.collectAsState()
+            val selectedZodiac = suggestionUIStates.selectedZodiac
 
             ZodiacSignCompo(
                 modifier = Modifier,
@@ -189,7 +291,7 @@ private fun FilterSuggestionCompo(
                 onZodiacSelected = {
                     suggestionViewModel.updateSelectedZodiac(it)
                 },
-                onReset = {}
+                onClearFilter = {}
             )
 
         }
@@ -201,7 +303,7 @@ private fun FilterSuggestionCompo(
 private fun FilterTitle(
     showReset: Boolean = false,
     headerTitle: String,
-    onReset: () -> Unit
+    onClearFilter: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -217,11 +319,11 @@ private fun FilterTitle(
         if (showReset) {
             TextButton(
                 onClick = {
-                    onReset()
+                    onClearFilter()
                 },
             ) {
                 Text(
-                    text = "Reset",
+                    text = "Clear Filter",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
@@ -231,113 +333,18 @@ private fun FilterTitle(
     }
 }
 
-/*@Composable
-private fun AgeFilterCompo(
-    onReset: () -> Unit,
-    onUpdateMinAge: () -> Unit,
-    onUpdateMaxAge: () -> Unit,
-    onChangeMinAge: (Int) -> Unit,
-    onChangeMaxAge: (Int) -> Unit,
-    minAge: Int,
-    maxAge: Int
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        FilterTitle(headerTitle = "Age", showReset = true) {
-            onReset()
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            Text(
-                modifier = Modifier.weight(1f),
-                text = "Min Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-            Text(
-                modifier = Modifier.weight(1f),
-                text = "Max Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AgeFilterCardCompo(
-                modifier = Modifier.weight(1f),
-                age = minAge.toString(),
-                onValueChanged = {
-                    it.toIntOrNull()?.let { safeInt -> onChangeMinAge(safeInt) }
-                },
-                onAction = {
-                    if (minAge + 1 <= maxAge) onUpdateMinAge()
-                },
-                canIncrement = minAge + 1 <= maxAge
-            )
-
-            AgeFilterCardCompo(
-                modifier = Modifier.weight(1f),
-                age = maxAge.toString(),
-                onValueChanged = {
-                    it.toIntOrNull()?.let { safeInt -> onChangeMaxAge(safeInt) }
-                },
-                onAction = {
-                    if (maxAge + 1 <= MAX_AGE) onUpdateMaxAge()
-                },
-                canIncrement = maxAge + 1 <= MAX_AGE
-            )
-        }
-    }
-}*/
-
 @Composable
 fun AgeFilterCompo(
-    onReset: () -> Unit,
+    onClearFilter: () -> Unit,
     onChangeMinAge: (Int) -> Unit,
     onChangeMaxAge: (Int) -> Unit,
-    minAge: Int,
-    maxAge: Int
+    minAge: Int?,
+    maxAge: Int?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         FilterTitle(headerTitle = "Age", showReset = true) {
-            onReset()
+            onClearFilter()
         }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            Text(
-                modifier = Modifier.weight(1f),
-                text = "Min Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-            Text(
-                modifier = Modifier.weight(1f),
-                text = "Max Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -347,16 +354,18 @@ fun AgeFilterCompo(
             AgeFilterDropdownCardCompo(
                 modifier = Modifier.weight(1f),
                 selectedAge = minAge,
+                headerTitle = "Min Age",
                 onAgeSelected = { selected ->
-                    if (selected <= maxAge) onChangeMinAge(selected)
+                    onChangeMinAge(selected)
                 }
             )
 
             AgeFilterDropdownCardCompo(
                 modifier = Modifier.weight(1f),
                 selectedAge = maxAge,
+                headerTitle = "Max Age",
                 onAgeSelected = { selected ->
-                    if (selected >= minAge) onChangeMaxAge(selected)
+                    onChangeMaxAge(selected)
                 }
             )
         }
@@ -368,7 +377,8 @@ fun AgeFilterCompo(
 @Composable
 fun AgeFilterDropdownCardCompo(
     modifier: Modifier,
-    selectedAge: Int,
+    selectedAge: Int?,
+    headerTitle: String,
     onAgeSelected: (Int) -> Unit
 ) {
     val ageOptions = (16..35).toList()
@@ -377,41 +387,32 @@ fun AgeFilterDropdownCardCompo(
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
-        modifier = modifier
+        modifier = modifier,
     ) {
-        Card(
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            onClick = {
-                expanded = !expanded
-            },
-            border = BorderStroke(1.dp, color = Color.Gray)
-        ) {
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 14.dp, horizontal = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = selectedAge.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Start
-                )
-
-                DropDownIcon {
-                    expanded = !expanded
+        val age = if (selectedAge == 0) "" else selectedAge.toString()
+        OutlinedTextField(
+            readOnly = true,
+            value = age,
+            onValueChange = {},
+            label = { Text(headerTitle) },
+            trailingIcon = {
+                DropDownIcon(expanded) {
+                    expanded != expanded
                 }
-            }
+            },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Gray,
+                focusedTextColor = Color.Black
+            )
+        )
 
-        }
 
         ExposedDropdownMenu(
+            modifier = Modifier.height(300.dp),
             expanded = expanded,
             shape = RoundedCornerShape(12.dp),
             onDismissRequest = { expanded = false }
@@ -434,80 +435,22 @@ fun AgeFilterDropdownCardCompo(
 
 
 @Composable
-private fun AgeFilterCardCompo(
-    modifier: Modifier,
-    age: String,
-    readOnly: Boolean = false,
-    onValueChanged: (String) -> Unit,
-    onAction: () -> Unit,
-    canIncrement: Boolean
-) {
-    OutlinedTextField(
-        modifier = modifier,
-        value = age,
-        onValueChange = {
-            onValueChanged(it)
-        },
-        readOnly = readOnly,
-        shape = RoundedCornerShape(12.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = TextStyle(
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-        ),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.Gray,
-        ).copy(focusedTextColor = Color.Black),
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    if (canIncrement) onAction()
-                },
-                enabled = canIncrement,
-                modifier = Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)),
-                colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = if (canIncrement) Color.Black else Color.LightGray
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.AddCircle,
-                    contentDescription = "Increase Age",
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
-    )
-}
-
-
-@Composable
 private fun CountryFilterCompo(
-    onReset: () -> Unit,
+    selectedCountry: CountryModel?,
+    onClearFilter: () -> Unit,
     onOptionSelected: (CountryModel) -> Unit
 ) {
-    //TODO get the country from session
-    var countryModel by remember {
-        mutableStateOf(
-            CountryModel(
-                name = "Nepal",
-                prefix = "+977",
-                code = "NP"
-            )
-        )
-    }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         FilterTitle(headerTitle = "Country") {
-            onReset()
+            onClearFilter()
         }
 
         CountryDropDown(
             modifier = Modifier.fillMaxWidth(),
-            option = countryModel,
+            option = selectedCountry,
             onOptionSelected = {
                 onOptionSelected(it)
-                countryModel = it
             }
         )
     }
@@ -529,6 +472,8 @@ private fun CountryDropDown(
         countryCode = option?.code ?: ""
     )
 
+    AppLogger.log("OPTION = ${option}")
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -544,7 +489,7 @@ private fun CountryDropDown(
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
@@ -579,11 +524,10 @@ private fun CountryDropDown(
                 )
             }
 
-            Box(modifier = Modifier.padding(end = 8.dp)) {
-                DropDownIcon(onClick = {
-                    showCountryBottomSheet = true
-                })
-            }
+            DropDownIcon(expanded = showCountryBottomSheet, onClick = {
+                showCountryBottomSheet = true
+            })
+
 
             CountrySelectionBottomSheet(
                 show = showCountryBottomSheet,
@@ -607,13 +551,13 @@ fun CityDropDownCompo(
     selectedCity: String?,
     onCitySelected: (String) -> Unit,
     cityList: List<String?>?,
-    onReset: () -> Unit
+    onClearFilter: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         FilterTitle(headerTitle = "City") {
-            onReset()
+            onClearFilter()
         }
 
         Card(
@@ -640,7 +584,7 @@ fun CityDropDownCompo(
                         textAlign = TextAlign.Start
                     )
 
-                    DropDownIcon {
+                    DropDownIcon(expanded = expanded) {
                         expanded = !expanded
                     }
                 }
@@ -666,14 +610,14 @@ private fun ZodiacSignCompo(
     modifier: Modifier = Modifier,
     selectedZodiac: ZodiacSign?,
     onZodiacSelected: (ZodiacSign) -> Unit,
-    onReset: () -> Unit
+    onClearFilter: () -> Unit
 ) {
     var expanded by rememberSaveable {
         mutableStateOf(false)
     }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         FilterTitle(headerTitle = "Zodiac Sign") {
-            onReset()
+            onClearFilter()
         }
 
         Card(
@@ -688,7 +632,7 @@ private fun ZodiacSignCompo(
             )
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
@@ -718,11 +662,10 @@ private fun ZodiacSignCompo(
                     }
                 }
 
-                Box(modifier = Modifier.padding(end = 8.dp)) {
-                    DropDownIcon(onClick = {
-                        expanded = true
-                    })
-                }
+                DropDownIcon(expanded = expanded, onClick = {
+                    expanded = true
+                })
+
 
                 ZodiacSignSelectionBottomSheet(
                     show = expanded,
@@ -743,6 +686,7 @@ private fun ZodiacSignCompo(
 
 @Composable
 private fun DropDownIcon(
+    expanded: Boolean = false,
     onClick: () -> Unit
 ) {
     IconButton(
@@ -755,9 +699,13 @@ private fun DropDownIcon(
             contentColor = Color.Black
         ),
     ) {
+
+        val dropDownIcon =
+            if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown
+
         Icon(
             modifier = Modifier.size(24.dp),
-            imageVector = Icons.Filled.KeyboardArrowDown,
+            imageVector = dropDownIcon,
             contentDescription = "Filter Icon",
         )
     }

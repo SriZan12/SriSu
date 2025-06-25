@@ -2,6 +2,8 @@ package com.srisu.srisu.session
 
 import com.srisu.srisu.core.data.response.auth.ProfileSetupResponse
 import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.core.data.response.auth.User.UserInterest
+import com.srisu.srisu.core.data.response.auth.User.UserPhoto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -56,7 +58,11 @@ data class Session(
     @SerialName("country")
     val country: String? = null,
     @SerialName("city")
-    val city: String? = null
+    val city: String? = null,
+    @SerialName("user_interests")
+    val userInterests: List<UserInterest?>? = null,
+    @SerialName("user_photos")
+    val userPhotos: List<UserPhoto?>? = null,
 )
 
 fun User.toSession(access: String?, refresh: String?): Session {
@@ -82,7 +88,11 @@ fun User.toSession(access: String?, refresh: String?): Session {
         profilePhoto = this.profilePhoto,
         updatedDate = this.updatedDate,
         username = this.username,
-        zodiacSign = this.zodiacSign
+        zodiacSign = this.zodiacSign,
+        country = this.country,
+        city = this.city,
+        userInterests = this.userInterests,
+        userPhotos = this.userPhotos
     )
 }
 

@@ -3,12 +3,14 @@ package com.srisu.srisu.core.data.apiservice.suggestion
 import com.srisu.srisu.core.data.apiservice.auth.AuthApiService.Companion.BASE_URL
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
+import com.srisu.srisu.core.data.dto.suggestion.UserPreferenceDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
 import com.srisu.srisu.core.data.response.suggestion.CityResponse
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
+import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -36,6 +38,36 @@ class SuggestionApiService(private val httpClient: HttpClient) {
             parameter("page_size", pageSize)
 
             method = HttpMethod.Get
+        }
+    }
+
+    suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
+        return httpClient.safeRequest<UserPreferenceResponse?> {
+            url("${BASE_URL}api/auth/user-preferences/me/")
+            method = HttpMethod.Get
+        }
+    }
+
+    suspend fun setUserPreferences(userPreferenceDTO: UserPreferenceDTO): ResultHandler<UserPreferenceResponse?> {
+        return httpClient.safeRequest<UserPreferenceResponse?> {
+            url("${BASE_URL}api/auth/user-preferences/")
+            method = HttpMethod.Post
+            setBody(
+                userPreferenceDTO
+            )
+        }
+    }
+
+    suspend fun updateUserPreferences(
+        userPreferenceDTO: UserPreferenceDTO,
+        prefId: Int?
+    ): ResultHandler<UserPreferenceResponse?> {
+        return httpClient.safeRequest<UserPreferenceResponse?> {
+            url("${BASE_URL}api/auth/user-preferences/${prefId}")
+            method = HttpMethod.Put
+            setBody(
+                userPreferenceDTO
+            )
         }
     }
 
