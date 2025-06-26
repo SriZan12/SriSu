@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -42,19 +45,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.CustomButtonCompo
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
+import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
+import com.srisu.srisu.theme.success
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
@@ -62,6 +71,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
+import srisu.composeapp.generated.resources.check_sticker
 import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
 
@@ -140,9 +150,8 @@ private fun HandleUiStates(
         }
 
         is BaseUIState.Success<*> -> {
-            SuccessDialog(
+            RequestSentDialog(
                 successMessage = baseUIState.message,
-                show = true,
                 onDismiss = {
                     profileViewModel.idleScreen()
                 },
@@ -442,3 +451,4 @@ fun GallerySection(
          )*/
     }
 }
+

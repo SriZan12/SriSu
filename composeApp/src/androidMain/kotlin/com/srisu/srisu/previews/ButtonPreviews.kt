@@ -5,14 +5,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.features.auth.screens.GlowingRedIcon
+import com.srisu.srisu.features.profile.screen.RequestSentDialog
 
 @Composable
 @Preview(showBackground = true)
 fun PreviewPrimaryButton() {
-   SuccessDialog (
-       show = true,
-       title = "Success",
-        successMessage = "Something went wrong",
-   ) { }
+    RequestSentDialog(
+        title = "Request sent!",
+        successMessage = "Your Crush request has been sent to Amelia. We'll let you know if they accept.",
+        onDismiss = {}
+    )
 }
 
