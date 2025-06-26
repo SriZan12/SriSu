@@ -103,7 +103,7 @@ private fun Initialization(
 ) {
     LaunchedEffect(Unit) {
         suggestionViewModel.getPreferences()
-//        suggestionViewModel.getCityList()
+        suggestionViewModel.getCityList()
     }
 }
 

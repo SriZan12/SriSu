@@ -22,6 +22,10 @@ import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class SuggestionApiService(private val httpClient: HttpClient) {
 
@@ -67,9 +71,20 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         return httpClient.safeRequest<UserPreferenceResponse?> {
             url("${BASE_URL}api/auth/user-preferences/${prefId}/")
             method = HttpMethod.Put
+            contentType(ContentType.Application.Json)
             setBody(
                 userPreferenceDTO
             )
+           /* setBody(
+                buildJsonObject {
+                    put("user", JsonPrimitive(userPreferenceDTO.user))
+                    put("min_age", JsonPrimitive(userPreferenceDTO.minAge))
+                    put("max_age", JsonPrimitive(userPreferenceDTO.maxAge))
+                    put("city", JsonPrimitive(null))
+                    put("country", JsonPrimitive(null))
+                    put("zodiac_sign", JsonPrimitive(null))
+                }
+            )*/
         }
     }
 

@@ -237,6 +237,7 @@ class SuggestionViewModel(
         isClear: Boolean = false,
         onPreferencesSuccess: () -> Unit
     ) {
+        showLoading()
         viewModelScope.launch {
             val userPreferenceDTO =
                 if (!isClear) {
@@ -266,6 +267,7 @@ class SuggestionViewModel(
             )
                 .onSuccess { response, _ ->
                     updateUserPreferences(response)
+                    idleScreen()
                     onPreferencesSuccess()
                 }.onError { error, errorType ->
                     showMessage(

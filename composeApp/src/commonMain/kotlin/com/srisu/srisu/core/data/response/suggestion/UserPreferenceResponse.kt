@@ -17,7 +17,7 @@ data class UserPreferenceResponse(
     @SerialName("min_age")
     val minAge: Int? = null,
     @SerialName("radius_km")
-    val radiusKm: String? = null,
+    val radiusKm: Int? = null,
     @SerialName("zodiac_sign")
     val zodiac_sign: String? = null
 )
