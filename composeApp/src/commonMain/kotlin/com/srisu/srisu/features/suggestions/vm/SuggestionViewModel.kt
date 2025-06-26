@@ -23,6 +23,7 @@ import com.srisu.srisu.utils.Country.getCountryModelFromName
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
+import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -144,8 +145,9 @@ class SuggestionViewModel(
         updateSession(session = session)
     }
 
-    private fun setUserPreferencesData(userPreferences: UserPreferenceResponse?) {
+    private fun setUserPreferencesData() {
         val session = suggestionUIStates.value.session
+        val userPreferences = suggestionUIStates.value.userPreferences
 
         //set min and max age.
         val minAge = userPreferences?.minAge ?: suggestionUIStates.value.minAge
@@ -155,7 +157,6 @@ class SuggestionViewModel(
 
         // set country
         val country = getCountryModelFromName(userPreferences?.country ?: session?.country)
-        AppLogger.log("COUNTRY MODEL = $country")
         updateSelectedCountry(country = country)
 
         //set city
@@ -201,10 +202,12 @@ class SuggestionViewModel(
         viewModelScope.launch {
             suggestionRepository.getUserPreferences().onSuccess { response, _ ->
                 updateUserPreferences(response)
-                setUserPreferencesData(userPreferences = response)
             }.onError { _, _ ->
                 idleScreen()
             }
+
+            setUserPreferencesData()
+
         }
     }
 
@@ -347,13 +350,24 @@ class SuggestionViewModel(
     }
 
     fun getCityList(country: String? = null) {
+
+        if (!isInternetAvailable()) {
+            showNoInternetConnection(isOffline = true)
+            return
+        }
+
         viewModelScope.launch {
-            val cities = suggestionRepository.getCityList(
-                country = country ?: suggestionUIStates.value.session?.country
-            )
-            if (cities?.error == false) {
-                updateCities(cities = cities.data)
+            try {
+                val cities = suggestionRepository.getCityList(
+                    country = country ?: suggestionUIStates.value.session?.country
+                )
+                if (cities?.error == false) {
+                    updateCities(cities = cities.data)
+                }
+            } catch (exception: UnresolvedAddressException) {
+                showNoInternetConnection(isOffline = true)
             }
+
         }
     }
 

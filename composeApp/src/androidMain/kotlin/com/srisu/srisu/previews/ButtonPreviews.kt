@@ -2,10 +2,7 @@ package com.srisu.srisu.previews
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.srisu.srisu.components.ErrorDialog
-import com.srisu.srisu.components.SuccessDialog
-import com.srisu.srisu.features.auth.screens.GlowingRedIcon
-import com.srisu.srisu.features.profile.screen.RequestSentDialog
+import com.srisu.srisu.components.RequestSentDialog
 
 @Composable
 @Preview(showBackground = true)

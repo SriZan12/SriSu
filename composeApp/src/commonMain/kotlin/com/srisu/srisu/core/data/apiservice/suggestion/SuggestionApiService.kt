@@ -16,6 +16,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -26,6 +27,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okio.IOException
 
 class SuggestionApiService(private val httpClient: HttpClient) {
 
@@ -75,16 +77,16 @@ class SuggestionApiService(private val httpClient: HttpClient) {
             setBody(
                 userPreferenceDTO
             )
-           /* setBody(
-                buildJsonObject {
-                    put("user", JsonPrimitive(userPreferenceDTO.user))
-                    put("min_age", JsonPrimitive(userPreferenceDTO.minAge))
-                    put("max_age", JsonPrimitive(userPreferenceDTO.maxAge))
-                    put("city", JsonPrimitive(null))
-                    put("country", JsonPrimitive(null))
-                    put("zodiac_sign", JsonPrimitive(null))
-                }
-            )*/
+            /* setBody(
+                 buildJsonObject {
+                     put("user", JsonPrimitive(userPreferenceDTO.user))
+                     put("min_age", JsonPrimitive(userPreferenceDTO.minAge))
+                     put("max_age", JsonPrimitive(userPreferenceDTO.maxAge))
+                     put("city", JsonPrimitive(null))
+                     put("country", JsonPrimitive(null))
+                     put("zodiac_sign", JsonPrimitive(null))
+                 }
+             )*/
         }
     }
 
