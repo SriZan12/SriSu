@@ -474,9 +474,7 @@ private fun CountryDropDown(
     val flag = getCountryFlagFromAssets(
         countryCode = option?.code ?: ""
     )
-
-    AppLogger.log("OPTION = ${option}")
-
+    
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
