@@ -141,7 +141,6 @@ class SuggestionViewModel(
 
     private fun setSession() {
         val session = SessionUtils().getSession()
-        AppLogger.log("SESSION = ${session}")
         updateSession(session = session)
     }
 
@@ -207,6 +206,7 @@ class SuggestionViewModel(
             }
 
             setUserPreferencesData()
+            getCityList()
 
         }
     }
@@ -356,17 +356,22 @@ class SuggestionViewModel(
             return
         }
 
+        showLoading()
+
+        val countryCity = suggestionUIStates.value.userPreferences?.country ?: country
+        ?: suggestionUIStates.value.session?.country
+
         viewModelScope.launch {
             try {
-                val cities = suggestionRepository.getCityList(
-                    country = country ?: suggestionUIStates.value.session?.country
-                )
+                val cities = suggestionRepository.getCityList(country = countryCity)
                 if (cities?.error == false) {
                     updateCities(cities = cities.data)
                 }
             } catch (exception: UnresolvedAddressException) {
                 showNoInternetConnection(isOffline = true)
             }
+
+            idleScreen()
 
         }
     }

@@ -2,6 +2,7 @@ package com.srisu.srisu.features.profile.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,16 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +51,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,6 +81,7 @@ import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.check_sticker
 import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
+import kotlin.random.Random
 
 @Composable
 fun ProfileScreen(
@@ -258,8 +266,8 @@ fun ProfilePictureCompo(
             )
         } else {
             AsyncImage(
-                model = profileUrl,
-//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+//                model = profileUrl,
+                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -267,6 +275,9 @@ fun ProfilePictureCompo(
                     .height(300.dp)
             )
         }
+
+        AppLogger.log("HAS SENT REQUEST = $hasSentRequest")
+        AppLogger.log("IS REQUEST SENT SUCCESSFULLY = $isRequestSentSuccessfully")
 
         if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
 
@@ -359,24 +370,52 @@ fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?)
                     }
                 }
             }
+
+            /* LazyVerticalGrid(
+                 modifier = Modifier.padding(top = 8.dp).heightIn(min = 150.dp, max = 200.dp),
+                 columns = GridCells.Fixed(3),
+                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
+             ) {
+                 items(interests) { interest ->
+                     val backgroundColor = remember { getRandomPastelColor() }
+                     interest?.let {
+                         if (!interest.name.isNullOrEmpty()) {
+                             InterestChip(label = interest.name, backgroundColor = backgroundColor)
+                         }
+                     }
+                 }
+             }*/
         }
     }
 }
 
 @Composable
-fun InterestChip(label: String) {
+fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
-            .padding(end = 8.dp)
+            .padding(end = 8.dp),
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                .basicMarquee(iterations = 10),
             style = MaterialTheme.typography.labelMedium
         )
     }
+}
+
+fun getRandomPastelColor(): Color {
+    val base = 200 // to ensure soft colors (pastel-ish)
+    val red = base + Random.nextInt(0, 56)
+    val green = base + Random.nextInt(0, 56)
+    val blue = base + Random.nextInt(0, 56)
+    return Color(red, green, blue)
 }
 
 @Preview

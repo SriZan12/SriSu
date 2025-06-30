@@ -103,7 +103,6 @@ private fun Initialization(
 ) {
     LaunchedEffect(Unit) {
         suggestionViewModel.getPreferences()
-        suggestionViewModel.getCityList()
     }
 }
 
@@ -269,6 +268,7 @@ private fun FilterSuggestionCompo(
                 },
                 onOptionSelected = {
                     suggestionViewModel.updateSelectedCountry(it)
+                    suggestionViewModel.updateSelectedCity("")
                     suggestionViewModel.getCityList(it.name?.lowercase())
                 }
             )

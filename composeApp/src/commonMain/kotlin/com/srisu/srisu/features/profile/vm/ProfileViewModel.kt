@@ -53,7 +53,7 @@ class ProfileViewModel(
     }
 
     fun idleScreen() {
-        this._profileUIState.value = this._profileUIState.value.copy(baseUIState = BaseUIState.Idle, isRequestSentSuccessfully = true)
+        this._profileUIState.value = this._profileUIState.value.copy(baseUIState = BaseUIState.Idle)
     }
 
     private fun showNoInternetConnection(isOffline: Boolean) {
@@ -93,19 +93,12 @@ class ProfileViewModel(
                 showSuccessMessage(data = response, message ?: "Request sent successfully")
                 updateIsRequestSent(isRequestSent = true)
             }.onError { error, errorType ->
-                updateIsRequestSent(isRequestSent = false)
                 showErrorMessage(
                     errorType = errorType.name,
                     message = error
                 )
             }
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        AppLogger.log("VM IS CLEARED")
-        //updateIsRequestSent(isRequestSent = false)
     }
 
 

@@ -40,7 +40,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         pageSize: Int
     ): ResultHandler<UserSuggestionResponse?> {
         return httpClient.safeRequest<UserSuggestionResponse?> {
-            url("${BASE_URL}api/auth/user-suggestions/")
+            url("${BASE_URL}api/social/user-suggestions/")
             parameter("page", page)
             parameter("page_size", pageSize)
 
@@ -50,7 +50,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
 
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BASE_URL}api/auth/user-preferences/me/")
+            url("${BASE_URL}api/social/user-preferences/me/")
             contentType(ContentType.Application.Json)
             method = HttpMethod.Get
         }
@@ -58,7 +58,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
 
     suspend fun setUserPreferences(userPreferenceDTO: UserPreferenceDTO): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BASE_URL}api/auth/user-preferences/")
+            url("${BASE_URL}api/social/user-preferences/")
             method = HttpMethod.Post
             setBody(
                 userPreferenceDTO
@@ -71,22 +71,12 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         prefId: Int?
     ): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BASE_URL}api/auth/user-preferences/${prefId}/")
+            url("${BASE_URL}api/social/user-preferences/${prefId}/")
             method = HttpMethod.Put
             contentType(ContentType.Application.Json)
             setBody(
                 userPreferenceDTO
             )
-            /* setBody(
-                 buildJsonObject {
-                     put("user", JsonPrimitive(userPreferenceDTO.user))
-                     put("min_age", JsonPrimitive(userPreferenceDTO.minAge))
-                     put("max_age", JsonPrimitive(userPreferenceDTO.maxAge))
-                     put("city", JsonPrimitive(null))
-                     put("country", JsonPrimitive(null))
-                     put("zodiac_sign", JsonPrimitive(null))
-                 }
-             )*/
         }
     }
 
@@ -100,7 +90,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         connectionRequest["receiver_number"] = receiverNumber
 
         return httpClient.safeRequest<CoupleConnectionResponse?> {
-            url("${BASE_URL}api/chat/connect-couple/")
+            url("${BASE_URL}api/social/connect-couple/")
             method = HttpMethod.Post
             setBody(connectionRequest)
         }
@@ -111,7 +101,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         coupleConnectionDTO: CoupleConnectionDTO
     ): ResultHandler<CoupleConnectionResponse?> {
         return httpClient.safeRequest<CoupleConnectionResponse?> {
-            url("${BASE_URL}api/chat/connect-couple/${connectionId}/")
+            url("${BASE_URL}api/social/connect-couple/${connectionId}/")
             method = HttpMethod.Put
             setBody(coupleConnectionDTO)
         }
@@ -123,7 +113,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
     ): ResultHandler<SingleConnectionResponse?> {
 
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BASE_URL}api/chat/connect-single/${connectionId}/")
+            url("${BASE_URL}api/social/connect-single/${connectionId}/")
             method = HttpMethod.Put
             setBody(singleConnectionDTO)
         }
@@ -134,7 +124,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
     ): ResultHandler<LoveRequestListResponse?> {
 
         return httpClient.safeRequest<LoveRequestListResponse?> {
-            url("${BASE_URL}api/chat/couple-connection/sent-requests/")
+            url("${BASE_URL}api/social/couple-connection/sent-requests/")
             parameter("page_size", pageSize)
             method = HttpMethod.Get
         }
@@ -145,7 +135,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
     ): ResultHandler<LoveRequestListResponse?> {
 
         return httpClient.safeRequest<LoveRequestListResponse?> {
-            url("${BASE_URL}api/chat/couple-connection/received-requests/")
+            url("${BASE_URL}api/social/couple-connection/received-requests/")
             parameter("page_size", pageSize)
             method = HttpMethod.Get
         }

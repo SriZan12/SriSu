@@ -352,18 +352,17 @@ class AuthViewModel(
 
                     saveSession(credentials = credentials, sessionKey = SESSION_KEY)
                     dataStoreRepo.deleteOTPTimeStamp()
+
                     onOtpVerifiedSuccess(
                         isPhoneNumberVerified = response?.user?.isPhoneVerified == true,
                         isProfileCompleted = response?.user?.isProfileComplete == true
                     ) {
                         onGoToHomeScreen()
                     }
-                    updateProgress(isIncrease = true)
+//                    updateProgress(isIncrease = true)
                     idleScreen()
                 }
-                .onError { error, errorType ->
-                    AppLogger.log("ERROR API CALL = ${errorType.name}")
-                    AppLogger.log("ERROR API CALL = ${error.toString()}")
+                .onError { error, _ ->
                     showErrorMessage(error = error.toString())
                 }
         }
@@ -514,8 +513,6 @@ class AuthViewModel(
             screenStack = screenStack
         )
 
-        AppLogger.log("SCREEN STACK = ${this._authUiState.value.screenStack}")
-        AppLogger.log("SCREEN STACK SCREEN ORDER = ${CustomAuthScreen.screenOrder}")
         updateCurrentScreen()
     }
 
@@ -531,7 +528,6 @@ class AuthViewModel(
                 ?: CustomAuthScreen.SelectGenderScreen
         )
 
-        AppLogger.log("FIRST SCREEN = ${this._authUiState.value.screenStack.firstOrNull()}")
 
     }
 
@@ -554,7 +550,6 @@ class AuthViewModel(
             removeCurrentScreen()
             updateCurrentScreen()
             updateProgress(isIncrease = isIncrease)
-            AppLogger.log("current screen order = ${CustomAuthScreen.screenOrder}")
         }
 
     }
