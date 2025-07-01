@@ -24,6 +24,8 @@ import com.srisu.srisu.utils.Constants.OTP_WAITING_TIME
 import com.srisu.srisu.utils.Constants.PHONE_NUMBER_VERIFICATION_PROGRESS
 import com.srisu.srisu.utils.Constants.SESSION_KEY
 import com.srisu.srisu.utils.Constants.TOTAL_PROGRESS
+import com.srisu.srisu.utils.Country.getCountryModelFromName
+import com.srisu.srisu.utils.Country.getCountryModelFromPrefix
 import com.srisu.srisu.utils.DateTimeUtils.calculateAge
 import com.srisu.srisu.utils.DateTimeUtils.getDayAndMonthIndividually
 import com.srisu.srisu.utils.FileManager
@@ -239,8 +241,9 @@ class AuthViewModel(
                 fullName = this@AuthViewModel._authUiState.value.fullName,
                 dob = this@AuthViewModel._authUiState.value.dob,
                 gender = this@AuthViewModel._authUiState.value.gender.name,
-                phoneNumber = "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}"
-            )
+                phoneNumber = "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}",
+
+                )
 
             val session = Session(isPhoneVerified = false)
 
@@ -397,8 +400,11 @@ class AuthViewModel(
 
             showLoading()
 
-            val phoneNumber = this@AuthViewModel._authUiState.value.session?.phoneNumber
+            val session = _authUiState.value.session
+            val phoneNumber = session?.phoneNumber
                 ?: "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}"
+            val country = getCountryModelFromPrefix(prefix = _authUiState.value.countryPrefix)
+            val countryPrefix = this@AuthViewModel._authUiState.value.countryPrefix
 
             val profileDTO = ProfileSetupDTO(
                 phoneNumber = phoneNumber,
@@ -407,6 +413,7 @@ class AuthViewModel(
                 username = this@AuthViewModel._authUiState.value.username,
                 gender = this@AuthViewModel._authUiState.value.gender.name.uppercase(),
                 mood = "HAPPY",
+                country = country?.name,
                 profilePhoto = this@AuthViewModel._authUiState.value.profilePictureUri.toString(),
                 zodiacSign = this@AuthViewModel._authUiState.value.zodiacSign?.sign?.uppercase(),
             )
@@ -438,8 +445,6 @@ class AuthViewModel(
                     showSuccessMessage(message = "")
                 }
                 .onError { error, errorType ->
-                    AppLogger.log("ERROR API CALL = ${errorType.name}")
-                    AppLogger.log("ERROR API CALL = ${error.toString()}")
                     showErrorMessage(
                         error = error.toString(),
                         errorType = "${errorType.name} ERROR"

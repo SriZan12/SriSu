@@ -27,4 +27,8 @@ object Country {
         return getAllCountriesFromJson()?.find { it.name == country }
     }
 
+    fun getCountryModelFromPrefix(prefix: String?): CountryModel? {
+        return getAllCountriesFromJson()?.find { it.prefix == prefix }
+    }
+
 }
