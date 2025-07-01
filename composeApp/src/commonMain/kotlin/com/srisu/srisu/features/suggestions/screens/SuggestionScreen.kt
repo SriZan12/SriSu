@@ -66,6 +66,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.cross_love
@@ -126,7 +127,7 @@ private fun Initialization(
     suggestionViewModel: SuggestionViewModel
 ) {
     LaunchedEffect(Unit) {
-        suggestionViewModel.getUserSuggestions()
+//        suggestionViewModel.getUserSuggestions()
     }
 }
 

@@ -23,9 +23,11 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import io.ktor.util.network.UnresolvedAddressException
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * This VM will be used by both SuggestionScreen and FilterSuggestionScreen
@@ -48,7 +50,9 @@ class SuggestionViewModel(
     val suggestionUIStates = _suggestionUIStates.asStateFlow()
 
     init {
+        AppLogger.log("SUGGESTION VIEW MODEL INITIALIZED")
         setSession()
+        getUserSuggestions()
     }
 
     private fun success(message: String = "") {
@@ -61,9 +65,19 @@ class SuggestionViewModel(
             _suggestionUIStates.value.copy(baseUIState = BaseUIState.Loading)
     }
 
-    private fun showMessage(errorType: String, message: String) {
-        _suggestionUIStates.value =
-            _suggestionUIStates.value.copy(
+    private fun <T> showSuccessMessage(data: T? = null, message: String) {
+        this._suggestionUIStates.value =
+            this._suggestionUIStates.value.copy(
+                baseUIState = BaseUIState.Success(
+                    data = data,
+                    message = message
+                )
+            )
+    }
+
+    private fun showErrorMessage(errorType: String?, message: String?) {
+        this._suggestionUIStates.value =
+            this._suggestionUIStates.value.copy(
                 baseUIState = BaseUIState.Error(
                     errorType = errorType,
                     message = message
@@ -167,6 +181,13 @@ class SuggestionViewModel(
         updateSelectedZodiac(zodiac = zodiac)
     }
 
+    fun setSuggestionProfileData(suggestionProfileData: String?) {
+        val profileData =
+            suggestionProfileData?.let { Json.decodeFromString<UserSuggestionResponse.Result?>(it) }
+        _suggestionUIStates.value =
+            _suggestionUIStates.value.copy(suggestionProfileData = profileData)
+    }
+
 
     fun getUserSuggestions() {
 
@@ -184,6 +205,7 @@ class SuggestionViewModel(
                     resultHandler.onSuccess { response, _ ->
                         items = response?.results
                         success()
+                        idleScreen()
                     }.onError { error, errorType ->
                         idleScreen()
                         throw Exception("API Error: $error, Type: $errorType")
@@ -226,7 +248,7 @@ class SuggestionViewModel(
                     updateUserPreferences(userPreferenceResponse = response)
                     onPreferencesSuccess()
                 }.onError { error, errorType ->
-                    showMessage(
+                    showErrorMessage(
                         errorType = errorType.name.uppercase(),
                         message = error.toString()
                     )
@@ -272,13 +294,39 @@ class SuggestionViewModel(
                     idleScreen()
                     onPreferencesSuccess()
                 }.onError { error, errorType ->
-                    showMessage(
+                    showErrorMessage(
                         errorType = errorType.name.uppercase(),
                         message = error.toString()
                     )
                 }
 
         }
+    }
+
+    fun sendSingleConnectionRequest() {
+
+        showLoading()
+
+        viewModelScope.launch {
+            val myPhoneNumber = SessionUtils().getPhoneNumber()
+            val receiverNumber = suggestionUIStates.value.suggestionProfileData?.phoneNumber
+
+            suggestionRepository.sendSingleConnectionRequest(
+                senderNumber = myPhoneNumber,
+                receiverNumber = receiverNumber
+            ).onSuccess { response, message ->
+                showSuccessMessage(
+                    data = response,
+                    message = message ?: "Request sent successfully"
+                )
+            }.onError { error, errorType ->
+                showErrorMessage(
+                    errorType = errorType.name,
+                    message = error
+                )
+            }
+        }
+
     }
 
 

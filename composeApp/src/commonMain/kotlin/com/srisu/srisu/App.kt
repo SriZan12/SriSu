@@ -10,6 +10,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration
+import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.AuthNavigation
 import com.srisu.srisu.navigation.HomeNavigation
 import com.srisu.srisu.navigation.Route
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 @Preview
@@ -62,6 +64,7 @@ private fun checkSession(session: SessionStorage): Session? {
 private fun NavHostController(session: Session?) {
     val navController = rememberNavController()
     val startDestination = startDestination(session = session)
+    val suggestionViewModel = koinViewModel<SuggestionViewModel>()
 
     NavHost(
         navController = navController,
@@ -83,7 +86,7 @@ private fun NavHostController(session: Session?) {
     ) {
         //Nav graphs
         authGraph(navController = navController)
-        homeGraph(navController = navController)
+        homeGraph(navController = navController, suggestionViewModel = suggestionViewModel)
     }
 }
 

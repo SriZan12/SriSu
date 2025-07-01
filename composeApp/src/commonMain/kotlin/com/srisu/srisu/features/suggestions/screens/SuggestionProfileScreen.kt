@@ -77,19 +77,18 @@ fun SuggestionProfileScreen(
         mutableStateOf(false)
     }
 
-    Init(profileViewModel = suggestionViewModel, userProfileData = userProfileData)
+    Init(suggestionViewModel = suggestionViewModel, suggestionProfileData = userProfileData)
 
     HandleUiStates(
-        profileViewModel = suggestionViewModel,
-        profileUIStates = suggestionUIState
+        suggestionViewModel = suggestionViewModel,
+        suggestionUIState = suggestionUIState
     )
 
     ProfilePictureContent(
         suggestionUIState = suggestionUIState,
         shouldShowRequestButton = shouldShowRequestButton,
         onSendRequest = {
-            AppLogger.log("ON SEND REQUEST")
-//            suggestionViewModel.sendSingleConnectionRequest()
+            suggestionViewModel.sendSingleConnectionRequest()
         }
     )
 
@@ -97,45 +96,47 @@ fun SuggestionProfileScreen(
 
 @Composable
 private fun Init(
-    profileViewModel: SuggestionViewModel,
-    userProfileData: String?
+    suggestionViewModel: SuggestionViewModel,
+    suggestionProfileData: String?
 ) {
     LaunchedEffect(
         key1 = Unit
     ) {
-//        profileViewModel.updateUserProfileData(userProfileData = userProfileData)
+        suggestionViewModel.setSuggestionProfileData(suggestionProfileData)
     }
 }
 
 @Composable
 private fun HandleUiStates(
-    profileViewModel: SuggestionViewModel,
-    profileUIStates: SuggestionUIStates
+    suggestionViewModel: SuggestionViewModel,
+    suggestionUIState: SuggestionUIStates
 ) {
 
     val isConnected = isInternetAvailable()
     var showBottomSheet by remember { mutableStateOf(!isConnected) }
+    AppLogger.log("BASE UI STATE = ${suggestionUIState.baseUIState}")
 
     LaunchedEffect(isConnected) {
         showBottomSheet = !isConnected
     }
 
-    when (val baseUIState = profileUIStates.baseUIState) {
+    when (val baseUIState = suggestionUIState.baseUIState) {
         is BaseUIState.Error -> {
             ErrorDialog(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
                 onDismiss = {
-                    profileViewModel.idleScreen()
+                    suggestionViewModel.idleScreen()
                 },
             )
         }
 
+
         is BaseUIState.Loading -> {
             LoadingScrim(
                 onDismissRequest = {
-                    profileViewModel.idleScreen()
+                    suggestionViewModel.idleScreen()
                 }
             )
         }
@@ -144,7 +145,7 @@ private fun HandleUiStates(
             RequestSentDialog(
                 successMessage = baseUIState.message,
                 onDismiss = {
-                    profileViewModel.idleScreen()
+                    suggestionViewModel.idleScreen()
                 },
             )
         }
@@ -163,7 +164,7 @@ private fun HandleUiStates(
             show = showBottomSheet,
             onDismiss = {
                 showBottomSheet = false
-                profileViewModel.idleScreen()
+                suggestionViewModel.idleScreen()
             }
         )
     }

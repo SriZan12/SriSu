@@ -48,6 +48,22 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         }
     }
 
+    suspend fun sendSingleConnectionRequest(
+        senderNumber: String?,
+        receiverNumber: String?
+    ): ResultHandler<SingleConnectionResponse?> {
+
+        val connectionRequest: HashMap<String, String> = HashMap()
+        connectionRequest["sender_number"] = senderNumber ?: ""
+        connectionRequest["receiver_number"] = receiverNumber ?: ""
+
+        return httpClient.safeRequest<SingleConnectionResponse?> {
+            url("${BASE_URL}api/social/connect-single/")
+            method = HttpMethod.Post
+            setBody(connectionRequest)
+        }
+    }
+
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
             url("${BASE_URL}api/social/user-preferences/me/")

@@ -1,11 +1,11 @@
 package com.srisu.srisu.navigation
 
 import SuggestionProfileScreen
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
@@ -31,22 +31,17 @@ sealed class HomeNavigation : Route {
     data object Filter : HomeNavigation()
 }
 
-@Composable
-fun koinSuggestionViewModelScoped(navController: NavController): SuggestionViewModel {
-    val parentEntry = remember { navController.getBackStackEntry("home") }
-    return koinViewModel(viewModelStoreOwner = parentEntry)
-}
-
-
-fun NavGraphBuilder.homeGraph(navController: NavController) {
+fun NavGraphBuilder.homeGraph(
+    navController: NavController,
+    suggestionViewModel: SuggestionViewModel
+) {
     composable<HomeNavigation.Home> { _ ->
         HomeScreen()
     }
 
     composable<HomeNavigation.Suggestions> {
-        val viewModel = koinSuggestionViewModelScoped(navController)
         SuggestionScreen(
-            suggestionViewModel = viewModel,
+            suggestionViewModel = suggestionViewModel,
             navigateFilterScreen = { navController.navigate(HomeNavigation.Filter) },
             navigateProfileScreen = { suggestionProfileData ->
                 navController.navigate(HomeNavigation.SuggestionProfile(suggestionProfileData = suggestionProfileData))
@@ -55,11 +50,10 @@ fun NavGraphBuilder.homeGraph(navController: NavController) {
     }
 
     composable<HomeNavigation.SuggestionProfile> { backStackEntry ->
-        val viewModel = koinSuggestionViewModelScoped(navController)
-        val userProfileData = backStackEntry.arguments?.getString("userProfileData")
+        val userProfileData = backStackEntry.arguments?.getString("suggestionProfileData")
         SuggestionProfileScreen(
+            suggestionViewModel = suggestionViewModel,
             userProfileData = userProfileData,
-            suggestionViewModel = viewModel
         )
     }
 
@@ -72,6 +66,8 @@ fun NavGraphBuilder.homeGraph(navController: NavController) {
         )
     }
 
+
+
     composable<HomeNavigation.Profile> { backStackEntry ->
         val userProfileData = backStackEntry.arguments?.getString("userProfileData")
         ProfileScreen(userProfileData = userProfileData)
@@ -79,3 +75,4 @@ fun NavGraphBuilder.homeGraph(navController: NavController) {
 
 
 }
+

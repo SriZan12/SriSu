@@ -59,6 +59,17 @@ class SuggestionRepository(
         return suggestionApiService.getUserSuggestions(pageSize = pageSize, page = page)
     }
 
+    @Throws(Exception::class)
+    suspend fun sendSingleConnectionRequest(
+        senderNumber: String?,
+        receiverNumber: String?
+    ): ResultHandler<SingleConnectionResponse?> {
+        return suggestionApiService.sendSingleConnectionRequest(
+            senderNumber = senderNumber,
+            receiverNumber = receiverNumber
+        )
+    }
+
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return suggestionApiService.getUserPreferences()
     }
