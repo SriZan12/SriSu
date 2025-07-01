@@ -260,10 +260,7 @@ fun ProfilePictureCompo(
             )
         }
 
-        AppLogger.log("HAS SENT REQUEST = $hasSentRequest")
-        AppLogger.log("IS REQUEST SENT SUCCESSFULLY = $isRequestSentSuccessfully")
-
-        if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
+        if (hasSentRequest == false) {
 
             IconButton(
                 onClick = {

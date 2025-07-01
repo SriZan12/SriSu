@@ -25,7 +25,7 @@ data class UserSuggestionResponse(
         @SerialName("country")
         val country: String? = null,
         @SerialName("crushed")
-        val crushed: Boolean? = null,
+        var crushed: Boolean? = null,
         @SerialName("dob")
         val dob: String? = null,
         @SerialName("full_name")

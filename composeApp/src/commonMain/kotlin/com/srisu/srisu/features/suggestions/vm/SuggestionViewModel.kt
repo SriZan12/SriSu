@@ -188,10 +188,19 @@ class SuggestionViewModel(
             _suggestionUIStates.value.copy(suggestionProfileData = profileData)
     }
 
+    fun updateSuggestionProfileData(
+        suggestionProfileData: UserSuggestionResponse.Result?
+    ) {
+        _suggestionUIStates.value =
+            _suggestionUIStates.value.copy(suggestionProfileData = suggestionProfileData)
+    }
 
-    fun getUserSuggestions() {
 
-        showLoading()
+    fun getUserSuggestions(showLoading: Boolean = true) {
+
+        if (showLoading) {
+            showLoading()
+        }
 
         val pagerFlow = Pager(
             config = PagingConfig(pageSize = 20, prefetchDistance = 15, enablePlaceholders = false),
@@ -319,6 +328,11 @@ class SuggestionViewModel(
                     data = response,
                     message = message ?: "Request sent successfully"
                 )
+                val suggestionProfileData = suggestionUIStates.value.suggestionProfileData.apply {
+                    this?.crushed = true
+                }
+                updateSuggestionProfileData(suggestionProfileData = suggestionProfileData)
+                getUserSuggestions()
             }.onError { error, errorType ->
                 showErrorMessage(
                     errorType = errorType.name,
