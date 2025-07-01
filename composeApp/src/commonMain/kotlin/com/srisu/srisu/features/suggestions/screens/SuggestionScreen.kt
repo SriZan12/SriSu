@@ -76,7 +76,7 @@ typealias UserProfileData = String
 @Preview
 @Composable
 fun SuggestionScreen(
-    suggestionViewModel: SuggestionViewModel = koinViewModel<SuggestionViewModel>(),
+    suggestionViewModel: SuggestionViewModel,
     navigateProfileScreen: (UserProfileData) -> Unit,
     navigateFilterScreen: () -> Unit
 ) {

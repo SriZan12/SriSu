@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration

@@ -17,6 +17,8 @@ data class SuggestionUIStates(
     val session: Session? = null,
     val baseUIState: BaseUIState = BaseUIState.Idle,
 
+    val suggestionProfileData: UserSuggestionResponse.Result? = null,
+
     // Used in Suggestion Filter UI
     val cities: List<String?>? = null,
     val selectedCity: String? = "Select a city",

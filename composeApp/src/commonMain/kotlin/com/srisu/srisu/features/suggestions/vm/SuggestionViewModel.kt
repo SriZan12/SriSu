@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import com.srisu.srisu.App
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
