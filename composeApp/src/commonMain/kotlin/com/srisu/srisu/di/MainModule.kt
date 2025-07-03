@@ -14,7 +14,7 @@ val mainModule = module {
         )
     }
 
-    single {
+    viewModel {
         SuggestionViewModel(
             suggestionRepository = get(),
             connectivityObserver = get(),

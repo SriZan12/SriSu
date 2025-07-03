@@ -144,6 +144,22 @@ class SuggestionViewModel(
             _suggestionUIStates.value.copy(userPreferences = userPreferenceResponse)
     }
 
+    private fun addRequestedUsers(userId: Int?) {
+        if (userId != null) {
+            _suggestionUIStates.value.requestedUsers.add(userId)
+        }
+    }
+
+    fun isRequested() {
+        val userId = _suggestionUIStates.value.suggestionProfileData?.id
+        val isUserRequested = _suggestionUIStates.value.requestedUsers.contains(userId)
+
+        _suggestionUIStates.value = _suggestionUIStates.value.copy(
+            isRequested = isUserRequested
+        )
+    }
+
+
     fun clearFilters() {
         updateMinAge(age = MIN_AGE)
         updateMaxAge(age = MAX_AGE)
@@ -183,12 +199,18 @@ class SuggestionViewModel(
 
     fun setSuggestionProfileData(suggestionProfileData: String?) {
         val profileData =
-            suggestionProfileData?.let { Json.decodeFromString<UserSuggestionResponse.Result?>(it) }
+            suggestionProfileData?.let {
+                Json.decodeFromString<UserSuggestionResponse.Result?>(
+                    it
+                )
+            }
         _suggestionUIStates.value =
             _suggestionUIStates.value.copy(suggestionProfileData = profileData)
+
+        isRequested()
     }
 
-    fun updateSuggestionProfileData(
+    private fun updateSuggestionProfileData(
         suggestionProfileData: UserSuggestionResponse.Result?
     ) {
         _suggestionUIStates.value =
@@ -196,14 +218,18 @@ class SuggestionViewModel(
     }
 
 
-    fun getUserSuggestions(showLoading: Boolean = true) {
+    fun getUserSuggestions() {
 
-        if (showLoading) {
-            showLoading()
-        }
+        showLoading()
+
+        AppLogger.log("INSIDE SUGGESTION API CALL")
 
         val pagerFlow = Pager(
-            config = PagingConfig(pageSize = 20, prefetchDistance = 15, enablePlaceholders = false),
+            config = PagingConfig(
+                pageSize = 20,
+                prefetchDistance = 20,
+                enablePlaceholders = false
+            ),
             pagingSourceFactory = {
                 BasePagingSource { page ->
                     val resultHandler =
@@ -213,7 +239,6 @@ class SuggestionViewModel(
 
                     resultHandler.onSuccess { response, _ ->
                         items = response?.results
-                        success()
                         idleScreen()
                     }.onError { error, errorType ->
                         idleScreen()
@@ -324,15 +349,18 @@ class SuggestionViewModel(
                 senderNumber = myPhoneNumber,
                 receiverNumber = receiverNumber
             ).onSuccess { response, message ->
+
+                addRequestedUsers(userId = suggestionUIStates.value.suggestionProfileData?.id)
+
                 showSuccessMessage(
                     data = response,
                     message = message ?: "Request sent successfully"
                 )
-                val suggestionProfileData = suggestionUIStates.value.suggestionProfileData.apply {
-                    this?.crushed = true
-                }
+                val suggestionProfileData =
+                    suggestionUIStates.value.suggestionProfileData.apply {
+                        this?.crushed = true
+                    }
                 updateSuggestionProfileData(suggestionProfileData = suggestionProfileData)
-                getUserSuggestions()
             }.onError { error, errorType ->
                 showErrorMessage(
                     errorType = errorType.name,
@@ -410,14 +438,16 @@ class SuggestionViewModel(
         }
     }
 
-    fun getCityList(country: String? = null) {
+    fun getCityList(country: String? = null, showLoading: Boolean = false) {
 
         if (!isInternetAvailable()) {
             showNoInternetConnection(isOffline = true)
             return
         }
 
-        showLoading()
+        if (showLoading) {
+            showLoading()
+        }
 
         val countryCity = suggestionUIStates.value.userPreferences?.country ?: country
         ?: suggestionUIStates.value.session?.country
@@ -428,11 +458,11 @@ class SuggestionViewModel(
                 if (cities?.error == false) {
                     updateCities(cities = cities.data)
                 }
+                idleScreen()
             } catch (exception: UnresolvedAddressException) {
                 showNoInternetConnection(isOffline = true)
             }
 
-            idleScreen()
 
         }
     }

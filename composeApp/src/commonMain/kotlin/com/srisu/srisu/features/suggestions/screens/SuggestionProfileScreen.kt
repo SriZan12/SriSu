@@ -1,3 +1,11 @@
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -39,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +75,7 @@ import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
 import kotlin.random.Random
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun SuggestionProfileScreen(
     userProfileData: String?,
@@ -84,13 +94,21 @@ fun SuggestionProfileScreen(
         suggestionUIState = suggestionUIState
     )
 
-    ProfilePictureContent(
-        suggestionUIState = suggestionUIState,
-        shouldShowRequestButton = shouldShowRequestButton,
-        onSendRequest = {
-            suggestionViewModel.sendSingleConnectionRequest()
+    AnimatedContent(
+        targetState = true,
+        transitionSpec = {
+            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
         }
-    )
+    ) {
+        ProfilePictureContent(
+            suggestionUIState = suggestionUIState,
+            shouldShowRequestButton = shouldShowRequestButton,
+            onSendRequest = {
+                suggestionViewModel.sendSingleConnectionRequest()
+            }
+        )
+    }
+
 
 }
 
@@ -170,6 +188,7 @@ private fun HandleUiStates(
     }
 }
 
+
 @Composable
 private fun ProfilePictureContent(
     suggestionUIState: SuggestionUIStates,
@@ -181,6 +200,11 @@ private fun ProfilePictureContent(
 
     Column(
         modifier = Modifier
+            .graphicsLayer {
+                scaleX = 1f
+                scaleY = 1f
+            }
+            .animateContentSize()
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .verticalScroll(rememberScrollState())
@@ -189,7 +213,7 @@ private fun ProfilePictureContent(
             profileUrl = userProfileData?.profilePhoto,
             hasSentRequest = userProfileData?.crushed,
             shouldShowRequestButton = shouldShowRequestButton,
-            isRequestSentSuccessfully = false,
+            isRequestSentSuccessfully = suggestionUIState.isRequested,
             onSendRequest = {
                 onSendRequest()
             }
@@ -235,7 +259,7 @@ fun ProfilePictureCompo(
     profileUrl: String? = null,
     hasSentRequest: Boolean? = false,
     shouldShowRequestButton: Boolean,
-    isRequestSentSuccessfully: Boolean?,
+    isRequestSentSuccessfully: Boolean,
     onSendRequest: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
@@ -260,7 +284,7 @@ fun ProfilePictureCompo(
             )
         }
 
-        if (hasSentRequest == false) {
+        if (hasSentRequest == false && !isRequestSentSuccessfully) {
 
             IconButton(
                 onClick = {

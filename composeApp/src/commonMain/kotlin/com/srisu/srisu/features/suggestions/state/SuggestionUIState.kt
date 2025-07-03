@@ -18,6 +18,8 @@ data class SuggestionUIStates(
     val baseUIState: BaseUIState = BaseUIState.Idle,
 
     val suggestionProfileData: UserSuggestionResponse.Result? = null,
+    val requestedUsers: HashSet<Int> = hashSetOf(),
+    val isRequested: Boolean = false,
 
     // Used in Suggestion Filter UI
     val cities: List<String?>? = null,

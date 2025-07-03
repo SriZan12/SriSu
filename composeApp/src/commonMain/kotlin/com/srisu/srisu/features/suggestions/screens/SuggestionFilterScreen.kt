@@ -43,7 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -72,10 +74,13 @@ import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
 
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun FilterSuggestionScreen(
-    suggestionViewModel: SuggestionViewModel = koinViewModel<SuggestionViewModel>(),
-    onNavigateBack: () -> Unit
+    suggestionViewModel: SuggestionViewModel,
+    onNavigateBack: () -> Unit,
+    onClearFilter: () -> Unit,
+    onFilterApplied: () -> Unit
 ) {
 
     val suggestionUIStates by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
@@ -92,9 +97,15 @@ fun FilterSuggestionScreen(
     SuggestionFilterContent(
         suggestionViewModel = suggestionViewModel,
         suggestionUIStates = suggestionUIStates,
-        onNavigateBack = onNavigateBack
+        onNavigateBack = onNavigateBack,
+        onClearFilter = onClearFilter,
+        onFilterApplied = onFilterApplied
     )
 
+    BackHandler(true) {
+        AppLogger.log("FROM BACK HANDLER")
+        onNavigateBack()
+    }
 }
 
 @Composable
@@ -167,7 +178,9 @@ private fun HandleUiStates(
 private fun SuggestionFilterContent(
     suggestionViewModel: SuggestionViewModel,
     suggestionUIStates: SuggestionUIStates,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onClearFilter: () -> Unit,
+    onFilterApplied: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -205,11 +218,11 @@ private fun SuggestionFilterContent(
                 onClick = {
                     if (suggestionUIStates.userPreferences == null) {
                         suggestionViewModel.setUserPreferences {
-                            onNavigateBack()
+                            onFilterApplied()
                         }
                     } else {
                         suggestionViewModel.updateUserPreferences {
-                            onNavigateBack()
+                            onFilterApplied()
                         }
                     }
                 }
@@ -225,7 +238,7 @@ private fun SuggestionFilterContent(
             ) {
                 suggestionViewModel.clearFilters()
                 suggestionViewModel.updateUserPreferences(isClear = true) {
-                    onNavigateBack()
+                    onClearFilter()
                 }
             }
         }
@@ -269,7 +282,10 @@ private fun FilterSuggestionCompo(
                 onOptionSelected = {
                     suggestionViewModel.updateSelectedCountry(it)
                     suggestionViewModel.updateSelectedCity("")
-                    suggestionViewModel.getCityList(it.name?.lowercase())
+                    suggestionViewModel.getCityList(
+                        country = it.name?.lowercase(),
+                        showLoading = true
+                    )
                 }
             )
 
@@ -474,7 +490,7 @@ private fun CountryDropDown(
     val flag = getCountryFlagFromAssets(
         countryCode = option?.code ?: ""
     )
-    
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),

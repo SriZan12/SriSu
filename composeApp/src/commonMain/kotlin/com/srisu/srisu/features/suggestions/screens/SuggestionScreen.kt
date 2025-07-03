@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.suggestions.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -44,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,8 +80,10 @@ typealias UserProfileData = String
 @Composable
 fun SuggestionScreen(
     suggestionViewModel: SuggestionViewModel,
+    filterApplied: Boolean,
+    filterCleared: Boolean,
     navigateProfileScreen: (UserProfileData) -> Unit,
-    navigateFilterScreen: () -> Unit
+    navigateFilterScreen: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -100,7 +104,11 @@ fun SuggestionScreen(
                 }
             )
 
-            Initialization(suggestionViewModel = suggestionViewModel)
+            Initialization(
+                suggestionViewModel = suggestionViewModel,
+                filterApplied = filterApplied,
+                filterCleared = filterCleared
+            )
 
             HandleUiStates(
                 authViewModel = suggestionViewModel,
@@ -124,10 +132,14 @@ fun SuggestionScreen(
 
 @Composable
 private fun Initialization(
-    suggestionViewModel: SuggestionViewModel
+    suggestionViewModel: SuggestionViewModel,
+    filterApplied: Boolean,
+    filterCleared: Boolean,
 ) {
     LaunchedEffect(Unit) {
-//        suggestionViewModel.getUserSuggestions()
+        if (filterCleared || filterApplied) {
+            suggestionViewModel.getUserSuggestions()
+        }
     }
 }
 
@@ -226,7 +238,7 @@ private fun SuggestionContent(
     suggestionUIState.suggestions?.let { suggestionsFlow ->
         val suggestions = suggestionsFlow.collectAsLazyPagingItems()
 
-        if (suggestions.itemCount == 0) {
+        if (suggestions.itemCount == 0 && suggestionUIState.baseUIState != BaseUIState.Loading) {
             NoSuggestionComp {
                 onRetry()
             }
@@ -293,7 +305,11 @@ private fun SuggestionCardCompo(
     onClick: (UserSuggestionResponse.Result?) -> Unit
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer {
+            scaleX = 1f
+            scaleY = 1f
+        }
+            .animateContentSize(),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = {

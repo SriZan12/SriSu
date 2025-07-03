@@ -95,6 +95,9 @@ kotlin {
             //shimmer
             implementation(libs.accompanist.placeholder.material3)
 
+            // ui-backhandler
+            implementation(libs.ui.backhandler)
+
 
             //paging
             implementation (libs.androidx.paging.runtime)
