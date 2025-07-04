@@ -1,5 +1,8 @@
 package com.srisu.srisu.features.suggestions.screens
 
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -76,12 +79,15 @@ import srisu.composeapp.generated.resources.filter_icon
 
 typealias UserProfileData = String
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Preview
 @Composable
 fun SuggestionScreen(
     suggestionViewModel: SuggestionViewModel,
     filterApplied: Boolean,
     filterCleared: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     navigateProfileScreen: (UserProfileData) -> Unit,
     navigateFilterScreen: () -> Unit,
 ) {
@@ -117,6 +123,8 @@ fun SuggestionScreen(
 
             SuggestionContent(
                 suggestionUIState = suggestionUIState,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedContentScope = animatedContentScope,
                 onRetry = {
                     suggestionViewModel.getUserSuggestions()
                 },
@@ -229,9 +237,12 @@ private fun SuggestionTopBarCompo(
 
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SuggestionContent(
     suggestionUIState: SuggestionUIStates,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     onRetry: () -> Unit,
     onNavigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit
 ) {
@@ -264,6 +275,8 @@ private fun SuggestionContent(
                             fadeInSpec = tween(200),
                             fadeOutSpec = tween(200)
                         ),
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedContentScope = animatedContentScope,
                         height = height,
                         suggestionItem = item
                     ) { userProfileData ->
@@ -297,78 +310,86 @@ private fun SuggestionShimmerCompo() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SuggestionCardCompo(
     modifier: Modifier,
     height: Dp,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     suggestionItem: UserSuggestionResponse.Result?,
     onClick: (UserSuggestionResponse.Result?) -> Unit
 ) {
+
     Card(
-        modifier = modifier.graphicsLayer {
-            scaleX = 1f
-            scaleY = 1f
-        }
-            .animateContentSize(),
+        modifier = modifier,
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = {
             onClick(suggestionItem)
         }
     ) {
+
         Box(modifier = Modifier.fillMaxWidth()) {
-            AsyncImage(
+            with(sharedTransitionScope) {
+
+                AsyncImage(
 //                model = suggestionItem?.profilePhoto,
-                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                contentDescription = "User Image",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(height)
-            )
+                    model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                    contentDescription = "User Image",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
 
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                    .align(Alignment.BottomStart)
-            ) {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = suggestionItem?.username ?: suggestionItem?.fullName ?: "",
-                    textAlign = TextAlign.Start,
-                    style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1
-
+                        .sharedElement(
+                            sharedTransitionScope.rememberSharedContentState(key = "image"),
+                            animatedVisibilityScope = animatedContentScope
+                        )
+                        .fillMaxWidth()
+                        .height(height)
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                /*Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                        .align(Alignment.BottomStart)
                 ) {
-                    val zodiacSignImg =
-                        ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = suggestionItem?.username ?: suggestionItem?.fullName ?: "",
+                        textAlign = TextAlign.Start,
+                        style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
 
-                    zodiacSignImg?.let {
-                        Image(
-                            modifier = Modifier.size(38.dp),
-                            painter = painterResource(zodiacSignImg),
-                            contentDescription = "Zodiac Sign",
-                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val zodiacSignImg =
+                            ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
+
+                        zodiacSignImg?.let {
+                            Image(
+                                modifier = Modifier.size(38.dp),
+                                painter = painterResource(zodiacSignImg),
+                                contentDescription = "Zodiac Sign",
+                            )
+                        }
+
+                        suggestionItem?.dob?.let { dob ->
+                            Text(
+                                text = "${DateTimeUtils.calculateAge(dob)}",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
+                            )
+                        }
+
                     }
 
-                    suggestionItem?.dob?.let { dob ->
-                        Text(
-                            text = "${DateTimeUtils.calculateAge(dob)}",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
-                        )
-                    }
 
-                }
-
-
-            }
+                }*/
 
 
 //            Button(
@@ -388,7 +409,9 @@ private fun SuggestionCardCompo(
 //                )
 //            }
 
+            }
         }
+
     }
 }
 

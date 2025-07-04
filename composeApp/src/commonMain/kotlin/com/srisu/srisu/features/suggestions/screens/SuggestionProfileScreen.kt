@@ -75,7 +75,6 @@ import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
 import kotlin.random.Random
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun SuggestionProfileScreen(
     userProfileData: String?,
