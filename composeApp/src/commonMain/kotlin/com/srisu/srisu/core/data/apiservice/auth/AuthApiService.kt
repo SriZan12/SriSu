@@ -19,8 +19,8 @@ import io.ktor.http.HttpMethod
 class AuthApiService(private val httpClient: HttpClient) {
 
     companion object {
-        const val BASE_URL = "http://192.168.88.175:8000/" // office
-//        const val BASE_URL = "http://192.168.1.69:8000/" // home
+//        const val BASE_URL = "http://192.168.88.175:8000/" // office
+        const val BASE_URL = "http://192.168.1.72:8000/" // home
     }
 
     suspend fun sendOTPRequest(authDTO: AuthDTO): ResultHandler<String?> {

@@ -339,7 +339,6 @@ private fun SuggestionCardCompo(
                     contentDescription = "User Image",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-
                         .sharedElement(
                             sharedTransitionScope.rememberSharedContentState(key = "image"),
                             animatedVisibilityScope = animatedContentScope
@@ -348,7 +347,8 @@ private fun SuggestionCardCompo(
                         .height(height)
                 )
 
-                /*Column(
+
+                Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
                         .align(Alignment.BottomStart)
                 ) {
@@ -389,26 +389,7 @@ private fun SuggestionCardCompo(
                     }
 
 
-                }*/
-
-
-//            Button(
-//                onClick = { },
-//                modifier = Modifier
-//                    .padding(top = 6.dp, bottom = 8.dp)
-//                    .align(Alignment.BottomCenter),
-//                shape = RoundedCornerShape(18.dp),
-//                contentPadding = PaddingValues(horizontal = 28.dp),
-//                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-//            ) {
-//                Icon(
-//                    modifier = Modifier.size(32.dp).align(Alignment.CenterVertically),
-//                    painter = painterResource(Res.drawable.love_icon),
-//                    contentDescription = "Request Button",
-//                    tint = Color.White
-//                )
-//            }
-
+                }
             }
         }
 
