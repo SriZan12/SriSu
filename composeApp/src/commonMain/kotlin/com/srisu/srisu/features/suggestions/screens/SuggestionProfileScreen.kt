@@ -1,5 +1,8 @@
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -75,10 +78,13 @@ import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
 import kotlin.random.Random
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SuggestionProfileScreen(
     userProfileData: String?,
-    suggestionViewModel: SuggestionViewModel
+    suggestionViewModel: SuggestionViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope
 ) {
 
     val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
@@ -102,6 +108,8 @@ fun SuggestionProfileScreen(
         ProfilePictureContent(
             suggestionUIState = suggestionUIState,
             shouldShowRequestButton = shouldShowRequestButton,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedContentScope = animatedContentScope,
             onSendRequest = {
                 suggestionViewModel.sendSingleConnectionRequest()
             }
@@ -188,10 +196,13 @@ private fun HandleUiStates(
 }
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ProfilePictureContent(
     suggestionUIState: SuggestionUIStates,
     onSendRequest: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     shouldShowRequestButton: Boolean
 ) {
 
@@ -199,20 +210,19 @@ private fun ProfilePictureContent(
 
     Column(
         modifier = Modifier
-            .graphicsLayer {
-                scaleX = 1f
-                scaleY = 1f
-            }
             .animateContentSize()
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .verticalScroll(rememberScrollState())
     ) {
         ProfilePictureCompo(
+            id = userProfileData?.id,
             profileUrl = userProfileData?.profilePhoto,
             hasSentRequest = userProfileData?.crushed,
             shouldShowRequestButton = shouldShowRequestButton,
             isRequestSentSuccessfully = suggestionUIState.isRequested,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedContentScope = animatedContentScope,
             onSendRequest = {
                 onSendRequest()
             }
@@ -252,13 +262,17 @@ private fun ProfilePictureContent(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Preview
 @Composable
 fun ProfilePictureCompo(
+    id: Int?,
     profileUrl: String? = null,
     hasSentRequest: Boolean? = false,
     shouldShowRequestButton: Boolean,
     isRequestSentSuccessfully: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     onSendRequest: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
@@ -272,15 +286,21 @@ fun ProfilePictureCompo(
                     .height(300.dp)
             )
         } else {
-            AsyncImage(
+            with(sharedTransitionScope) {
+                AsyncImage(
 //                model = profileUrl,
-                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
+                    model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .sharedElement(
+                            sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
+                            animatedVisibilityScope = animatedContentScope
+                        )
+                )
+            }
         }
 
         if (hasSentRequest == false && !isRequestSentSuccessfully) {

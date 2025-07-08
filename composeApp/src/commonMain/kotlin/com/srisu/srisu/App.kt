@@ -1,5 +1,6 @@
 package com.srisu.srisu
 
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.LinearEasing
@@ -62,9 +63,6 @@ private fun checkSession(session: SessionStorage): Session? {
     return sessionData
 }
 
-private const val FILTER_APPLIED = "filter_applied"
-private const val FILTER_CLEARED = "filter_cleared"
-
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun NavHostController(session: Session?) {
@@ -76,20 +74,20 @@ private fun NavHostController(session: Session?) {
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            popEnterTransition = {
-                fadeIn(
-                    animationSpec = tween(
-                        500, easing = LinearEasing
-                    )
-                )
-            },
-            popExitTransition = {
-                fadeOut(
-                    animationSpec = tween(
-                        500, easing = LinearEasing
-                    )
-                )
-            }
+//            popEnterTransition = {
+//                fadeIn(
+//                    animationSpec = tween(
+//                        500, easing = LinearEasing
+//                    )
+//                )
+//            },
+//            popExitTransition = {
+//                fadeOut(
+//                    animationSpec = tween(
+//                        500, easing = LinearEasing
+//                    )
+//                )
+//            }
         ) {
             // Nav graphs
             authGraph(navController = navController)
@@ -97,7 +95,8 @@ private fun NavHostController(session: Session?) {
             homeGraph(
                 navController = navController,
                 suggestionViewModel = suggestionViewModel,
-                sharedTransitionScope = this@SharedTransitionLayout
+                sharedTransitionScope = this@SharedTransitionLayout,
+
             )
         }
     }

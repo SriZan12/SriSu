@@ -340,7 +340,7 @@ private fun SuggestionCardCompo(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .sharedElement(
-                            sharedTransitionScope.rememberSharedContentState(key = "image"),
+                            sharedTransitionScope.rememberSharedContentState(key = "profile_image-${suggestionItem?.id}"),
                             animatedVisibilityScope = animatedContentScope
                         )
                         .fillMaxWidth()
@@ -348,12 +348,16 @@ private fun SuggestionCardCompo(
                 )
 
 
+
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
                         .align(Alignment.BottomStart)
                 ) {
                     Text(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().sharedElement(
+                            sharedTransitionScope.rememberSharedContentState(key = "username_text-${suggestionItem?.id}"),
+                            animatedVisibilityScope = animatedContentScope
+                        ),
                         text = suggestionItem?.username ?: suggestionItem?.fullName ?: "",
                         textAlign = TextAlign.Start,
                         style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
@@ -371,7 +375,10 @@ private fun SuggestionCardCompo(
 
                         zodiacSignImg?.let {
                             Image(
-                                modifier = Modifier.size(38.dp),
+                                modifier = Modifier.size(38.dp).sharedElement(
+                                    sharedTransitionScope.rememberSharedContentState(key = "zodiac_image-${suggestionItem?.id}"),
+                                    animatedVisibilityScope = animatedContentScope
+                                ),
                                 painter = painterResource(zodiacSignImg),
                                 contentDescription = "Zodiac Sign",
                             )
@@ -379,6 +386,10 @@ private fun SuggestionCardCompo(
 
                         suggestionItem?.dob?.let { dob ->
                             Text(
+                                modifier = Modifier.sharedElement(
+                                        sharedTransitionScope.rememberSharedContentState(key = "dob_text-${suggestionItem?.id}"),
+                                animatedVisibilityScope = animatedContentScope
+                                    ),
                                 text = "${DateTimeUtils.calculateAge(dob)}",
                                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
                                 fontWeight = FontWeight.Medium,

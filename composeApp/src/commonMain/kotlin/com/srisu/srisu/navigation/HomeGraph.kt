@@ -1,6 +1,7 @@
 package com.srisu.srisu.navigation
 
 import SuggestionProfileScreen
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.remember
@@ -73,6 +74,8 @@ fun NavGraphBuilder.homeGraph(
         SuggestionProfileScreen(
             suggestionViewModel = suggestionViewModel,
             userProfileData = userProfileData,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedContentScope = this@composable,
         )
 
     }
