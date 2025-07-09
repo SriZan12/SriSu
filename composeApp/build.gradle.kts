@@ -38,6 +38,9 @@ kotlin {
 //            implementation(libs.koin.android)
 //            implementation(libs.koin.androidx.compose)
             implementation(libs.androidx.foundation.android)
+            implementation (libs.androidx.paging.compose)
+            implementation (libs.androidx.paging.runtime)
+
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -100,8 +103,6 @@ kotlin {
 
 
             //paging
-            implementation (libs.androidx.paging.runtime)
-            implementation (libs.androidx.paging.compose)
             implementation(libs.paging.compose.common)
             implementation(libs.paging.common)
 

@@ -10,6 +10,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.compose.LocalPlatformContext
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
+import coil3.request.crossfade
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
@@ -45,6 +53,7 @@ fun App(
             dynamicColor = dynamicColor
         ) {
             NavHostController(session = checkSession(session = session))
+            InitCoilImageLoader()
 //            SharedElement_PredictiveBack()
         }
     }
@@ -74,20 +83,20 @@ private fun NavHostController(session: Session?) {
         NavHost(
             navController = navController,
             startDestination = startDestination,
-//            popEnterTransition = {
-//                fadeIn(
-//                    animationSpec = tween(
-//                        500, easing = LinearEasing
-//                    )
-//                )
-//            },
-//            popExitTransition = {
-//                fadeOut(
-//                    animationSpec = tween(
-//                        500, easing = LinearEasing
-//                    )
-//                )
-//            }
+            popEnterTransition = {
+                fadeIn(
+                    animationSpec = tween(
+                        500, easing = LinearEasing
+                    )
+                )
+            },
+            popExitTransition = {
+                fadeOut(
+                    animationSpec = tween(
+                        500, easing = LinearEasing
+                    )
+                )
+            }
         ) {
             // Nav graphs
             authGraph(navController = navController)
@@ -97,7 +106,7 @@ private fun NavHostController(session: Session?) {
                 suggestionViewModel = suggestionViewModel,
                 sharedTransitionScope = this@SharedTransitionLayout,
 
-            )
+                )
         }
     }
 }
@@ -109,4 +118,21 @@ private fun startDestination(session: Session?): Route {
 
         else -> AuthNavigation.Auth
     }
+}
+
+@Composable
+private fun InitCoilImageLoader() {
+
+    setSingletonImageLoaderFactory { platformContext ->
+        ImageLoader.Builder(platformContext)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .memoryCache {
+                MemoryCache.Builder() // platformContext needed for max size percent
+                    .maxSizePercent(platformContext, 0.25)
+                    .build()
+            }
+            .crossfade(true)
+            .build()
+    }
+
 }

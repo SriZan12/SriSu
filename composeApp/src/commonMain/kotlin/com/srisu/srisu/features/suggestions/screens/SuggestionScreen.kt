@@ -57,7 +57,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
+import coil3.ImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.decode.BlackholeDecoder
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.OfflineBottomSheetCompo
@@ -310,7 +316,7 @@ private fun SuggestionShimmerCompo() {
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalCoilApi::class)
 @Composable
 private fun SuggestionCardCompo(
     modifier: Modifier,
@@ -331,6 +337,7 @@ private fun SuggestionCardCompo(
     ) {
 
         Box(modifier = Modifier.fillMaxWidth()) {
+
             with(sharedTransitionScope) {
 
                 AsyncImage(
@@ -387,9 +394,9 @@ private fun SuggestionCardCompo(
                         suggestionItem?.dob?.let { dob ->
                             Text(
                                 modifier = Modifier.sharedElement(
-                                        sharedTransitionScope.rememberSharedContentState(key = "dob_text-${suggestionItem?.id}"),
-                                animatedVisibilityScope = animatedContentScope
-                                    ),
+                                    sharedTransitionScope.rememberSharedContentState(key = "dob_text-${suggestionItem?.id}"),
+                                    animatedVisibilityScope = animatedContentScope
+                                ),
                                 text = "${DateTimeUtils.calculateAge(dob)}",
                                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
                                 fontWeight = FontWeight.Medium,
