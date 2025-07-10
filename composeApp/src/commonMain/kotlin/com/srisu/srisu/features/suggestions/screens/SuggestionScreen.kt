@@ -129,6 +129,7 @@ fun SuggestionScreen(
                 authUIStates = suggestionUIState
             )
 
+
             SuggestionContent(
                 suggestionUIState = suggestionUIState,
                 sharedTransitionScope = sharedTransitionScope,
@@ -277,18 +278,6 @@ private fun SuggestionContent(
                     val item = suggestions[index]
 
                     val height = if (index % 2 == 0) 188.dp else 252.dp
-                    val profileUrl =
-                        "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-
-                    val context = LocalPlatformContext.current
-                    val imageLoader = remember { SingletonImageLoader.get(context) }
-                    LaunchedEffect(profileUrl) {
-                        val request = ImageRequest.Builder(context)
-                            .data(profileUrl)
-                            .size(Size.ORIGINAL) // Or specify a target size if you know it
-                            .build()
-                        imageLoader.enqueue(request)
-                    }
 
                     SuggestionCardCompo(
                         modifier = Modifier.animateItem(
@@ -298,7 +287,6 @@ private fun SuggestionContent(
                         sharedTransitionScope = sharedTransitionScope,
                         animatedContentScope = animatedContentScope,
                         height = height,
-                        imageLoader = imageLoader,
                         suggestionItem = item
                     ) { userProfileData ->
                         onNavigateProfileScreen(userProfileData)
@@ -331,14 +319,13 @@ private fun SuggestionShimmerCompo() {
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalCoilApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SuggestionCardCompo(
     modifier: Modifier,
     height: Dp,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    imageLoader: ImageLoader,
     suggestionItem: UserSuggestionResponse.Result?,
     onClick: (UserSuggestionResponse.Result?) -> Unit
 ) {
@@ -354,18 +341,18 @@ private fun SuggestionCardCompo(
 
         Box(modifier = Modifier.fillMaxWidth()) {
 
-            val profileUrl =
-                "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            val profileUrl = suggestionItem?.profilePhoto
+//                "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 
-//            val context = LocalPlatformContext.current
-//            val imageLoader = remember { SingletonImageLoader.get(context) }
-//            LaunchedEffect(profileUrl) {
-//                val request = ImageRequest.Builder(context)
-//                    .data(profileUrl)
-//                    .size(Size.ORIGINAL) // Or specify a target size if you know it
-//                    .build()
-//                imageLoader.enqueue(request)
-//            }
+            val context = LocalPlatformContext.current
+            val imageLoader = remember { SingletonImageLoader.get(context) }
+            LaunchedEffect(profileUrl) {
+                val request = ImageRequest.Builder(context)
+                    .data(profileUrl)
+                    .size(Size.ORIGINAL)
+                    .build()
+                imageLoader.enqueue(request)
+            }
 
             with(sharedTransitionScope) {
 

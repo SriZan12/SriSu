@@ -1,6 +1,5 @@
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
@@ -8,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -50,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,8 +56,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
-import coil3.request.ImageRequest
-import coil3.size.Size
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
@@ -76,7 +71,6 @@ import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
@@ -240,7 +234,7 @@ private fun ProfilePictureContent(
             age = age,
             zodiacSign = userProfileData?.zodiacSign,
             city = userProfileData?.city,
-            country = userProfileData?.country
+            country = userProfileData?.country,
         )
 
         //Interest
@@ -281,36 +275,23 @@ fun ProfilePictureCompo(
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
 
-//        val profileUrl =
-//            "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-
-        val context = LocalPlatformContext.current
-        val imageLoader = remember { SingletonImageLoader.get(context) }
-        LaunchedEffect(profileUrl) {
-            val request = ImageRequest.Builder(context)
-                .data(profileUrl)
-                .size(Size.ORIGINAL) // Or specify a target size if you know it
-                .build()
-            imageLoader.enqueue(request)
-        }
-
         with(sharedTransitionScope) {
-             AsyncImage(
- //                model = profileUrl,
-                 model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                 contentDescription = "Profile Picture",
-                 contentScale = ContentScale.Crop,
-                 imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
-                 placeholder = painterResource(Res.drawable.image_placeholder),
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .height(300.dp)
-                     .sharedElement(
-                         sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
-                         animatedVisibilityScope = animatedContentScope,
-                         renderInOverlayDuringTransition = false
-                     )
-             )
+            AsyncImage(
+                model = profileUrl,
+//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                contentDescription = "Profile Picture",
+                contentScale = ContentScale.Crop,
+                imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
+                placeholder = painterResource(Res.drawable.image_placeholder),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .sharedElement(
+                        sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
+                        animatedVisibilityScope = animatedContentScope,
+                        renderInOverlayDuringTransition = false
+                    )
+            )
 
         }
 
@@ -351,11 +332,14 @@ fun UserInfo(
         modifier = Modifier.padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+
         Text(
+            modifier = Modifier,
             text = name ?: "",
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.headlineSmall
         )
+
 
         Text("(${age})", style = MaterialTheme.typography.titleMedium)
 
@@ -365,6 +349,7 @@ fun UserInfo(
             contentDescription = "zodiac sign",
             modifier = Modifier.size(32.dp)
         )
+
     }
 
     Row(
