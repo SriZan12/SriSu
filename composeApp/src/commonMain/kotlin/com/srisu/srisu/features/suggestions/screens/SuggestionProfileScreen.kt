@@ -56,7 +56,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
@@ -276,32 +280,40 @@ fun ProfilePictureCompo(
     onSendRequest: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
-        if (profileUrl == null) {
-            Image(
-                painter = painterResource(Res.drawable.image_placeholder),
-                contentDescription = "profile placeholder",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
-        } else {
-            with(sharedTransitionScope) {
-                AsyncImage(
-//                model = profileUrl,
-                    model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                    contentDescription = "Profile Picture",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .sharedElement(
-                            sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
-                            animatedVisibilityScope = animatedContentScope
-                        )
-                )
-            }
+
+//        val profileUrl =
+//            "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+
+        val context = LocalPlatformContext.current
+        val imageLoader = remember { SingletonImageLoader.get(context) }
+        LaunchedEffect(profileUrl) {
+            val request = ImageRequest.Builder(context)
+                .data(profileUrl)
+                .size(Size.ORIGINAL) // Or specify a target size if you know it
+                .build()
+            imageLoader.enqueue(request)
         }
+
+        with(sharedTransitionScope) {
+             AsyncImage(
+ //                model = profileUrl,
+                 model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                 contentDescription = "Profile Picture",
+                 contentScale = ContentScale.Crop,
+                 imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
+                 placeholder = painterResource(Res.drawable.image_placeholder),
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .height(300.dp)
+                     .sharedElement(
+                         sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
+                         animatedVisibilityScope = animatedContentScope,
+                         renderInOverlayDuringTransition = false
+                     )
+             )
+
+        }
+
 
         if (hasSentRequest == false && !isRequestSentSuccessfully) {
 

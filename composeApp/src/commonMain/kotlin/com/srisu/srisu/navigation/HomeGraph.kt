@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import coil3.compose.LocalPlatformContext
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
