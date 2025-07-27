@@ -476,7 +476,7 @@ private fun CountryFilterCompo(
 }
 
 @Composable
-private fun CountryDropDown(
+fun CountryDropDown(
     modifier: Modifier,
     visibleLeadingIcon: Boolean = true,
     option: CountryModel? = null,
@@ -563,7 +563,7 @@ private fun CountryDropDown(
 }
 
 @Composable
-fun CityDropDownCompo(
+private fun CityDropDownCompo(
     modifier: Modifier = Modifier,
     selectedCity: String?,
     onCitySelected: (String) -> Unit,

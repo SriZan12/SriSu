@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.getCountryFlagFromAssets
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
@@ -92,6 +91,6 @@ fun CountryCodeDropDown(
             )
         }
     }
-
-
 }
+
+
