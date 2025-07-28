@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -27,14 +26,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.srisu.srisu.components.CityDropdownCompo
-import com.srisu.srisu.components.CountrySelectionBottomSheet
-import com.srisu.srisu.components.FormFieldCompo
+import com.srisu.srisu.components.FormFieldCompoø
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
-import com.srisu.srisu.features.suggestions.screens.CountryDropDown
-import com.srisu.srisu.theme.backgroundGray
-import com.srisu.srisu.utils.CountryModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 
@@ -128,14 +122,10 @@ private fun GeneralInfoCompo(){
         )
 
         var selectedCity by remember { mutableStateOf<String?>(null) }
-
         val cityList = listOf("New York", "Los Angeles", "Chicago", "San Francisco", "Miami")
 
-        CityDropdownCompo(
-            selectedCity = selectedCity,
-            onCitySelected = { selectedCity = it },
-            cityList = cityList
-        )
+
+
 
     }
 }

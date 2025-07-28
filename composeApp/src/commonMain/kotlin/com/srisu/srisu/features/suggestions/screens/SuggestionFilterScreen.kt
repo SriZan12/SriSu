@@ -577,48 +577,13 @@ private fun CityDropDownCompo(
             onClearFilter()
         }
 
-        Card(
+        CityDropDown(
             modifier = modifier,
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            onClick = {
-                expanded = !expanded
-            },
-            border = BorderStroke(1.dp, color = Color.Gray)
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 14.dp, horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val city = if (selectedCity.isNullOrEmpty()) "Select City" else selectedCity
-                    Text(
-                        text = city,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Start
-                    )
-
-                    DropDownIcon(expanded = expanded) {
-                        expanded = !expanded
-                    }
-                }
-
-                CitySelectionBottomSheet(
-                    show = expanded,
-                    onCitySelected = {
-                        onCitySelected(it)
-                        expanded = false
-                    },
-                    onClose = {
-                        expanded = false
-                    },
-                    cityList = cityList
-                )
-            }
+            selectedCity = selectedCity,
+            onCitySelected = onCitySelected,
+            cityList = cityList
+        ){
+            expanded = !expanded
         }
     }
 }
