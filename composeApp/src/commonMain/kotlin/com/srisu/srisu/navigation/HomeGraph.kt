@@ -10,6 +10,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import coil3.compose.LocalPlatformContext
 import com.srisu.srisu.features.home.HomeScreen
+import com.srisu.srisu.features.profile.screen.EditProfileScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
@@ -31,6 +32,9 @@ sealed class HomeNavigation : Route {
 
     @Serializable
     data object Filter : HomeNavigation()
+
+    @Serializable
+    data object EditProfile: HomeNavigation()
 }
 
 private const val FILTER_APPLIED = "filter_applied"
@@ -106,6 +110,10 @@ fun NavGraphBuilder.homeGraph(
     composable<HomeNavigation.Profile> { backStackEntry ->
         val userProfileData = backStackEntry.arguments?.getString("userProfileData")
         ProfileScreen(userProfileData = userProfileData)
+    }
+
+    composable<HomeNavigation.EditProfile> { backStackEntry ->
+        EditProfileScreen()
     }
 
 

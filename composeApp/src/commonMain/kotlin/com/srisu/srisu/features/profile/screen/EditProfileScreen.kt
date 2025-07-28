@@ -2,17 +2,27 @@ package com.srisu.srisu.features.profile.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -28,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.CityDropDown
@@ -41,11 +52,10 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun EditProfileScreen() {
-
+    EditProfileScreenContent()
 }
 
 @Composable
-@Preview
 fun EditProfileScreenContent() {
     Scaffold(
         modifier = Modifier,
@@ -59,12 +69,17 @@ fun EditProfileScreenContent() {
         }
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(all = 16.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(all = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 EditPictureCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
                 GeneralInfoCompo()
+
+                InterestCompo()
             }
         }
     }
@@ -128,7 +143,7 @@ private fun GeneralInfoCompo() {
         )
 
         CountryDropDownCompo(
-            selectedCountry = CountryModel(name = "Nepal", null, null),
+            selectedCountry = CountryModel(name = "Nepal", "977", "+977"),
             onCountrySelected = {}
         )
 
@@ -142,8 +157,7 @@ private fun GeneralInfoCompo() {
                 selectedCity = it
             },
             cityList = cityList,
-
-            )
+        )
 
     }
 }
@@ -168,6 +182,7 @@ private fun CountryDropDownCompo(
         CountryDropDown(
             modifier = Modifier.fillMaxWidth(),
             option = selectedCountry,
+            backgroundColor = MaterialTheme.colorScheme.surface,
             onOptionSelected = {
                 onCountrySelected(it)
             },
@@ -197,18 +212,80 @@ private fun CityDropDownCompo(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
 
-        )
+            )
 
         CityDropDown(
             modifier = modifier,
             selectedCity = selectedCity,
             onCitySelected = onCitySelected,
             cityList = cityList,
-            backgroundColor = Color.White,
+            backgroundColor = MaterialTheme.colorScheme.surface,
             onExpandedChange = {
                 expanded = !expanded
             },
             expanded = expanded
+        )
+    }
+}
+
+@Composable
+private fun InterestCompo() {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+
+        Text(
+            text = "Interest",
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        LazyRow(modifier = Modifier.fillMaxWidth()){
+            items(10){
+                InterestChip(label = "Music")
+            }
+        }
+    }
+}
+
+@Composable
+@Preview
+fun InterestChip(
+    label: String,
+    backgroundColor: Color = Color.LightGray,
+    onRemove: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .padding(end = 8.dp)
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = backgroundColor),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+        ) {
+            Text(
+                text = label,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 32.dp, top = 8.dp, bottom = 8.dp)
+                    .basicMarquee(iterations = 10),
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Remove",
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 8.dp, y = (-8).dp)
+                .size(16.dp)
+                .background(Color.White, shape = CircleShape)
+                .clickable { onRemove() }
+                .padding(2.dp),
+            tint = Color.Black
         )
     }
 }

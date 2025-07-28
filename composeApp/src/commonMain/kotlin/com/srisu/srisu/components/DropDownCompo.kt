@@ -140,6 +140,7 @@ fun CountryDropDown(
     option: CountryModel? = null,
     onOptionSelected: (CountryModel) -> Unit,
     showCountryBottomSheet: Boolean,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
     onShowCountryBottomSheetChange: () -> Unit
 ) {
 
@@ -154,7 +155,7 @@ fun CountryDropDown(
             onShowCountryBottomSheetChange()
         },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            containerColor = backgroundColor
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(
