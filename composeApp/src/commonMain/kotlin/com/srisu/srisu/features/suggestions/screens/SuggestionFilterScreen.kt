@@ -53,8 +53,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.CityDropDown
 import com.srisu.srisu.components.CitySelectionBottomSheet
+import com.srisu.srisu.components.CountryDropDown
 import com.srisu.srisu.components.CountrySelectionBottomSheet
+import com.srisu.srisu.components.DropDownIcon
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
@@ -461,6 +464,7 @@ private fun CountryFilterCompo(
 ) {
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        var showCountryBottomSheet by remember { mutableStateOf(false) }
         FilterTitle(headerTitle = "Country") {
             onClearFilter()
         }
@@ -470,97 +474,15 @@ private fun CountryFilterCompo(
             option = selectedCountry,
             onOptionSelected = {
                 onOptionSelected(it)
-            }
+            },
+            onShowCountryBottomSheetChange = {
+                showCountryBottomSheet = !showCountryBottomSheet
+            },
+            showCountryBottomSheet = showCountryBottomSheet
         )
     }
 }
 
-@Composable
-fun CountryDropDown(
-    modifier: Modifier,
-    visibleLeadingIcon: Boolean = true,
-    option: CountryModel? = null,
-    onOptionSelected: (CountryModel) -> Unit
-
-) {
-    var showCountryBottomSheet by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    val flag = getCountryFlagFromAssets(
-        countryCode = option?.code ?: ""
-    )
-
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        onClick = {
-            showCountryBottomSheet = true
-        },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(
-            1.dp, color = Color.Gray
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier,
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (visibleLeadingIcon) {
-                    if (flag == null) {
-                        Image(
-                            painter = painterResource(Res.drawable.country_flag),
-                            contentDescription = "country_flag",
-                            modifier = Modifier
-                                .size(24.dp)
-                        )
-                    } else {
-                        Image(
-                            bitmap = flag,
-                            contentDescription = "flag",
-                            modifier = Modifier
-                                .size(24.dp)
-                        )
-                    }
-                }
-
-                Text(
-                    modifier = Modifier,
-                    text = option?.name ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Start
-                )
-            }
-
-            DropDownIcon(expanded = showCountryBottomSheet, onClick = {
-                showCountryBottomSheet = true
-            })
-
-
-            CountrySelectionBottomSheet(
-                show = showCountryBottomSheet,
-                onCountrySelected = {
-                    onOptionSelected(it)
-                    showCountryBottomSheet = false
-                },
-                onClose = {
-                    showCountryBottomSheet = false
-                }
-            )
-
-
-        }
-    }
-}
 
 @Composable
 private fun CityDropDownCompo(
@@ -581,10 +503,12 @@ private fun CityDropDownCompo(
             modifier = modifier,
             selectedCity = selectedCity,
             onCitySelected = onCitySelected,
-            cityList = cityList
-        ){
-            expanded = !expanded
-        }
+            cityList = cityList,
+            onExpandedChange = {
+                expanded = !expanded
+            },
+            expanded = expanded
+        )
     }
 }
 
@@ -598,6 +522,7 @@ private fun ZodiacSignCompo(
     var expanded by rememberSaveable {
         mutableStateOf(false)
     }
+
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         FilterTitle(headerTitle = "Zodiac Sign") {
             onClearFilter()
@@ -667,29 +592,4 @@ private fun ZodiacSignCompo(
 }
 
 
-@Composable
-private fun DropDownIcon(
-    expanded: Boolean = false,
-    onClick: () -> Unit
-) {
-    IconButton(
-        modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
-        onClick = {
-            onClick()
-        },
-        colors = IconButtonDefaults.iconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceDim,
-            contentColor = Color.Black
-        ),
-    ) {
 
-        val dropDownIcon =
-            if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown
-
-        Icon(
-            modifier = Modifier.size(24.dp),
-            imageVector = dropDownIcon,
-            contentDescription = "Filter Icon",
-        )
-    }
-}
