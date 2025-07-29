@@ -7,10 +7,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.theme.AppTheme
 
@@ -67,5 +69,28 @@ fun CustomButtonCompo(
         onClick = onClick
     ) {
         Text(text = label, style = textStyle)
+    }
+}
+
+@Composable
+fun PrimaryTextButton(
+    modifier: Modifier,
+    label: String,
+    textStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary),
+    fontWeight: FontWeight = FontWeight.SemiBold,
+    onClick: () -> Unit,
+    ) {
+    TextButton(
+        modifier = modifier,
+        onClick = {
+            onClick()
+        }
+    ) {
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -57,6 +58,8 @@ import coil3.compose.AsyncImage
 import com.srisu.srisu.components.CityDropDown
 import com.srisu.srisu.components.CountryDropDown
 import com.srisu.srisu.components.FormFieldCompo
+import com.srisu.srisu.components.PrimaryButtonCompo
+import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
 import com.srisu.srisu.navigation.Interest
@@ -285,18 +288,16 @@ private fun InterestCompo(
                 fontWeight = FontWeight.SemiBold,
             )
 
-            TextButton(
+            PrimaryTextButton(
+                modifier = Modifier,
+                label = "Edit",
+                textStyle = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary),
+                fontWeight = FontWeight.SemiBold,
                 onClick = {
-                    onEditInterest()
+
                 }
-            ) {
-                Text(
-                    text = "Edit",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            )
+
         }
 
 
@@ -351,7 +352,7 @@ fun GalleryCompo(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
         Text(
             text = "Gallery",
@@ -396,6 +397,18 @@ fun GalleryCompo(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        PrimaryTextButton(
+            modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally),
+            label = "View all",
+            textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary),
+            fontWeight = FontWeight.SemiBold,
+            onClick = {
+
+            }
+        )
     }
 }
 
@@ -429,6 +442,13 @@ fun GalleryAddCard(
                     contentDescription = "Add Image",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
+                )
+
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Add Image",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
                 )
             }
         }
