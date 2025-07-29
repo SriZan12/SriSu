@@ -377,7 +377,7 @@ fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?)
 }
 
 @Composable
-fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
+private fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
     Card(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),

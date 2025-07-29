@@ -7,17 +7,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Card
@@ -26,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -46,17 +59,30 @@ import com.srisu.srisu.components.CountryDropDown
 import com.srisu.srisu.components.FormFieldCompo
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
+import com.srisu.srisu.navigation.Interest
+import com.srisu.srisu.navigation.interestList
 import com.srisu.srisu.utils.CountryModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 
 @Composable
-fun EditProfileScreen() {
-    EditProfileScreenContent()
+fun EditProfileScreen(
+    onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit
+) {
+    EditProfileScreenContent(
+        onNavigateInterestScreen =  { interests, currentInterest ->
+            onNavigateInterestScreen(
+                interests,
+                currentInterest
+            )
+        }
+    )
 }
 
 @Composable
-fun EditProfileScreenContent() {
+fun EditProfileScreenContent(
+    onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit
+) {
     Scaffold(
         modifier = Modifier,
         topBar = {
@@ -70,8 +96,9 @@ fun EditProfileScreenContent() {
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(all = 16.dp)
-                    .verticalScroll(rememberScrollState())
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 EditPictureCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -79,7 +106,16 @@ fun EditProfileScreenContent() {
 
                 GeneralInfoCompo()
 
-                InterestCompo()
+                InterestCompo {
+                    onNavigateInterestScreen(
+                        interestList,
+                        listOf("Football", "Jazz", "Hiking")
+                    )
+                }
+
+                GalleryCompo(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
     }
@@ -90,7 +126,7 @@ fun EditPictureCompo(
     modifier: Modifier
 ) {
     Box(
-        modifier = modifier
+        modifier = modifier.padding(horizontal = 16.dp)
             .size(180.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceDim)
@@ -120,7 +156,10 @@ fun EditPictureCompo(
 
 @Composable
 private fun GeneralInfoCompo() {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         FormFieldCompo(
             label = "Full Name",
             value = TextFieldValue("Srijan Khadka"),
@@ -229,18 +268,45 @@ private fun CityDropDownCompo(
 }
 
 @Composable
-private fun InterestCompo() {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun InterestCompo(
+    onEditInterest: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
 
-        Text(
-            text = "Interest",
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Interest",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
 
-        LazyRow(modifier = Modifier.fillMaxWidth()){
-            items(10){
+            TextButton(
+                onClick = {
+                    onEditInterest()
+                }
+            ) {
+                Text(
+                    text = "Edit",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
+            items(10) {
                 InterestChip(label = "Music")
             }
         }
@@ -248,44 +314,125 @@ private fun InterestCompo() {
 }
 
 @Composable
-@Preview
 fun InterestChip(
     label: String,
-    backgroundColor: Color = Color.LightGray,
-    onRemove: () -> Unit
+    backGroundColor: Color = MaterialTheme.colorScheme.surfaceDim,
+    onChipClick: () -> Unit = {}
 ) {
-    Box(
-        modifier = Modifier
-            .padding(end = 8.dp)
-    ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = backgroundColor),
-            shape = RoundedCornerShape(24.dp),
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-        ) {
-            Text(
-                text = label,
-                maxLines = 1,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .padding(start = 16.dp, end = 32.dp, top = 8.dp, bottom = 8.dp)
-                    .basicMarquee(iterations = 10),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
 
-        Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = "Remove",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 8.dp, y = (-8).dp)
-                .size(16.dp)
-                .background(Color.White, shape = CircleShape)
-                .clickable { onRemove() }
-                .padding(2.dp),
-            tint = Color.Black
+    Card(
+        colors = CardDefaults.cardColors(containerColor = backGroundColor),
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier,
+        onClick = {
+            onChipClick()
+        }
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                .basicMarquee(iterations = 10),
+            style = MaterialTheme.typography.labelMedium
         )
     }
+
 }
+
+
+@Composable
+@Preview
+fun GalleryCompo(
+    modifier: Modifier = Modifier,
+    onAddImageClicked: () -> Unit = {}
+) {
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Gallery",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // First row: 2 large cards
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            repeat(2) {
+                GalleryAddCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    onClick = onAddImageClicked
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            repeat(3) {
+                GalleryAddCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    onClick = onAddImageClicked
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GalleryAddCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(6.dp, shape = RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(color = MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Image",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+

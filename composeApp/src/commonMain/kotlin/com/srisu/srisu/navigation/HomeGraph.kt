@@ -11,11 +11,14 @@ import androidx.navigation.compose.composable
 import coil3.compose.LocalPlatformContext
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
+import com.srisu.srisu.features.profile.screen.InterestScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 sealed class HomeNavigation : Route {
     @Serializable
@@ -34,7 +37,12 @@ sealed class HomeNavigation : Route {
     data object Filter : HomeNavigation()
 
     @Serializable
-    data object EditProfile: HomeNavigation()
+    data object EditProfile : HomeNavigation()
+
+    @Serializable
+    data class InterestScreen(
+        val data: String
+    ) : HomeNavigation()
 }
 
 private const val FILTER_APPLIED = "filter_applied"
@@ -112,8 +120,34 @@ fun NavGraphBuilder.homeGraph(
         ProfileScreen(userProfileData = userProfileData)
     }
 
-    composable<HomeNavigation.EditProfile> { backStackEntry ->
-        EditProfileScreen()
+    composable<HomeNavigation.EditProfile> {
+        EditProfileScreen(
+            onNavigateInterestScreen = { interests, currentInterestStrings ->
+                val data = InterestScreenData(
+                    list = interests,
+                    currentInterests = currentInterestStrings,
+                )
+                navController.navigate(
+                    HomeNavigation.InterestScreen(
+                        data = Json.encodeToString(data)
+                    )
+                )
+            }
+        )
+    }
+
+
+    composable<HomeNavigation.InterestScreen> { backStackEntry ->
+        val data = backStackEntry.arguments?.getString("data")
+        val interestScreenData = Json.decodeFromString<InterestScreenData>(data ?: "")
+
+        InterestScreen(
+            interests = interestScreenData.list,
+            currentInterests = interestScreenData.currentInterests,
+            onInterestSelected = {
+                navController.popBackStack()
+            }
+        )
     }
 
 
@@ -141,3 +175,38 @@ fun applyFilter(navController: NavController) {
         ?.savedStateHandle
         ?.set(FILTER_APPLIED, true)
 }
+
+@Serializable
+data class Interest(
+    val category: String,
+    val interests: List<String>
+)
+
+@Serializable
+data class InterestScreenData(
+    val list: List<Interest>,
+    val currentInterests: List<String>,
+)
+
+val interestList = listOf(
+    Interest(
+        category = "Sports",
+        interests = listOf("Football", "Cricket", "Tennis")
+    ),
+    Interest(
+        category = "Music",
+        interests = listOf("Rock", "Jazz", "Classical")
+    ),
+    Interest(
+        category = "Travel",
+        interests = listOf("Hiking", "Road Trips", "Camping")
+    ),
+    Interest(
+        category = "Technology",
+        interests = listOf("AI", "Blockchain", "Cybersecurity")
+    ),
+    Interest(
+        category = "Food",
+        interests = listOf("Cooking", "Baking", "Trying new cuisines")
+    )
+)
