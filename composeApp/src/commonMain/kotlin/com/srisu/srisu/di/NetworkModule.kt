@@ -22,6 +22,7 @@ val sharedNetworkModule = module {
 
     single { ProfileApiService(get()) }
     single { ProfileRepository(get()) }
+
 }
 
 expect val platformNetworkModule: Module

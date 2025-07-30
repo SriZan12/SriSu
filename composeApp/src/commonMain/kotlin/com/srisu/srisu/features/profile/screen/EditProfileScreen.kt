@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,10 +30,11 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,34 +44,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.CityDropDown
 import com.srisu.srisu.components.CountryDropDown
 import com.srisu.srisu.components.FormFieldCompo
-import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
+import com.srisu.srisu.features.profile.state.EditProfileUIState
+import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.navigation.Interest
 import com.srisu.srisu.navigation.interestList
 import com.srisu.srisu.utils.CountryModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
 
 
 @Composable
 fun EditProfileScreen(
+    editProfileViewModel: EditProfileViewModel = koinViewModel<EditProfileViewModel>(),
     onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit
 ) {
+
+    val editProfileUIState by editProfileViewModel.editProfileUIState.collectAsStateWithLifecycle()
+
     EditProfileScreenContent(
-        onNavigateInterestScreen =  { interests, currentInterest ->
+        editProfileUIState = editProfileUIState,
+        editProfileViewModel = editProfileViewModel,
+        onNavigateInterestScreen = { interests, currentInterest ->
             onNavigateInterestScreen(
                 interests,
                 currentInterest
@@ -84,7 +89,9 @@ fun EditProfileScreen(
 
 @Composable
 fun EditProfileScreenContent(
-    onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit
+    editProfileUIState: EditProfileUIState,
+    editProfileViewModel: EditProfileViewModel,
+    onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier,
@@ -107,7 +114,21 @@ fun EditProfileScreenContent(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                GeneralInfoCompo()
+                GeneralInfoCompo(
+                    modifier = Modifier,
+                    fullName = editProfileUIState.fullName,
+                    userName = editProfileUIState.userName,
+                    bio = editProfileUIState.bio,
+                    country = editProfileUIState.country,
+                    city = editProfileUIState.city,
+                    onUpdateFullName = {
+                        editProfileViewModel.updateFullName("Srijan Khadka")
+                    },
+                    onUpdateUserName = {},
+                    onUpdateBio = {},
+                    onUpdateCountry = {},
+                    onUpdateCity = {}
+                )
 
                 InterestCompo {
                     onNavigateInterestScreen(
@@ -157,31 +178,51 @@ fun EditPictureCompo(
     }
 }
 
+typealias fullName = String
+typealias userName = String
+typealias bio = String
+typealias city = String
+
 @Composable
-private fun GeneralInfoCompo() {
+private fun GeneralInfoCompo(
+    modifier: Modifier = Modifier,
+    fullName: String? = null,
+    userName: String? = null,
+    bio: String? = null,
+    country: String? = null,
+    city: String? = null,
+    onUpdateFullName: (fullName) -> Unit,
+    onUpdateUserName: (userName) -> Unit,
+    onUpdateBio: (bio) -> Unit,
+    onUpdateCountry: (CountryModel) -> Unit,
+    onUpdateCity: (city) -> Unit,
+) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FormFieldCompo(
             label = "Full Name",
-            value = TextFieldValue("Srijan Khadka"),
-            onValueChange = { }
+            value = TextFieldValue(fullName ?: ""),
+            onValueChange = {
+                onUpdateFullName(it.text)
+            }
         )
 
         FormFieldCompo(
             label = "Username",
-            value = TextFieldValue("Davide"),
-            onValueChange = { }
+            value = TextFieldValue(userName ?: ""),
+            onValueChange = {
+                onUpdateUserName(it.text)
+            }
         )
 
-        var description by remember { mutableStateOf("Hello I am davide") }
 
         TextAreaCompo(
             label = "Bio",
             placeholder = "Enter your bio...",
-            value = description,
-            onValueChange = { description = it }
+            value = bio ?: "",
+            onValueChange = { onUpdateBio(it) }
         )
 
         CountryDropDownCompo(
@@ -380,7 +421,7 @@ fun GalleryCompo(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
         Row(
             modifier = Modifier
@@ -398,7 +439,7 @@ fun GalleryCompo(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         PrimaryTextButton(
             modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally),
@@ -417,40 +458,57 @@ fun GalleryAddCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .shadow(6.dp, shape = RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
+    Box(modifier = modifier) {
+
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White),
-            contentAlignment = Alignment.Center
+                .shadow(6.dp, shape = RoundedCornerShape(16.dp))
+                .clickable { onClick() },
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(color = MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .background(Color.White)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Image",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+                // Center Add Circle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Image",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Add Image",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
-                )
             }
+        }
+
+        IconButton(
+            onClick = { /* Handle close icon click */ },
+
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(24.dp)
+                .offset(y = (-6).dp)
+                .clip(shape = CircleShape),
+            colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Close",
+                tint = Color.White,
+                modifier = Modifier.padding(all = 4.dp)
+            )
         }
     }
 }

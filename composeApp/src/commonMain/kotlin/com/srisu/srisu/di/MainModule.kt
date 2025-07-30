@@ -1,6 +1,7 @@
 package com.srisu.srisu.di
 
 import com.srisu.srisu.features.home.HomeViewModel
+import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import org.koin.core.module.dsl.viewModel
@@ -23,6 +24,13 @@ val mainModule = module {
 
     viewModel {
         ProfileViewModel(
+            profileRepository = get(),
+            connectivityObserver = get(),
+        )
+    }
+
+    viewModel {
+        EditProfileViewModel(
             profileRepository = get(),
             connectivityObserver = get(),
         )
