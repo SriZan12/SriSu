@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 fun FormFieldCompo(
     modifier: Modifier = Modifier,
     label: String,
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
     placeholder: String = "Enter text...",
     labelStyle: TextStyle = MaterialTheme.typography.labelLarge,
     labelWeight: FontWeight = FontWeight.SemiBold,
@@ -66,7 +66,7 @@ fun FormFieldCompo(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    if (value.text.isEmpty()) {
+                    if (value.isEmpty()) {
                         Text(
                             text = placeholder,
                             style = MaterialTheme.typography.titleMedium.copy(

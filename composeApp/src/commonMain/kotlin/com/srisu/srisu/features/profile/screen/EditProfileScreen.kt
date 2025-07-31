@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,33 +49,49 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import coil3.toUri
 import com.srisu.srisu.components.CityDropDown
 import com.srisu.srisu.components.CountryDropDown
 import com.srisu.srisu.components.FormFieldCompo
 import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.navigation.Interest
 import com.srisu.srisu.navigation.interestList
+import com.srisu.srisu.permissionmanager.PermissionCallback
+import com.srisu.srisu.permissionmanager.PermissionState
+import com.srisu.srisu.permissionmanager.PermissionType
+import com.srisu.srisu.permissionmanager.createPermissionsManager
+import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.CountryModel
+import com.srisu.srisu.utils.MediaType
+import com.srisu.srisu.utils.rememberGalleryManager
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 
 @Composable
 fun EditProfileScreen(
+    editedInterest: List<String?>? = null,
+    session: Session?,
     editProfileViewModel: EditProfileViewModel = koinViewModel<EditProfileViewModel>(),
-    onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit
+    onNavigateInterestScreen: (List<Interest>, List<String?>?) -> Unit
 ) {
 
     val editProfileUIState by editProfileViewModel.editProfileUIState.collectAsStateWithLifecycle()
+
+    Initialization(
+        session = session,
+        editedInterest = editedInterest,
+        editProfileViewModel = editProfileViewModel
+    )
 
     EditProfileScreenContent(
         editProfileUIState = editProfileUIState,
@@ -88,10 +106,24 @@ fun EditProfileScreen(
 }
 
 @Composable
+fun Initialization(
+    session: Session? = null,
+    editedInterest: List<String?>? = null,
+    editProfileViewModel: EditProfileViewModel
+) {
+    LaunchedEffect(Unit) {
+        editProfileViewModel.updateSession(session = session)
+        if (!editedInterest.isNullOrEmpty()) {
+            editProfileViewModel.updateInterests(interests = editedInterest)
+        }
+    }
+}
+
+@Composable
 fun EditProfileScreenContent(
     editProfileUIState: EditProfileUIState,
     editProfileViewModel: EditProfileViewModel,
-    onNavigateInterestScreen: (List<Interest>, List<String>) -> Unit,
+    onNavigateInterestScreen: (List<Interest>, List<String?>?) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier,
@@ -110,8 +142,10 @@ fun EditProfileScreenContent(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                EditPictureCompo(
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ProfilePictureCompo(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    editProfileViewModel = editProfileViewModel,
+                    editProfileUIState = editProfileUIState
                 )
 
                 GeneralInfoCompo(
@@ -121,19 +155,26 @@ fun EditProfileScreenContent(
                     bio = editProfileUIState.bio,
                     country = editProfileUIState.country,
                     city = editProfileUIState.city,
-                    onUpdateFullName = {
-                        editProfileViewModel.updateFullName("Srijan Khadka")
+                    onUpdateFullName = { fullName ->
+                        editProfileViewModel.updateFullName(fullName)
                     },
-                    onUpdateUserName = {},
-                    onUpdateBio = {},
-                    onUpdateCountry = {},
+                    onUpdateUserName = { userName ->
+                        editProfileViewModel.updateUserName(userName)
+                    },
+                    onUpdateBio = { bio ->
+                        editProfileViewModel.updateBio(bio)
+
+                    },
+                    onUpdateCountry = { countryModel ->
+                        editProfileViewModel.updateCountry(countryModel)
+                    },
                     onUpdateCity = {}
                 )
 
-                InterestCompo {
+                InterestCompo(allInterests = editProfileUIState.interests) {
                     onNavigateInterestScreen(
                         interestList,
-                        listOf("Football", "Jazz", "Hiking")
+                        editProfileUIState.interests
                     )
                 }
 
@@ -146,20 +187,62 @@ fun EditProfileScreenContent(
 }
 
 @Composable
-fun EditPictureCompo(
-    modifier: Modifier
+private fun ProfilePictureCompo(
+    modifier: Modifier = Modifier,
+    editProfileViewModel: EditProfileViewModel,
+    editProfileUIState: EditProfileUIState,
 ) {
+    val profilePictureUri = editProfileUIState.profilePictureUri
+    var showPermissionDialog by remember { mutableStateOf(false) }
+//    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
+
+
+    val permissionManager = createPermissionsManager(object : PermissionCallback {
+        override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
+            AppLogger.log("INSIDE CALLBACK = $status")
+            when (status) {
+                PermissionState.GRANTED -> {
+//                    permissionState = PermissionState.GRANTED
+                }
+
+                PermissionState.SHOW_RATIONALE -> {
+//                    permissionState = PermissionState.SHOW_RATIONALE
+                }
+
+                PermissionState.DENIED -> {
+//                    permissionState = PermissionState.DENIED
+                }
+
+                PermissionState.NOT_ASKED_YET -> {
+                }
+
+                PermissionState.REQUEST_LAUNCHED -> {
+//                    permissionState = PermissionState.REQUEST_LAUNCHED
+                }
+            }
+        }
+    })
+
+    val galleryManager = rememberGalleryManager(
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                editProfileViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
+            }
+        },
+        mediaType = MediaType.IMAGE_ONLY
+    )
+
     Box(
         modifier = modifier.padding(horizontal = 16.dp)
             .size(180.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceDim)
             .clickable {
+                showPermissionDialog = true
 
             },
         contentAlignment = Alignment.Center
     ) {
-        val profilePictureUri = "http://localhost:8000/media/profiles/pexels-athena-1758144.jpg"
         if (profilePictureUri != null) {
             AsyncImage(
                 model = profilePictureUri,
@@ -175,8 +258,19 @@ fun EditPictureCompo(
             )
         }
 
+        if (showPermissionDialog) {
+            if (!permissionManager.isPermissionGranted(permission = PermissionType.STORAGE)) {
+                permissionManager.askPermission(permission = PermissionType.STORAGE)
+            } else {
+                galleryManager.launch()
+            }
+            showPermissionDialog = false
+        }
+
     }
+
 }
+
 
 typealias fullName = String
 typealias userName = String
@@ -189,7 +283,7 @@ private fun GeneralInfoCompo(
     fullName: String? = null,
     userName: String? = null,
     bio: String? = null,
-    country: String? = null,
+    country: CountryModel? = null,
     city: String? = null,
     onUpdateFullName: (fullName) -> Unit,
     onUpdateUserName: (userName) -> Unit,
@@ -203,17 +297,17 @@ private fun GeneralInfoCompo(
     ) {
         FormFieldCompo(
             label = "Full Name",
-            value = TextFieldValue(fullName ?: ""),
+            value = fullName ?: "",
             onValueChange = {
-                onUpdateFullName(it.text)
+                onUpdateFullName(it)
             }
         )
 
         FormFieldCompo(
             label = "Username",
-            value = TextFieldValue(userName ?: ""),
+            value = userName ?: "",
             onValueChange = {
-                onUpdateUserName(it.text)
+                onUpdateUserName(it)
             }
         )
 
@@ -226,20 +320,19 @@ private fun GeneralInfoCompo(
         )
 
         CountryDropDownCompo(
-            selectedCountry = CountryModel(name = "Nepal", "977", "+977"),
-            onCountrySelected = {}
+            selectedCountry = country,
+            onCountrySelected = {
+                onUpdateCountry(it)
+            }
         )
-
-        var selectedCity by remember { mutableStateOf<String?>(null) }
-        val cityList = listOf("New York", "Los Angeles", "Chicago", "San Francisco", "Miami")
 
         CityDropDownCompo(
             modifier = Modifier.fillMaxWidth(),
-            selectedCity = selectedCity,
+            selectedCity = city,
             onCitySelected = {
-                selectedCity = it
+                onUpdateCity(it)
             },
-            cityList = cityList,
+            cityList = listOf(),
         )
 
     }
@@ -313,6 +406,7 @@ private fun CityDropDownCompo(
 
 @Composable
 private fun InterestCompo(
+    allInterests: List<String?>? = null,
     onEditInterest: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -331,11 +425,11 @@ private fun InterestCompo(
 
             PrimaryTextButton(
                 modifier = Modifier,
-                label = "Edit",
+                label = if (allInterests.isNullOrEmpty()) "Add" else "Edit",
                 textStyle = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary),
                 fontWeight = FontWeight.SemiBold,
                 onClick = {
-
+                    onEditInterest()
                 }
             )
 
@@ -348,8 +442,10 @@ private fun InterestCompo(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(10) {
-                InterestChip(label = "Music")
+            items(allInterests ?: emptyList()) { interest ->
+                if (!interest.isNullOrEmpty()) {
+                    InterestChip(label = interest)
+                }
             }
         }
     }

@@ -25,7 +25,6 @@ import com.srisu.srisu.features.auth.state.AuthUIStates
 import com.srisu.srisu.features.auth.state.Validation
 import com.srisu.srisu.features.auth.vm.AuthViewModel
 import com.srisu.srisu.navigation.HomeNavigation
-import com.srisu.srisu.utils.Constants.OTP_LENGTH
 import com.srisu.srisu.utils.DateTimeUtils.CountdownTimer
 import com.srisu.srisu.utils.formatTime
 import com.srisu.srisu.utils.isInternetAvailable
@@ -39,6 +38,7 @@ import com.srisu.srisu.components.StyledAnnotatedText
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.common.CommonAuthContainerCompo
 import com.srisu.srisu.features.auth.common.TitleText
+import com.srisu.srisu.utils.Constants.Auth.OTP_LENGTH
 import kotlinx.coroutines.delay
 
 @Composable

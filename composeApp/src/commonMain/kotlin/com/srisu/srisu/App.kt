@@ -11,7 +11,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
-import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.crossfade
@@ -26,7 +25,7 @@ import com.srisu.srisu.navigation.homeGraph
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.theme.AppTheme
-import com.srisu.srisu.utils.Constants.SESSION_KEY
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinMultiplatformApplication
@@ -51,7 +50,6 @@ fun App(
         ) {
             NavHostController(session = checkSession(session = session))
             InitCoilImageLoader()
-//            SharedElement_PredictiveBack()
         }
     }
 }
@@ -62,7 +60,7 @@ private fun checkSession(session: SessionStorage): Session? {
 
     try {
         sessionData = sessionJson?.let { Json.decodeFromString<Session>(it) }
-    } catch (exception: Exception) {
+    } catch (_: Exception) {
         AppLogger.log("SESSION SERIALIZATION EXCEPTION")
     }
 
@@ -101,6 +99,7 @@ private fun NavHostController(session: Session?) {
             homeGraph(
                 navController = navController,
                 suggestionViewModel = suggestionViewModel,
+                session = session,
                 sharedTransitionScope = this@SharedTransitionLayout,
 
                 )
@@ -113,7 +112,8 @@ private fun startDestination(session: Session?): Route {
     return when {
         session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.EditProfile
 
-        else -> AuthNavigation.Auth
+//        else -> AuthNavigation.Auth
+        else -> HomeNavigation.EditProfile
     }
 }
 

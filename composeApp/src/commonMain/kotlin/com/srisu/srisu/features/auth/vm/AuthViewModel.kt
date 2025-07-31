@@ -19,12 +19,11 @@ import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.session.setUserWholeCredentials
 import com.srisu.srisu.session.toSession
 import com.srisu.srisu.utils.ConnectivityObserver
-import com.srisu.srisu.utils.Constants.FULL_NAME_PROGRESS
-import com.srisu.srisu.utils.Constants.OTP_WAITING_TIME
-import com.srisu.srisu.utils.Constants.PHONE_NUMBER_VERIFICATION_PROGRESS
-import com.srisu.srisu.utils.Constants.SESSION_KEY
-import com.srisu.srisu.utils.Constants.TOTAL_PROGRESS
-import com.srisu.srisu.utils.Country.getCountryModelFromName
+import com.srisu.srisu.utils.Constants.Auth.FULL_NAME_PROGRESS
+import com.srisu.srisu.utils.Constants.Auth.OTP_WAITING_TIME
+import com.srisu.srisu.utils.Constants.Auth.PHONE_NUMBER_VERIFICATION_PROGRESS
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
+import com.srisu.srisu.utils.Constants.Auth.TOTAL_PROGRESS
 import com.srisu.srisu.utils.Country.getCountryModelFromPrefix
 import com.srisu.srisu.utils.DateTimeUtils.calculateAge
 import com.srisu.srisu.utils.DateTimeUtils.getDayAndMonthIndividually

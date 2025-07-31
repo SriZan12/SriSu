@@ -1,22 +1,36 @@
 package com.srisu.srisu.features.profile.vm
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import coil3.Uri
+import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.features.profile.state.EditProfileUIState
+import com.srisu.srisu.navigation.Interest
+import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.ConnectivityObserver
+import com.srisu.srisu.utils.Country
+import com.srisu.srisu.utils.CountryModel
+import com.srisu.srisu.utils.isInternetAvailable
+import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class EditProfileViewModel(
     private val connectivityObserver: ConnectivityObserver,
     private val profileRepository: ProfileRepository
-): ViewModel() {
+) : ViewModel() {
 
     private val _editProfileUIState: MutableStateFlow<EditProfileUIState> =
         MutableStateFlow(EditProfileUIState())
 
     val editProfileUIState = _editProfileUIState.asStateFlow()
+
+    init {
+
+    }
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
         this._editProfileUIState.value =
@@ -38,46 +52,97 @@ class EditProfileViewModel(
             )
     }
 
+    private fun showNoInternetConnection(isOffline: Boolean) {
+        this._editProfileUIState.value =
+            _editProfileUIState.value.copy(baseUIState = BaseUIState.NoInternetConnection(isOffline = isOffline))
+    }
+
     private fun showLoading() {
         this._editProfileUIState.value =
             this._editProfileUIState.value.copy(baseUIState = BaseUIState.Loading)
     }
 
     fun idleScreen() {
-        this._editProfileUIState.value = this._editProfileUIState.value.copy(baseUIState = BaseUIState.Idle)
-    }
-
-    init {
-
+        this._editProfileUIState.value =
+            this._editProfileUIState.value.copy(baseUIState = BaseUIState.Idle)
     }
 
     //Events
-    fun updateFullName(fullName: String){
+    fun updateFullName(fullName: String) {
         _editProfileUIState.value = _editProfileUIState.value.copy(fullName = fullName)
     }
 
-    fun updateUserName(userName: String){
+    fun updateUserName(userName: String) {
         _editProfileUIState.value = _editProfileUIState.value.copy(userName = userName)
     }
 
-    fun updateBio(bio: String){
+    fun updateBio(bio: String) {
         _editProfileUIState.value = _editProfileUIState.value.copy(bio = bio)
     }
 
-    fun updateCountry(country: String){
+    fun updateCountry(country: CountryModel?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(country = country)
     }
 
-    fun updateCity(city: String){
+    fun updateCity(city: String?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(city = city)
     }
 
-    fun updateInterests(interests: List<String>){
+    fun updateInterests(interests: List<String?>?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(interests = interests)
     }
 
-    fun updatePhotos(photos: List<String>){
+    fun updatePhotos(photos: List<String>) {
         _editProfileUIState.value = _editProfileUIState.value.copy(photos = photos)
+    }
+
+    fun updateProfilePictureUri(uri: Uri?) {
+        this._editProfileUIState.value =
+            this._editProfileUIState.value.copy(profilePictureUri = uri)
+    }
+
+    fun updateSession(session: Session?) {
+        this._editProfileUIState.value =
+            this._editProfileUIState.value.copy(session = session)
+
+        setUserProfileData()
+    }
+
+    fun setUserProfileData() {
+        val session = this._editProfileUIState.value.session
+
+        updateFullName(fullName = session?.fullName ?: "")
+        updateUserName(userName = session?.username ?: "")
+        updateBio(bio = "")
+        updateCountry(country = Country.getCountryModelFromName(country = session?.country))
+        updateCity(city = session?.city)
+        updateInterests(interests = null)
+        updatePhotos(photos = emptyList())
+        updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
+    }
+
+    fun getCityList(country: String? = null, showLoading: Boolean = false) {
+
+        if (showLoading) {
+            showLoading()
+        }
+
+        val countryCity = _editProfileUIState.value.session?.country ?: country
+        ?: _editProfileUIState.value.session?.country
+
+        viewModelScope.launch {
+            try {
+//                val cities = profileRepository.getCityList(country = countryCity)
+//                if (cities?.error == false) {
+//                    updateCities(cities = cities.data)
+//                }
+//                idleScreen()
+            } catch (exception: UnresolvedAddressException) {
+                showNoInternetConnection(isOffline = true)
+            }
+
+
+        }
     }
 
 

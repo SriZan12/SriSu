@@ -1,6 +1,6 @@
 package com.srisu.srisu.utils
 
-import com.srisu.srisu.utils.Constants.COUNTRY_JSON_FILE_NAME
+import com.srisu.srisu.utils.Constants.Auth.COUNTRY_JSON_FILE_NAME
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

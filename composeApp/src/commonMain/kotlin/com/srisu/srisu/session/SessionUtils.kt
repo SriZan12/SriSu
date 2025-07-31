@@ -1,7 +1,7 @@
 package com.srisu.srisu.session
 
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.utils.Constants.SESSION_KEY
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject

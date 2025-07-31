@@ -3,11 +3,10 @@ package com.srisu.srisu.core.data.network
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionStorage
-import com.srisu.srisu.utils.Constants.SESSION_KEY
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel

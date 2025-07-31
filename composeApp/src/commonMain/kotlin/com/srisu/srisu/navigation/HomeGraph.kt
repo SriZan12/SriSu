@@ -1,14 +1,12 @@
 package com.srisu.srisu.navigation
 
 import SuggestionProfileScreen
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import coil3.compose.LocalPlatformContext
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
 import com.srisu.srisu.features.profile.screen.InterestScreen
@@ -16,6 +14,10 @@ import com.srisu.srisu.features.profile.screen.ProfileScreen
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
+import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.Constants.HomeGraph.EDITED_INTERESTS
+import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_APPLIED
+import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -45,12 +47,10 @@ sealed class HomeNavigation : Route {
     ) : HomeNavigation()
 }
 
-private const val FILTER_APPLIED = "filter_applied"
-private const val FILTER_CLEARED = "filter_cleared"
-
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.homeGraph(
     navController: NavController,
+    session: Session?,
     suggestionViewModel: SuggestionViewModel,
     sharedTransitionScope: SharedTransitionScope,
 ) {
@@ -120,9 +120,15 @@ fun NavGraphBuilder.homeGraph(
         ProfileScreen(userProfileData = userProfileData)
     }
 
-    composable<HomeNavigation.EditProfile> {
+    composable<HomeNavigation.EditProfile> { navBackStackEntry ->
+        val savedStateHandle = navBackStackEntry.savedStateHandle
+        val editedInterest = savedStateHandle.getStateFlow(EDITED_INTERESTS, "").value
+        val editedInterestList =
+            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<String?>>(editedInterest) else null
+
         EditProfileScreen(
             onNavigateInterestScreen = { interests, currentInterestStrings ->
+
                 val data = InterestScreenData(
                     list = interests,
                     currentInterests = currentInterestStrings,
@@ -132,7 +138,11 @@ fun NavGraphBuilder.homeGraph(
                         data = Json.encodeToString(data)
                     )
                 )
-            }
+
+            },
+            editedInterest = editedInterestList,
+            session = session
+
         )
     }
 
@@ -145,6 +155,13 @@ fun NavGraphBuilder.homeGraph(
             interests = interestScreenData.list,
             currentInterests = interestScreenData.currentInterests,
             onInterestSelected = {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.set(
+                        key = EDITED_INTERESTS,
+                        value = Json.encodeToString(it)
+                    )
+
                 navController.popBackStack()
             }
         )
@@ -184,8 +201,8 @@ data class Interest(
 
 @Serializable
 data class InterestScreenData(
-    val list: List<Interest>,
-    val currentInterests: List<String>,
+    val list: List<Interest?>?,
+    val currentInterests: List<String?>?,
 )
 
 val interestList = listOf(
