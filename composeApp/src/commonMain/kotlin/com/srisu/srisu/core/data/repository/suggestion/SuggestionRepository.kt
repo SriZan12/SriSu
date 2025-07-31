@@ -2,6 +2,7 @@ package com.srisu.srisu.core.data.repository.suggestion
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
+import com.srisu.srisu.core.data.apiservice.base.BaseApiService
 import com.srisu.srisu.core.data.apiservice.suggestion.SuggestionApiService
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
@@ -16,7 +17,8 @@ import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 
 class SuggestionRepository(
-    private val suggestionApiService: SuggestionApiService
+    private val suggestionApiService: SuggestionApiService,
+    private val baseApiService: BaseApiService,
 ) {
 
     @Throws(Exception::class)
@@ -144,7 +146,7 @@ class SuggestionRepository(
 
     @Throws(Exception::class)
     suspend fun getCityList(country: String?): CityResponse? {
-        return suggestionApiService.getCitiesList(country)
+        return baseApiService.getCitiesList(country)
     }
 
 }

@@ -1,6 +1,6 @@
 package com.srisu.srisu.core.data.apiservice.suggestion
 
-import com.srisu.srisu.core.data.apiservice.auth.AuthApiService.Companion.BASE_URL
+import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.dto.suggestion.UserPreferenceDTO
@@ -155,12 +155,5 @@ class SuggestionApiService(private val httpClient: HttpClient) {
             parameter("page_size", pageSize)
             method = HttpMethod.Get
         }
-    }
-
-    suspend fun getCitiesList(country: String?): CityResponse? {
-        return httpClient.get(CITY_ENDPOINT) {
-            parameter("country", country)
-            contentType(ContentType.Application.Json)
-        }.body()
     }
 }

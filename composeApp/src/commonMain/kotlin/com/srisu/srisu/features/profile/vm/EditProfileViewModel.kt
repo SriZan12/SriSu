@@ -7,13 +7,11 @@ import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.features.profile.state.EditProfileUIState
-import com.srisu.srisu.navigation.Interest
+import com.srisu.srisu.features.profile.state.GalleyPhotoModel
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Country
 import com.srisu.srisu.utils.CountryModel
-import com.srisu.srisu.utils.isInternetAvailable
-import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -29,7 +27,6 @@ class EditProfileViewModel(
     val editProfileUIState = _editProfileUIState.asStateFlow()
 
     init {
-
     }
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
@@ -76,24 +73,38 @@ class EditProfileViewModel(
         _editProfileUIState.value = _editProfileUIState.value.copy(userName = userName)
     }
 
-    fun updateBio(bio: String) {
+    fun updateBio(bio: String?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(bio = bio)
     }
 
     fun updateCountry(country: CountryModel?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(country = country)
+        getCityList(country = country?.name?.lowercase())
     }
 
     fun updateCity(city: String?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(city = city)
     }
 
+    fun setCities(cities: List<String?>?) {
+        _editProfileUIState.value = _editProfileUIState.value.copy(cities = cities)
+    }
+
     fun updateInterests(interests: List<String?>?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(interests = interests)
     }
 
-    fun updatePhotos(photos: List<String>) {
-        _editProfileUIState.value = _editProfileUIState.value.copy(photos = photos)
+    fun updateLargePhoto(photo: GalleyPhotoModel?) {
+        val currentPhotos = _editProfileUIState.value.largePhotos?.toMutableList()
+        currentPhotos?.add(photo)
+
+        _editProfileUIState.value = _editProfileUIState.value.copy(largePhotos = currentPhotos)
+
+    }
+
+
+    fun updateSmallPhotos(photos: List<GalleyPhotoModel?>?) {
+        _editProfileUIState.value = _editProfileUIState.value.copy(smallPhotos = photos)
     }
 
     fun updateProfilePictureUri(uri: Uri?) {
@@ -113,11 +124,27 @@ class EditProfileViewModel(
 
         updateFullName(fullName = session?.fullName ?: "")
         updateUserName(userName = session?.username ?: "")
-        updateBio(bio = "")
+        updateBio(bio = session?.bio)
         updateCountry(country = Country.getCountryModelFromName(country = session?.country))
+        getCityList()
         updateCity(city = session?.city)
         updateInterests(interests = null)
-        updatePhotos(photos = emptyList())
+        updateLargePhoto(
+            photo =
+                GalleyPhotoModel(
+                    photoUri = null,
+                    index = 0
+                )
+        )
+
+        updateLargePhoto(
+            photo =
+                GalleyPhotoModel(
+                    photoUri = null,
+                    index = 1
+                )
+        )
+        updateSmallPhotos(photos = emptyList())
         updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
     }
 
@@ -127,18 +154,17 @@ class EditProfileViewModel(
             showLoading()
         }
 
-        val countryCity = _editProfileUIState.value.session?.country ?: country
-        ?: _editProfileUIState.value.session?.country
+        val countryCity = country ?: _editProfileUIState.value.session?.country
 
         viewModelScope.launch {
             try {
-//                val cities = profileRepository.getCityList(country = countryCity)
-//                if (cities?.error == false) {
-//                    updateCities(cities = cities.data)
-//                }
-//                idleScreen()
-            } catch (exception: UnresolvedAddressException) {
-                showNoInternetConnection(isOffline = true)
+                val cities = profileRepository.getCityList(country = countryCity)
+                if (cities?.error == false) {
+                    setCities(cities = cities.data)
+                }
+                idleScreen()
+            } catch (exception: Exception) {
+                showErrorMessage(message = exception.message, errorType = "ERROR")
             }
 
 

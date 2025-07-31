@@ -13,9 +13,16 @@ data class EditProfileUIState(
     val bio: String? = null,
     val country: CountryModel? = CountryModel(name = "Nepal", code = "NP", prefix = "+977"),
     val city: String? = null,
+    val cities: List<String?>? = null,
     val profilePictureUri: Uri? = null,
     val interests: List<String?>? = null,
-    val photos: List<String>? = null,
+    val largePhotos: List<GalleyPhotoModel?>? = null,
+    val smallPhotos: List<GalleyPhotoModel?>? = null,
     val session: Session? = null,
     val baseUIState: BaseUIState = BaseUIState.Idle
+)
+
+data class GalleyPhotoModel(
+    val photoUri: Uri?,
+    val index: Int
 )

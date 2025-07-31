@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.Uri
 import coil3.compose.AsyncImage
 import coil3.toUri
 import com.srisu.srisu.components.CityDropDown
@@ -62,6 +63,7 @@ import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
+import com.srisu.srisu.features.profile.state.GalleyPhotoModel
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.navigation.Interest
 import com.srisu.srisu.navigation.interestList
@@ -75,6 +77,8 @@ import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.rememberGalleryManager
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+
+enum class PhotoType { LARGE, SMALL }
 
 
 @Composable
@@ -155,6 +159,7 @@ fun EditProfileScreenContent(
                     bio = editProfileUIState.bio,
                     country = editProfileUIState.country,
                     city = editProfileUIState.city,
+                    cities = editProfileUIState.cities,
                     onUpdateFullName = { fullName ->
                         editProfileViewModel.updateFullName(fullName)
                     },
@@ -178,9 +183,34 @@ fun EditProfileScreenContent(
                     )
                 }
 
+                val openGallery = remember { mutableStateOf(false) }
+                val photoType = remember { mutableStateOf(PhotoType.LARGE) }
+                val photoIndex = remember { mutableStateOf(0) }
+
                 GalleryCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
+                ) { index, type ->
+                    openGallery.value = true
+                    photoIndex.value = index
+                    photoType.value = type
+                }
+
+                if (openGallery.value) {
+                    OpenGallery(showPermissionDialog = openGallery.value) { photoUri ->
+                        if (photoType.value == PhotoType.LARGE) {
+                            editProfileViewModel.updateLargePhoto(
+                                photo = GalleyPhotoModel(
+                                    photoUri = photoUri,
+                                    index = photoIndex.value
+                                )
+                            )
+
+                        } else {
+
+                        }
+                        openGallery.value = false
+                    }
+                }
             }
         }
     }
@@ -285,6 +315,7 @@ private fun GeneralInfoCompo(
     bio: String? = null,
     country: CountryModel? = null,
     city: String? = null,
+    cities: List<String?>? = null,
     onUpdateFullName: (fullName) -> Unit,
     onUpdateUserName: (userName) -> Unit,
     onUpdateBio: (bio) -> Unit,
@@ -332,7 +363,7 @@ private fun GeneralInfoCompo(
             onCitySelected = {
                 onUpdateCity(it)
             },
-            cityList = listOf(),
+            cityList = cities,
         )
 
     }
@@ -442,7 +473,7 @@ private fun InterestCompo(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(allInterests ?: emptyList()) { interest ->
+            items(items = allInterests ?: emptyList()) { interest ->
                 if (!interest.isNullOrEmpty()) {
                     InterestChip(label = interest)
                 }
@@ -478,12 +509,15 @@ fun InterestChip(
 
 }
 
+typealias index = Int
 
 @Composable
 @Preview
 fun GalleryCompo(
     modifier: Modifier = Modifier,
-    onAddImageClicked: () -> Unit = {}
+    largePhotos: List<GalleyPhotoModel?>? = emptyList(),
+    smallPhotos: List<GalleyPhotoModel?>? = emptyList(),
+    onAddImageClicked: (index, PhotoType) -> Unit
 ) {
 
     Column(
@@ -507,12 +541,14 @@ fun GalleryCompo(
                 .height(200.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            repeat(2) {
+            val photos = largePhotos?.sortedBy { it?.index }
+            photos?.forEachIndexed { index, photo ->
                 GalleryAddCard(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
-                    onClick = onAddImageClicked
+                    photoUri = photo?.photoUri,
+                    onClick = { onAddImageClicked(index, PhotoType.LARGE) }
                 )
             }
         }
@@ -530,7 +566,7 @@ fun GalleryCompo(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
-                    onClick = onAddImageClicked
+                    onClick = { onAddImageClicked(0, PhotoType.SMALL) }
                 )
             }
         }
@@ -552,6 +588,7 @@ fun GalleryCompo(
 @Composable
 fun GalleryAddCard(
     modifier: Modifier = Modifier,
+    photoUri: Uri? = null,
     onClick: () -> Unit
 ) {
     Box(modifier = modifier) {
@@ -577,12 +614,22 @@ fun GalleryAddCard(
                         .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Image",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    if (photoUri == null) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Image",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = "Selected Image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+
+                        )
+                    }
                 }
 
             }
@@ -609,4 +656,59 @@ fun GalleryAddCard(
     }
 }
 
+@Composable
+private fun OpenGallery(
+    showPermissionDialog: Boolean = false,
+    photoPicked: (Uri?) -> Unit
+) {
+    var showPermissionDialog by remember { mutableStateOf(showPermissionDialog) }
+//    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
+
+
+    val permissionManager = createPermissionsManager(object : PermissionCallback {
+        override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
+            AppLogger.log("INSIDE CALLBACK = $status")
+            when (status) {
+                PermissionState.GRANTED -> {
+//                    permissionState = PermissionState.GRANTED
+                }
+
+                PermissionState.SHOW_RATIONALE -> {
+//                    permissionState = PermissionState.SHOW_RATIONALE
+                }
+
+                PermissionState.DENIED -> {
+//                    permissionState = PermissionState.DENIED
+                }
+
+                PermissionState.NOT_ASKED_YET -> {
+                }
+
+                PermissionState.REQUEST_LAUNCHED -> {
+//                    permissionState = PermissionState.REQUEST_LAUNCHED
+                }
+            }
+        }
+    })
+
+    val galleryManager = rememberGalleryManager(
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                photoPicked(uris.firstOrNull()?.toUri())
+            }
+        },
+        mediaType = MediaType.IMAGE_ONLY
+    )
+
+
+
+    if (showPermissionDialog) {
+        if (!permissionManager.isPermissionGranted(permission = PermissionType.STORAGE)) {
+            permissionManager.askPermission(permission = PermissionType.STORAGE)
+        } else {
+            galleryManager.launch()
+        }
+    }
+
+}
 

@@ -63,6 +63,8 @@ data class Session(
     val userInterests: List<UserInterest?>? = null,
     @SerialName("user_photos")
     val userPhotos: List<UserPhoto?>? = null,
+    @SerialName("bio")
+    val bio: String? = null,
 )
 
 fun User.toSession(access: String?, refresh: String?): Session {
@@ -72,6 +74,7 @@ fun User.toSession(access: String?, refresh: String?): Session {
         createdDate = this.createdDate,
         dateJoined = this.dateJoined,
         dob = this.dob,
+        bio = this.bio,
         email = this.email,
         firstName = this.firstName,
         fullName = this.fullName,

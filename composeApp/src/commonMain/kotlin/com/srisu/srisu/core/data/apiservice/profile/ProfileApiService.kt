@@ -1,6 +1,6 @@
 package com.srisu.srisu.core.data.apiservice.profile
 
-import com.srisu.srisu.core.data.apiservice.auth.AuthApiService.Companion.BASE_URL
+import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse

@@ -1,6 +1,7 @@
 package com.srisu.srisu.di
 
 import com.srisu.srisu.core.data.apiservice.auth.AuthApiService
+import com.srisu.srisu.core.data.apiservice.base.BaseApiService
 import com.srisu.srisu.core.data.apiservice.profile.ProfileApiService
 import com.srisu.srisu.core.data.apiservice.suggestion.SuggestionApiService
 import com.srisu.srisu.core.data.network.HttpClientFactory
@@ -13,15 +14,15 @@ import org.koin.dsl.module
 
 val sharedNetworkModule = module {
     single { HttpClientFactory.create(engine = CIO.create(), sessionStorage = get()) }
+    single { BaseApiService(httpClient = get()) }
+    single { AuthApiService(httpClient = get()) } //apiService
+    single { AuthRepository(authApiService = get()) } // Repo
 
-    single { AuthApiService(get()) } //apiService
-    single { AuthRepository(get()) } // Repo
+    single { SuggestionApiService(httpClient = get()) }
+    single { SuggestionRepository(suggestionApiService = get(), baseApiService = get()) }
 
-    single { SuggestionApiService(get()) }
-    single { SuggestionRepository(get()) }
-
-    single { ProfileApiService(get()) }
-    single { ProfileRepository(get()) }
+    single { ProfileApiService(httpClient = get()) }
+    single { ProfileRepository(profileApiService = get(), baseApiService = get()) }
 
 }
 
