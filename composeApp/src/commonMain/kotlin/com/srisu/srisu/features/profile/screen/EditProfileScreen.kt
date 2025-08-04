@@ -188,28 +188,60 @@ fun EditProfileScreenContent(
                 val photoIndex = remember { mutableStateOf(0) }
 
                 GalleryCompo(
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) { index, type ->
-                    openGallery.value = true
-                    photoIndex.value = index
-                    photoType.value = type
-                }
-
-                if (openGallery.value) {
-                    OpenGallery(showPermissionDialog = openGallery.value) { photoUri ->
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    largePhotos = editProfileUIState.largePhotos,
+                    smallPhotos = editProfileUIState.smallPhotos,
+                    onAddImageClicked = { index, type ->
+                        photoIndex.value = index
+                        photoType.value = type
+                        openGallery.value = true
+                    },
+                    onRemoveImage = { index, type ->
+                        photoIndex.value = index
+                        photoType.value = type
                         if (photoType.value == PhotoType.LARGE) {
                             editProfileViewModel.updateLargePhoto(
                                 photo = GalleyPhotoModel(
-                                    photoUri = photoUri,
+                                    photoUri = null,
                                     index = photoIndex.value
                                 )
                             )
-
                         } else {
+                            editProfileViewModel.updateSmallPhotos(
+                                photo = GalleyPhotoModel(
+                                    photoUri = null,
+                                    index = photoIndex.value
+                                )
+                            )
+                        }
+                    }
+                )
+
+                if (openGallery.value) {
+                    OpenGallery { photoUri ->
+                        if (photoUri != null) {
+                            if (photoType.value == PhotoType.LARGE) {
+                                editProfileViewModel.updateLargePhoto(
+                                    photo = GalleyPhotoModel(
+                                        photoUri = photoUri,
+                                        index = photoIndex.value
+                                    )
+                                )
+
+                            } else {
+                                editProfileViewModel.updateSmallPhotos(
+                                    photo = GalleyPhotoModel(
+                                        photoUri = photoUri,
+                                        index = photoIndex.value
+                                    )
+                                )
+                            }
 
                         }
                         openGallery.value = false
+
                     }
+
                 }
             }
         }
@@ -255,7 +287,7 @@ private fun ProfilePictureCompo(
 
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
-            if (uris.isNotEmpty()) {
+            if (!uris.isNullOrEmpty()) {
                 editProfileViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
             }
         },
@@ -517,7 +549,8 @@ fun GalleryCompo(
     modifier: Modifier = Modifier,
     largePhotos: List<GalleyPhotoModel?>? = emptyList(),
     smallPhotos: List<GalleyPhotoModel?>? = emptyList(),
-    onAddImageClicked: (index, PhotoType) -> Unit
+    onAddImageClicked: (index, PhotoType) -> Unit,
+    onRemoveImage: (index, PhotoType) -> Unit
 ) {
 
     Column(
@@ -548,7 +581,10 @@ fun GalleryCompo(
                         .weight(1f)
                         .fillMaxHeight(),
                     photoUri = photo?.photoUri,
-                    onClick = { onAddImageClicked(index, PhotoType.LARGE) }
+                    onClick = { onAddImageClicked(index, PhotoType.LARGE) },
+                    onRemove = {
+                        onRemoveImage(index, PhotoType.LARGE)
+                    }
                 )
             }
         }
@@ -561,12 +597,19 @@ fun GalleryCompo(
                 .height(120.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            repeat(3) {
+            val photos = smallPhotos?.sortedBy { it?.index }
+            photos?.forEachIndexed { index, photo ->
                 GalleryAddCard(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
-                    onClick = { onAddImageClicked(0, PhotoType.SMALL) }
+                    photoUri = photo?.photoUri,
+                    onClick = {
+                        onAddImageClicked(index, PhotoType.SMALL)
+                    },
+                    onRemove = {
+                        onRemoveImage(index, PhotoType.SMALL)
+                    }
                 )
             }
         }
@@ -589,7 +632,8 @@ fun GalleryCompo(
 fun GalleryAddCard(
     modifier: Modifier = Modifier,
     photoUri: Uri? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onRemove: () -> Unit
 ) {
     Box(modifier = modifier) {
 
@@ -605,38 +649,40 @@ fun GalleryAddCard(
                     .fillMaxSize()
                     .background(Color.White)
             ) {
-                // Center Add Circle
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (photoUri == null) {
+                if (photoUri == null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add Image",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
-                    } else {
-                        AsyncImage(
-                            model = photoUri,
-                            contentDescription = "Selected Image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-
-                        )
                     }
-                }
+                } else {
 
+                    AsyncImage(
+                        model = photoUri,
+                        contentDescription = "Selected Image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+
+                    )
+                }
             }
+
         }
 
         IconButton(
-            onClick = { /* Handle close icon click */ },
+            onClick = {
+                onRemove()
+            },
 
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -658,57 +704,25 @@ fun GalleryAddCard(
 
 @Composable
 private fun OpenGallery(
-    showPermissionDialog: Boolean = false,
     photoPicked: (Uri?) -> Unit
 ) {
-    var showPermissionDialog by remember { mutableStateOf(showPermissionDialog) }
-//    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
-
-
-    val permissionManager = createPermissionsManager(object : PermissionCallback {
-        override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
-            AppLogger.log("INSIDE CALLBACK = $status")
-            when (status) {
-                PermissionState.GRANTED -> {
-//                    permissionState = PermissionState.GRANTED
-                }
-
-                PermissionState.SHOW_RATIONALE -> {
-//                    permissionState = PermissionState.SHOW_RATIONALE
-                }
-
-                PermissionState.DENIED -> {
-//                    permissionState = PermissionState.DENIED
-                }
-
-                PermissionState.NOT_ASKED_YET -> {
-                }
-
-                PermissionState.REQUEST_LAUNCHED -> {
-//                    permissionState = PermissionState.REQUEST_LAUNCHED
-                }
-            }
-        }
-    })
 
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
-            if (uris.isNotEmpty()) {
+            AppLogger.log("INSIDE RESULT OF GALLERY MANAGER")
+            if (uris.isNullOrEmpty()) {
+                photoPicked(null)
+            } else {
                 photoPicked(uris.firstOrNull()?.toUri())
+
             }
         },
         mediaType = MediaType.IMAGE_ONLY
     )
 
-
-
-    if (showPermissionDialog) {
-        if (!permissionManager.isPermissionGranted(permission = PermissionType.STORAGE)) {
-            permissionManager.askPermission(permission = PermissionType.STORAGE)
-        } else {
-            galleryManager.launch()
-        }
+    LaunchedEffect(Unit) {
+        galleryManager.launch()
     }
-
 }
+
 

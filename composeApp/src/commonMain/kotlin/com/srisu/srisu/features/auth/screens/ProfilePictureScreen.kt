@@ -187,8 +187,10 @@ private fun ProfilePictureCompo(
 
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
-            if (uris.isNotEmpty()) {
+            if (!uris.isNullOrEmpty()) {
                 authViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
+            } else {
+                authViewModel.idleScreen()
             }
         },
         mediaType = MediaType.IMAGE_ONLY

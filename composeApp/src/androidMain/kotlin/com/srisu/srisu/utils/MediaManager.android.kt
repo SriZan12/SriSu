@@ -19,7 +19,7 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 
 @Composable
 actual fun rememberGalleryManager(
-    onResult: (List<String>) -> Unit, mediaType: MediaType?
+    onResult: (List<String?>?) -> Unit, mediaType: MediaType?
 ): GalleryManager {
 
     var pickVisualMediaRequest =
@@ -42,12 +42,10 @@ actual fun rememberGalleryManager(
 
     val pickMedia =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-
             if (uri != null) {
-                AppLogger.log("PhotoPicker : Selected URI: $uri")
                 onResult(listOf(uri.toString()))
             } else {
-                AppLogger.log("PhotoPicker : No media selected")
+                onResult(null)
             }
         }
 

@@ -6,6 +6,7 @@ import coil3.Uri
 import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
 import com.srisu.srisu.session.Session
@@ -95,16 +96,45 @@ class EditProfileViewModel(
     }
 
     fun updateLargePhoto(photo: GalleyPhotoModel?) {
-        val currentPhotos = _editProfileUIState.value.largePhotos?.toMutableList()
-        currentPhotos?.add(photo)
+        if (photo == null) return
+
+        val currentPhotos =
+            _editProfileUIState.value.largePhotos?.toMutableList() ?: mutableListOf()
+
+        if (photo.index in currentPhotos.indices) {
+            currentPhotos[photo.index] = photo
+        } else {
+            if (photo.index >= 0) {
+                while (currentPhotos.size <= photo.index) {
+                    currentPhotos.add(null)
+                }
+                currentPhotos[photo.index] = photo
+            }
+        }
 
         _editProfileUIState.value = _editProfileUIState.value.copy(largePhotos = currentPhotos)
 
     }
 
 
-    fun updateSmallPhotos(photos: List<GalleyPhotoModel?>?) {
-        _editProfileUIState.value = _editProfileUIState.value.copy(smallPhotos = photos)
+    fun updateSmallPhotos(photo: GalleyPhotoModel?) {
+        if (photo == null) return
+
+        val currentPhotos =
+            _editProfileUIState.value.smallPhotos?.toMutableList() ?: mutableListOf()
+
+        if (photo.index in currentPhotos.indices) {
+            currentPhotos[photo.index] = photo
+        } else {
+            if (photo.index >= 0) {
+                while (currentPhotos.size <= photo.index) {
+                    currentPhotos.add(null)
+                }
+                currentPhotos[photo.index] = photo
+            }
+        }
+
+        _editProfileUIState.value = _editProfileUIState.value.copy(smallPhotos = currentPhotos)
     }
 
     fun updateProfilePictureUri(uri: Uri?) {
@@ -129,22 +159,6 @@ class EditProfileViewModel(
         getCityList()
         updateCity(city = session?.city)
         updateInterests(interests = null)
-        updateLargePhoto(
-            photo =
-                GalleyPhotoModel(
-                    photoUri = null,
-                    index = 0
-                )
-        )
-
-        updateLargePhoto(
-            photo =
-                GalleyPhotoModel(
-                    photoUri = null,
-                    index = 1
-                )
-        )
-        updateSmallPhotos(photos = emptyList())
         updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
     }
 

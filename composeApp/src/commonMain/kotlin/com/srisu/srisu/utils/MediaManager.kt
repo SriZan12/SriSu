@@ -22,7 +22,7 @@ data class MediaFile(
 
 @Composable
 expect fun rememberGalleryManager(
-    onResult: (List<String>) -> Unit,
+    onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?
 ): GalleryManager
 

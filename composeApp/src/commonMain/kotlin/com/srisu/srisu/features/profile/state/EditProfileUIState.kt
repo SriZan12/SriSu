@@ -16,8 +16,17 @@ data class EditProfileUIState(
     val cities: List<String?>? = null,
     val profilePictureUri: Uri? = null,
     val interests: List<String?>? = null,
-    val largePhotos: List<GalleyPhotoModel?>? = null,
-    val smallPhotos: List<GalleyPhotoModel?>? = null,
+    val largePhotos: List<GalleyPhotoModel?>? =
+        listOf(
+            GalleyPhotoModel(photoUri = null, index = 0),
+            GalleyPhotoModel(photoUri = null, index = 1),
+        ),
+    val smallPhotos: List<GalleyPhotoModel?>? =
+        listOf(
+            GalleyPhotoModel(photoUri = null, index = 0),
+            GalleyPhotoModel(photoUri = null, index = 1),
+            GalleyPhotoModel(photoUri = null, index = 2)
+        ),
     val session: Session? = null,
     val baseUIState: BaseUIState = BaseUIState.Idle
 )

@@ -28,7 +28,7 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 
 @Composable
 actual fun rememberGalleryManager(
-    onResult: (List<String>) -> Unit,
+    onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?
 ): GalleryManager {
     val viewController = rememberUIViewController()
