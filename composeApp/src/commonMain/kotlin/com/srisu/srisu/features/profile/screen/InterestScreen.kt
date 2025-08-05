@@ -101,8 +101,9 @@ fun CategorizedInterestListCompo(
                     }
 
                     InterestChip(
+                        modifier = Modifier,
                         label = interest,
-                        backGroundColor = backgroundColor,
+                        backgroundColor = backgroundColor,
                         onChipClick = {
                             onInterestSelected(
                                 selectInterests(

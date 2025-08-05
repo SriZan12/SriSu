@@ -1,6 +1,7 @@
 package com.srisu.srisu.utils
 
 import androidx.compose.runtime.Composable
+import coil3.Uri
 import kotlinx.serialization.Serializable
 
 enum class MediaType {
@@ -34,4 +35,10 @@ expect class GalleryManager(
 
 expect class FileManager() {
     suspend fun createMediaFileFromPath(path: String?): MediaFile?
+}
+
+suspend fun getMediaFileFromUri(uri: Uri?): MediaFile? {
+    if (uri == null) return null
+    val fileManager = FileManager()
+    return fileManager.createMediaFileFromPath(uri.toString())
 }

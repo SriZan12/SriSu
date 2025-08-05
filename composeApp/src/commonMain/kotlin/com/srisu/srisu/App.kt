@@ -112,8 +112,8 @@ private fun startDestination(session: Session?): Route {
     return when {
         session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.EditProfile
 
-//        else -> AuthNavigation.Auth
-        else -> HomeNavigation.EditProfile
+        else -> AuthNavigation.Auth
+//        else -> HomeNavigation.EditProfile
     }
 }
 

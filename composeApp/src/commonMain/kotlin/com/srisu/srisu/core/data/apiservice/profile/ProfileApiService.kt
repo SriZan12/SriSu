@@ -1,13 +1,22 @@
 package com.srisu.srisu.core.data.apiservice.profile
 
 import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
+import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
+import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
+import com.srisu.srisu.core.data.response.auth.ProfileSetupResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
+import com.srisu.srisu.utils.MediaFile
 import io.ktor.client.HttpClient
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import io.ktor.http.appendPathSegments
 
 class ProfileApiService(private val httpClient: HttpClient) {
 
@@ -24,6 +33,80 @@ class ProfileApiService(private val httpClient: HttpClient) {
             url("${BASE_URL}api/social/connect-single/")
             method = HttpMethod.Post
             setBody(connectionRequest)
+        }
+    }
+
+    suspend fun sendUpdateProfileRequest(
+        userId: Int,
+        profileUpdateDTO: ProfileUpdateDTO,
+        mediaFile: MediaFile?,
+        gallery: List<MediaFile?>?
+    ): ResultHandler<ProfileSetupResponse?> {
+
+        return httpClient.safeRequest<ProfileSetupResponse?> {
+            url("${BASE_URL}api/auth/setup-profile/")
+            method = HttpMethod.Put
+
+            setBody(
+                MultiPartFormDataContent(
+                    formData {
+                        append("full_name", profileUpdateDTO.fullName ?: "")
+                        append("username", profileUpdateDTO.username ?: "")
+                        append("bio", profileUpdateDTO.bio ?: "")
+                        append("country", profileUpdateDTO.country ?: "")
+                        append("city", profileUpdateDTO.city ?: "")
+//                        append("mood", profileSetupDTO.mood ?: "")
+
+                        // Actual file data (profile_picture)
+                        mediaFile?.fileBytes?.let { fileBytes ->
+                            append(
+                                "profile_photo",
+                                fileBytes,
+                                Headers.build {
+                                    append(
+                                        HttpHeaders.ContentDisposition,
+                                        "form-data; name=profile_photo; filename=${mediaFile.fileName}"
+                                    )
+                                    append(HttpHeaders.ContentType, mediaFile.mimeType)
+                                }
+                            )
+                        }
+
+                        profileUpdateDTO.userInterests?.let { userInterests ->
+                            userInterests.forEachIndexed { index, interestName ->
+                                interestName?.let {
+                                    append("user_interests[$index][user]", userId)
+                                    append("user_interests[$index][name]", interestName)
+                                }
+                            }
+                        }
+
+                        gallery?.let { userPhotos ->
+                            userPhotos.forEachIndexed { index, mediaFile ->
+                                mediaFile?.fileBytes?.let { fileBytes ->
+                                    append("user_photos[$index][user]", userId)
+                                    append(
+                                        "user_photos[$index][photo]",
+                                        fileBytes,
+                                        Headers.build {
+                                            append(
+                                                HttpHeaders.ContentDisposition,
+                                                "form-data; name=user_photos[$index][photo]; filename=${mediaFile.fileName}"
+                                            )
+                                            append(
+                                                HttpHeaders.ContentType,
+                                                mediaFile.mimeType
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+
+                    }
+                )
+            )
         }
     }
 }

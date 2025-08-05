@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import coil3.Uri
 import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
@@ -13,6 +14,8 @@ import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Country
 import com.srisu.srisu.utils.CountryModel
+import com.srisu.srisu.utils.MediaFile
+import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -182,6 +185,47 @@ class EditProfileViewModel(
             }
 
 
+        }
+    }
+
+    fun updateProfile() {
+        viewModelScope.launch {
+            try {
+                val profileUpdateDTO = ProfileUpdateDTO(
+                    fullName = _editProfileUIState.value.fullName,
+                    username = _editProfileUIState.value.userName,
+                    bio = _editProfileUIState.value.bio,
+                    country = _editProfileUIState.value.country?.name?.lowercase(),
+                    city = _editProfileUIState.value.city,
+                    userInterests = _editProfileUIState.value.interests,
+                    profilePhoto = _editProfileUIState.value.profilePictureUri.toString(),
+                )
+
+                val profile = getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
+                val gallery: ArrayList<MediaFile?> = arrayListOf()
+                _editProfileUIState.value.largePhotos?.forEach {
+                    gallery.add(getMediaFileFromUri(uri = it?.photoUri))
+                }
+                _editProfileUIState.value.smallPhotos?.forEach {
+                    gallery.add(getMediaFileFromUri(uri = it?.photoUri))
+                }
+
+                profileRepository.sendUpdateProfileRequest(
+                    profileUpdateDTO = profileUpdateDTO,
+                    userId = _editProfileUIState.value.session?.id ?: -1,
+                    profilePhoto = profile,
+                    gallery = gallery
+                ).onSuccess { _, _ ->
+                    AppLogger.log("Profile Updated Successfully")
+                    idleScreen()
+                }.onError { error, errorType ->
+                    AppLogger.log("Profile Update Error = $error")
+                    idleScreen()
+                }
+            } catch (exception: Exception) {
+                AppLogger.log("Profile Update Error = ${exception.message}")
+                showErrorMessage(message = exception.message, errorType = "Profile Update Error")
+            }
         }
     }
 

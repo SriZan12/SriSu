@@ -58,6 +58,7 @@ import coil3.toUri
 import com.srisu.srisu.components.CityDropDown
 import com.srisu.srisu.components.CountryDropDown
 import com.srisu.srisu.components.FormFieldCompo
+import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.TextAreaCompo
@@ -243,6 +244,13 @@ fun EditProfileScreenContent(
                     }
 
                 }
+
+                PrimaryButtonCompo(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    label = "Update Profile",
+                    onClick = {
+                        editProfileViewModel.updateProfile()
+                    })
             }
         }
     }
@@ -507,24 +515,27 @@ private fun InterestCompo(
         ) {
             items(items = allInterests ?: emptyList()) { interest ->
                 if (!interest.isNullOrEmpty()) {
-                    InterestChip(label = interest)
+                    InterestChip(modifier = Modifier, label = interest)
                 }
             }
         }
     }
 }
 
+
 @Composable
 fun InterestChip(
+    modifier: Modifier,
     label: String,
-    backGroundColor: Color = MaterialTheme.colorScheme.surfaceDim,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceDim,
+    iterations: Int = 10,
     onChipClick: () -> Unit = {}
 ) {
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = backGroundColor),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
-        modifier = Modifier,
+        modifier = modifier,
         onClick = {
             onChipClick()
         }
@@ -534,7 +545,7 @@ fun InterestChip(
             maxLines = 1,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                .basicMarquee(iterations = 10),
+                .basicMarquee(iterations = iterations),
             style = MaterialTheme.typography.labelMedium
         )
     }
