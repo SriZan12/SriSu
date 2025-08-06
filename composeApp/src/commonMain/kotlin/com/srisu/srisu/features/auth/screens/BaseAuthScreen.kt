@@ -136,8 +136,8 @@ private fun AuthScreenContent(
                 )
             }
 
-            CustomAuthScreen.ProfilePictureScreen -> {
-                ProfilePictureScreen(navController = navController, authViewModel = authViewModel)
+            CustomAuthScreen.SetProfilePictureScreen -> {
+                SetProfilePictureScreen(navController = navController, authViewModel = authViewModel)
             }
         }
     }

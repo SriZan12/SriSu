@@ -5,6 +5,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ProfileUpdateDTO(
+    @SerialName("phone_number")
+    val phoneNumber: String? = null,
+    @SerialName("gender")
+    val gender: String? = null,
+    @SerialName("zodiac_sign")
+    val zodiacSign: String? = null,
     @SerialName("dob")
     val dob: String? = null,
     @SerialName("full_name")

@@ -484,7 +484,7 @@ class AuthViewModel(
                     CustomAuthScreen.AddDOBScreen,
                     CustomAuthScreen.ZodiacScreen,
                     CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.ProfilePictureScreen
+                    CustomAuthScreen.SetProfilePictureScreen
                 )
             )
         } else if (session != null && isPhoneNumberVerified == false) {
@@ -495,7 +495,7 @@ class AuthViewModel(
                     CustomAuthScreen.AddDOBScreen,
                     CustomAuthScreen.ZodiacScreen,
                     CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.ProfilePictureScreen
+                    CustomAuthScreen.SetProfilePictureScreen
                 )
             )
         } else {
@@ -508,7 +508,7 @@ class AuthViewModel(
                     CustomAuthScreen.AddDOBScreen,
                     CustomAuthScreen.ZodiacScreen,
                     CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.ProfilePictureScreen
+                    CustomAuthScreen.SetProfilePictureScreen
                 )
             )
         }

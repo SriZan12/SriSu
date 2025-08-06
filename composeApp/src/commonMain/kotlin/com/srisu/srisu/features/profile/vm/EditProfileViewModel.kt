@@ -14,6 +14,7 @@ import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Country
 import com.srisu.srisu.utils.CountryModel
+import com.srisu.srisu.utils.FileManager
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,19 +190,24 @@ class EditProfileViewModel(
     }
 
     fun updateProfile() {
+        showLoading()
         viewModelScope.launch {
             try {
                 val profileUpdateDTO = ProfileUpdateDTO(
+                    phoneNumber = _editProfileUIState.value.session?.phoneNumber,
+                    gender = _editProfileUIState.value.session?.gender,
+                    dob = _editProfileUIState.value.session?.dob,
+                    zodiacSign = _editProfileUIState.value.session?.zodiacSign,
                     fullName = _editProfileUIState.value.fullName,
                     username = _editProfileUIState.value.userName,
                     bio = _editProfileUIState.value.bio,
                     country = _editProfileUIState.value.country?.name?.lowercase(),
                     city = _editProfileUIState.value.city,
                     userInterests = _editProfileUIState.value.interests,
-                    profilePhoto = _editProfileUIState.value.profilePictureUri.toString(),
                 )
 
-                val profile = getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
+                val fileManager = FileManager()
+                val profile = fileManager.createMediaFileFromPath(path = _editProfileUIState.value.profilePictureUri.toString())
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
                     gallery.add(getMediaFileFromUri(uri = it?.photoUri))
@@ -217,17 +223,16 @@ class EditProfileViewModel(
                     gallery = gallery
                 ).onSuccess { _, _ ->
                     AppLogger.log("Profile Updated Successfully")
-                    idleScreen()
+                    showSuccessMessage(data = null, message = "Profile Updated")
                 }.onError { error, errorType ->
                     AppLogger.log("Profile Update Error = $error")
-                    idleScreen()
+                    showErrorMessage(message = error, errorType = "Profile Update Error")
                 }
             } catch (exception: Exception) {
-                AppLogger.log("Profile Update Error = ${exception.message}")
-                showErrorMessage(message = exception.message, errorType = "Profile Update Error")
+                AppLogger.log("Exception = ${exception.message}")
             }
         }
+
+
     }
-
-
 }

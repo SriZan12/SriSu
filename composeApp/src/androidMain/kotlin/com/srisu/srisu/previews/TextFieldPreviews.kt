@@ -3,7 +3,7 @@ package com.srisu.srisu.previews
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
-import com.srisu.srisu.features.auth.screens.ProfilePictureScreen
+import com.srisu.srisu.features.auth.screens.SetProfilePictureScreen
 import com.srisu.srisu.features.auth.vm.AuthViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -62,7 +62,7 @@ fun ShowCountryCodeDropDown() {
         selectedCountryPrefix = "+92"
     ) { }*/
 
-    ProfilePictureScreen(
+    SetProfilePictureScreen(
         authViewModel = koinViewModel<AuthViewModel>(),
         navController = rememberNavController()
     )

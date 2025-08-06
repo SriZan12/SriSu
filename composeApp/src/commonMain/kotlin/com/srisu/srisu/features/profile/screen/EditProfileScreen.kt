@@ -55,17 +55,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.Uri
 import coil3.compose.AsyncImage
 import coil3.toUri
+import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.CityDropDown
 import com.srisu.srisu.components.CountryDropDown
+import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.FormFieldCompo
+import com.srisu.srisu.components.LoadingScrim
+import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
+import com.srisu.srisu.components.RequestSentDialog
+import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.components.TextAreaCompo
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
+import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
+import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.navigation.Interest
 import com.srisu.srisu.navigation.interestList
 import com.srisu.srisu.permissionmanager.PermissionCallback
@@ -75,6 +83,7 @@ import com.srisu.srisu.permissionmanager.createPermissionsManager
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaType
+import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -96,6 +105,11 @@ fun EditProfileScreen(
         session = session,
         editedInterest = editedInterest,
         editProfileViewModel = editProfileViewModel
+    )
+
+    HandleUiStates(
+        editProfileViewModel = editProfileViewModel,
+        editProfileUIState = editProfileUIState
     )
 
     EditProfileScreenContent(
@@ -121,6 +135,69 @@ fun Initialization(
         if (!editedInterest.isNullOrEmpty()) {
             editProfileViewModel.updateInterests(interests = editedInterest)
         }
+    }
+}
+
+@Composable
+private fun HandleUiStates(
+    editProfileViewModel: EditProfileViewModel,
+    editProfileUIState: EditProfileUIState
+) {
+
+    val isConnected = isInternetAvailable()
+    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+
+    LaunchedEffect(isConnected) {
+        showBottomSheet = !isConnected
+    }
+
+    when (val baseUIState = editProfileUIState.baseUIState) {
+        is BaseUIState.Error -> {
+            ErrorDialog(
+                title = baseUIState.errorType,
+                errorMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    editProfileViewModel.idleScreen()
+                },
+            )
+        }
+
+        is BaseUIState.Loading -> {
+            LoadingScrim(
+                onDismissRequest = {
+                    editProfileViewModel.idleScreen()
+                }
+            )
+        }
+
+        is BaseUIState.Success<*> -> {
+            SuccessDialog(
+                successMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    editProfileViewModel.idleScreen()
+                }
+            )
+        }
+
+        is BaseUIState.NoInternetConnection -> {
+            showBottomSheet = baseUIState.isOffline
+        }
+
+        is BaseUIState.Idle -> {
+            Unit
+        }
+    }
+
+    if (showBottomSheet) {
+        OfflineBottomSheetCompo(
+            show = showBottomSheet,
+            onDismiss = {
+                showBottomSheet = false
+                editProfileViewModel.idleScreen()
+            }
+        )
     }
 }
 
@@ -173,8 +250,11 @@ fun EditProfileScreenContent(
                     },
                     onUpdateCountry = { countryModel ->
                         editProfileViewModel.updateCountry(countryModel)
+                        editProfileViewModel.updateCity("")
                     },
-                    onUpdateCity = {}
+                    onUpdateCity = {
+                        editProfileViewModel.updateCity(it)
+                    }
                 )
 
                 InterestCompo(allInterests = editProfileUIState.interests) {
@@ -720,7 +800,6 @@ private fun OpenGallery(
 
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
-            AppLogger.log("INSIDE RESULT OF GALLERY MANAGER")
             if (uris.isNullOrEmpty()) {
                 photoPicked(null)
             } else {
