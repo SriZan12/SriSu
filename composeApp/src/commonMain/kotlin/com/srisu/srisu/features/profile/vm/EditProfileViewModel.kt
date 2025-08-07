@@ -11,7 +11,10 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
 import com.srisu.srisu.session.Session
+import com.srisu.srisu.session.SessionStorage
+import com.srisu.srisu.session.setUserWholeCredentials
 import com.srisu.srisu.utils.ConnectivityObserver
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Country
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.FileManager
@@ -20,9 +23,12 @@ import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 class EditProfileViewModel(
     private val connectivityObserver: ConnectivityObserver,
+    private val sessionStorage: SessionStorage,
     private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
@@ -32,6 +38,12 @@ class EditProfileViewModel(
     val editProfileUIState = _editProfileUIState.asStateFlow()
 
     init {
+        val sessionData = getSession()
+        if (sessionData != null) {
+            AppLogger.log("SESSION DATA = ${sessionData}")
+            val session = Json.decodeFromString<Session>(sessionData)
+            updateSession(session)
+        }
     }
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
@@ -164,6 +176,27 @@ class EditProfileViewModel(
         updateCity(city = session?.city)
         updateInterests(interests = null)
         updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
+
+        session?.userPhotos?.forEachIndexed { index, photo ->
+            if (index < 2) {
+
+                updateLargePhoto(
+                    GalleyPhotoModel(
+                        photoUri = photo?.photo?.toUri(),
+                        index = index
+                    )
+                )
+            } else {
+                updateSmallPhotos(
+                    GalleyPhotoModel(
+                        photoUri = photo?.photo?.toUri(),
+                        index = index
+                    )
+                )
+            }
+        }
+
+
     }
 
     fun getCityList(country: String? = null, showLoading: Boolean = false) {
@@ -201,13 +234,16 @@ class EditProfileViewModel(
                     fullName = _editProfileUIState.value.fullName,
                     username = _editProfileUIState.value.userName,
                     bio = _editProfileUIState.value.bio,
-                    country = _editProfileUIState.value.country?.name?.lowercase(),
+                    country = _editProfileUIState.value.country?.name,
                     city = _editProfileUIState.value.city,
                     userInterests = _editProfileUIState.value.interests,
                 )
 
                 val fileManager = FileManager()
-                val profile = fileManager.createMediaFileFromPath(path = _editProfileUIState.value.profilePictureUri.toString())
+                val profile =
+                    fileManager.createMediaFileFromPath(path = _editProfileUIState.value.profilePictureUri.toString())
+
+                AppLogger.log("Profile URI = ${_editProfileUIState.value.profilePictureUri}")
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
                     gallery.add(getMediaFileFromUri(uri = it?.photoUri))
@@ -216,23 +252,47 @@ class EditProfileViewModel(
                     gallery.add(getMediaFileFromUri(uri = it?.photoUri))
                 }
 
+                AppLogger.log("GALLERY SIZZE  = ${gallery.size}")
+
                 profileRepository.sendUpdateProfileRequest(
                     profileUpdateDTO = profileUpdateDTO,
-                    userId = _editProfileUIState.value.session?.id ?: -1,
+                    userId = _editProfileUIState.value.session?.id,
                     profilePhoto = profile,
                     gallery = gallery
-                ).onSuccess { _, _ ->
+                ).onSuccess { profileResponse, _ ->
                     AppLogger.log("Profile Updated Successfully")
+                    val credentials = setUserWholeCredentials(
+                        access = _editProfileUIState.value.session?.access,
+                        refresh = _editProfileUIState.value.session?.refresh,
+                        userInfo = profileResponse?.user
+                    )
+
+                    saveSession(credentials = credentials)
                     showSuccessMessage(data = null, message = "Profile Updated")
+                    getSession()
                 }.onError { error, errorType ->
                     AppLogger.log("Profile Update Error = $error")
                     showErrorMessage(message = error, errorType = "Profile Update Error")
                 }
             } catch (exception: Exception) {
+                showErrorMessage(message = exception.message, errorType = "Exception")
                 AppLogger.log("Exception = ${exception.message}")
             }
         }
 
+
+    }
+
+    private fun saveSession(credentials: String) {
+        sessionStorage.saveSession(credentials, SESSION_KEY)
+    }
+
+    private fun getSession(): String? {
+        return try {
+            sessionStorage.getSession(SESSION_KEY)
+        } catch (_: Exception) {
+            null
+        }
 
     }
 }

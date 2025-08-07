@@ -224,3 +224,10 @@ actual class FileManager {
         }
     }
 }
+
+//actual fun saveImageToCache(bytes: ByteArray): File {
+//    val file = File.createTempFile("image_", ".jpg", AppContext.get().cacheDir)
+//    file.writeBytes(bytes)
+//    return file
+//}
+

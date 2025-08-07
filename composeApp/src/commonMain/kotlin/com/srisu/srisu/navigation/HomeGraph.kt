@@ -14,7 +14,6 @@ import com.srisu.srisu.features.profile.screen.ProfileScreen
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
-import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.HomeGraph.EDITED_INTERESTS
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_APPLIED
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
@@ -50,7 +49,6 @@ sealed class HomeNavigation : Route {
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.homeGraph(
     navController: NavController,
-    session: Session?,
     suggestionViewModel: SuggestionViewModel,
     sharedTransitionScope: SharedTransitionScope,
 ) {
@@ -141,8 +139,6 @@ fun NavGraphBuilder.homeGraph(
 
             },
             editedInterest = editedInterestList,
-            session = session
-
         )
     }
 

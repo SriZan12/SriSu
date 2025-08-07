@@ -33,6 +33,7 @@ val mainModule = module {
         EditProfileViewModel(
             profileRepository = get(),
             connectivityObserver = get(),
+            sessionStorage = get()
         )
     }
 }

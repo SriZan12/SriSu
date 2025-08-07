@@ -99,7 +99,6 @@ private fun NavHostController(session: Session?) {
             homeGraph(
                 navController = navController,
                 suggestionViewModel = suggestionViewModel,
-                session = session,
                 sharedTransitionScope = this@SharedTransitionLayout,
 
                 )

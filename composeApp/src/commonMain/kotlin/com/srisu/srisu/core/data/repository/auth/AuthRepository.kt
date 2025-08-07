@@ -5,7 +5,7 @@ import com.srisu.srisu.core.data.dto.authdto.AuthDTO
 import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.response.auth.OtpVerificationResponse
-import com.srisu.srisu.core.data.response.auth.ProfileSetupResponse
+import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.utils.MediaFile
 
 class AuthRepository(
@@ -29,7 +29,7 @@ class AuthRepository(
     suspend fun sendProfileSetupRequest(
         profileSetupDTO: ProfileSetupDTO,
         mediaFile: MediaFile?
-    ): ResultHandler<ProfileSetupResponse?> {
+    ): ResultHandler<ProfileResponse?> {
         return authApiService.sendProfileSetupRequest(
             profileSetupDTO = profileSetupDTO,
             mediaFile = mediaFile

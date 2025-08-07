@@ -6,7 +6,7 @@ import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
 import com.srisu.srisu.core.data.response.auth.OtpVerificationResponse
-import com.srisu.srisu.core.data.response.auth.ProfileSetupResponse
+import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.utils.MediaFile
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.MultiPartFormDataContent
@@ -45,9 +45,9 @@ class AuthApiService(private val httpClient: HttpClient) {
     suspend fun sendProfileSetupRequest(
         profileSetupDTO: ProfileSetupDTO,
         mediaFile: MediaFile?
-    ): ResultHandler<ProfileSetupResponse?> {
+    ): ResultHandler<ProfileResponse?> {
 
-        return httpClient.safeRequest<ProfileSetupResponse> {
+        return httpClient.safeRequest<ProfileResponse> {
             url("${BASE_URL}api/auth/setup-profile/")
             method = HttpMethod.Put
 

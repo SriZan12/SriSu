@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.srisu.srisu.core.logger.AppLogger
+import java.io.File
 import java.net.URLConnection
 
 actual class GalleryManager actual constructor(private val onLaunch: () -> Unit) {
@@ -133,3 +134,11 @@ actual class FileManager {
         }
     }
 }
+
+
+// In androidMain
+//actual fun saveImageToCache(bytes: ByteArray): File {
+//    val file = File.createTempFile("image_", ".jpg", AppContext.get().cacheDir)
+//    file.writeBytes(bytes)
+//    return file
+//}

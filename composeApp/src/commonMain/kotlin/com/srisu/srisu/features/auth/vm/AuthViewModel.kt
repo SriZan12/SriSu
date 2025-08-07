@@ -347,7 +347,8 @@ class AuthViewModel(
 
                     val session = response?.user?.toSession(
                         access = response.tokens?.access,
-                        refresh = response.tokens?.refresh
+                        refresh = response.tokens?.refresh,
+                        id = response.user.id
                     )
 
                     val credentials = Json.encodeToString(session)

@@ -94,7 +94,6 @@ enum class PhotoType { LARGE, SMALL }
 @Composable
 fun EditProfileScreen(
     editedInterest: List<String?>? = null,
-    session: Session?,
     editProfileViewModel: EditProfileViewModel = koinViewModel<EditProfileViewModel>(),
     onNavigateInterestScreen: (List<Interest>, List<String?>?) -> Unit
 ) {
@@ -102,7 +101,6 @@ fun EditProfileScreen(
     val editProfileUIState by editProfileViewModel.editProfileUIState.collectAsStateWithLifecycle()
 
     Initialization(
-        session = session,
         editedInterest = editedInterest,
         editProfileViewModel = editProfileViewModel
     )
@@ -126,12 +124,10 @@ fun EditProfileScreen(
 
 @Composable
 fun Initialization(
-    session: Session? = null,
     editedInterest: List<String?>? = null,
     editProfileViewModel: EditProfileViewModel
 ) {
     LaunchedEffect(Unit) {
-        editProfileViewModel.updateSession(session = session)
         if (!editedInterest.isNullOrEmpty()) {
             editProfileViewModel.updateInterests(interests = editedInterest)
         }
@@ -635,7 +631,6 @@ fun InterestChip(
 typealias index = Int
 
 @Composable
-@Preview
 fun GalleryCompo(
     modifier: Modifier = Modifier,
     largePhotos: List<GalleyPhotoModel?>? = emptyList(),
@@ -816,3 +811,22 @@ private fun OpenGallery(
 }
 
 
+@Preview()
+@Composable
+fun GalleryCompoPreview() {
+    val fakeLargePhotos = listOf(
+        GalleyPhotoModel(photoUri = null, index = 0),
+        GalleyPhotoModel(photoUri = null, index = 1)
+    )
+    val fakeSmallPhotos = listOf(
+        GalleyPhotoModel(photoUri = null, index = 0),
+        GalleyPhotoModel(photoUri = null, index = 1),
+        GalleyPhotoModel(photoUri = null, index = 2)
+    )
+    GalleryCompo(
+        largePhotos = fakeLargePhotos,
+        smallPhotos = fakeSmallPhotos,
+        onAddImageClicked = { _, _ -> },
+        onRemoveImage = { _, _ -> }
+    )
+}

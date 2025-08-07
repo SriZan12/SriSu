@@ -1,6 +1,6 @@
 package com.srisu.srisu.session
 
-import com.srisu.srisu.core.data.response.auth.ProfileSetupResponse
+import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.auth.User.UserInterest
 import com.srisu.srisu.core.data.response.auth.User.UserPhoto
@@ -67,7 +67,7 @@ data class Session(
     val bio: String? = null,
 )
 
-fun User.toSession(access: String?, refresh: String?): Session {
+fun User.toSession(access: String?, refresh: String?,id: Int?): Session {
     return Session(
         access = access,
         refresh = refresh,
@@ -79,7 +79,7 @@ fun User.toSession(access: String?, refresh: String?): Session {
         firstName = this.firstName,
         fullName = this.fullName,
         gender = this.gender,
-        id = this.id,
+        id = id,
         isActive = this.isActive,
         isPhoneVerified = this.isPhoneVerified,
         isProfileComplete = this.isProfileComplete,
@@ -103,12 +103,13 @@ fun User.toSession(access: String?, refresh: String?): Session {
 fun setUserWholeCredentials(
     access: String?,
     refresh: String?,
-    userInfo: ProfileSetupResponse.User?
+    userInfo: ProfileResponse.User?
 ): String {
     val credentials = Session(
         access = access,
         refresh = refresh,
         dob = userInfo?.dob,
+        bio = userInfo?.bio,
         fullName = userInfo?.fullName,
         gender = userInfo?.gender,
         isPhoneVerified = userInfo?.isPhoneVerified,
@@ -116,7 +117,12 @@ fun setUserWholeCredentials(
         mood = userInfo?.mood,
         phoneNumber = userInfo?.phoneNumber,
         profilePhoto = userInfo?.profilePhoto,
-        zodiacSign = userInfo?.zodiacSign
+        username = userInfo?.username,
+        zodiacSign = userInfo?.zodiacSign,
+        country = userInfo?.country,
+        city = userInfo?.city,
+        userInterests = userInfo?.userInterests,
+        userPhotos = userInfo?.userPhotos
     )
 
     return Json.encodeToString(credentials)
