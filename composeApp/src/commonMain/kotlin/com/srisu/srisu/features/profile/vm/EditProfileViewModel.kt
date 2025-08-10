@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class EditProfileViewModel(
@@ -239,10 +240,7 @@ class EditProfileViewModel(
                     userInterests = _editProfileUIState.value.interests,
                 )
 
-                val fileManager = FileManager()
-                val profile =
-                    fileManager.createMediaFileFromPath(path = _editProfileUIState.value.profilePictureUri.toString())
-
+                val profile =  getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
                 AppLogger.log("Profile URI = ${_editProfileUIState.value.profilePictureUri}")
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
@@ -252,7 +250,7 @@ class EditProfileViewModel(
                     gallery.add(getMediaFileFromUri(uri = it?.photoUri))
                 }
 
-                AppLogger.log("GALLERY SIZZE  = ${gallery.size}")
+                AppLogger.log("GALLERY SIZE  = ${Json.encodeToString(gallery)}")
 
                 profileRepository.sendUpdateProfileRequest(
                     profileUpdateDTO = profileUpdateDTO,

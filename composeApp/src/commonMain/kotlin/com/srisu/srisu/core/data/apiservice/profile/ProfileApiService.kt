@@ -75,24 +75,20 @@ class ProfileApiService(private val httpClient: HttpClient) {
                         append("zodiac_sign", profileUpdateDTO.zodiacSign ?: "")
                         append("mood", profileUpdateDTO.mood ?: "")
 
-                        // Actual file data (profile_picture)
-                        AppLogger.log("MEDIA FILE = ${Json.encodeToString(mediaFile)}}")
-                        /* mediaFile?.fileBytes?.let { fileBytes ->
-                             append(
-                                 "profile_photo",
-                                 fileBytes,
-                                 Headers.build {
-                                     append(
-                                         HttpHeaders.ContentDisposition,
-                                         "form-data; name=profile_photo; filename=${mediaFile.fileName}"
-                                     )
-                                     append(HttpHeaders.ContentType, mediaFile.mimeType)
-                                 }
-                             )
-                         }*/
-
                         mediaFile?.let {
-                            uploadImage(mediaFile)
+                            if (mediaFile.fileBytes != null) {
+                                append(
+                                    "profile_photo",
+                                    mediaFile.fileBytes,
+                                    Headers.build {
+                                        append(
+                                            HttpHeaders.ContentDisposition,
+                                            "form-data; name=profile_photo; filename=${mediaFile.fileName}"
+                                        )
+                                        append(HttpHeaders.ContentType, mediaFile.mimeType ?: "")
+                                    }
+                                )
+                            }
                         }
 
                         profileUpdateDTO.userInterests?.let { userInterests ->
@@ -104,79 +100,39 @@ class ProfileApiService(private val httpClient: HttpClient) {
                             }
                         }
 
-/*
+
                         gallery?.let { userPhotos ->
                             userPhotos.forEachIndexed { index, galleryFile ->
-                                galleryFile?.fileBytes?.let { fileBytes ->
-                                    if (userId != null) {
-                                        append("user_photos[$index][user]", userId)
-                                        append(
-                                            "user_photos[$index][photo]",
-                                            fileBytes,
-                                            Headers.build {
-                                                append(
-                                                    HttpHeaders.ContentDisposition,
-                                                    "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
-                                                )
-                                                append(
-                                                    HttpHeaders.ContentType,
-                                                    galleryFile.mimeType
-                                                )
-                                            }
-                                        )
-                                    }
+                                AppLogger.log("FILE BYTES = ${galleryFile?.fileBytes}")
+                                if (userId != null && galleryFile?.fileBytes != null) {
+                                    // Case: New or updated photo (send file)
+                                    append("user_photos[$index][user]", userId)
+                                    append(
+                                        "user_photos[$index][photo]",
+                                        value = galleryFile.fileBytes,
+                                        Headers.build {
+                                            append(
+                                                HttpHeaders.ContentDisposition,
+                                                "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
+                                            )
+                                            append(
+                                                HttpHeaders.ContentType,
+                                                galleryFile.mimeType ?: "application/octet-stream"
+                                            )
+                                        }
+                                    )
+                                } else {
+                                    AppLogger.log("FILE BYTES ARE NULL")
+                                    append("user_photos[$index][user]", userId!!)
+                                    append("user_photos[$index][photo]", galleryFile?.url!!, )
                                 }
                             }
                         }
-*/
+
+
                     }
                 )
             )
         }
-    }
-
-    suspend fun createMediaFileFromUrl(url: String, fileName: String = "profile_photo.jpg"): MediaFile {
-        // Initialize Ktor client
-        val client = HttpClient(CIO)
-
-        return withContext(Dispatchers.IO) {
-            try {
-                // Download the image from the URL
-                val response = client.get(url)
-                val fileBytes = response.readRawBytes()
-                val fileSize = fileBytes.size.toLong()
-
-                // Determine MIME type from response headers or fallback to JPEG
-                val mimeType = response.contentType()?.toString() ?: "image/jpeg"
-
-                // Create MediaFile object
-                MediaFile(
-                    fileName = fileName,
-                    mimeType = mimeType,
-                    fileSize = fileSize,
-                    fileBytes = fileBytes,
-                    fileType = MediaType.IMAGE_ONLY
-                )
-            } catch (e: Exception) {
-                throw IllegalStateException("Failed to download image from URL: ${e.message}")
-            } finally {
-                client.close()
-            }
-        }
-    }
-
-    fun uploadImage(mediaFile: MediaFile) {
-        // Your existing multipart upload logic
-        append(
-            "profile_photo",
-            mediaFile.fileBytes,
-            Headers.build {
-                append(
-                    HttpHeaders.ContentDisposition,
-                    "form-data; name=profile_photo; filename=${mediaFile.fileName}"
-                )
-                append(HttpHeaders.ContentType, mediaFile.mimeType)
-            }
-        )
     }
 }

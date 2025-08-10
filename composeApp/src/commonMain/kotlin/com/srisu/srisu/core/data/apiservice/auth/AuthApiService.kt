@@ -72,7 +72,7 @@ class AuthApiService(private val httpClient: HttpClient) {
                                         HttpHeaders.ContentDisposition,
                                         "form-data; name=profile_photo; filename=${mediaFile.fileName}"
                                     )
-                                    append(HttpHeaders.ContentType, mediaFile.mimeType)
+                                    append(HttpHeaders.ContentType, mediaFile.mimeType ?: "application/octet-stream")
                                 }
                             )
                         }

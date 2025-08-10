@@ -7,7 +7,9 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.utils.io.toByteArray
+import kotlinx.serialization.Required
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 enum class MediaType {
     IMAGE_ONLY,
@@ -19,11 +21,12 @@ enum class MediaType {
 
 @Serializable
 data class MediaFile(
-    val fileName: String,
-    val mimeType: String,
-    val fileSize: Long,
-    val fileBytes: ByteArray,
-    val fileType: MediaType
+    @Required val fileName: String? = null,
+    @Required val mimeType: String? = null,
+    @Required val fileSize: Long? = null,
+    @Required val fileBytes: ByteArray? = null,
+    @Required val fileType: MediaType? = null,
+    @Required val url: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -69,42 +72,16 @@ expect class FileManager() {
 suspend fun getMediaFileFromUri(uri: Uri?): MediaFile? {
     if (uri == null) return null
     val fileManager = FileManager()
-    return fileManager.createMediaFileFromPath(uri.toString())
-}
-/**
- * Downloads an image from the given URL and saves it to a temporary file
- * in the device's cache directory.
- *
- * Flow:
- *
- * [Your App]
- *     |
- *     |   URL: http://yourserver.com/media/profiles/22.jpg
- *     v
- * Open network connection (HttpURLConnection)
- *     |
- *     v
- * Read image bytes from server (InputStream)
- *     |
- *     v
- * Write image bytes to temporary file (OutputStream → File)
- *     |
- *     v
- * Return the File (stored in cache dir, usable for upload)
- */
-suspend fun downloadImageBytes(imageUrl: String, httpClient: HttpClient): ByteArray? {
-    return try {
-        val response: HttpResponse = httpClient.get(imageUrl)
-        if (response.status.value in 200..299) {
-            response.bodyAsChannel().toByteArray()
-        } else {
-            null
-        }
-    } catch (e: Exception) {
-        println("Image download failed: ${e.message}")
-        null
-    }
+    return fileManager.createMediaFileFromPath(path = uri.toString())
 }
 
-//expect fun saveImageToCache(bytes: ByteArray): Any
+fun isValidContentUri(uri: String?): Boolean {
+    if (uri.isNullOrBlank()) return false
+
+    val lowerUri = uri.lowercase()
+
+    return lowerUri.startsWith("content://") ||
+            lowerUri.startsWith("file://") ||
+            lowerUri.startsWith("/") // absolute file path
+}
 

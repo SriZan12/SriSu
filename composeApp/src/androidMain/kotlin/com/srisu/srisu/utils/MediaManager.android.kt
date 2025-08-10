@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import com.srisu.srisu.core.logger.AppLogger
 import java.io.File
 import java.net.URLConnection
+import androidx.core.net.toUri
 
 actual class GalleryManager actual constructor(private val onLaunch: () -> Unit) {
 
@@ -63,38 +64,36 @@ actual class FileManager {
     private val context = AppContext.get()
 
     actual suspend fun createMediaFileFromPath(path: String?): MediaFile? {
-        path?.let {
-            val uri = Uri.parse(path)
+        try {
+            path?.let {
+                val uri = path.toUri()
 
-            val contentResolver = context.contentResolver
-            val fileName = getFileName(uri) ?: return null
-            val mimeType =
-                contentResolver.getType(uri) ?: URLConnection.guessContentTypeFromName(fileName)
-                ?: "application/octet-stream"
-            val fileType = determineFileType(mimeType)
+                val contentResolver = context.contentResolver
+                val fileName = getFileName(uri) ?: return null
+                val mimeType =
+                    contentResolver.getType(uri) ?: URLConnection.guessContentTypeFromName(fileName)
+                    ?: "application/octet-stream"
+                val fileType = determineFileType(mimeType)
 
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val fileBytes = inputStream.use { it.readBytes() }
-            val fileSize = fileBytes.size.toLong()
+                val inputStream = contentResolver.openInputStream(uri) ?: return null
+                val fileBytes = inputStream.use { it.readBytes() }
+                val fileSize = fileBytes.size.toLong()
 
-            val file = MediaFile(
-                fileName = fileName,
-                mimeType = mimeType,
-                fileSize = fileSize,
-                fileBytes = fileBytes,
-                fileType = fileType
-            )
-
-//        AppLogger.log("MEDIA FILE = ${Json.encodeToString(file)}")
-
+                return MediaFile(
+                    fileName = fileName,
+                    mimeType = mimeType,
+                    fileSize = fileSize,
+                    fileBytes = fileBytes,
+                    fileType = fileType
+                )
+            }
+        } catch (exception: Exception) {
+            AppLogger.log("Error creating media file from path: ${exception.message}")
             return MediaFile(
-                fileName = fileName,
-                mimeType = mimeType,
-                fileSize = fileSize,
-                fileBytes = fileBytes,
-                fileType = fileType
+                url = path
             )
         }
+
 
         return null
 
