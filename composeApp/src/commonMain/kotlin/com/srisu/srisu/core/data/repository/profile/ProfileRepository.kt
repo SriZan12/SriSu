@@ -4,6 +4,7 @@ import com.srisu.srisu.core.data.apiservice.base.BaseApiService
 import com.srisu.srisu.core.data.apiservice.profile.ProfileApiService
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.suggestion.CityResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
@@ -28,6 +29,11 @@ class ProfileRepository(
     @Throws(Exception::class)
     suspend fun getCityList(country: String?): CityResponse? {
         return baseApiService.getCitiesList(country)
+    }
+
+    @Throws(Exception::class)
+    suspend fun getInterestList(): ResultHandler<InterestResponse?> {
+        return profileApiService.getInterestList()
     }
 
     @Throws(Exception::class)

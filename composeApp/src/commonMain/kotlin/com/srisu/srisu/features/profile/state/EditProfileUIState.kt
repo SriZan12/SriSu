@@ -3,6 +3,7 @@ package com.srisu.srisu.features.profile.state
 import androidx.compose.runtime.Stable
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.CountryModel
 
@@ -16,6 +17,7 @@ data class EditProfileUIState(
     val cities: List<String?>? = null,
     val profilePictureUri: Uri? = null,
     val interests: List<String?>? = null,
+    val interestList: List<InterestResponse.Interest?>? = null,
     val largePhotos: List<GalleyPhotoModel?>? =
         listOf(
             GalleyPhotoModel(photoUri = null, index = 0),

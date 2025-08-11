@@ -5,6 +5,7 @@ import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
+import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
@@ -47,6 +48,13 @@ class ProfileApiService(private val httpClient: HttpClient) {
             url("${BASE_URL}api/social/connect-single/")
             method = HttpMethod.Post
             setBody(connectionRequest)
+        }
+    }
+
+    suspend fun getInterestList(): ResultHandler<InterestResponse?> {
+        return httpClient.safeRequest<InterestResponse?> {
+            url("${BASE_URL}api/auth/interests/")
+            method = HttpMethod.Get
         }
     }
 
@@ -124,7 +132,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                 } else {
                                     AppLogger.log("FILE BYTES ARE NULL")
                                     append("user_photos[$index][user]", userId!!)
-                                    append("user_photos[$index][photo]", galleryFile?.url!!, )
+                                    append("user_photos[$index][photo]", galleryFile?.url!!)
                                 }
                             }
                         }

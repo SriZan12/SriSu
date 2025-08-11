@@ -7,6 +7,7 @@ import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
+import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
@@ -41,10 +42,12 @@ class EditProfileViewModel(
     init {
         val sessionData = getSession()
         if (sessionData != null) {
-            AppLogger.log("SESSION DATA = ${sessionData}")
+            AppLogger.log("SESSION DATA = $sessionData")
             val session = Json.decodeFromString<Session>(sessionData)
             updateSession(session)
         }
+
+        getInterestList()
     }
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
@@ -110,6 +113,10 @@ class EditProfileViewModel(
 
     fun updateInterests(interests: List<String?>?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(interests = interests)
+    }
+
+    fun updateInterestList(interestList: List<InterestResponse.Interest?>?) {
+        _editProfileUIState.value = _editProfileUIState.value.copy(interestList = interestList)
     }
 
     fun updateLargePhoto(photo: GalleyPhotoModel?) {
@@ -223,6 +230,16 @@ class EditProfileViewModel(
         }
     }
 
+    fun getInterestList() {
+        viewModelScope.launch {
+            profileRepository.getInterestList().onSuccess { interestResponse, message ->
+                updateInterestList(interestList = interestResponse?.interests)
+            }.onError { error, errorType ->
+                AppLogger.log("Error getting interest list = $error")
+            }
+        }
+    }
+
     fun updateProfile() {
         showLoading()
         viewModelScope.launch {
@@ -240,7 +257,7 @@ class EditProfileViewModel(
                     userInterests = _editProfileUIState.value.interests,
                 )
 
-                val profile =  getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
+                val profile = getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
                 AppLogger.log("Profile URI = ${_editProfileUIState.value.profilePictureUri}")
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
