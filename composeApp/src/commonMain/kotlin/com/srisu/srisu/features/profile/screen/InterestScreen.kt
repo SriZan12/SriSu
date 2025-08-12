@@ -22,15 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryToolBar
-import com.srisu.srisu.navigation.Interest
+import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.features.profile.state.InterestCategoryUI
+import com.srisu.srisu.features.profile.state.InterestUI
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.collections.emptyList
 
 @Composable
 @Preview
 fun InterestScreen(
-    interests: List<Interest?>? = emptyList(),
-    currentInterests: List<String?>? = emptyList(),
-    onInterestSelected: (List<String?>?) -> Unit = {}
+    interests: List<InterestResponse.Interest?>? = emptyList(),
+    currentInterests: List<InterestResponse.Interest?>? = emptyList(),
+    onInterestSelected: (List<InterestResponse.Interest?>?) -> Unit = {}
 ) {
     var selectedInterests by remember {
         mutableStateOf(currentInterests)
@@ -62,7 +65,7 @@ fun InterestScreen(
                 .padding(innerPadding)
         ) {
             CategorizedInterestListCompo(
-                interestCategories = interests,
+                interestList = mapToUIModel(interests = interests),
                 selectedInterests = selectedInterests,
                 onInterestSelected = { selectedInterests = it }
             )
@@ -71,76 +74,138 @@ fun InterestScreen(
 }
 
 
-@Composable
+/*@Composable
 fun CategorizedInterestListCompo(
-    interestCategories: List<Interest?>?,
+    interestList: List<InterestResponse.Interest?>?,
     selectedInterests: List<String?>?,
     onInterestSelected: (List<String?>?) -> Unit
 ) {
     LazyVerticalGrid(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        columns = GridCells.Fixed(3),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        interestList?.filterNotNull()?.forEach { interest ->
+            item(span = { GridItemSpan(3) }) {
+                Text(
+                    text = interest.category?.label ?: interest.category?.name ?: "Uncategorized",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            // Display interests for the category
+            items(interestList) { interest ->
+                val backgroundColor = if (isSelected(selectedInterests, interest?.name)) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceDim
+                }
+
+                InterestChip(
+                    modifier = Modifier,
+                    label = interest?.name ?: "",
+                    backgroundColor = backgroundColor,
+                    onChipClick = {
+                        onInterestSelected(
+                            selectInterests(
+                                selectedInterests = selectedInterests,
+                                selectedInterest = interest?.name ?: ""
+                            )
+                        )
+                    }
+                )
+            }
+        } ?: run {
+            // Handle empty or null interestList
+            item(span = { GridItemSpan(3) }) {
+                Text(
+                    text = "No interests available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}*/
+
+@Composable
+fun CategorizedInterestListCompo(
+    interestList: List<InterestCategoryUI>,
+    selectedInterests: List<InterestResponse.Interest?>?,
+    onInterestSelected: (List<InterestResponse.Interest?>?) -> Unit
+) {
+    LazyVerticalGrid(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         columns = GridCells.Fixed(3),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        interestCategories?.let { newInterestsCategories ->
-            newInterestsCategories.forEach { category ->
-                item(span = { GridItemSpan(3) }) {
-                    Text(
-                        text = category?.category ?: "",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+        interestList.forEach { category ->
+            item(span = { GridItemSpan(3) }) {
+                Text(
+                    text = category.category,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            items(category.interests) { interest ->
+                val isSelected = selectedInterests
+                    ?.any { it?.id == interest.interestId } == true
+
+                val backgroundColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceDim
                 }
 
-                items(category?.interests ?: emptyList()) { interest ->
+                InterestChip(
+                    modifier = Modifier,
+                    label = interest.interestName ?: "",
+                    backgroundColor = backgroundColor,
+                    onChipClick = {
+                        val currentList = selectedInterests ?: emptyList()
 
-                    val backgroundColor = if (isSelected(selectedInterests, interest)) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceDim
-                    }
-
-                    InterestChip(
-                        modifier = Modifier,
-                        label = interest,
-                        backgroundColor = backgroundColor,
-                        onChipClick = {
-                            onInterestSelected(
-                                selectInterests(
-                                    selectedInterests = selectedInterests,
-                                    selectedInterest = interest
-                                )
+                        val updatedSelection = if (isSelected) {
+                            currentList.filterNot { it?.id == interest.interestId }
+                        } else {
+                            currentList + InterestResponse.Interest(
+                                id = interest.interestId,
+                                name = interest.interestName,
+                                category = null // or set the correct category if needed
                             )
                         }
-                    )
-                }
+
+                        onInterestSelected(updatedSelection)
+                    }
+                )
             }
         }
     }
 }
 
-private fun isSelected(selectedInterests: List<String?>?, interest: String?): Boolean {
-    val isSelected =
-        selectedInterests?.contains(interest)
-
-    return isSelected == true
+fun mapToUIModel(interests: List<InterestResponse.Interest?>?): List<InterestCategoryUI> {
+    return interests
+        ?.groupBy { it?.category?.name ?: "" }
+        ?.map { (categoryName, interestsInCategory) ->
+            InterestCategoryUI(
+                category = categoryName,
+                interests = interestsInCategory.map { interest ->
+                    InterestUI(
+                        interestName = interest?.name,
+                        interestId = interest?.id
+                    )
+                }
+            )
+        } ?: emptyList()
 }
 
-private fun selectInterests(
-    selectedInterests: List<String?>?,
-    selectedInterest: String?
-): List<String> {
-    val interestsList = selectedInterests?.filterNotNull() ?: emptyList()
-
-    if (selectedInterest == null) return interestsList
-
-    return if (interestsList.contains(selectedInterest)) {
-        interestsList - selectedInterest
-    } else {
-        if (interestsList.size < 10) interestsList + selectedInterest
-        else interestsList
-    }
-}
 
 
 

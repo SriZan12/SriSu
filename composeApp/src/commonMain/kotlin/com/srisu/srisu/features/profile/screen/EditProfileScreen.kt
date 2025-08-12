@@ -65,22 +65,17 @@ import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
-import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.components.TextAreaCompo
+import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
-import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
-import com.srisu.srisu.features.profile.vm.ProfileViewModel
-import com.srisu.srisu.navigation.Interest
-import com.srisu.srisu.navigation.interestList
 import com.srisu.srisu.permissionmanager.PermissionCallback
 import com.srisu.srisu.permissionmanager.PermissionState
 import com.srisu.srisu.permissionmanager.PermissionType
 import com.srisu.srisu.permissionmanager.createPermissionsManager
-import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
@@ -93,9 +88,9 @@ enum class PhotoType { LARGE, SMALL }
 
 @Composable
 fun EditProfileScreen(
-    editedInterest: List<String?>? = null,
+    editedInterest: List<InterestResponse.Interest?>? = null,
     editProfileViewModel: EditProfileViewModel = koinViewModel<EditProfileViewModel>(),
-    onNavigateInterestScreen: (List<Interest>, List<String?>?) -> Unit
+    onNavigateInterestScreen: (List<InterestResponse.Interest?>?, List<InterestResponse.Interest?>?) -> Unit
 ) {
 
     val editProfileUIState by editProfileViewModel.editProfileUIState.collectAsStateWithLifecycle()
@@ -113,9 +108,9 @@ fun EditProfileScreen(
     EditProfileScreenContent(
         editProfileUIState = editProfileUIState,
         editProfileViewModel = editProfileViewModel,
-        onNavigateInterestScreen = { interests, currentInterest ->
+        onNavigateInterestScreen = { currentInterest ->
             onNavigateInterestScreen(
-                interests,
+                editProfileUIState.interestList,
                 currentInterest
             )
         }
@@ -124,7 +119,7 @@ fun EditProfileScreen(
 
 @Composable
 fun Initialization(
-    editedInterest: List<String?>? = null,
+    editedInterest: List<InterestResponse.Interest?>? = null,
     editProfileViewModel: EditProfileViewModel
 ) {
     LaunchedEffect(Unit) {
@@ -201,7 +196,7 @@ private fun HandleUiStates(
 fun EditProfileScreenContent(
     editProfileUIState: EditProfileUIState,
     editProfileViewModel: EditProfileViewModel,
-    onNavigateInterestScreen: (List<Interest>, List<String?>?) -> Unit,
+    onNavigateInterestScreen: (List<InterestResponse.Interest?>?) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier,
@@ -253,10 +248,11 @@ fun EditProfileScreenContent(
                     }
                 )
 
-                InterestCompo(allInterests = editProfileUIState.interests) {
+                val allInterests = editProfileUIState.currentInterests?.map { it?.name }
+
+                InterestCompo(allInterests = allInterests) {
                     onNavigateInterestScreen(
-                        interestList,
-                        editProfileUIState.interests
+                        editProfileUIState.currentInterests
                     )
                 }
 

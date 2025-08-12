@@ -16,7 +16,7 @@ data class EditProfileUIState(
     val city: String? = null,
     val cities: List<String?>? = null,
     val profilePictureUri: Uri? = null,
-    val interests: List<String?>? = null,
+    val currentInterests: List<InterestResponse.Interest?>? = null,
     val interestList: List<InterestResponse.Interest?>? = null,
     val largePhotos: List<GalleyPhotoModel?>? =
         listOf(
@@ -37,3 +37,14 @@ data class GalleyPhotoModel(
     val photoUri: Uri?,
     val index: Int
 )
+
+data class InterestCategoryUI(
+    val category: String,
+    val interests: List<InterestUI>
+)
+
+data class InterestUI(
+    val interestName: String?,
+    val interestId: Int?
+)
+

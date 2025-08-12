@@ -18,13 +18,11 @@ import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Country
 import com.srisu.srisu.utils.CountryModel
-import com.srisu.srisu.utils.FileManager
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -111,8 +109,8 @@ class EditProfileViewModel(
         _editProfileUIState.value = _editProfileUIState.value.copy(cities = cities)
     }
 
-    fun updateInterests(interests: List<String?>?) {
-        _editProfileUIState.value = _editProfileUIState.value.copy(interests = interests)
+    fun updateInterests(interests: List<InterestResponse.Interest?>?) {
+        _editProfileUIState.value = _editProfileUIState.value.copy(currentInterests = interests)
     }
 
     fun updateInterestList(interestList: List<InterestResponse.Interest?>?) {
@@ -254,7 +252,7 @@ class EditProfileViewModel(
                     bio = _editProfileUIState.value.bio,
                     country = _editProfileUIState.value.country?.name,
                     city = _editProfileUIState.value.city,
-                    userInterests = _editProfileUIState.value.interests,
+                    userInterests = _editProfileUIState.value.currentInterests,
                 )
 
                 val profile = getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
@@ -268,6 +266,7 @@ class EditProfileViewModel(
                 }
 
                 AppLogger.log("GALLERY SIZE  = ${Json.encodeToString(gallery)}")
+                AppLogger.log("INTEREST SIZE  = ${Json.encodeToString(_editProfileUIState.value.currentInterests?.size)}")
 
                 profileRepository.sendUpdateProfileRequest(
                     profileUpdateDTO = profileUpdateDTO,

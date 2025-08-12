@@ -100,16 +100,20 @@ class ProfileApiService(private val httpClient: HttpClient) {
                         }
 
                         profileUpdateDTO.userInterests?.let { userInterests ->
-                            userInterests.forEachIndexed { index, interestName ->
-                                if (!interestName.isNullOrEmpty() && userId != null) {
-                                    append("user_interests[$index][user]", userId)
-                                    append("user_interests[$index][name]", interestName)
-                                }
+                            userInterests.forEachIndexed { index, interest ->
+                                AppLogger.log("USER ID = $userId")
+//                                if (userId != null) {
+                                    AppLogger.log("USER ID = $userId")
+                                    append("user_interests[$index][user]", 42)
+                                    interest?.name?.let { append("user_interests[$index][name]", it) }
+                                    interest?.id?.let { append("user_interests[$index][interest]", it) }
+//                                }
                             }
                         }
 
 
-                        gallery?.let { userPhotos ->
+
+                        /*gallery?.let { userPhotos ->
                             userPhotos.forEachIndexed { index, galleryFile ->
                                 AppLogger.log("FILE BYTES = ${galleryFile?.fileBytes}")
                                 if (userId != null && galleryFile?.fileBytes != null) {
@@ -135,7 +139,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                     append("user_photos[$index][photo]", galleryFile?.url!!)
                                 }
                             }
-                        }
+                        }*/
 
 
                     }

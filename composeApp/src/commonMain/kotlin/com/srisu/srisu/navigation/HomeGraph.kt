@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
 import com.srisu.srisu.features.profile.screen.InterestScreen
@@ -122,12 +123,12 @@ fun NavGraphBuilder.homeGraph(
         val savedStateHandle = navBackStackEntry.savedStateHandle
         val editedInterest = savedStateHandle.getStateFlow(EDITED_INTERESTS, "").value
         val editedInterestList =
-            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<String?>>(editedInterest) else null
+            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<InterestResponse.Interest?>?>(editedInterest) else null
 
         EditProfileScreen(
             onNavigateInterestScreen = { interests, currentInterestStrings ->
 
-                val data = InterestScreenData(
+                val data = ScreenData.InterestScreenData(
                     list = interests,
                     currentInterests = currentInterestStrings,
                 )
@@ -145,7 +146,7 @@ fun NavGraphBuilder.homeGraph(
 
     composable<HomeNavigation.InterestScreen> { backStackEntry ->
         val data = backStackEntry.arguments?.getString("data")
-        val interestScreenData = Json.decodeFromString<InterestScreenData>(data ?: "")
+        val interestScreenData = Json.decodeFromString<ScreenData.InterestScreenData>(data ?: "")
 
         InterestScreen(
             interests = interestScreenData.list,
@@ -189,37 +190,11 @@ fun applyFilter(navController: NavController) {
         ?.set(FILTER_APPLIED, true)
 }
 
-@Serializable
-data class Interest(
-    val category: String,
-    val interests: List<String>
-)
-
-@Serializable
-data class InterestScreenData(
-    val list: List<Interest?>?,
-    val currentInterests: List<String?>?,
-)
-
-val interestList = listOf(
-    Interest(
-        category = "Sports",
-        interests = listOf("Football", "Cricket", "Tennis")
-    ),
-    Interest(
-        category = "Music",
-        interests = listOf("Rock", "Jazz", "Classical")
-    ),
-    Interest(
-        category = "Travel",
-        interests = listOf("Hiking", "Road Trips", "Camping")
-    ),
-    Interest(
-        category = "Technology",
-        interests = listOf("AI", "Blockchain", "Cybersecurity")
-    ),
-    Interest(
-        category = "Food",
-        interests = listOf("Cooking", "Baking", "Trying new cuisines")
+object ScreenData{
+    @Serializable
+    data class InterestScreenData(
+        val list: List<InterestResponse.Interest?>?,
+        val currentInterests: List<InterestResponse.Interest?>?,
     )
-)
+}
+
