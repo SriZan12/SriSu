@@ -1,6 +1,7 @@
 package com.srisu.srisu.core.data.dto.profile
 
 import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.User
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -29,7 +30,7 @@ data class ProfileUpdateDTO(
     @SerialName("bio")
     val bio: String? = null,
     @SerialName("user_interests")
-    val userInterests: List<InterestResponse.Interest?>? = null,
+    val userInterests: List<User.UserInterest?>? = null,
     @SerialName("user_photos")
     val userPhotos: List<String>? = null
 )

@@ -8,6 +8,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
@@ -109,7 +110,7 @@ class EditProfileViewModel(
         _editProfileUIState.value = _editProfileUIState.value.copy(cities = cities)
     }
 
-    fun updateInterests(interests: List<InterestResponse.Interest?>?) {
+    fun updateCurrentInterests(interests: List<User.UserInterest?>?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(currentInterests = interests)
     }
 
@@ -180,7 +181,7 @@ class EditProfileViewModel(
         updateCountry(country = Country.getCountryModelFromName(country = session?.country))
         getCityList()
         updateCity(city = session?.city)
-        updateInterests(interests = null)
+        updateCurrentInterests(interests = session?.userInterests)
         updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
 
         session?.userPhotos?.forEachIndexed { index, photo ->

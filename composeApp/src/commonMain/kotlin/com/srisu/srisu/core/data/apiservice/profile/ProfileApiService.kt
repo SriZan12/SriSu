@@ -106,7 +106,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                     AppLogger.log("USER ID = $userId")
                                     append("user_interests[$index][user]", 42)
                                     interest?.name?.let { append("user_interests[$index][name]", it) }
-                                    interest?.id?.let { append("user_interests[$index][interest]", it) }
+                                    interest?.interest?.let { append("user_interests[$index][interest]", it) }
 //                                }
                             }
                         }

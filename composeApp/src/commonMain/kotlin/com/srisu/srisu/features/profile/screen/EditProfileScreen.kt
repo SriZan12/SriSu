@@ -124,7 +124,7 @@ fun Initialization(
 ) {
     LaunchedEffect(Unit) {
         if (!editedInterest.isNullOrEmpty()) {
-            editProfileViewModel.updateInterests(interests = editedInterest)
+            editProfileViewModel.updateCurrentInterests(interests = editedInterest)
         }
     }
 }

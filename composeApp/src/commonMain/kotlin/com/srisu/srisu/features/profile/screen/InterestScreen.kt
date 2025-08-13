@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.features.profile.state.InterestCategoryUI
 import com.srisu.srisu.features.profile.state.InterestUI
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -32,8 +33,8 @@ import kotlin.collections.emptyList
 @Preview
 fun InterestScreen(
     interests: List<InterestResponse.Interest?>? = emptyList(),
-    currentInterests: List<InterestResponse.Interest?>? = emptyList(),
-    onInterestSelected: (List<InterestResponse.Interest?>?) -> Unit = {}
+    currentInterests: List<User.UserInterest?>? = emptyList(),
+    onInterestSelected: (List<User.UserInterest?>?) -> Unit = {}
 ) {
     var selectedInterests by remember {
         mutableStateOf(currentInterests)
@@ -136,8 +137,8 @@ fun CategorizedInterestListCompo(
 @Composable
 fun CategorizedInterestListCompo(
     interestList: List<InterestCategoryUI>,
-    selectedInterests: List<InterestResponse.Interest?>?,
-    onInterestSelected: (List<InterestResponse.Interest?>?) -> Unit
+    selectedInterests: List<User.UserInterest?>?,
+    onInterestSelected: (List<User.UserInterest?>?) -> Unit
 ) {
     LazyVerticalGrid(
         modifier = Modifier
@@ -175,10 +176,10 @@ fun CategorizedInterestListCompo(
                         val updatedSelection = if (isSelected) {
                             currentList.filterNot { it?.id == interest.interestId }
                         } else {
-                            currentList + InterestResponse.Interest(
-                                id = interest.interestId,
+                            currentList + User.UserInterest(
+                                interest = interest.interestId,
                                 name = interest.interestName,
-                                category = null // or set the correct category if needed
+
                             )
                         }
 
