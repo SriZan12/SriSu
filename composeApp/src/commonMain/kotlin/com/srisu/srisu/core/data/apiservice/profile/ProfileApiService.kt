@@ -102,12 +102,14 @@ class ProfileApiService(private val httpClient: HttpClient) {
                         profileUpdateDTO.userInterests?.let { userInterests ->
                             userInterests.forEachIndexed { index, interest ->
                                 AppLogger.log("USER ID = $userId")
-//                                if (userId != null) {
+                                if (userId != null) {
                                     AppLogger.log("USER ID = $userId")
-                                    append("user_interests[$index][user]", 42)
+                                    append("user_interests[$index][user]", userId)
                                     interest?.name?.let { append("user_interests[$index][name]", it) }
                                     interest?.interest?.let { append("user_interests[$index][interest]", it) }
-//                                }
+                                    interest?.removed?.let { append("user_interests[$index][removed]", it) }
+//                                    append("user_interests[$index][removed]", false)
+                                }
                             }
                         }
 

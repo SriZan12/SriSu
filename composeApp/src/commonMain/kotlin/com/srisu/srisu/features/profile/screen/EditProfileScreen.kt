@@ -68,6 +68,7 @@ import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.components.TextAreaCompo
 import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
@@ -88,9 +89,9 @@ enum class PhotoType { LARGE, SMALL }
 
 @Composable
 fun EditProfileScreen(
-    editedInterest: List<InterestResponse.Interest?>? = null,
+    editedInterest: List<User.UserInterest?>? = null,
     editProfileViewModel: EditProfileViewModel = koinViewModel<EditProfileViewModel>(),
-    onNavigateInterestScreen: (List<InterestResponse.Interest?>?, List<InterestResponse.Interest?>?) -> Unit
+    onNavigateInterestScreen: (List<InterestResponse.Interest?>?, List<User.UserInterest?>?) -> Unit
 ) {
 
     val editProfileUIState by editProfileViewModel.editProfileUIState.collectAsStateWithLifecycle()
@@ -119,11 +120,11 @@ fun EditProfileScreen(
 
 @Composable
 fun Initialization(
-    editedInterest: List<InterestResponse.Interest?>? = null,
+    editedInterest: List<User.UserInterest?>? = null,
     editProfileViewModel: EditProfileViewModel
 ) {
     LaunchedEffect(Unit) {
-        if (!editedInterest.isNullOrEmpty()) {
+        if (editedInterest != null) {
             editProfileViewModel.updateCurrentInterests(interests = editedInterest)
         }
     }
@@ -196,7 +197,7 @@ private fun HandleUiStates(
 fun EditProfileScreenContent(
     editProfileUIState: EditProfileUIState,
     editProfileViewModel: EditProfileViewModel,
-    onNavigateInterestScreen: (List<InterestResponse.Interest?>?) -> Unit,
+    onNavigateInterestScreen: (List<User.UserInterest?>?) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier,
@@ -248,7 +249,9 @@ fun EditProfileScreenContent(
                     }
                 )
 
-                val allInterests = editProfileUIState.currentInterests?.map { it?.name }
+                val allInterests =
+                    editProfileUIState.currentInterests?.filter { it?.removed == false }
+                        ?.map { it?.name }
 
                 InterestCompo(allInterests = allInterests) {
                     onNavigateInterestScreen(

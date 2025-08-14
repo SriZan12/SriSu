@@ -13,6 +13,8 @@ data class ProfileResponse(
 ) {
     @Serializable
     data class User(
+        @SerialName("id")
+        val id: Int? = null,
         @SerialName("bio")
         val bio: String? = null,
         @SerialName("city")

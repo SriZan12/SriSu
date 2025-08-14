@@ -276,6 +276,7 @@ class EditProfileViewModel(
                     gallery = gallery
                 ).onSuccess { profileResponse, _ ->
                     AppLogger.log("Profile Updated Successfully")
+
                     val credentials = setUserWholeCredentials(
                         access = _editProfileUIState.value.session?.access,
                         refresh = _editProfileUIState.value.session?.refresh,

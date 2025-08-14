@@ -8,6 +8,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
 import com.srisu.srisu.features.profile.screen.InterestScreen
@@ -123,7 +124,7 @@ fun NavGraphBuilder.homeGraph(
         val savedStateHandle = navBackStackEntry.savedStateHandle
         val editedInterest = savedStateHandle.getStateFlow(EDITED_INTERESTS, "").value
         val editedInterestList =
-            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<InterestResponse.Interest?>?>(editedInterest) else null
+            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<User.UserInterest?>?>(editedInterest) else null
 
         EditProfileScreen(
             onNavigateInterestScreen = { interests, currentInterestStrings ->
@@ -194,7 +195,7 @@ object ScreenData{
     @Serializable
     data class InterestScreenData(
         val list: List<InterestResponse.Interest?>?,
-        val currentInterests: List<InterestResponse.Interest?>?,
+        val currentInterests: List<User.UserInterest?>?,
     )
 }
 

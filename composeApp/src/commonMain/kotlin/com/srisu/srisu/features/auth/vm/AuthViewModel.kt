@@ -351,6 +351,8 @@ class AuthViewModel(
                         id = response.user.id
                     )
 
+                    AppLogger.log("SESSION = ${response?.user?.id}")
+
                     val credentials = Json.encodeToString(session)
 
                     saveSession(credentials = credentials, sessionKey = SESSION_KEY)

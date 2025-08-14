@@ -108,6 +108,7 @@ fun setUserWholeCredentials(
     val credentials = Session(
         access = access,
         refresh = refresh,
+        id = userInfo?.id,
         dob = userInfo?.dob,
         bio = userInfo?.bio,
         fullName = userInfo?.fullName,

@@ -67,7 +67,9 @@ data class User(
         @SerialName("user")
         val user: Int? = null,
         @SerialName("interest") //This is the interest id from the InterestModel
-        val interest: Int? = null
+        val interest: Int? = null,
+        @SerialName("removed")
+        val removed: Boolean? = null,
     )
 
     @Serializable

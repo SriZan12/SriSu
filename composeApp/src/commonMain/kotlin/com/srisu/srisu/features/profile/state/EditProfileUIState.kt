@@ -46,6 +46,8 @@ data class InterestCategoryUI(
 
 data class InterestUI(
     val interestName: String?,
-    val interestId: Int?
+    val id : Int? = null,
+    val user: Int? = null,
+    val category: Int? = null,
 )
 
