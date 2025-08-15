@@ -81,6 +81,8 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -125,6 +127,7 @@ fun Initialization(
 ) {
     LaunchedEffect(Unit) {
         if (editedInterest != null) {
+            AppLogger.log("INSIDE INITIALIZATION = ${Json.encodeToString(editedInterest)}")
             editProfileViewModel.updateCurrentInterests(interests = editedInterest)
         }
     }

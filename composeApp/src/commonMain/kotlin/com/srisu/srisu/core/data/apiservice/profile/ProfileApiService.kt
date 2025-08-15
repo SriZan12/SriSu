@@ -100,6 +100,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
                         }
 
                         profileUpdateDTO.userInterests?.let { userInterests ->
+                            AppLogger.log("USER INTERESTS API SERVICE= $userInterests")
                             userInterests.forEachIndexed { index, interest ->
                                 AppLogger.log("USER ID = $userId")
                                 if (userId != null) {

@@ -267,7 +267,7 @@ class EditProfileViewModel(
                 }
 
                 AppLogger.log("GALLERY SIZE  = ${Json.encodeToString(gallery)}")
-                AppLogger.log("INTEREST SIZE  = ${Json.encodeToString(_editProfileUIState.value.currentInterests?.size)}")
+                AppLogger.log("INTEREST SIZE  = ${Json.encodeToString(_editProfileUIState.value.currentInterests)}")
 
                 profileRepository.sendUpdateProfileRequest(
                     profileUpdateDTO = profileUpdateDTO,

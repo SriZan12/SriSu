@@ -18,7 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryToolBar
@@ -49,16 +51,18 @@ fun InterestScreen(
             )
         },
         bottomBar = {
-            PrimaryButtonCompo(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .navigationBarsPadding(),
-                label = "Save",
-                onClick = {
-                    onInterestSelected(selectedInterests)
-                }
-            )
+            if (!interests.isNullOrEmpty()) {
+                PrimaryButtonCompo(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .navigationBarsPadding(),
+                    label = "Save",
+                    onClick = {
+                        onInterestSelected(selectedInterests)
+                    }
+                )
+            }
         }
     ) { innerPadding ->
         Box(
@@ -69,6 +73,7 @@ fun InterestScreen(
             CategorizedInterestListCompo(
                 interestList = mapToUIModel(interests = interests),
                 selectedInterests = selectedInterests,
+                previousInterest = currentInterests,
                 onInterestSelected = { selectedInterests = it }
             )
         }
@@ -77,8 +82,9 @@ fun InterestScreen(
 
 @Composable
 fun CategorizedInterestListCompo(
-    interestList: List<InterestCategoryUI>,
+    interestList: List<InterestCategoryUI> = emptyList(),
     selectedInterests: List<User.UserInterest?>?,
+    previousInterest: List<User.UserInterest?>?,
     onInterestSelected: (List<User.UserInterest?>?) -> Unit
 ) {
     LazyVerticalGrid(
@@ -88,63 +94,72 @@ fun CategorizedInterestListCompo(
         columns = GridCells.Fixed(3),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        interestList.forEach { category ->
+        if (interestList.isEmpty()) {
+            // Empty state
             item(span = { GridItemSpan(3) }) {
-                Text(
-                    text = category.category,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "No interests available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-
-            items(category.interests) { interest ->
-                val isSelected = selectedInterests
-                    ?.any {
-                        AppLogger.log("INTEREST = ${it?.interest}")
-                        AppLogger.log("id = ${interest.id}")
-                        it?.removed == false && it.interest == interest.id
-                    } == true
-
-
-                val backgroundColor = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceDim
+        } else {
+            interestList.forEach { category ->
+                item(span = { GridItemSpan(3) }) {
+                    Text(
+                        text = category.category,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
 
-                InterestChip(
-                    modifier = Modifier,
-                    label = interest.interestName ?: "",
-                    backgroundColor = backgroundColor,
-                    onChipClick = {
-                        val currentList = selectedInterests?.toMutableList() ?: mutableListOf()
+                items(category.interests) { interest ->
+                    val isSelected = selectedInterests
+                        ?.any {
+                            AppLogger.log("INTEREST = ${it?.interest}")
+                            AppLogger.log("id = ${interest.id}")
+                            it?.removed == false && it.interest == interest.id
+                        } == true
 
-                        val updatedSelection = if (isSelected) {
-                            currentList.map { userInterest ->
-                                if (userInterest?.interest == interest.id) {
-                                    userInterest?.copy(
-                                        removed = true
-                                    )
-                                } else userInterest
-                            }
-                        } else {
-                            currentList + User.UserInterest(
-                                interest = interest.id,
-                                name = interest.interestName,
-                                removed = false
-                            )
-                        }
-
-
-                        onInterestSelected(updatedSelection)
+                    val backgroundColor = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceDim
                     }
-                )
+
+                    InterestChip(
+                        modifier = Modifier,
+                        label = interest.interestName ?: "",
+                        backgroundColor = backgroundColor,
+                        onChipClick = {
+
+                            val updatedSelection = updateInterestSelection(
+                                currentList = selectedInterests ?: emptyList(),
+                                previousInterest = previousInterest,
+                                interest = interest,
+                                isSelected = isSelected
+                            )
+
+                            onInterestSelected(updatedSelection)
+                        }
+                    )
+                }
             }
         }
     }
+
 }
 
-fun mapToUIModel(interests: List<InterestResponse.Interest?>?): List<InterestCategoryUI> {
+private fun mapToUIModel(interests: List<InterestResponse.Interest?>?): List<InterestCategoryUI> {
     return interests
         ?.groupBy { it?.category?.name ?: "" }
         ?.map { (categoryName, interestsInCategory) ->
@@ -159,6 +174,50 @@ fun mapToUIModel(interests: List<InterestResponse.Interest?>?): List<InterestCat
             )
         } ?: emptyList()
 }
+
+private fun updateInterestSelection(
+    currentList: List<User.UserInterest?>,
+    previousInterest: List<User.UserInterest?>?,
+    interest: InterestUI,
+    isSelected: Boolean
+): List<User.UserInterest?> {
+
+    return if (isSelected) {
+        AppLogger.log("Interest is selected")
+        val isAvailableInPrevList = previousInterest?.any { it?.interest == interest.id }
+        if (isAvailableInPrevList == false) {
+            AppLogger.log("Interest was not in previous list, removing it")
+            currentList.filter { it?.interest != interest.id }
+        } else {
+            currentList.map { userInterest ->
+                if (userInterest?.interest == interest.id) {
+                    userInterest?.copy(removed = true)
+                } else userInterest
+            }
+        }
+
+    } else {
+        val existing = currentList.find { it?.interest == interest.id }
+
+        if (existing != null) {
+            AppLogger.log("Interest exists in current list, updating it")
+            currentList.map { userInterest ->
+                if (userInterest?.interest == interest.id) {
+                    userInterest?.copy(removed = false)
+                } else userInterest
+            }
+        } else {
+            AppLogger.log("Interest  does not exists in current list, adding it")
+            currentList + User.UserInterest(
+                interest = interest.id,
+                name = interest.interestName,
+                removed = false
+            )
+        }
+    }
+
+}
+
 
 
 
