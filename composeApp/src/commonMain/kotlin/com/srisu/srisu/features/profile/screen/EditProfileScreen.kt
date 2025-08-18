@@ -265,30 +265,36 @@ fun EditProfileScreenContent(
                 val openGallery = remember { mutableStateOf(false) }
                 val photoType = remember { mutableStateOf(PhotoType.LARGE) }
                 val photoIndex = remember { mutableStateOf(0) }
+                val photoId = remember { mutableStateOf(-1) }
 
                 GalleryCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     largePhotos = editProfileUIState.largePhotos,
                     smallPhotos = editProfileUIState.smallPhotos,
-                    onAddImageClicked = { index, type ->
+                    onAddImageClicked = { index, type, id ->
+                        photoId.value = id ?: -1
                         photoIndex.value = index
                         photoType.value = type
                         openGallery.value = true
                     },
-                    onRemoveImage = { index, type ->
+                    onRemoveImage = { index, type, id ->
                         photoIndex.value = index
                         photoType.value = type
                         if (photoType.value == PhotoType.LARGE) {
                             editProfileViewModel.updateLargePhoto(
                                 photo = GalleyPhotoModel(
+                                    id = id,
                                     photoUri = null,
+                                    removed = true,
                                     index = photoIndex.value
                                 )
                             )
                         } else {
                             editProfileViewModel.updateSmallPhotos(
                                 photo = GalleyPhotoModel(
+                                    id = id,
                                     photoUri = null,
+                                    removed = true,
                                     index = photoIndex.value
                                 )
                             )
@@ -637,8 +643,8 @@ fun GalleryCompo(
     modifier: Modifier = Modifier,
     largePhotos: List<GalleyPhotoModel?>? = emptyList(),
     smallPhotos: List<GalleyPhotoModel?>? = emptyList(),
-    onAddImageClicked: (index, PhotoType) -> Unit,
-    onRemoveImage: (index, PhotoType) -> Unit
+    onAddImageClicked: (index, PhotoType, Int?) -> Unit,
+    onRemoveImage: (index, PhotoType, Int?) -> Unit
 ) {
 
     Column(
@@ -669,9 +675,10 @@ fun GalleryCompo(
                         .weight(1f)
                         .fillMaxHeight(),
                     photoUri = photo?.photoUri,
-                    onClick = { onAddImageClicked(index, PhotoType.LARGE) },
+                    onClick = { onAddImageClicked(index, PhotoType.LARGE, photo?.id) },
                     onRemove = {
-                        onRemoveImage(index, PhotoType.LARGE)
+                        AppLogger.log("WHILE REMOVING ID = ${photo?.id}")
+                        onRemoveImage(index, PhotoType.LARGE, photo?.id)
                     }
                 )
             }
@@ -693,26 +700,26 @@ fun GalleryCompo(
                         .fillMaxHeight(),
                     photoUri = photo?.photoUri,
                     onClick = {
-                        onAddImageClicked(index, PhotoType.SMALL)
+                        onAddImageClicked(index, PhotoType.SMALL, photo?.id)
                     },
                     onRemove = {
-                        onRemoveImage(index, PhotoType.SMALL)
+                        onRemoveImage(index, PhotoType.SMALL, photo?.id)
                     }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        /* Spacer(modifier = Modifier.height(12.dp))
 
-        PrimaryTextButton(
-            modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally),
-            label = "View all",
-            textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary),
-            fontWeight = FontWeight.SemiBold,
-            onClick = {
+         PrimaryTextButton(
+             modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally),
+             label = "View all",
+             textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary),
+             fontWeight = FontWeight.SemiBold,
+             onClick = {
 
-            }
-        )
+             }
+         )*/
     }
 }
 
@@ -828,7 +835,7 @@ fun GalleryCompoPreview() {
     GalleryCompo(
         largePhotos = fakeLargePhotos,
         smallPhotos = fakeSmallPhotos,
-        onAddImageClicked = { _, _ -> },
-        onRemoveImage = { _, _ -> }
+        onAddImageClicked = { _, _, _ -> },
+        onRemoveImage = { _, _, _ -> }
     )
 }

@@ -129,18 +129,20 @@ class EditProfileViewModel(
         } else {
             if (photo.index >= 0) {
                 while (currentPhotos.size <= photo.index) {
-                    currentPhotos.add(null)
+                    currentPhotos.add(photo)
                 }
                 currentPhotos[photo.index] = photo
             }
         }
+
+        AppLogger.log("GALLERY = $photo")
 
         _editProfileUIState.value = _editProfileUIState.value.copy(largePhotos = currentPhotos)
 
     }
 
 
-    fun updateSmallPhotos(photo: GalleyPhotoModel?) {
+    fun updateSmallPhotos(photo: GalleyPhotoModel?,) {
         if (photo == null) return
 
         val currentPhotos =
@@ -189,16 +191,21 @@ class EditProfileViewModel(
 
                 updateLargePhoto(
                     GalleyPhotoModel(
+                        id = photo?.id,
                         photoUri = photo?.photo?.toUri(),
-                        index = index
+                        index = index,
+                        removed = photo?.removed ?: false
                     )
                 )
             } else {
                 updateSmallPhotos(
                     GalleyPhotoModel(
+                        id = photo?.id,
                         photoUri = photo?.photo?.toUri(),
-                        index = index
-                    )
+                        index = index,
+                        removed = photo?.removed ?: false,
+                    ),
+
                 )
             }
         }
@@ -256,17 +263,24 @@ class EditProfileViewModel(
                     userInterests = _editProfileUIState.value.currentInterests,
                 )
 
-                val profile = getMediaFileFromUri(uri = _editProfileUIState.value.profilePictureUri)
+                val profile = getMediaFileFromUri(
+                    uri = _editProfileUIState.value.profilePictureUri,
+                    id = null,
+                    removed = false
+                )
+
                 AppLogger.log("Profile URI = ${_editProfileUIState.value.profilePictureUri}")
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
-                    gallery.add(getMediaFileFromUri(uri = it?.photoUri))
+                    AppLogger.log("LOOPING = ${it?.id} - ${it?.removed}")
+                    gallery.add(getMediaFileFromUri(uri = it?.photoUri, id = it?.id, removed = it?.removed ?: false))
                 }
                 _editProfileUIState.value.smallPhotos?.forEach {
-                    gallery.add(getMediaFileFromUri(uri = it?.photoUri))
+                    gallery.add(getMediaFileFromUri(uri = it?.photoUri, id = it?.id, removed = it?.removed ?: false))
                 }
 
                 AppLogger.log("GALLERY SIZE  = ${Json.encodeToString(gallery)}")
+                AppLogger.log("GALLERY SIZE  = ${gallery.size}")
                 AppLogger.log("INTEREST SIZE  = ${Json.encodeToString(_editProfileUIState.value.currentInterests)}")
 
                 profileRepository.sendUpdateProfileRequest(

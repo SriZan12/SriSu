@@ -1,5 +1,6 @@
 package com.srisu.srisu.core.data.apiservice.profile
 
+import com.srisu.srisu.App
 import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
 import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
@@ -106,43 +107,152 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                 if (userId != null) {
                                     AppLogger.log("USER ID = $userId")
                                     append("user_interests[$index][user]", userId)
-                                    interest?.name?.let { append("user_interests[$index][name]", it) }
-                                    interest?.interest?.let { append("user_interests[$index][interest]", it) }
-                                    interest?.removed?.let { append("user_interests[$index][removed]", it) }
+                                    interest?.name?.let {
+                                        append(
+                                            "user_interests[$index][name]",
+                                            it
+                                        )
+                                    }
+                                    interest?.interest?.let {
+                                        append(
+                                            "user_interests[$index][interest]",
+                                            it
+                                        )
+                                    }
+                                    interest?.removed?.let {
+                                        append(
+                                            "user_interests[$index][removed]",
+                                            it
+                                        )
+                                    }
 //                                    append("user_interests[$index][removed]", false)
                                 }
                             }
                         }
 
+                     /*   gallery?.forEachIndexed { index, galleryFile ->
+                            if (userId != null) {
+
+                                AppLogger.log("GALLER = ${Json.encodeToString(galleryFile)}")
+
+                                when {
+                                    //Case 1: Updating the photo
+                                    galleryFile?.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
+                                        // flag that photo as null
+                                        append("user_photos[$index][user]", userId)
+                                        append("user_photos[$index][id]", galleryFile.id)
+
+//                                        append("user_photos[$index][removed]", true)
+
+//                                        append("user_photos[$index][user]", userId)
+                                        append(
+                                            key = "user_photos[$index][photo]",
+                                            value = galleryFile.fileBytes,
+                                            Headers.build {
+                                                append(
+                                                    HttpHeaders.ContentDisposition,
+                                                    "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
+                                                )
+                                                append(
+                                                    HttpHeaders.ContentType,
+                                                    galleryFile.mimeType ?: ""
+                                                )
+                                            }
+                                        )
 
 
-                        /*gallery?.let { userPhotos ->
-                            userPhotos.forEachIndexed { index, galleryFile ->
-                                AppLogger.log("FILE BYTES = ${galleryFile?.fileBytes}")
-                                if (userId != null && galleryFile?.fileBytes != null) {
-                                    // Case: New or updated photo (send file)
-                                    append("user_photos[$index][user]", userId)
-                                    append(
-                                        "user_photos[$index][photo]",
-                                        value = galleryFile.fileBytes,
-                                        Headers.build {
+                                    }
+
+                                    galleryFile?.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
+                                        AppLogger.log("REMOVING PHOTO.. = $index")
+                                        append("user_photos[${index-1}][user]", userId)
+                                        append("user_photos[${index-1}][id]", galleryFile.id)
+                                        append("user_photos[${index-1}][removed]", true)
+                                    }
+
+                                    // Case 3: New photo (upload file)
+                                    galleryFile?.fileBytes != null -> {
+                                        AppLogger.log("NEW PHOTO UPLOADING.. = $index")
+                                        galleryFile.id?.let {
                                             append(
-                                                HttpHeaders.ContentDisposition,
-                                                "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
-                                            )
-                                            append(
-                                                HttpHeaders.ContentType,
-                                                galleryFile.mimeType ?: "application/octet-stream"
+                                                "user_photos[$index][id]",
+                                                it
                                             )
                                         }
-                                    )
-                                } else {
-                                    AppLogger.log("FILE BYTES ARE NULL")
-                                    append("user_photos[$index][user]", userId!!)
-                                    append("user_photos[$index][photo]", galleryFile?.url!!)
+                                        append("user_photos[$index][user]", userId)
+                                        append(
+                                            key = "user_photos[$index][photo]",
+                                            value = galleryFile.fileBytes,
+                                            Headers.build {
+                                                append(
+                                                    HttpHeaders.ContentDisposition,
+                                                    "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
+                                                )
+                                                append(
+                                                    HttpHeaders.ContentType,
+                                                    galleryFile.mimeType ?: ""
+                                                )
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        }*/
+                        }
+*/
+
+                        var appendIndex = 0
+
+                        gallery?.forEach { galleryFile ->
+                            if (userId != null && galleryFile != null) {
+                                when {
+                                    // Case 1: Updating the photo
+                                    galleryFile.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
+                                        append("user_photos[$appendIndex][user]", userId)
+                                        append("user_photos[$appendIndex][id]", galleryFile.id)
+                                        append(
+                                            key = "user_photos[$appendIndex][photo]",
+                                            value = galleryFile.fileBytes,
+                                            Headers.build {
+                                                append(
+                                                    HttpHeaders.ContentDisposition,
+                                                    "form-data; name=user_photos[$appendIndex][photo]; filename=${galleryFile.fileName}"
+                                                )
+                                                append(HttpHeaders.ContentType, galleryFile.mimeType ?: "")
+                                            }
+                                        )
+                                        appendIndex++
+                                    }
+
+                                    // Case 2: Removing photo
+                                    galleryFile.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
+                                        append("user_photos[$appendIndex][user]", userId)
+                                        append("user_photos[$appendIndex][id]", galleryFile.id)
+                                        append("user_photos[$appendIndex][removed]", true)
+                                        appendIndex++
+                                    }
+
+                                    // Case 3: New photo (upload)
+                                    galleryFile.fileBytes != null -> {
+                                        galleryFile.id?.let {
+                                            append("user_photos[$appendIndex][id]", it)
+                                        }
+                                        append("user_photos[$appendIndex][user]", userId)
+                                        append(
+                                            key = "user_photos[$appendIndex][photo]",
+                                            value = galleryFile.fileBytes,
+                                            Headers.build {
+                                                append(
+                                                    HttpHeaders.ContentDisposition,
+                                                    "form-data; name=user_photos[$appendIndex][photo]; filename=${galleryFile.fileName}"
+                                                )
+                                                append(HttpHeaders.ContentType, galleryFile.mimeType ?: "")
+                                            }
+                                        )
+                                        appendIndex++
+                                    }
+                                }
+                            }
+                        }
 
 
                     }

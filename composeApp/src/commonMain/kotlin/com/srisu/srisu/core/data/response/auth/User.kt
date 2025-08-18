@@ -83,7 +83,9 @@ data class User(
         @SerialName("updated_date")
         val updatedDate: String? = null,
         @SerialName("user")
-        val user: Int? = null
+        val user: Int? = null,
+        @SerialName("removed")
+        val removed: Boolean? = null,
     )
 }
 

@@ -428,7 +428,7 @@ class AuthViewModel(
                     this@AuthViewModel._authUiState.value.profilePictureUri.toString()
                 }
             val mediaFile =
-                fileManager.createMediaFileFromPath(profilePictureUri)
+                fileManager.createMediaFileFromPath(path =profilePictureUri, id = null, removed = null)
 
             authRepository.sendProfileSetupRequest(
                 profileSetupDTO = profileDTO,

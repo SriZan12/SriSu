@@ -21,6 +21,8 @@ enum class MediaType {
 
 @Serializable
 data class MediaFile(
+    @Required val id: Int?,
+    @Required val removed: Boolean? = false,
     @Required val fileName: String? = null,
     @Required val mimeType: String? = null,
     @Required val fileSize: Long? = null,
@@ -66,22 +68,10 @@ expect class GalleryManager(
 }
 
 expect class FileManager() {
-    suspend fun createMediaFileFromPath(path: String?): MediaFile?
+    suspend fun createMediaFileFromPath(path: String?, id: Int?, removed: Boolean?): MediaFile?
 }
 
-suspend fun getMediaFileFromUri(uri: Uri?): MediaFile? {
-    if (uri == null) return null
+suspend fun getMediaFileFromUri(uri: Uri?, id: Int?,removed: Boolean?): MediaFile? {
     val fileManager = FileManager()
-    return fileManager.createMediaFileFromPath(path = uri.toString())
+    return fileManager.createMediaFileFromPath(path = uri.toString(), id = id, removed = removed)
 }
-
-fun isValidContentUri(uri: String?): Boolean {
-    if (uri.isNullOrBlank()) return false
-
-    val lowerUri = uri.lowercase()
-
-    return lowerUri.startsWith("content://") ||
-            lowerUri.startsWith("file://") ||
-            lowerUri.startsWith("/") // absolute file path
-}
-

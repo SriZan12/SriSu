@@ -158,7 +158,7 @@ actual class FileManager {
         return mediaFile
     }*/
 
-    actual suspend fun createMediaFileFromPath(path: String?): MediaFile? {
+    actual suspend fun createMediaFileFromPath(path: String?, id: Int?,removed: Boolean?): MediaFile? {
 
         path?.let {
             AppLogger.log("FILE PATH = $path")
@@ -178,18 +178,23 @@ actual class FileManager {
             val fileSize = fileBytes.size.toLong()
 
             val mediaFile = MediaFile(
+                id = id,
                 fileName = fileName,
                 mimeType = mimeType,
                 fileSize = fileSize,
                 fileBytes = fileBytes,
-                fileType = fileType
+                fileType = fileType,
+                removed = removed
             )
-            AppLogger.log("MEDIA FILE = ${Json.encodeToString(mediaFile)}")
 
             return mediaFile
         }
 
-        return null
+        return MediaFile(
+            id = id,
+            url = path,
+            removed = removed
+        )
     }
 
 

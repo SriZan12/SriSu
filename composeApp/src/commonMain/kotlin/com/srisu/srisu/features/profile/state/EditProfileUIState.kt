@@ -35,7 +35,9 @@ data class EditProfileUIState(
 )
 
 data class GalleyPhotoModel(
+    val id: Int? = null,
     val photoUri: Uri?,
+    val removed: Boolean = false,
     val index: Int
 )
 
@@ -46,7 +48,7 @@ data class InterestCategoryUI(
 
 data class InterestUI(
     val interestName: String?,
-    val id : Int? = null,
+    val id: Int? = null,
     val user: Int? = null,
     val category: Int? = null,
 )

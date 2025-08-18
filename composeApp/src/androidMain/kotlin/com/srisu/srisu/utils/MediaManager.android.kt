@@ -63,7 +63,11 @@ actual class FileManager {
 
     private val context = AppContext.get()
 
-    actual suspend fun createMediaFileFromPath(path: String?): MediaFile? {
+    actual suspend fun createMediaFileFromPath(
+        path: String?,
+        id: Int?,
+        removed: Boolean?
+    ): MediaFile? {
         try {
             path?.let {
                 val uri = path.toUri()
@@ -80,6 +84,8 @@ actual class FileManager {
                 val fileSize = fileBytes.size.toLong()
 
                 return MediaFile(
+                    id = id,
+                    removed = removed,
                     fileName = fileName,
                     mimeType = mimeType,
                     fileSize = fileSize,
@@ -88,9 +94,11 @@ actual class FileManager {
                 )
             }
         } catch (exception: Exception) {
-            AppLogger.log("Error creating media file from path: ${exception.message}")
+            AppLogger.log("INSIDE EXCEPTION = Error creating media file from path: ${exception.message}")
             return MediaFile(
-                url = path
+                id = id,
+                url = path,
+                removed = removed
             )
         }
 
