@@ -669,6 +669,7 @@ fun GalleryCompo(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val photos = largePhotos?.sortedBy { it?.index }
+            AppLogger.log("LARGE PHOTOS SIZE = ${photos?.size}")
             photos?.forEachIndexed { index, photo ->
                 GalleryAddCard(
                     modifier = Modifier
@@ -693,6 +694,7 @@ fun GalleryCompo(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val photos = smallPhotos?.sortedBy { it?.index }
+            AppLogger.log("small photos size = ${photos?.size}")
             photos?.forEachIndexed { index, photo ->
                 GalleryAddCard(
                     modifier = Modifier

@@ -121,6 +121,7 @@ class EditProfileViewModel(
     fun updateLargePhoto(photo: GalleyPhotoModel?) {
         if (photo == null) return
 
+        AppLogger.log("INSIDE UPDATE LARGE PHOTOS = $photo")
         val currentPhotos =
             _editProfileUIState.value.largePhotos?.toMutableList() ?: mutableListOf()
 
@@ -142,8 +143,10 @@ class EditProfileViewModel(
     }
 
 
-    fun updateSmallPhotos(photo: GalleyPhotoModel?,) {
+    fun updateSmallPhotos(photo: GalleyPhotoModel?) {
         if (photo == null) return
+
+        AppLogger.log("INSIDE UPDATE SMALL PHOTOS = $photo")
 
         val currentPhotos =
             _editProfileUIState.value.smallPhotos?.toMutableList() ?: mutableListOf()
@@ -186,28 +189,30 @@ class EditProfileViewModel(
         updateCurrentInterests(interests = session?.userInterests)
         updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
 
-        session?.userPhotos?.forEachIndexed { index, photo ->
-            if (index < 2) {
-
-                updateLargePhoto(
-                    GalleyPhotoModel(
-                        id = photo?.id,
-                        photoUri = photo?.photo?.toUri(),
-                        index = index,
-                        removed = photo?.removed ?: false
-                    )
+        var largePhotoIndex = 0;
+        session?.userPhotos?.take(2)?.forEach { photo ->
+            updateLargePhoto(
+                GalleyPhotoModel(
+                    id = photo?.id,
+                    photoUri = photo?.photo?.toUri(),
+                    index = largePhotoIndex,
+                    removed = photo?.removed ?: false
                 )
-            } else {
-                updateSmallPhotos(
-                    GalleyPhotoModel(
-                        id = photo?.id,
-                        photoUri = photo?.photo?.toUri(),
-                        index = index,
-                        removed = photo?.removed ?: false,
-                    ),
+            )
+            ++largePhotoIndex;
+        }
+        var smallPhotoIndex = 0;
 
-                )
-            }
+        session?.userPhotos?.drop(2)?.forEach { photo ->
+            updateSmallPhotos(
+                GalleyPhotoModel(
+                    id = photo?.id,
+                    photoUri = photo?.photo?.toUri(),
+                    index = smallPhotoIndex,
+                    removed = photo?.removed ?: false,
+                ),
+            )
+            ++smallPhotoIndex;
         }
 
 
@@ -273,10 +278,22 @@ class EditProfileViewModel(
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
                     AppLogger.log("LOOPING = ${it?.id} - ${it?.removed}")
-                    gallery.add(getMediaFileFromUri(uri = it?.photoUri, id = it?.id, removed = it?.removed ?: false))
+                    gallery.add(
+                        getMediaFileFromUri(
+                            uri = it?.photoUri,
+                            id = it?.id,
+                            removed = it?.removed ?: false
+                        )
+                    )
                 }
                 _editProfileUIState.value.smallPhotos?.forEach {
-                    gallery.add(getMediaFileFromUri(uri = it?.photoUri, id = it?.id, removed = it?.removed ?: false))
+                    gallery.add(
+                        getMediaFileFromUri(
+                            uri = it?.photoUri,
+                            id = it?.id,
+                            removed = it?.removed ?: false
+                        )
+                    )
                 }
 
                 AppLogger.log("GALLERY SIZE  = ${Json.encodeToString(gallery)}")
@@ -300,6 +317,7 @@ class EditProfileViewModel(
                     saveSession(credentials = credentials)
                     showSuccessMessage(data = null, message = "Profile Updated")
                     getSession()
+                    setUserProfileData()
                 }.onError { error, errorType ->
                     AppLogger.log("Profile Update Error = $error")
                     showErrorMessage(message = error, errorType = "Profile Update Error")
