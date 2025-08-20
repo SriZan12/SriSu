@@ -207,6 +207,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                 when {
                                     // Case 1: Updating the photo
                                     galleryFile.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
+                                        AppLogger.log("INSIDE UPDATING THE PHOTO")
                                         append("user_photos[$appendIndex][user]", userId)
                                         append("user_photos[$appendIndex][id]", galleryFile.id)
                                         append(
@@ -225,18 +226,21 @@ class ProfileApiService(private val httpClient: HttpClient) {
 
                                     // Case 2: Removing photo
                                     galleryFile.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
+                                        AppLogger.log("INSIDE REMOVING THE PHOTO")
                                         append("user_photos[$appendIndex][user]", userId)
                                         append("user_photos[$appendIndex][id]", galleryFile.id)
                                         append("user_photos[$appendIndex][removed]", true)
                                         appendIndex++
                                     }
 
-                                    // Case 3: New photo (upload)
+                                    // Case 3: New photo or update photo(upload)
                                     galleryFile.fileBytes != null -> {
+                                        AppLogger.log("INSIDE 3 CASE NEW PHOTO UPLOAD")
+                                        AppLogger.log("gallery file id = ${galleryFile.id}")
+                                        append("user_photos[$appendIndex][user]", userId)
                                         galleryFile.id?.let {
                                             append("user_photos[$appendIndex][id]", it)
                                         }
-                                        append("user_photos[$appendIndex][user]", userId)
                                         append(
                                             key = "user_photos[$appendIndex][photo]",
                                             value = galleryFile.fileBytes,
@@ -249,6 +253,13 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                             }
                                         )
                                         appendIndex++
+                                    }
+
+                                    else -> {
+//                                        if (galleryFile.id != null){
+//                                            append("user_photos[$appendIndex][id]",galleryFile.id)
+//                                            append("user_photos[$appendIndex][user]", userId)
+//                                        }
                                     }
                                 }
                             }
