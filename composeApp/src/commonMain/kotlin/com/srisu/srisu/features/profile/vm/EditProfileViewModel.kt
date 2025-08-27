@@ -39,13 +39,8 @@ class EditProfileViewModel(
     val editProfileUIState = _editProfileUIState.asStateFlow()
 
     init {
-        val sessionData = getSession()
-        if (sessionData != null) {
-            AppLogger.log("SESSION DATA = $sessionData")
-            val session = Json.decodeFromString<Session>(sessionData)
-            updateSession(session)
-        }
-
+        setSession()
+        getProfile()
         getInterestList()
     }
 
@@ -121,7 +116,6 @@ class EditProfileViewModel(
     fun updateLargePhoto(photo: GalleyPhotoModel?) {
         if (photo == null) return
 
-        AppLogger.log("INSIDE UPDATE LARGE PHOTOS = $photo")
         val currentPhotos =
             _editProfileUIState.value.largePhotos?.toMutableList() ?: mutableListOf()
 
@@ -136,7 +130,6 @@ class EditProfileViewModel(
             }
         }
 
-        AppLogger.log("GALLERY = $photo")
 
         _editProfileUIState.value = _editProfileUIState.value.copy(largePhotos = currentPhotos)
 
@@ -145,8 +138,6 @@ class EditProfileViewModel(
 
     fun updateSmallPhotos(photo: GalleyPhotoModel?) {
         if (photo == null) return
-
-        AppLogger.log("INSIDE UPDATE SMALL PHOTOS = $photo")
 
         val currentPhotos =
             _editProfileUIState.value.smallPhotos?.toMutableList() ?: mutableListOf()
@@ -174,23 +165,22 @@ class EditProfileViewModel(
         this._editProfileUIState.value =
             this._editProfileUIState.value.copy(session = session)
 
-        setUserProfileData()
     }
 
     fun setUserProfileData() {
-        val session = this._editProfileUIState.value.session
+        val profileData = this._editProfileUIState.value.session
 
-        updateFullName(fullName = session?.fullName ?: "")
-        updateUserName(userName = session?.username ?: "")
-        updateBio(bio = session?.bio)
-        updateCountry(country = Country.getCountryModelFromName(country = session?.country))
+        updateFullName(fullName = profileData?.fullName ?: "")
+        updateUserName(userName = profileData?.username ?: "")
+        updateBio(bio = profileData?.bio)
+        updateCountry(country = Country.getCountryModelFromName(country = profileData?.country))
         getCityList()
-        updateCity(city = session?.city)
-        updateCurrentInterests(interests = session?.userInterests)
-        updateProfilePictureUri(uri = session?.profilePhoto?.toUri())
+        updateCity(city = profileData?.city)
+        updateCurrentInterests(interests = profileData?.userInterests)
+        updateProfilePictureUri(uri = profileData?.profilePhoto?.toUri())
 
         var largePhotoIndex = 0;
-        session?.userPhotos?.take(2)?.forEach { photo ->
+        profileData?.userPhotos?.take(2)?.forEach { photo ->
             updateLargePhoto(
                 GalleyPhotoModel(
                     id = photo?.id,
@@ -201,19 +191,23 @@ class EditProfileViewModel(
             )
             ++largePhotoIndex;
         }
+
+
         var smallPhotoIndex = 0;
 
-        session?.userPhotos?.drop(2)?.forEach { photo ->
-            updateSmallPhotos(
-                GalleyPhotoModel(
-                    id = photo?.id,
-                    photoUri = photo?.photo?.toUri(),
-                    index = smallPhotoIndex,
-                    removed = photo?.removed ?: false,
-                ),
-            )
-            ++smallPhotoIndex;
-        }
+        profileData?.userPhotos
+            ?.subList(2, profileData.userPhotos.size) // from index 2 up to size (exclusive)
+            ?.forEach { photo ->
+                updateSmallPhotos(
+                    GalleyPhotoModel(
+                        id = photo?.id,
+                        photoUri = photo?.photo?.toUri(),
+                        index = smallPhotoIndex,
+                        removed = photo?.removed ?: false,
+                    )
+                )
+                smallPhotoIndex++
+            }
 
 
     }
@@ -246,7 +240,30 @@ class EditProfileViewModel(
             profileRepository.getInterestList().onSuccess { interestResponse, message ->
                 updateInterestList(interestList = interestResponse?.interests)
             }.onError { error, errorType ->
+                showErrorMessage(message = error, errorType = errorType.name)
                 AppLogger.log("Error getting interest list = $error")
+            }
+        }
+    }
+
+    fun getProfile() {
+        viewModelScope.launch {
+            profileRepository.getProfile().onSuccess { profileResponse, message ->
+
+
+                val credentials = setUserWholeCredentials(
+                    access = _editProfileUIState.value.session?.access,
+                    refresh = _editProfileUIState.value.session?.refresh,
+                    userInfo = profileResponse?.user
+                )
+                saveSession(credentials = credentials)
+                setSession()
+                setUserProfileData()
+
+            }.onError { error, errorType ->
+                setSession()
+//                showErrorMessage(message = error, errorType = errorType.name)
+                AppLogger.log("Error getting profile = $error")
             }
         }
     }
@@ -274,10 +291,8 @@ class EditProfileViewModel(
                     removed = false
                 )
 
-                AppLogger.log("Profile URI = ${_editProfileUIState.value.profilePictureUri}")
                 val gallery: ArrayList<MediaFile?> = arrayListOf()
                 _editProfileUIState.value.largePhotos?.forEach {
-                    AppLogger.log("LOOPING = ${it?.id} - ${it?.removed}")
                     gallery.add(
                         getMediaFileFromUri(
                             uri = it?.photoUri,
@@ -296,10 +311,6 @@ class EditProfileViewModel(
                     )
                 }
 
-                AppLogger.log("GALLERY SIZE  = ${gallery.size}")
-                AppLogger.log("GALLERY = ${Json.encodeToString(gallery)}")
-                AppLogger.log("INTEREST SIZE  = ${Json.encodeToString(_editProfileUIState.value.currentInterests)}")
-
                 profileRepository.sendUpdateProfileRequest(
                     profileUpdateDTO = profileUpdateDTO,
                     userId = _editProfileUIState.value.session?.id,
@@ -315,9 +326,9 @@ class EditProfileViewModel(
                     )
 
                     saveSession(credentials = credentials)
-                    showSuccessMessage(data = null, message = "Profile Updated")
-                    getSession()
+                    setSession()
                     setUserProfileData()
+
                 }.onError { error, errorType ->
                     AppLogger.log("Profile Update Error = $error")
                     showErrorMessage(message = error, errorType = "Profile Update Error")
@@ -335,11 +346,18 @@ class EditProfileViewModel(
         sessionStorage.saveSession(credentials, SESSION_KEY)
     }
 
-    private fun getSession(): String? {
-        return try {
-            sessionStorage.getSession(SESSION_KEY)
-        } catch (_: Exception) {
-            null
+    fun setSession() {
+        try {
+            val sessionData = sessionStorage.getSession(SESSION_KEY)
+            var session: Session? = null
+            if (sessionData != null) {
+                session = Json.decodeFromString<Session>(sessionData)
+                AppLogger.log("SESSION =${Json.encodeToString(session)}")
+            }
+            updateSession(session)
+
+        } catch (exception: Exception) {
+            AppLogger.log("Exception = ${exception.message}")
         }
 
     }

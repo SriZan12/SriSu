@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -265,14 +264,14 @@ fun EditProfileScreenContent(
                 val openGallery = remember { mutableStateOf(false) }
                 val photoType = remember { mutableStateOf(PhotoType.LARGE) }
                 val photoIndex = remember { mutableStateOf(0) }
-                val photoId = remember { mutableStateOf(-1) }
+                val photoId = remember { mutableStateOf<Int?>(null) }
 
                 GalleryCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     largePhotos = editProfileUIState.largePhotos,
                     smallPhotos = editProfileUIState.smallPhotos,
                     onAddImageClicked = { index, type, id ->
-                        photoId.value = id ?: -1
+                        photoId.value = id
                         photoIndex.value = index
                         photoType.value = type
                         openGallery.value = true
@@ -306,16 +305,19 @@ fun EditProfileScreenContent(
                     OpenGallery { photoUri ->
                         if (photoUri != null) {
                             if (photoType.value == PhotoType.LARGE) {
+                                AppLogger.log("WHILE UPDATING THE PHOTO = $photoId")
                                 editProfileViewModel.updateLargePhoto(
                                     photo = GalleyPhotoModel(
+                                        id = photoId.value,
                                         photoUri = photoUri,
-                                        index = photoIndex.value
+                                        index = photoIndex.value,
                                     )
                                 )
 
                             } else {
                                 editProfileViewModel.updateSmallPhotos(
                                     photo = GalleyPhotoModel(
+                                        id = photoId.value,
                                         photoUri = photoUri,
                                         index = photoIndex.value
                                     )

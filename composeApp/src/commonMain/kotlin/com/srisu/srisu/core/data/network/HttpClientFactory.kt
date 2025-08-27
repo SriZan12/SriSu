@@ -37,15 +37,15 @@ object HttpClientFactory {
                 requestTimeoutMillis = 120_000L
                 connectTimeoutMillis = 120_000L
             }
-//            install(Logging) {
-//                logger = object : Logger {
-//                    override fun log(message: String) {
-//                        AppLogger.log(message)
-//                    }
-//                }
-////                level = LogLevel.ALL
-//                level = LogLevel.BODY
-//            }
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        AppLogger.log(message)
+                    }
+                }
+//                level = LogLevel.ALL
+                level = LogLevel.BODY
+            }
             defaultRequest {
                 contentType(ContentType.Application.Json)
                 accept(ContentType.Application.Json)

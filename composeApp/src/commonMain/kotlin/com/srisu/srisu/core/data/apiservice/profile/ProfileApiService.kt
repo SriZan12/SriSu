@@ -1,8 +1,6 @@
 package com.srisu.srisu.core.data.apiservice.profile
 
-import com.srisu.srisu.App
 import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
-import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
@@ -11,28 +9,14 @@ import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.MediaFile
-import com.srisu.srisu.utils.MediaType
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
-import io.ktor.client.request.get
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
-import io.ktor.client.statement.readBytes
-import io.ktor.client.statement.readRawBytes
-import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
-import io.ktor.http.appendPathSegments
-import io.ktor.http.contentType
-import kotlinx.atomicfu.TraceBase.None.append
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class ProfileApiService(private val httpClient: HttpClient) {
 
@@ -130,75 +114,75 @@ class ProfileApiService(private val httpClient: HttpClient) {
                             }
                         }
 
-                     /*   gallery?.forEachIndexed { index, galleryFile ->
-                            if (userId != null) {
+                        /*   gallery?.forEachIndexed { index, galleryFile ->
+                               if (userId != null) {
 
-                                AppLogger.log("GALLER = ${Json.encodeToString(galleryFile)}")
+                                   AppLogger.log("GALLER = ${Json.encodeToString(galleryFile)}")
 
-                                when {
-                                    //Case 1: Updating the photo
-                                    galleryFile?.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
-                                        // flag that photo as null
-                                        append("user_photos[$index][user]", userId)
-                                        append("user_photos[$index][id]", galleryFile.id)
+                                   when {
+                                       //Case 1: Updating the photo
+                                       galleryFile?.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
+                                           // flag that photo as null
+                                           append("user_photos[$index][user]", userId)
+                                           append("user_photos[$index][id]", galleryFile.id)
 
-//                                        append("user_photos[$index][removed]", true)
+   //                                        append("user_photos[$index][removed]", true)
 
-//                                        append("user_photos[$index][user]", userId)
-                                        append(
-                                            key = "user_photos[$index][photo]",
-                                            value = galleryFile.fileBytes,
-                                            Headers.build {
-                                                append(
-                                                    HttpHeaders.ContentDisposition,
-                                                    "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
-                                                )
-                                                append(
-                                                    HttpHeaders.ContentType,
-                                                    galleryFile.mimeType ?: ""
-                                                )
-                                            }
-                                        )
+   //                                        append("user_photos[$index][user]", userId)
+                                           append(
+                                               key = "user_photos[$index][photo]",
+                                               value = galleryFile.fileBytes,
+                                               Headers.build {
+                                                   append(
+                                                       HttpHeaders.ContentDisposition,
+                                                       "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
+                                                   )
+                                                   append(
+                                                       HttpHeaders.ContentType,
+                                                       galleryFile.mimeType ?: ""
+                                                   )
+                                               }
+                                           )
 
 
-                                    }
+                                       }
 
-                                    galleryFile?.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
-                                        AppLogger.log("REMOVING PHOTO.. = $index")
-                                        append("user_photos[${index-1}][user]", userId)
-                                        append("user_photos[${index-1}][id]", galleryFile.id)
-                                        append("user_photos[${index-1}][removed]", true)
-                                    }
+                                       galleryFile?.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
+                                           AppLogger.log("REMOVING PHOTO.. = $index")
+                                           append("user_photos[${index-1}][user]", userId)
+                                           append("user_photos[${index-1}][id]", galleryFile.id)
+                                           append("user_photos[${index-1}][removed]", true)
+                                       }
 
-                                    // Case 3: New photo (upload file)
-                                    galleryFile?.fileBytes != null -> {
-                                        AppLogger.log("NEW PHOTO UPLOADING.. = $index")
-                                        galleryFile.id?.let {
-                                            append(
-                                                "user_photos[$index][id]",
-                                                it
-                                            )
-                                        }
-                                        append("user_photos[$index][user]", userId)
-                                        append(
-                                            key = "user_photos[$index][photo]",
-                                            value = galleryFile.fileBytes,
-                                            Headers.build {
-                                                append(
-                                                    HttpHeaders.ContentDisposition,
-                                                    "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
-                                                )
-                                                append(
-                                                    HttpHeaders.ContentType,
-                                                    galleryFile.mimeType ?: ""
-                                                )
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-*/
+                                       // Case 3: New photo (upload file)
+                                       galleryFile?.fileBytes != null -> {
+                                           AppLogger.log("NEW PHOTO UPLOADING.. = $index")
+                                           galleryFile.id?.let {
+                                               append(
+                                                   "user_photos[$index][id]",
+                                                   it
+                                               )
+                                           }
+                                           append("user_photos[$index][user]", userId)
+                                           append(
+                                               key = "user_photos[$index][photo]",
+                                               value = galleryFile.fileBytes,
+                                               Headers.build {
+                                                   append(
+                                                       HttpHeaders.ContentDisposition,
+                                                       "form-data; name=user_photos[$index][photo]; filename=${galleryFile.fileName}"
+                                                   )
+                                                   append(
+                                                       HttpHeaders.ContentType,
+                                                       galleryFile.mimeType ?: ""
+                                                   )
+                                               }
+                                           )
+                                       }
+                                   }
+                               }
+                           }
+   */
 
                         var appendIndex = 0
 
@@ -218,7 +202,10 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                                     HttpHeaders.ContentDisposition,
                                                     "form-data; name=user_photos[$appendIndex][photo]; filename=${galleryFile.fileName}"
                                                 )
-                                                append(HttpHeaders.ContentType, galleryFile.mimeType ?: "")
+                                                append(
+                                                    HttpHeaders.ContentType,
+                                                    galleryFile.mimeType ?: ""
+                                                )
                                             }
                                         )
                                         appendIndex++
@@ -249,7 +236,10 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                                     HttpHeaders.ContentDisposition,
                                                     "form-data; name=user_photos[$appendIndex][photo]; filename=${galleryFile.fileName}"
                                                 )
-                                                append(HttpHeaders.ContentType, galleryFile.mimeType ?: "")
+                                                append(
+                                                    HttpHeaders.ContentType,
+                                                    galleryFile.mimeType ?: ""
+                                                )
                                             }
                                         )
                                         appendIndex++
@@ -269,6 +259,13 @@ class ProfileApiService(private val httpClient: HttpClient) {
                     }
                 )
             )
+        }
+    }
+
+    suspend fun getProfile(): ResultHandler<ProfileResponse?> {
+        return httpClient.safeRequest<ProfileResponse?> {
+            url("${BASE_URL}api/auth/setup-profile/")
+            method = HttpMethod.Get
         }
     }
 }

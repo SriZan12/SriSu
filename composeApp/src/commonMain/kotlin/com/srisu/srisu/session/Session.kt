@@ -4,6 +4,7 @@ import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.auth.User.UserInterest
 import com.srisu.srisu.core.data.response.auth.User.UserPhoto
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString

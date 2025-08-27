@@ -50,4 +50,9 @@ class ProfileRepository(
             gallery = gallery
         )
     }
+
+    @Throws(Exception::class)
+    suspend fun getProfile(): ResultHandler<ProfileResponse?> {
+        return profileApiService.getProfile()
+    }
 }
