@@ -8,10 +8,13 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
+import com.srisu.srisu.features.profile.state.UserProfileUIModel
+import com.srisu.srisu.features.profile.state.toUIModel
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.session.setUserWholeCredentials
@@ -167,50 +170,95 @@ class EditProfileViewModel(
 
     }
 
-    fun setUserProfileData() {
-        val profileData = this._editProfileUIState.value.session
+    fun updateProfileResponse(profileResponse: ProfileResponse?) {
+        this._editProfileUIState.value =
+            this._editProfileUIState.value.copy(profileResponse = profileResponse)
+    }
 
-        updateFullName(fullName = profileData?.fullName ?: "")
-        updateUserName(userName = profileData?.username ?: "")
-        updateBio(bio = profileData?.bio)
-        updateCountry(country = Country.getCountryModelFromName(country = profileData?.country))
-        getCityList()
-        updateCity(city = profileData?.city)
-        updateCurrentInterests(interests = profileData?.userInterests)
-        updateProfilePictureUri(uri = profileData?.profilePhoto?.toUri())
+    fun resetGalleryPhotos() {
+        val largePhotos = listOf(
+            GalleyPhotoModel(photoUri = null, index = 0),
+            GalleyPhotoModel(photoUri = null, index = 1)
+        )
 
-        var largePhotoIndex = 0;
-        profileData?.userPhotos?.take(2)?.forEach { photo ->
-            updateLargePhoto(
-                GalleyPhotoModel(
-                    id = photo?.id,
-                    photoUri = photo?.photo?.toUri(),
-                    index = largePhotoIndex,
-                    removed = photo?.removed ?: false
-                )
-            )
-            ++largePhotoIndex;
+        val smallPhotos = listOf(
+            GalleyPhotoModel(photoUri = null, index = 0),
+            GalleyPhotoModel(photoUri = null, index = 1),
+            GalleyPhotoModel(photoUri = null, index = 2)
+        )
+
+        this._editProfileUIState.value = _editProfileUIState.value.copy(
+            largePhotos = largePhotos,
+            smallPhotos = smallPhotos
+        )
+    }
+
+
+    fun getProfile() {
+        viewModelScope.launch {
+            profileRepository.getProfile()
+                .onSuccess { profileResponse, _ ->
+                    updateProfileResponse(profileResponse = profileResponse)
+                    updateSessionWithCredentials(
+                        access = _editProfileUIState.value.session?.access,
+                        refresh = _editProfileUIState.value.session?.refresh,
+                        userInfo = profileResponse?.user
+                    )
+                }
+                .onError { error, errorType ->
+                    AppLogger.log("Error getting profile = $error")
+                    showErrorMessage(message = error, errorType = errorType.name)
+                    setUserProfileData() // fallback to session data
+                }
         }
+    }
 
+    fun setUserProfileData() {
+        val profileData: UserProfileUIModel =
+            _editProfileUIState.value.profileResponse?.toUIModel()
+                ?: _editProfileUIState.value.session?.toUIModel()
+                ?: UserProfileUIModel() // fallback empty
 
-        var smallPhotoIndex = 0;
+        updateFullName(profileData.fullName.orEmpty())
+        updateUserName(profileData.username.orEmpty())
+        updateBio(profileData.bio)
+        updateCountry(Country.getCountryModelFromName(profileData.country))
+        getCityList()
+        updateCity(profileData.city)
+        updateCurrentInterests(profileData.userInterests)
+        updateProfilePictureUri(profileData.profilePhoto?.toUri())
 
-        profileData?.userPhotos
-            ?.subList(2, profileData.userPhotos.size) // from index 2 up to size (exclusive)
-            ?.forEach { photo ->
+        if (!profileData.userPhotos.isNullOrEmpty()) {
+
+            resetGalleryPhotos()
+            AppLogger.log("USER PHOTOS AFTER UPDATING = ${Json.encodeToString(profileData.userPhotos)}")
+
+            // Large photos
+            profileData.userPhotos.take(2).forEachIndexed { index, photo ->
+                updateLargePhoto(
+                    GalleyPhotoModel(
+                        id = photo?.id,
+                        photoUri = photo?.photo?.toUri(),
+                        index = index,
+                        removed = photo?.removed ?: false
+                    )
+                )
+            }
+
+            // Small photos
+            profileData.userPhotos.drop(2).forEachIndexed { index, photo ->
                 updateSmallPhotos(
                     GalleyPhotoModel(
                         id = photo?.id,
                         photoUri = photo?.photo?.toUri(),
-                        index = smallPhotoIndex,
-                        removed = photo?.removed ?: false,
+                        index = index,
+                        removed = photo?.removed ?: false
                     )
                 )
-                smallPhotoIndex++
             }
-
-
+        }
     }
+
 
     fun getCityList(country: String? = null, showLoading: Boolean = false) {
 
@@ -246,101 +294,81 @@ class EditProfileViewModel(
         }
     }
 
-    fun getProfile() {
-        viewModelScope.launch {
-            profileRepository.getProfile().onSuccess { profileResponse, message ->
-
-
-                val credentials = setUserWholeCredentials(
-                    access = _editProfileUIState.value.session?.access,
-                    refresh = _editProfileUIState.value.session?.refresh,
-                    userInfo = profileResponse?.user
-                )
-                saveSession(credentials = credentials)
-                setSession()
-                setUserProfileData()
-
-            }.onError { error, errorType ->
-                setSession()
-//                showErrorMessage(message = error, errorType = errorType.name)
-                AppLogger.log("Error getting profile = $error")
-            }
-        }
-    }
-
     fun updateProfile() {
         showLoading()
         viewModelScope.launch {
             try {
-                val profileUpdateDTO = ProfileUpdateDTO(
-                    phoneNumber = _editProfileUIState.value.session?.phoneNumber,
-                    gender = _editProfileUIState.value.session?.gender,
-                    dob = _editProfileUIState.value.session?.dob,
-                    zodiacSign = _editProfileUIState.value.session?.zodiacSign,
-                    fullName = _editProfileUIState.value.fullName,
-                    username = _editProfileUIState.value.userName,
-                    bio = _editProfileUIState.value.bio,
-                    country = _editProfileUIState.value.country?.name,
-                    city = _editProfileUIState.value.city,
-                    userInterests = _editProfileUIState.value.currentInterests,
-                )
-
-                val profile = getMediaFileFromUri(
-                    uri = _editProfileUIState.value.profilePictureUri,
-                    id = null,
-                    removed = false
-                )
-
-                val gallery: ArrayList<MediaFile?> = arrayListOf()
-                _editProfileUIState.value.largePhotos?.forEach {
-                    gallery.add(
-                        getMediaFileFromUri(
-                            uri = it?.photoUri,
-                            id = it?.id,
-                            removed = it?.removed ?: false
-                        )
-                    )
-                }
-                _editProfileUIState.value.smallPhotos?.forEach {
-                    gallery.add(
-                        getMediaFileFromUri(
-                            uri = it?.photoUri,
-                            id = it?.id,
-                            removed = it?.removed ?: false
-                        )
-                    )
-                }
+                val dto = buildProfileUpdateDTO()
+                val profile = buildProfileMedia()
+                val gallery = buildGalleryMedia()
 
                 profileRepository.sendUpdateProfileRequest(
-                    profileUpdateDTO = profileUpdateDTO,
+                    profileUpdateDTO = dto,
                     userId = _editProfileUIState.value.session?.id,
                     profilePhoto = profile,
                     gallery = gallery
                 ).onSuccess { profileResponse, _ ->
                     AppLogger.log("Profile Updated Successfully")
-
-                    val credentials = setUserWholeCredentials(
+                    updateProfileResponse(profileResponse = profileResponse)
+                    updateSessionWithCredentials(
                         access = _editProfileUIState.value.session?.access,
                         refresh = _editProfileUIState.value.session?.refresh,
                         userInfo = profileResponse?.user
                     )
-
-                    saveSession(credentials = credentials)
-                    setSession()
-                    setUserProfileData()
-
-                }.onError { error, errorType ->
+                }.onError { error, _ ->
                     AppLogger.log("Profile Update Error = $error")
                     showErrorMessage(message = error, errorType = "Profile Update Error")
                 }
             } catch (exception: Exception) {
-                showErrorMessage(message = exception.message, errorType = "Exception")
                 AppLogger.log("Exception = ${exception.message}")
+                showErrorMessage(message = exception.message, errorType = "Exception")
             }
         }
-
-
     }
+
+    private fun buildProfileUpdateDTO() = ProfileUpdateDTO(
+        phoneNumber = _editProfileUIState.value.session?.phoneNumber,
+        gender = _editProfileUIState.value.session?.gender,
+        dob = _editProfileUIState.value.session?.dob,
+        zodiacSign = _editProfileUIState.value.session?.zodiacSign,
+        fullName = _editProfileUIState.value.fullName,
+        username = _editProfileUIState.value.userName,
+        bio = _editProfileUIState.value.bio,
+        country = _editProfileUIState.value.country?.name,
+        city = _editProfileUIState.value.city,
+        userInterests = _editProfileUIState.value.currentInterests,
+    )
+
+    private suspend fun buildProfileMedia() =
+        getMediaFileFromUri(
+            uri = _editProfileUIState.value.profilePictureUri,
+            id = null,
+            removed = false
+        )
+
+    private suspend fun buildGalleryMedia(): ArrayList<MediaFile?> {
+        val gallery = arrayListOf<MediaFile?>()
+        _editProfileUIState.value.largePhotos?.forEach {
+            gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
+        }
+        _editProfileUIState.value.smallPhotos?.forEach {
+            gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
+        }
+        return gallery
+    }
+
+
+    private fun updateSessionWithCredentials(
+        access: String?,
+        refresh: String?,
+        userInfo: ProfileResponse.User?,
+    ) {
+        val credentials = setUserWholeCredentials(access, refresh, userInfo)
+        saveSession(credentials)
+        setSession()
+        setUserProfileData()
+    }
+
 
     private fun saveSession(credentials: String) {
         sessionStorage.saveSession(credentials, SESSION_KEY)

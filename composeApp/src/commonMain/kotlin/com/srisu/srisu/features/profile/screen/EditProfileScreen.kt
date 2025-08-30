@@ -778,25 +778,27 @@ fun GalleryAddCard(
 
         }
 
-        IconButton(
-            onClick = {
-                onRemove()
-            },
+        if (photoUri != null) {
+            IconButton(
+                onClick = {
+                    onRemove()
+                },
 
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(24.dp)
-                .offset(y = (-6).dp)
-                .clip(shape = CircleShape),
-            colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(24.dp)
+                    .offset(y = (-6).dp)
+                    .clip(shape = CircleShape),
+                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
 
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = "Close",
-                tint = Color.White,
-                modifier = Modifier.padding(all = 4.dp)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.padding(all = 4.dp)
+                )
+            }
         }
     }
 }
