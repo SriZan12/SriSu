@@ -1,11 +1,10 @@
 package com.srisu.srisu.core.data.network
 
+import com.srisu.srisu.session.SessionStorage
+import io.ktor.client.HttpClient
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
-import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -18,13 +17,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import io.ktor.client.*
+import io.ktor.client.engine.darwin.*
 
-expect class HttpClientFactory() {
-    fun create(sessionStorage: SessionStorage): HttpClient
-}
-object HttpClientFactoryS {
-
-    fun create(sessionStorage: SessionStorage): HttpClient {
+actual class HttpClientFactory actual constructor() {
+    actual fun create(sessionStorage: SessionStorage): HttpClient {
         return HttpClient {
             install(ContentNegotiation) {
                 json(

@@ -96,7 +96,7 @@ fun SuggestionScreen(
     filterCleared: Boolean,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    navigateProfileScreen: (UserProfileData) -> Unit,
+    navigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit,
     navigateFilterScreen: () -> Unit,
 ) {
     Scaffold(
@@ -138,8 +138,8 @@ fun SuggestionScreen(
                     suggestionViewModel.getUserSuggestions()
                 },
                 onNavigateProfileScreen = {
-                    val userProfileData = Json.encodeToString(it)
-                    navigateProfileScreen(userProfileData)
+//                    val userProfileData = Json.encodeToString(it)
+                    navigateProfileScreen(it)
                 }
             )
         }

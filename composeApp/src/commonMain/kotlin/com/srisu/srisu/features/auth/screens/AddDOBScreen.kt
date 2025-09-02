@@ -76,8 +76,9 @@ fun AddDOBCompo(authViewModel: AuthViewModel) {
             hideHeader = true,
             startDate = starDate,
             yearsRange = (1950..(LocalDate.now().year - 15)),
-            dateTextStyle = MaterialTheme.typography.titleSmall,
-            dateTextColor = MaterialTheme.colorScheme.primary,
+            defaultDateTextStyle = MaterialTheme.typography.titleSmall.copy(
+                color = MaterialTheme.colorScheme.primary
+            ),
             selectorProperties = WheelPickerDefaults.selectorProperties(borderColor = Color.White),
             onDateChangeListener = { date ->
                 val formattedDate = formatLocalDate(date = date)

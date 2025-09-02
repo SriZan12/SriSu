@@ -7,8 +7,10 @@ import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.features.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
 import com.srisu.srisu.features.profile.screen.InterestScreen
@@ -20,7 +22,6 @@ import com.srisu.srisu.utils.Constants.HomeGraph.EDITED_INTERESTS
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_APPLIED
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 sealed class HomeNavigation : Route {
@@ -75,13 +76,15 @@ fun NavGraphBuilder.homeGraph(
             animatedContentScope = this@composable,
             navigateFilterScreen = { navController.navigate(HomeNavigation.Filter) },
             navigateProfileScreen = { suggestionProfileData ->
-                navController.navigate(HomeNavigation.SuggestionProfile(suggestionProfileData = suggestionProfileData))
+                val json = Json.encodeToString(suggestionProfileData)
+                navController.navigate(HomeNavigation.SuggestionProfile(json))
             },
         )
     }
 
     composable<HomeNavigation.SuggestionProfile> { backStackEntry ->
-        val userProfileData = backStackEntry.arguments?.getString("suggestionProfileData")
+//        val userProfileData = backStackEntry.arguments?.getString("suggestionProfileData")
+        val userProfileData = backStackEntry.toRoute<HomeNavigation.SuggestionProfile>().suggestionProfileData
         clearFilterFlags(navController = navController)
 
         SuggestionProfileScreen(
@@ -116,8 +119,8 @@ fun NavGraphBuilder.homeGraph(
 
 
     composable<HomeNavigation.Profile> { backStackEntry ->
-        val userProfileData = backStackEntry.arguments?.getString("userProfileData")
-        ProfileScreen(userProfileData = userProfileData)
+        val userProfileData = backStackEntry.toRoute<UserSuggestionResponse.Result?>()
+        ProfileScreen(userProfileData = Json.encodeToString(userProfileData))
     }
 
     composable<HomeNavigation.EditProfile> { navBackStackEntry ->
@@ -146,8 +149,10 @@ fun NavGraphBuilder.homeGraph(
 
 
     composable<HomeNavigation.InterestScreen> { backStackEntry ->
-        val data = backStackEntry.arguments?.getString("data")
-        val interestScreenData = Json.decodeFromString<ScreenData.InterestScreenData>(data ?: "")
+//        val data = backStackEntry.arguments?.getString("data")
+        val data = backStackEntry.toRoute<ScreenData.InterestScreenData>()
+        val interestScreenData = data
+//        val interestScreenData = Json.decodeFromString<ScreenData.InterestScreenData>(data ?: "")
 
         InterestScreen(
             interests = interestScreenData.list,
