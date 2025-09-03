@@ -352,7 +352,9 @@ class EditProfileViewModel(
             gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
         }
         _editProfileUIState.value.smallPhotos?.forEach {
+            AppLogger.log("gallery in small while adding = ${it?.photoUri}-${it?.removed}")
             gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
+            AppLogger.log("gallery in small photos = ${gallery.size}")
         }
         return gallery
     }

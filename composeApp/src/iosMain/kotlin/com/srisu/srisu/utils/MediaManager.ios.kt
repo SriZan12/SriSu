@@ -163,22 +163,26 @@ actual class FileManager {
         id: Int?,
         removed: Boolean?
     ): MediaFile? {
+
+        val defaultMediaFile = defaultMediaFile(id, path ?: "", removed)
+
         try {
 
             path?.let {
                 AppLogger.log("FILE PATH = $path")
 
+
                 // Ensure the path is a valid file URL
                 val fixedPath = if (path.startsWith("file://")) path else "file://$path"
-                val fileUrl = NSURL.URLWithString(fixedPath) ?: return null
+                val fileUrl = NSURL.URLWithString(fixedPath)
 
                 AppLogger.log("FILE URL = $fileUrl")
 
-                val fileName = fileUrl.lastPathComponent ?: return null
+                val fileName = fileUrl?.lastPathComponent ?: return defaultMediaFile
                 val mimeType = getMimeType(fileUrl)
                 val fileType = determineFileType(mimeType)
 
-                val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return null
+                val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return defaultMediaFile
                 val fileBytes = fileData.toByteArray()
                 val fileSize = fileBytes.size.toLong()
 
@@ -196,16 +200,18 @@ actual class FileManager {
             }
         } catch (exception: Exception) {
             AppLogger.log("INSIDE EXCEPTION = Error creating media file from path: ${exception.message}")
-            return MediaFile(
-                id = id,
-                url = path,
-                removed = removed
-            )
+            defaultMediaFile
         }
 
-        return null
+        return defaultMediaFile
+    }
 
-
+    fun defaultMediaFile(id: Int?, path: String, removed: Boolean?): MediaFile {
+        return MediaFile(
+            id = id,
+            url = path,
+            removed = removed
+        )
     }
 
 

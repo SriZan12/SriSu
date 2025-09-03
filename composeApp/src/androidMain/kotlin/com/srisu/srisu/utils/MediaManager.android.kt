@@ -103,7 +103,11 @@ actual class FileManager {
         }
 
 
-        return null
+        return MediaFile(
+            id = id,
+            url = path,
+            removed = removed
+        )
 
     }
 

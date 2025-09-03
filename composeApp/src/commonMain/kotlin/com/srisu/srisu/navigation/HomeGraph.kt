@@ -83,8 +83,8 @@ fun NavGraphBuilder.homeGraph(
     }
 
     composable<HomeNavigation.SuggestionProfile> { backStackEntry ->
-//        val userProfileData = backStackEntry.arguments?.getString("suggestionProfileData")
-        val userProfileData = backStackEntry.toRoute<HomeNavigation.SuggestionProfile>().suggestionProfileData
+        val userProfileData =
+            backStackEntry.toRoute<HomeNavigation.SuggestionProfile>().suggestionProfileData
         clearFilterFlags(navController = navController)
 
         SuggestionProfileScreen(
@@ -127,7 +127,9 @@ fun NavGraphBuilder.homeGraph(
         val savedStateHandle = navBackStackEntry.savedStateHandle
         val editedInterest = savedStateHandle.getStateFlow(EDITED_INTERESTS, "").value
         val editedInterestList =
-            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<User.UserInterest?>?>(editedInterest) else null
+            if (editedInterest.isNotEmpty()) Json.decodeFromString<List<User.UserInterest?>?>(
+                editedInterest
+            ) else null
 
         EditProfileScreen(
             onNavigateInterestScreen = { interests, currentInterestStrings ->
@@ -149,10 +151,8 @@ fun NavGraphBuilder.homeGraph(
 
 
     composable<HomeNavigation.InterestScreen> { backStackEntry ->
-//        val data = backStackEntry.arguments?.getString("data")
-        val data = backStackEntry.toRoute<ScreenData.InterestScreenData>()
-        val interestScreenData = data
-//        val interestScreenData = Json.decodeFromString<ScreenData.InterestScreenData>(data ?: "")
+        val data = backStackEntry.toRoute<HomeNavigation.InterestScreen>().data
+        val interestScreenData = Json.decodeFromString<ScreenData.InterestScreenData>(data)
 
         InterestScreen(
             interests = interestScreenData.list,
@@ -196,7 +196,7 @@ fun applyFilter(navController: NavController) {
         ?.set(FILTER_APPLIED, true)
 }
 
-object ScreenData{
+object ScreenData {
     @Serializable
     data class InterestScreenData(
         val list: List<InterestResponse.Interest?>?,

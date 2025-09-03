@@ -5,7 +5,6 @@ import com.srisu.srisu.core.data.apiservice.base.BaseApiService
 import com.srisu.srisu.core.data.apiservice.profile.ProfileApiService
 import com.srisu.srisu.core.data.apiservice.suggestion.SuggestionApiService
 import com.srisu.srisu.core.data.network.HttpClientFactory
-import com.srisu.srisu.core.data.network.HttpClientFactoryS
 import com.srisu.srisu.core.data.repository.auth.AuthRepository
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
@@ -14,7 +13,7 @@ import org.koin.core.module.Module
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
-    single { HttpClientFactoryS.create(sessionStorage = get()) }
+    single { HttpClientFactory.create(sessionStorage = get()) }
     single { BaseApiService(httpClient = get()) }
     single { AuthApiService(httpClient = get()) } //apiService
     single { AuthRepository(authApiService = get()) } // Repo

@@ -5,7 +5,6 @@ import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -19,10 +18,7 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
-expect class HttpClientFactory() {
-    fun create(sessionStorage: SessionStorage): HttpClient
-}
-object HttpClientFactoryS {
+object HttpClientFactory {
 
     fun create(sessionStorage: SessionStorage): HttpClient {
         return HttpClient {
@@ -46,7 +42,7 @@ object HttpClientFactoryS {
                         AppLogger.log(message)
                     }
                 }
-//                level = LogLevel.ALL
+                level = LogLevel.ALL
                 level = LogLevel.BODY
             }
             defaultRequest {
