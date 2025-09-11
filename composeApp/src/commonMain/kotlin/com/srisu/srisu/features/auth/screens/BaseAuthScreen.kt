@@ -127,7 +127,7 @@ private fun AuthScreenContent(
             }
 
             is CustomAuthScreen.ZodiacScreen -> {
-                // This will be handled specifically.
+                // This will be handled automatically.
             }
 
             is CustomAuthScreen.SelectGenderScreen -> {
@@ -137,7 +137,10 @@ private fun AuthScreenContent(
             }
 
             CustomAuthScreen.SetProfilePictureScreen -> {
-                SetProfilePictureScreen(navController = navController, authViewModel = authViewModel)
+                SetProfilePictureScreen(
+                    navController = navController,
+                    authViewModel = authViewModel
+                )
             }
         }
     }

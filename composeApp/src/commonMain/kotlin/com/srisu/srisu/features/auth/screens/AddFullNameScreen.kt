@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -23,8 +25,14 @@ import com.srisu.srisu.features.auth.vm.AuthViewModel
 
 @Composable
 fun AddFullNameCompo(authViewModel: AuthViewModel) {
+
+    val localFocusManager: FocusManager = LocalFocusManager.current
+
     CommonAuthContainerCompo(
         buttonTitle = "Next",
+        onClickScreenContent = {
+            localFocusManager.clearFocus()
+        },
         onClickPrimaryButton = {
             if (authViewModel.isFullNameValid() && authViewModel.isUsernameValid()) {
                 authViewModel.navigateNextScreen()
