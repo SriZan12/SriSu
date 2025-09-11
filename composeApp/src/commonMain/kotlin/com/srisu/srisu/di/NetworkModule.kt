@@ -8,12 +8,12 @@ import com.srisu.srisu.core.data.network.HttpClientFactory
 import com.srisu.srisu.core.data.repository.auth.AuthRepository
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
-import io.ktor.client.engine.cio.CIO
+//import io.ktor.client.engine.cio.CIO
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
-    single { HttpClientFactory.create(engine = CIO.create(), sessionStorage = get()) }
+    single { HttpClientFactory.create(sessionStorage = get()) }
     single { BaseApiService(httpClient = get()) }
     single { AuthApiService(httpClient = get()) } //apiService
     single { AuthRepository(authApiService = get()) } // Repo

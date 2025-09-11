@@ -158,38 +158,55 @@ actual class FileManager {
         return mediaFile
     }*/
 
-    actual suspend fun createMediaFileFromPath(path: String?, id: Int?,removed: Boolean?): MediaFile? {
+    actual suspend fun createMediaFileFromPath(
+        path: String?,
+        id: Int?,
+        removed: Boolean?
+    ): MediaFile? {
 
-        path?.let {
-            AppLogger.log("FILE PATH = $path")
+        val defaultMediaFile = defaultMediaFile(id, path ?: "", removed)
 
-            // Ensure the path is a valid file URL
-            val fixedPath = if (path.startsWith("file://")) path else "file://$path"
-            val fileUrl = NSURL.URLWithString(fixedPath) ?: return null
+        try {
 
-            AppLogger.log("FILE URL = $fileUrl")
+            path?.let {
+                AppLogger.log("FILE PATH = $path")
 
-            val fileName = fileUrl.lastPathComponent ?: return null
-            val mimeType = getMimeType(fileUrl)
-            val fileType = determineFileType(mimeType)
 
-            val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return null
-            val fileBytes = fileData.toByteArray()
-            val fileSize = fileBytes.size.toLong()
+                // Ensure the path is a valid file URL
+                val fixedPath = if (path.startsWith("file://")) path else "file://$path"
+                val fileUrl = NSURL.URLWithString(fixedPath)
 
-            val mediaFile = MediaFile(
-                id = id,
-                fileName = fileName,
-                mimeType = mimeType,
-                fileSize = fileSize,
-                fileBytes = fileBytes,
-                fileType = fileType,
-                removed = removed
-            )
+                AppLogger.log("FILE URL = $fileUrl")
 
-            return mediaFile
+                val fileName = fileUrl?.lastPathComponent ?: return defaultMediaFile
+                val mimeType = getMimeType(fileUrl)
+                val fileType = determineFileType(mimeType)
+
+                val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return defaultMediaFile
+                val fileBytes = fileData.toByteArray()
+                val fileSize = fileBytes.size.toLong()
+
+                val mediaFile = MediaFile(
+                    id = id,
+                    fileName = fileName,
+                    mimeType = mimeType,
+                    fileSize = fileSize,
+                    fileBytes = fileBytes,
+                    fileType = fileType,
+                    removed = removed
+                )
+
+                return mediaFile
+            }
+        } catch (exception: Exception) {
+            AppLogger.log("INSIDE EXCEPTION = Error creating media file from path: ${exception.message}")
+            defaultMediaFile
         }
 
+        return defaultMediaFile
+    }
+
+    fun defaultMediaFile(id: Int?, path: String, removed: Boolean?): MediaFile {
         return MediaFile(
             id = id,
             url = path,

@@ -250,19 +250,27 @@ fun ProfilePictureCompo(
                     .height(300.dp)
             )
         } else {
-            AsyncImage(
-//                model = profileUrl,
-                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            /*AsyncImage(
+                model = profileUrl,
+//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
                 contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Inside,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )*/
+
+            AsyncImage(
+                model = profileUrl,
+                contentDescription = "Profile Picture",
+                contentScale = ContentScale.Crop, // fills and crops extra
+                alignment = Alignment.TopCenter,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
             )
-        }
 
-        AppLogger.log("HAS SENT REQUEST = $hasSentRequest")
-        AppLogger.log("IS REQUEST SENT SUCCESSFULLY = $isRequestSentSuccessfully")
+        }
 
         if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
 

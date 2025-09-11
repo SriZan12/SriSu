@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.time.ExperimentalTime
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -278,6 +279,7 @@ class AuthViewModel(
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     fun saveOTPTimeStamp() {
         viewModelScope.launch {
             if (this@AuthViewModel._authUiState.value.remainingOTPTimestamp == null) {
@@ -286,7 +288,7 @@ class AuthViewModel(
                         countryCode = this@AuthViewModel._authUiState.value.countryCode,
                         countryPrefix = this@AuthViewModel._authUiState.value.countryPrefix,
                         phoneNumber = this@AuthViewModel._authUiState.value.phoneNumber,
-                        saveTime = Clock.System.now().toEpochMilliseconds(),
+                        saveTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
                         totalTime = OTP_WAITING_TIME
                     )
                 )
@@ -294,10 +296,11 @@ class AuthViewModel(
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     fun getRemainingOTPTimeStamp() {
         viewModelScope.launch {
             dataStoreRepo.getOTPTimestamp().collectLatest { otpTimestamp ->
-                val currentTime = Clock.System.now().toEpochMilliseconds()
+                val currentTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 val timeRemaining = otpTimestamp?.let {
                     val elapsedTime = currentTime - it.saveTime
                     val remainingTime = (it.totalTime - elapsedTime).coerceAtLeast(0L)

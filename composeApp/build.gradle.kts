@@ -1,5 +1,4 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -11,6 +10,7 @@ plugins {
 }
 
 kotlin {
+    val xcf = XCFramework()
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -25,6 +25,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            xcf.add(this)
         }
     }
     
@@ -59,7 +60,7 @@ kotlin {
             // ktor dependency
             implementation(libs.bundles.ktor)
             implementation(libs.bundles.coil)
-            implementation(libs.ktor.client.cio)
+//            implementation(libs.ktor.client.cio)
 
             //serialization
             implementation(libs.ktor.serialization.kotlinx.json)
@@ -74,7 +75,7 @@ kotlin {
 
 //            koin
             implementation(project.dependencies.platform(libs.koin.bom))
-            api(libs.koin.core)
+            implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.koin.compose.viewmodel.navigation)
@@ -110,7 +111,8 @@ kotlin {
             implementation(libs.material.icons.core)
 
         }
-        commonTest.dependencies {
+
+        iosMain.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)
 
