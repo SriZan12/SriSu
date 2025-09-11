@@ -45,7 +45,7 @@ fun AddDOBCompo(authViewModel: AuthViewModel) {
 
     var showAgeConfirmationBottomSheet by rememberSaveable { mutableStateOf(false) }
 
-    CommonAuthContainerCompo(buttonTitle = "Next", onClick = {
+    CommonAuthContainerCompo(buttonTitle = "Next", onClickPrimaryButton = {
         showAgeConfirmationBottomSheet = true
     }) {
 

@@ -46,7 +46,7 @@ fun PhoneNumberVerificationScreen(
     navController: NavController,
     authViewModel: AuthViewModel
 ) {
-    CommonAuthContainerCompo(buttonTitle = "Verify", onClick = {
+    CommonAuthContainerCompo(buttonTitle = "Verify", onClickPrimaryButton = {
         if (authViewModel.isOtpValid()) {
             authViewModel.verifyOtp() {
                 navController.navigate(HomeNavigation.Home)

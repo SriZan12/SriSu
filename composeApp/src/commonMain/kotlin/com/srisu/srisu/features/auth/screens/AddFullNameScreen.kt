@@ -25,7 +25,7 @@ import com.srisu.srisu.features.auth.vm.AuthViewModel
 fun AddFullNameCompo(authViewModel: AuthViewModel) {
     CommonAuthContainerCompo(
         buttonTitle = "Next",
-        onClick = {
+        onClickPrimaryButton = {
             if (authViewModel.isFullNameValid() && authViewModel.isUsernameValid()) {
                 authViewModel.navigateNextScreen()
             }

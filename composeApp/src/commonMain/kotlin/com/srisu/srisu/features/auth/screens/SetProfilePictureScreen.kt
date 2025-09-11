@@ -51,7 +51,7 @@ import com.srisu.srisu.theme.backgroundGray
 
 @Composable
 fun SetProfilePictureScreen(navController: NavController, authViewModel: AuthViewModel) {
-    CommonAuthContainerCompo(buttonTitle = "Complete", onClick = {
+    CommonAuthContainerCompo(buttonTitle = "Complete", onClickPrimaryButton = {
         authViewModel.sendSetupProfileRequest()
     }) {
 

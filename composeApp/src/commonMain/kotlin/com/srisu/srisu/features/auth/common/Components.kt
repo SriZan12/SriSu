@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.auth.common
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,10 +53,17 @@ fun ProgressIndicator(
 fun CommonAuthContainerCompo(
     modifier: Modifier = Modifier,
     buttonTitle: String = "Next",
-    onClick: () -> Unit,
+    onClickPrimaryButton: () -> Unit,
+    onClickScreenContent: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier.fillMaxSize().clickable(
+            onClick = onClickScreenContent,
+            indication = null,
+            interactionSource = MutableInteractionSource()
+        )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -71,7 +80,7 @@ fun CommonAuthContainerCompo(
                 .align(Alignment.BottomCenter),
             label = buttonTitle
         ) {
-            onClick()
+            onClickPrimaryButton()
         }
     }
 }
