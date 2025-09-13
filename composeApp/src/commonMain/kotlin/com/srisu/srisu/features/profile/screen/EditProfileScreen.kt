@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,7 +81,6 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -226,6 +226,7 @@ fun EditProfileScreenContent(
 
                 GeneralInfoCompo(
                     modifier = Modifier,
+                    countryList = editProfileUIState.countryList,
                     fullName = editProfileUIState.fullName,
                     userName = editProfileUIState.userName,
                     bio = editProfileUIState.bio,
@@ -436,6 +437,7 @@ typealias city = String
 @Composable
 private fun GeneralInfoCompo(
     modifier: Modifier = Modifier,
+    countryList: List<CountryModel>,
     fullName: String? = null,
     userName: String? = null,
     bio: String? = null,
@@ -455,6 +457,7 @@ private fun GeneralInfoCompo(
         FormFieldCompo(
             label = "Full Name",
             value = fullName ?: "",
+            imeAction = ImeAction.Done,
             onValueChange = {
                 onUpdateFullName(it)
             }
@@ -463,6 +466,7 @@ private fun GeneralInfoCompo(
         FormFieldCompo(
             label = "Username",
             value = userName ?: "",
+            imeAction = ImeAction.Done,
             onValueChange = {
                 onUpdateUserName(it)
             }
@@ -472,12 +476,14 @@ private fun GeneralInfoCompo(
         TextAreaCompo(
             label = "Bio",
             placeholder = "Enter your bio...",
+            imeAction = ImeAction.Done,
             value = bio ?: "",
             onValueChange = { onUpdateBio(it) }
         )
 
         CountryDropDownCompo(
             selectedCountry = country,
+            countryList = countryList ,
             onCountrySelected = {
                 onUpdateCountry(it)
             }
@@ -498,6 +504,7 @@ private fun GeneralInfoCompo(
 @Composable
 private fun CountryDropDownCompo(
     selectedCountry: CountryModel?,
+    countryList: List<CountryModel>,
     onCountrySelected: (CountryModel) -> Unit
 ) {
     var showCountryBottomSheet by remember { mutableStateOf(false) }
@@ -514,6 +521,7 @@ private fun CountryDropDownCompo(
 
         CountryDropDown(
             modifier = Modifier.fillMaxWidth(),
+            countryList = countryList,
             option = selectedCountry,
             backgroundColor = MaterialTheme.colorScheme.surface,
             onOptionSelected = {

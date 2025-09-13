@@ -33,6 +33,7 @@ data class EditProfileUIState(
         ),
     val session: Session? = null,
     val profileResponse: ProfileResponse? = null,
+    val countryList: List<CountryModel> = emptyList(),
     val baseUIState: BaseUIState = BaseUIState.Idle
 )
 

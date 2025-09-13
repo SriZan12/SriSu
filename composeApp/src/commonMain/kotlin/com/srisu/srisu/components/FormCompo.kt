@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,7 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -34,6 +36,8 @@ fun FormFieldCompo(
     labelStyle: TextStyle = MaterialTheme.typography.labelLarge,
     labelWeight: FontWeight = FontWeight.SemiBold,
     textFieldHeight: Dp = 44.dp,
+    imeAction: ImeAction = ImeAction.None,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -61,6 +65,10 @@ fun FormFieldCompo(
                     shape = RoundedCornerShape(12.dp)
                 )
                 .padding(horizontal = 12.dp),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = imeAction
+            ),
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -95,7 +103,10 @@ fun TextAreaCompo(
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
     borderColor: Color = MaterialTheme.colorScheme.outline,
     cornerRadius: Dp = 12.dp,
-    padding: Dp = 12.dp
+    padding: Dp = 12.dp,
+    imeAction: ImeAction = ImeAction.None,
+    keyboardType: KeyboardType = KeyboardType.Text
+
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -125,6 +136,10 @@ fun TextAreaCompo(
                     shape = RoundedCornerShape(cornerRadius)
                 )
                 .padding(padding),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = imeAction
+            ),
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier

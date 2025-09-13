@@ -28,5 +28,6 @@ data class SuggestionUIStates(
     val maxAge: Int = MAX_AGE,
     val selectedZodiac: ZodiacSign? = null,
     val selectedCountry: CountryModel? = null,
-    val userPreferences: UserPreferenceResponse? = null
+    val userPreferences: UserPreferenceResponse? = null,
+    val countryList: List<CountryModel> = emptyList()
 )

@@ -280,6 +280,7 @@ private fun FilterSuggestionCompo(
 
             CountryFilterCompo(
                 selectedCountry = suggestionUIStates.selectedCountry,
+                countryList = suggestionUIStates.countryList,
                 onClearFilter = {
                 },
                 onOptionSelected = {
@@ -459,6 +460,7 @@ fun AgeFilterDropdownCardCompo(
 @Composable
 private fun CountryFilterCompo(
     selectedCountry: CountryModel?,
+    countryList: List<CountryModel>,
     onClearFilter: () -> Unit,
     onOptionSelected: (CountryModel) -> Unit
 ) {
@@ -471,6 +473,7 @@ private fun CountryFilterCompo(
 
         CountryDropDown(
             modifier = Modifier.fillMaxWidth(),
+            countryList = countryList,
             option = selectedCountry,
             onOptionSelected = {
                 onOptionSelected(it)

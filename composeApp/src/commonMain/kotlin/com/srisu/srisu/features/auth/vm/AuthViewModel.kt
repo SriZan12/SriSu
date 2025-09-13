@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.auth.vm
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil3.Uri
@@ -24,17 +25,20 @@ import com.srisu.srisu.utils.Constants.Auth.OTP_WAITING_TIME
 import com.srisu.srisu.utils.Constants.Auth.PHONE_NUMBER_VERIFICATION_PROGRESS
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Constants.Auth.TOTAL_PROGRESS
+import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.Country.getCountryModelFromPrefix
 import com.srisu.srisu.utils.DateTimeUtils.calculateAge
 import com.srisu.srisu.utils.DateTimeUtils.getDayAndMonthIndividually
 import com.srisu.srisu.utils.FileManager
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -61,6 +65,7 @@ class AuthViewModel(
         checkSession()
         initializeAuthNavigationFlow()
         setZodiacSign()
+        loadAllCountries()
     }
 
     private fun showErrorMessage(errorType: String = "ERROR", error: String) {
@@ -161,6 +166,13 @@ class AuthViewModel(
         newOtpValues[index] = value
         this._authUiState.value = this._authUiState.value.copy(optValues = newOtpValues)
 
+    }
+
+    private fun loadAllCountries() {
+        viewModelScope.launch {
+            val countries = getAllCountriesFromJson() ?: emptyList()
+            _authUiState.value = _authUiState.value.copy(countryList = countries)
+        }
     }
 
     /* private fun updateIsOtpVerified(isPhoneNumberVerified: Boolean) {
@@ -431,7 +443,11 @@ class AuthViewModel(
                     this@AuthViewModel._authUiState.value.profilePictureUri.toString()
                 }
             val mediaFile =
-                fileManager.createMediaFileFromPath(path =profilePictureUri, id = null, removed = null)
+                fileManager.createMediaFileFromPath(
+                    path = profilePictureUri,
+                    id = null,
+                    removed = null
+                )
 
             authRepository.sendProfileSetupRequest(
                 profileSetupDTO = profileDTO,

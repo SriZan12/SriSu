@@ -21,6 +21,7 @@ import com.srisu.srisu.session.setUserWholeCredentials
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Country
+import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
@@ -45,7 +46,16 @@ class EditProfileViewModel(
         setSession()
         getProfile()
         getInterestList()
+        loadAllCountries()
     }
+
+    private fun loadAllCountries() {
+        viewModelScope.launch {
+            val countries = getAllCountriesFromJson() ?: emptyList()
+            _editProfileUIState.value = _editProfileUIState.value.copy(countryList = countries)
+        }
+    }
+
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
         this._editProfileUIState.value =
@@ -65,6 +75,10 @@ class EditProfileViewModel(
                     message = message
                 )
             )
+    }
+
+    private fun isInternetAvailable(): Boolean {
+        return connectivityObserver.isConnected.value
     }
 
     private fun showNoInternetConnection(isOffline: Boolean) {

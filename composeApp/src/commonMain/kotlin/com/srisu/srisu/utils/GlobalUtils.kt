@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 
 expect object AppContext
 
-expect fun getCountryFlagFromAssets(countryCode: String): ImageBitmap?
+expect suspend fun getCountryFlagFromAssets(countryCode: String): ImageBitmap?
 
 expect fun readJsonFromAssets(fileName: String): String?
 

@@ -18,6 +18,7 @@ import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.ConnectivityObserver
+import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.Country.getCountryModelFromName
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
@@ -53,6 +54,7 @@ class SuggestionViewModel(
         AppLogger.log("SUGGESTION VIEW MODEL INITIALIZED")
         setSession()
         getUserSuggestions()
+        loadAllCountries()
     }
 
     private fun success(message: String = "") {
@@ -157,6 +159,13 @@ class SuggestionViewModel(
         _suggestionUIStates.value = _suggestionUIStates.value.copy(
             isRequested = isUserRequested
         )
+    }
+
+    private fun loadAllCountries() {
+        viewModelScope.launch {
+            val countries = getAllCountriesFromJson() ?: emptyList()
+            _suggestionUIStates.value = _suggestionUIStates.value.copy(countryList = countries)
+        }
     }
 
 

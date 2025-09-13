@@ -97,6 +97,8 @@ fun AddPhoneNumberCompo(
         }
 
         CountrySelectionBottomSheet(
+            modifier = Modifier,
+            countries = authUIStates.countryList,
             show = showCountryList,
             onCountrySelected = { countryModel ->
                 showCountryList = false
