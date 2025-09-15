@@ -28,7 +28,6 @@ import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class EditProfileViewModel(
@@ -47,13 +46,6 @@ class EditProfileViewModel(
         getProfile()
         getInterestList()
         loadAllCountries()
-    }
-
-    private fun loadAllCountries() {
-        viewModelScope.launch {
-            val countries = getAllCountriesFromJson() ?: emptyList()
-            _editProfileUIState.value = _editProfileUIState.value.copy(countryList = countries)
-        }
     }
 
 
@@ -128,6 +120,13 @@ class EditProfileViewModel(
 
     fun updateInterestList(interestList: List<InterestResponse.Interest?>?) {
         _editProfileUIState.value = _editProfileUIState.value.copy(interestList = interestList)
+    }
+
+    private fun loadAllCountries() {
+        viewModelScope.launch {
+            val countries = getAllCountriesFromJson() ?: emptyList()
+            _editProfileUIState.value = _editProfileUIState.value.copy(countryList = countries)
+        }
     }
 
     fun updateLargePhoto(photo: GalleyPhotoModel?) {
@@ -220,7 +219,6 @@ class EditProfileViewModel(
                     )
                 }
                 .onError { error, errorType ->
-                    AppLogger.log("Error getting profile = $error")
                     showErrorMessage(message = error, errorType = errorType.name)
                     setUserProfileData() // fallback to session data
                 }
@@ -245,7 +243,6 @@ class EditProfileViewModel(
         if (!profileData.userPhotos.isNullOrEmpty()) {
 
             resetGalleryPhotos()
-            AppLogger.log("USER PHOTOS AFTER UPDATING = ${Json.encodeToString(profileData.userPhotos)}")
 
             // Large photos
             profileData.userPhotos.take(2).forEachIndexed { index, photo ->
@@ -366,9 +363,7 @@ class EditProfileViewModel(
             gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
         }
         _editProfileUIState.value.smallPhotos?.forEach {
-            AppLogger.log("gallery in small while adding = ${it?.photoUri}-${it?.removed}")
             gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
-            AppLogger.log("gallery in small photos = ${gallery.size}")
         }
         return gallery
     }
@@ -396,7 +391,6 @@ class EditProfileViewModel(
             var session: Session? = null
             if (sessionData != null) {
                 session = Json.decodeFromString<Session>(sessionData)
-                AppLogger.log("SESSION =${Json.encodeToString(session)}")
             }
             updateSession(session)
 

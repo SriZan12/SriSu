@@ -28,7 +28,6 @@ import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.InterestCategoryUI
 import com.srisu.srisu.features.profile.state.InterestUI
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -42,6 +41,7 @@ fun InterestScreen(
     currentInterests: List<User.UserInterest?>? = emptyList(),
     onInterestSelected: (List<User.UserInterest?>?) -> Unit = {}
 ) {
+
     var selectedInterests by remember {
         mutableStateOf(currentInterests)
     }
@@ -121,7 +121,9 @@ fun CategorizedInterestListCompo(
             }
         } else {
             interestList.forEach { category ->
-                item(span = { GridItemSpan(3) }) {
+                item(span = { GridItemSpan(3) }, key = {
+                    category.category
+                }) {
                     Text(
                         text = category.category,
                         style = MaterialTheme.typography.titleMedium,
@@ -132,8 +134,6 @@ fun CategorizedInterestListCompo(
                 items(category.interests) { interest ->
                     val isSelected = selectedInterests
                         ?.any {
-                            AppLogger.log("INTEREST = ${it?.interest}")
-                            AppLogger.log("id = ${interest.id}")
                             it?.removed == false && it.interest == interest.id
                         } == true
 
@@ -190,10 +190,8 @@ private fun updateInterestSelection(
 ): List<User.UserInterest?> {
 
     return if (isSelected) {
-        AppLogger.log("Interest is selected")
         val isAvailableInPrevList = previousInterest?.any { it?.interest == interest.id }
         if (isAvailableInPrevList == false) {
-            AppLogger.log("Interest was not in previous list, removing it")
             currentList.filter { it?.interest != interest.id }
         } else {
             currentList.map { userInterest ->
@@ -207,14 +205,12 @@ private fun updateInterestSelection(
         val existing = currentList.find { it?.interest == interest.id }
 
         if (existing != null) {
-            AppLogger.log("Interest exists in current list, updating it")
             currentList.map { userInterest ->
                 if (userInterest?.interest == interest.id) {
                     userInterest?.copy(removed = false)
                 } else userInterest
             }
         } else {
-            AppLogger.log("Interest  does not exists in current list, adding it")
             currentList + User.UserInterest(
                 interest = interest.id,
                 name = interest.interestName,
