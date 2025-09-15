@@ -11,14 +11,16 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
 
 object DateTimeUtils {
 
     fun formatLocalDate(date: LocalDate): String {
         return "${date.year}-${
-            date.monthNumber.toString().padStart(2, '0')
-        }-${date.dayOfMonth.toString().padStart(2, '0')}"
+            date.month.number.toString().padStart(2, '0')
+        }-${date.day.toString().padStart(2, '0')}"
     }
 
     fun getDayAndMonthIndividually(dateString: String): Pair<Int, Int> {
@@ -38,11 +40,12 @@ object DateTimeUtils {
         return dateAsNumber
     }
 
+    @OptIn(ExperimentalTime::class)
     fun calculateAge(dateString: String?): Int? {
         if (dateString != null) {
             val birthDate = LocalDate.parse(dateString)
             val currentDate =
-                Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+                kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
             return currentDate.year - birthDate.year
         }

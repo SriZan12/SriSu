@@ -1,7 +1,7 @@
 package com.srisu.srisu.features.home
 
 import androidx.lifecycle.ViewModel
-import com.srisu.srisu.core.data.repository.SuggestionRepository
+import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
 import com.srisu.srisu.session.SessionStorage
 
 class HomeViewModel(

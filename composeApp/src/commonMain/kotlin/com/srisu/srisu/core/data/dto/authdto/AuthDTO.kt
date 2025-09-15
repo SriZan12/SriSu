@@ -23,5 +23,5 @@ data class AuthDTO(
     @SerialName("profile_photo")
     val profilePhoto: String? = null,
     @SerialName("zodiac_sign")
-    val zodiacSign: String? = null
+    val zodiacSign: String? = null,
 )

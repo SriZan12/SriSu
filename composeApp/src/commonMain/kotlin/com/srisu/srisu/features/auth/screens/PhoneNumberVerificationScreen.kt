@@ -17,7 +17,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -25,7 +27,6 @@ import com.srisu.srisu.features.auth.state.AuthUIStates
 import com.srisu.srisu.features.auth.state.Validation
 import com.srisu.srisu.features.auth.vm.AuthViewModel
 import com.srisu.srisu.navigation.HomeNavigation
-import com.srisu.srisu.utils.Constants.OTP_LENGTH
 import com.srisu.srisu.utils.DateTimeUtils.CountdownTimer
 import com.srisu.srisu.utils.formatTime
 import com.srisu.srisu.utils.isInternetAvailable
@@ -39,6 +40,7 @@ import com.srisu.srisu.components.StyledAnnotatedText
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.common.CommonAuthContainerCompo
 import com.srisu.srisu.features.auth.common.TitleText
+import com.srisu.srisu.utils.Constants.Auth.OTP_LENGTH
 import kotlinx.coroutines.delay
 
 @Composable
@@ -46,16 +48,23 @@ fun PhoneNumberVerificationScreen(
     navController: NavController,
     authViewModel: AuthViewModel
 ) {
-    CommonAuthContainerCompo(buttonTitle = "Verify", onClick = {
-        if (authViewModel.isOtpValid()) {
-//            authViewModel.verifyOtp() {
-//                navController.navigate(HomeNavigation.Home)
-//            }
+    val localFocusManager: FocusManager = LocalFocusManager.current
 
-            authViewModel.navigateNextScreen()
-        }
+    CommonAuthContainerCompo(
+        buttonTitle = "Verify",
+        onClickScreenContent = {
+            localFocusManager.clearFocus(force = true)
+        },
+        onClickPrimaryButton = {
+            if (authViewModel.isOtpValid()) {
+                authViewModel.verifyOtp() {
+                    navController.navigate(HomeNavigation.Home)
+                }
 
-    }) {
+//            authViewModel.navigateNextScreen()
+            }
+
+        }) {
 
         val authUIStates by authViewModel.authUiState.collectAsState()
 

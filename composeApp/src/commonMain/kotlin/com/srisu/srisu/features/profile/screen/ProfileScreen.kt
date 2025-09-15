@@ -2,6 +2,7 @@ package com.srisu.srisu.features.profile.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
@@ -36,27 +34,39 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.LoadingScrim
+import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
+import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
+import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.leo
+import kotlin.random.Random
 
 @Composable
 fun ProfileScreen(
@@ -65,11 +75,24 @@ fun ProfileScreen(
 ) {
 
     val profileUIState by profileViewModel.profileUIState.collectAsStateWithLifecycle()
+    val shouldShowRequestButton by remember {
+        mutableStateOf(false)
+    }
 
     Init(profileViewModel = profileViewModel, userProfileData = userProfileData)
 
+    HandleUiStates(
+        profileViewModel = profileViewModel,
+        profileUIStates = profileUIState
+    )
+
     ProfilePictureContent(
-        profileUIState = profileUIState
+        profileUIState = profileUIState,
+        shouldShowRequestButton = shouldShowRequestButton,
+        onSendRequest = {
+            AppLogger.log("ON SEND REQUEST")
+            profileViewModel.sendSingleConnectionRequest()
+        }
     )
 
 }
@@ -82,68 +105,128 @@ private fun Init(
     LaunchedEffect(
         key1 = Unit
     ) {
-        //Init profile data
         profileViewModel.updateUserProfileData(userProfileData = userProfileData)
     }
 }
 
 @Composable
-private fun ProfilePictureContent(profileUIState: ProfileUIState) {
+private fun HandleUiStates(
+    profileViewModel: ProfileViewModel,
+    profileUIStates: ProfileUIState
+) {
+
+    val isConnected = isInternetAvailable()
+    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+
+    LaunchedEffect(isConnected) {
+        showBottomSheet = !isConnected
+    }
+
+    when (val baseUIState = profileUIStates.baseUIState) {
+        is BaseUIState.Error -> {
+            ErrorDialog(
+                title = baseUIState.errorType,
+                errorMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    profileViewModel.idleScreen()
+                },
+            )
+        }
+
+        is BaseUIState.Loading -> {
+            LoadingScrim(
+                onDismissRequest = {
+                    profileViewModel.idleScreen()
+                }
+            )
+        }
+
+        is BaseUIState.Success<*> -> {
+            RequestSentDialog(
+                successMessage = baseUIState.message,
+                onDismiss = {
+                    profileViewModel.idleScreen()
+                },
+            )
+        }
+
+        is BaseUIState.NoInternetConnection -> {
+            showBottomSheet = baseUIState.isOffline
+        }
+
+        is BaseUIState.Idle -> {
+            Unit
+        }
+    }
+
+    if (showBottomSheet) {
+        OfflineBottomSheetCompo(
+            show = showBottomSheet,
+            onDismiss = {
+                showBottomSheet = false
+                profileViewModel.idleScreen()
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProfilePictureContent(
+    profileUIState: ProfileUIState,
+    onSendRequest: () -> Unit,
+    shouldShowRequestButton: Boolean
+) {
 
     val userProfileData = profileUIState.userProfileData
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFADADD))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .verticalScroll(rememberScrollState())
     ) {
-        item {
-            ProfilePictureCompo(
-                profileUrl = userProfileData?.profilePhoto,
-                onSendRequest = {}
-            )
-        }
+        ProfilePictureCompo(
+            profileUrl = userProfileData?.profilePhoto,
+            hasSentRequest = userProfileData?.crushed,
+            shouldShowRequestButton = shouldShowRequestButton,
+            isRequestSentSuccessfully = profileUIState.isRequestSentSuccessfully,
+            onSendRequest = {
+                onSendRequest()
+            }
+        )
 
-        item {
-            // Name and Age
-            val age = DateTimeUtils.calculateAge(userProfileData?.dob)
+        // Name and Age
+        val age = DateTimeUtils.calculateAge(userProfileData?.dob)
 
-            UserInfo(
-                name = userProfileData?.fullName,
-                age = age,
-                zodiacSign = userProfileData?.zodiacSign,
-                city = userProfileData?.city,
-                country = userProfileData?.country
-            )
-        }
+        UserInfo(
+            name = userProfileData?.fullName,
+            age = age,
+            zodiacSign = userProfileData?.zodiacSign,
+            city = userProfileData?.city,
+            country = userProfileData?.country
+        )
 
-        item {
-            //Interest
-            val interests = userProfileData?.userInterests
-            InterestCompo(interests = interests)
-        }
+        //Interest
+        val interests = userProfileData?.userInterests
+        InterestCompo(interests = interests)
 
-        item {
-            AboutCompo(
-                bio = userProfileData?.bio
-            )
-        }
+        AboutCompo(
+            bio = userProfileData?.bio
+        )
 
-        item {
-            // Gallery
-            Text(
-                "Gallery",
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
+        // Gallery
+        Text(
+            "Gallery",
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
 
-        item {
-            GallerySection(
-                photos = userProfileData?.userPhotos
-            )
-        }
+        GallerySection(
+            photos = userProfileData?.userPhotos
+        )
+
     }
 }
 
@@ -151,6 +234,9 @@ private fun ProfilePictureContent(profileUIState: ProfileUIState) {
 @Composable
 fun ProfilePictureCompo(
     profileUrl: String? = null,
+    hasSentRequest: Boolean? = false,
+    shouldShowRequestButton: Boolean,
+    isRequestSentSuccessfully: Boolean?,
     onSendRequest: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
@@ -164,30 +250,47 @@ fun ProfilePictureCompo(
                     .height(300.dp)
             )
         } else {
-            AsyncImage(
-                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            /*AsyncImage(
+                model = profileUrl,
+//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
                 contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Inside,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )*/
+
+            AsyncImage(
+                model = profileUrl,
+                contentDescription = "Profile Picture",
+                contentScale = ContentScale.Crop, // fills and crops extra
+                alignment = Alignment.TopCenter,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
             )
+
         }
-        IconButton(
-            onClick = { /* Like action */ },
-            modifier = Modifier
-                .size(48.dp)
-                .align(Alignment.BottomCenter)
-                .offset(y = 24.dp)
-                .background(Color.White, shape = CircleShape),
-            colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFFFA500))
-        ) {
-            Icon(
-                modifier = Modifier.size(32.dp),
-                imageVector = Icons.Default.Favorite,
-                contentDescription = "Like",
-                tint = Color.White
-            )
+
+        if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
+
+            IconButton(
+                onClick = {
+                    onSendRequest()
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .align(Alignment.BottomCenter)
+                    .offset(y = 24.dp),
+                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(
+                    modifier = Modifier.size(48.dp).padding(all = 8.dp),
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Like",
+                    tint = Color.White
+                )
+            }
         }
     }
 }
@@ -260,24 +363,52 @@ fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?)
                     }
                 }
             }
+
+            /* LazyVerticalGrid(
+                 modifier = Modifier.padding(top = 8.dp).heightIn(min = 150.dp, max = 200.dp),
+                 columns = GridCells.Fixed(3),
+                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
+             ) {
+                 items(interests) { interest ->
+                     val backgroundColor = remember { getRandomPastelColor() }
+                     interest?.let {
+                         if (!interest.name.isNullOrEmpty()) {
+                             InterestChip(label = interest.name, backgroundColor = backgroundColor)
+                         }
+                     }
+                 }
+             }*/
         }
     }
 }
 
 @Composable
-fun InterestChip(label: String) {
+private fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.LightGray),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
-            .padding(end = 8.dp)
+            .padding(end = 8.dp),
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                .basicMarquee(iterations = 10),
             style = MaterialTheme.typography.labelMedium
         )
     }
+}
+
+fun getRandomPastelColor(): Color {
+    val base = 200 // to ensure soft colors (pastel-ish)
+    val red = base + Random.nextInt(0, 56)
+    val green = base + Random.nextInt(0, 56)
+    val blue = base + Random.nextInt(0, 56)
+    return Color(red, green, blue)
 }
 
 @Preview
@@ -324,16 +455,15 @@ fun GallerySection(
     )
 
     photos?.let {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+        LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(items = listPhotos) { photoItem ->
                 AsyncImage(
                     modifier = Modifier
+                        .size(200.dp)
                         .aspectRatio(1f)
                         .clip(shape = RoundedCornerShape(8.dp)),
                     model = photoItem,
@@ -353,3 +483,4 @@ fun GallerySection(
          )*/
     }
 }
+

@@ -15,7 +15,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.serialization.JsonConvertException
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -66,6 +65,7 @@ suspend inline fun <reified T> handleResponse(response: HttpResponse): ResultHan
                     message = defaultResponse.message
                 )
             )
+
         }
 
 
@@ -123,12 +123,11 @@ suspend inline fun <reified T> handleErrorResponse(response: HttpResponse): Resu
 
     val errorResponse: DefaultErrorResponse? = try {
         parseErrorResponse(rawBody)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 
 
-    AppLogger.log("ERROR RESPONSE = ${Json.encodeToString(errorResponse)}")
 
     errorMessage = when (response.status) {
         HttpStatusCode.BadRequest -> {
@@ -192,10 +191,10 @@ fun parseErrorResponse(jsonString: String): DefaultErrorResponse {
         }
 
         // Return parsed error response
-        DefaultErrorResponse(errorDetails = errorDetails, message = message ?: "Unknown error")
+        DefaultErrorResponse(errorDetails = errorDetails, message = message ?: "Server error")
     } catch (e: Exception) {
         AppLogger.log("Parsing error response failed: ${e.message}")
-        DefaultErrorResponse(errorDetails = null, message = "Unknown error")
+        DefaultErrorResponse(errorDetails = null, message = "Server error")
     }
 }
 

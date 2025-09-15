@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,23 +26,35 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.getCountryFlagFromAssets
 import com.srisu.srisu.theme.backgroundGraySecondary
+import com.srisu.srisu.utils.ZodiacUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.aries
+import srisu.composeapp.generated.resources.country_flag
 import srisu.composeapp.generated.resources.offline
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +81,88 @@ fun CommonBottomSheetCompo(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CountrySelectionBottomSheet(
+    modifier: Modifier = Modifier,
+    countries: List<CountryModel>,
+    show: Boolean,
+    onCountrySelected: (CountryModel) -> Unit,
+    onClose: () -> Unit
+) {
+    if (!show) return
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    val scope = rememberCoroutineScope()
+
+    var countryList by remember { mutableStateOf(countries) }
+    var filterCountryList by remember { mutableStateOf<List<CountryModel>>(emptyList()) }
+    var isSearchOn by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        modifier = modifier.fillMaxSize(),
+        sheetState = sheetState,
+        containerColor = Color.White,
+        onDismissRequest = { onClose() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(all = 12.dp)
+        ) {
+            SearchBar(
+                modifier = Modifier.fillMaxWidth(),
+                hint = "Search Country",
+                onTextChange = { query ->
+                    scope.launch(Dispatchers.Default) {
+                        if (query.isBlank()) {
+                            withContext(Dispatchers.Main) {
+                                isSearchOn = false
+                                filterCountryList = emptyList()
+                            }
+                        } else {
+                            val filtered = countryList.filter {
+                                it.name?.contains(query, ignoreCase = true) == true
+                            }
+                            withContext(Dispatchers.Main) {
+                                isSearchOn = true
+                                filterCountryList = filtered
+                            }
+                        }
+                    }
+                }
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                val countriesToShow = if (isSearchOn) filterCountryList else countryList
+
+                items(
+                    items = countriesToShow,
+                    key = { it.code ?: it.name ?: it.hashCode().toString() }
+                ) { item ->
+                    key(item.code ?: item.hashCode()) {
+                        CountryCodeSelectionItem(
+                            countryModel = item,
+                            onCountrySelected = { onCountrySelected(it) }
+                        )
+                    }
+                }
+            }
+
+        }
+    }
+}
+
+
+/*@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CountrySelectionBottomSheet(
     show: Boolean,
@@ -139,7 +234,7 @@ fun CountrySelectionBottomSheet(
             }
         }
     }
-}
+}*/
 
 @Composable
 private fun CountryCodeSelectionItem(
@@ -161,9 +256,14 @@ private fun CountryCodeSelectionItem(
         ) {
 
 
-            val flag = getCountryFlagFromAssets(
-                countryCode = countryModel.code ?: ""
-            )
+            /*  val flag by produceState<ImageBitmap?>(initialValue = null, key1 = countryModel.code) {
+                  value = getCountryFlagFromAssets(countryModel.code ?: "")
+              }*/
+
+            var flag by remember { mutableStateOf<ImageBitmap?>(null) }
+            LaunchedEffect(countryModel.code) {
+                flag = getCountryFlagFromAssets(countryModel.code ?: "")
+            }
 
             Row(
                 modifier = Modifier,
@@ -172,13 +272,13 @@ private fun CountryCodeSelectionItem(
             ) {
                 if (flag == null) {
                     Image(
-                        painter = painterResource(Res.drawable.aries),
+                        painter = painterResource(Res.drawable.country_flag),
                         contentDescription = "country_flag",
                         modifier = Modifier.size(22.dp)
                     )
                 } else {
                     Image(
-                        bitmap = flag,
+                        bitmap = flag!!,
                         contentDescription = "flag",
                         modifier = Modifier.size(22.dp)
                     )
@@ -309,6 +409,238 @@ fun SuccessBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CitySelectionBottomSheet(
+    show: Boolean,
+    cityList: List<String?>?,
+    onClose: () -> Unit,
+    onCitySelected: (String) -> Unit
+) {
+    if (show) {
+
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true
+        )
+
+        var isSearchOn by remember {
+            mutableStateOf(false)
+        }
+        var filterCityList by remember {
+            mutableStateOf(cityList)
+        }
+
+        ModalBottomSheet(
+            modifier = Modifier.fillMaxSize(),
+            sheetState = sheetState,
+            containerColor = Color.White,
+            onDismissRequest = {
+                onClose()
+            }) {
+
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                SearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    hint = "Search City",
+                    onTextChange = { query ->
+
+                        isSearchOn = true
+
+                        if (query.isEmpty() || query.isBlank()) {
+                            isSearchOn = false
+                        }
+
+                        filterCityList = cityList?.filter {
+                            it?.contains(query, ignoreCase = true) == true
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    val citiesList = if (isSearchOn) filterCityList else cityList
+
+                    items(citiesList ?: emptyList()) { item ->
+                        if (!item.isNullOrEmpty()) {
+                            CitySelectionItem(
+                                city = item,
+                                onCitySelected = {
+                                    onCitySelected(it)
+                                }
+                            )
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+}
+
+@Composable
+private fun CitySelectionItem(
+    city: String,
+    onCitySelected: (String) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 12.dp)
+                .clickable {
+                    onCitySelected(
+                        city
+                    )
+                },
+            verticalAlignment = CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier,
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = city,
+                    color = Color.Black,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+        }
+
+        HorizontalDivider()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ZodiacSignSelectionBottomSheet(
+    show: Boolean,
+    onZodiacSelected: (ZodiacUtils.ZodiacSign) -> Unit,
+    onClose: () -> Unit
+) {
+
+    if (show) {
+        val zodiacList = ZodiacUtils.getZodiacSignList()
+
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true
+        )
+
+        var isSearchOn by remember {
+            mutableStateOf(false)
+        }
+
+        var filterZodiacList by remember {
+            mutableStateOf(listOf<ZodiacUtils.ZodiacSign>())
+        }
+
+        ModalBottomSheet(
+            modifier = Modifier.fillMaxSize(),
+            sheetState = sheetState,
+            containerColor = Color.White,
+            onDismissRequest = {
+                onClose()
+            }) {
+
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                SearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    hint = "Search Zodiac Sign",
+                    onTextChange = { query ->
+
+                        isSearchOn = true
+
+                        if (query.isEmpty() || query.isBlank()) {
+                            isSearchOn = false
+                        }
+
+                        filterZodiacList = zodiacList.filter {
+                            it.sign.contains(query, ignoreCase = true)
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    val zodiacs = if (isSearchOn) filterZodiacList else zodiacList
+
+                    items(zodiacs) { item ->
+                        ZodiacSignSelectionItem(
+                            zodiacSign = item,
+                            onZodiacSignSelected = {
+                                onZodiacSelected(it)
+                            }
+                        )
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZodiacSignSelectionItem(
+    zodiacSign: ZodiacUtils.ZodiacSign,
+    onZodiacSignSelected: (ZodiacUtils.ZodiacSign) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 12.dp)
+                .clickable {
+                    onZodiacSignSelected(
+                        zodiacSign
+                    )
+                },
+            verticalAlignment = CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+
+
+            val zodiacLogo = ZodiacUtils.getZodiacSignImage(
+                name = zodiacSign.sign
+            )
+
+            Row(
+                modifier = Modifier,
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (zodiacLogo != null) {
+                    Image(
+                        painter = painterResource(zodiacLogo),
+                        contentDescription = "flag",
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Text(
+                    text = zodiacSign.sign ?: "",
+                    color = Color.Black,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+
+        }
+
+        HorizontalDivider()
     }
 }
 

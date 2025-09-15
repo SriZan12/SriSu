@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,7 +49,6 @@ import com.srisu.srisu.features.auth.state.AuthUIStates
 import com.srisu.srisu.features.auth.state.Validation
 import com.srisu.srisu.features.auth.vm.AuthViewModel
 import com.srisu.srisu.utils.isInternetAvailable
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun AddPhoneNumberCompo(
@@ -62,7 +62,11 @@ fun AddPhoneNumberCompo(
         mutableStateOf(false)
     }
 
-    CommonAuthContainerCompo(buttonTitle = "Continue", onClick = {
+    val localFocusManager = LocalFocusManager.current
+
+    CommonAuthContainerCompo(buttonTitle = "Continue", onClickScreenContent = {
+        localFocusManager.clearFocus(force = true)
+    }, onClickPrimaryButton = {
         if (authViewModel.isPhoneNumberValid()) {
             showPhoneNumberConfirmation = true
         }
@@ -93,6 +97,8 @@ fun AddPhoneNumberCompo(
         }
 
         CountrySelectionBottomSheet(
+            modifier = Modifier,
+            countries = authUIStates.countryList,
             show = showCountryList,
             onCountrySelected = { countryModel ->
                 showCountryList = false

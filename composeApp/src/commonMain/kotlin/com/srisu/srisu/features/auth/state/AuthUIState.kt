@@ -6,6 +6,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.features.auth.common.CustomAuthScreen
 import com.srisu.srisu.features.auth.screens.Gender
 import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 
 @Stable
@@ -31,6 +32,7 @@ data class AuthUIStates(
     val screenStack: ArrayDeque<CustomAuthScreen> = ArrayDeque(),
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val validationError: Validation = Validation(),
+    val countryList: List<CountryModel> = emptyList()
 )
 
 data class Validation(

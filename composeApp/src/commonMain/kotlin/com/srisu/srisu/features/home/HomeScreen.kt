@@ -11,8 +11,9 @@ import androidx.compose.ui.Modifier
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
-@Preview
+
 @Composable
+@Preview
 fun HomeScreen(
     homeViewModel: HomeViewModel = koinViewModel<HomeViewModel>()
 ) {

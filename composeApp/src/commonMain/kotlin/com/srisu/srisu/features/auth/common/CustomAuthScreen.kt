@@ -9,7 +9,7 @@ sealed class CustomAuthScreen(val title: String) : Comparable<CustomAuthScreen> 
     data object AddDOBScreen : CustomAuthScreen("Date of birth")
     data object ZodiacScreen : CustomAuthScreen("Zodiac Sign")
     data object SelectGenderScreen : CustomAuthScreen("Gender")
-    data object ProfilePictureScreen : CustomAuthScreen("Profile picture")
+    data object SetProfilePictureScreen : CustomAuthScreen("Set Profile Picture")
 
     override fun compareTo(other: CustomAuthScreen): Int {
         return screenOrder.indexOf(this) - screenOrder.indexOf(other)
@@ -29,7 +29,7 @@ sealed class CustomAuthScreen(val title: String) : Comparable<CustomAuthScreen> 
                     AddDOBScreen,
                     ZodiacScreen,
                     SelectGenderScreen,
-                    ProfilePictureScreen
+                    SetProfilePictureScreen
                 )
             )
         }

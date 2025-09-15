@@ -26,7 +26,7 @@ enum class Gender {
 
 @Composable
 fun SelectGenderCompo(authViewModel: AuthViewModel) {
-    CommonAuthContainerCompo(buttonTitle = "Next", onClick = {
+    CommonAuthContainerCompo(buttonTitle = "Next", onClickPrimaryButton = {
         if (authViewModel.isGenderValid()) {
             authViewModel.navigateNextScreen()
         }

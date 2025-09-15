@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.auth.vm
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil3.Uri
@@ -7,7 +8,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.authdto.AuthDTO
 import com.srisu.srisu.core.data.dto.authdto.ProfileSetupDTO
 import com.srisu.srisu.core.data.local.AppDataStoreRepo
-import com.srisu.srisu.core.data.repository.AuthRepository
+import com.srisu.srisu.core.data.repository.auth.AuthRepository
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.common.CustomAuthScreen
 import com.srisu.srisu.features.auth.common.OTPScreenMetadata
@@ -19,24 +20,29 @@ import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.session.setUserWholeCredentials
 import com.srisu.srisu.session.toSession
 import com.srisu.srisu.utils.ConnectivityObserver
-import com.srisu.srisu.utils.Constants.FULL_NAME_PROGRESS
-import com.srisu.srisu.utils.Constants.OTP_WAITING_TIME
-import com.srisu.srisu.utils.Constants.PHONE_NUMBER_VERIFICATION_PROGRESS
-import com.srisu.srisu.utils.Constants.SESSION_KEY
-import com.srisu.srisu.utils.Constants.TOTAL_PROGRESS
+import com.srisu.srisu.utils.Constants.Auth.FULL_NAME_PROGRESS
+import com.srisu.srisu.utils.Constants.Auth.OTP_WAITING_TIME
+import com.srisu.srisu.utils.Constants.Auth.PHONE_NUMBER_VERIFICATION_PROGRESS
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
+import com.srisu.srisu.utils.Constants.Auth.TOTAL_PROGRESS
+import com.srisu.srisu.utils.Country.getAllCountriesFromJson
+import com.srisu.srisu.utils.Country.getCountryModelFromPrefix
 import com.srisu.srisu.utils.DateTimeUtils.calculateAge
 import com.srisu.srisu.utils.DateTimeUtils.getDayAndMonthIndividually
 import com.srisu.srisu.utils.FileManager
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.time.ExperimentalTime
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -59,6 +65,7 @@ class AuthViewModel(
         checkSession()
         initializeAuthNavigationFlow()
         setZodiacSign()
+        loadAllCountries()
     }
 
     private fun showErrorMessage(errorType: String = "ERROR", error: String) {
@@ -161,6 +168,13 @@ class AuthViewModel(
 
     }
 
+    private fun loadAllCountries() {
+        viewModelScope.launch {
+            val countries = getAllCountriesFromJson() ?: emptyList()
+            _authUiState.value = _authUiState.value.copy(countryList = countries)
+        }
+    }
+
     /* private fun updateIsOtpVerified(isPhoneNumberVerified: Boolean) {
          _authUiState.value = _authUiState.value.copy(isPhoneNumberVerified = isPhoneNumberVerified)
      }*/
@@ -239,8 +253,9 @@ class AuthViewModel(
                 fullName = this@AuthViewModel._authUiState.value.fullName,
                 dob = this@AuthViewModel._authUiState.value.dob,
                 gender = this@AuthViewModel._authUiState.value.gender.name,
-                phoneNumber = "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}"
-            )
+                phoneNumber = "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}",
+
+                )
 
             val session = Session(isPhoneVerified = false)
 
@@ -276,6 +291,7 @@ class AuthViewModel(
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     fun saveOTPTimeStamp() {
         viewModelScope.launch {
             if (this@AuthViewModel._authUiState.value.remainingOTPTimestamp == null) {
@@ -284,7 +300,7 @@ class AuthViewModel(
                         countryCode = this@AuthViewModel._authUiState.value.countryCode,
                         countryPrefix = this@AuthViewModel._authUiState.value.countryPrefix,
                         phoneNumber = this@AuthViewModel._authUiState.value.phoneNumber,
-                        saveTime = Clock.System.now().toEpochMilliseconds(),
+                        saveTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
                         totalTime = OTP_WAITING_TIME
                     )
                 )
@@ -292,10 +308,11 @@ class AuthViewModel(
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     fun getRemainingOTPTimeStamp() {
         viewModelScope.launch {
             dataStoreRepo.getOTPTimestamp().collectLatest { otpTimestamp ->
-                val currentTime = Clock.System.now().toEpochMilliseconds()
+                val currentTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 val timeRemaining = otpTimestamp?.let {
                     val elapsedTime = currentTime - it.saveTime
                     val remainingTime = (it.totalTime - elapsedTime).coerceAtLeast(0L)
@@ -345,25 +362,27 @@ class AuthViewModel(
 
                     val session = response?.user?.toSession(
                         access = response.tokens?.access,
-                        refresh = response.tokens?.refresh
+                        refresh = response.tokens?.refresh,
+                        id = response.user.id
                     )
+
+                    AppLogger.log("SESSION = ${response?.user?.id}")
 
                     val credentials = Json.encodeToString(session)
 
                     saveSession(credentials = credentials, sessionKey = SESSION_KEY)
                     dataStoreRepo.deleteOTPTimeStamp()
+
                     onOtpVerifiedSuccess(
                         isPhoneNumberVerified = response?.user?.isPhoneVerified == true,
                         isProfileCompleted = response?.user?.isProfileComplete == true
                     ) {
                         onGoToHomeScreen()
                     }
-                    updateProgress(isIncrease = true)
+//                    updateProgress(isIncrease = true)
                     idleScreen()
                 }
-                .onError { error, errorType ->
-                    AppLogger.log("ERROR API CALL = ${errorType.name}")
-                    AppLogger.log("ERROR API CALL = ${error.toString()}")
+                .onError { error, _ ->
                     showErrorMessage(error = error.toString())
                 }
         }
@@ -398,8 +417,11 @@ class AuthViewModel(
 
             showLoading()
 
-            val phoneNumber = this@AuthViewModel._authUiState.value.session?.phoneNumber
+            val session = _authUiState.value.session
+            val phoneNumber = session?.phoneNumber
                 ?: "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}"
+            val country = getCountryModelFromPrefix(prefix = _authUiState.value.countryPrefix)
+            val countryPrefix = this@AuthViewModel._authUiState.value.countryPrefix
 
             val profileDTO = ProfileSetupDTO(
                 phoneNumber = phoneNumber,
@@ -408,6 +430,7 @@ class AuthViewModel(
                 username = this@AuthViewModel._authUiState.value.username,
                 gender = this@AuthViewModel._authUiState.value.gender.name.uppercase(),
                 mood = "HAPPY",
+                country = country?.name,
                 profilePhoto = this@AuthViewModel._authUiState.value.profilePictureUri.toString(),
                 zodiacSign = this@AuthViewModel._authUiState.value.zodiacSign?.sign?.uppercase(),
             )
@@ -420,7 +443,11 @@ class AuthViewModel(
                     this@AuthViewModel._authUiState.value.profilePictureUri.toString()
                 }
             val mediaFile =
-                fileManager.createMediaFileFromPath(profilePictureUri)
+                fileManager.createMediaFileFromPath(
+                    path = profilePictureUri,
+                    id = null,
+                    removed = null
+                )
 
             authRepository.sendProfileSetupRequest(
                 profileSetupDTO = profileDTO,
@@ -439,8 +466,6 @@ class AuthViewModel(
                     showSuccessMessage(message = "")
                 }
                 .onError { error, errorType ->
-                    AppLogger.log("ERROR API CALL = ${errorType.name}")
-                    AppLogger.log("ERROR API CALL = ${error.toString()}")
                     showErrorMessage(
                         error = error.toString(),
                         errorType = "${errorType.name} ERROR"
@@ -481,7 +506,7 @@ class AuthViewModel(
                     CustomAuthScreen.AddDOBScreen,
                     CustomAuthScreen.ZodiacScreen,
                     CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.ProfilePictureScreen
+                    CustomAuthScreen.SetProfilePictureScreen
                 )
             )
         } else if (session != null && isPhoneNumberVerified == false) {
@@ -492,7 +517,7 @@ class AuthViewModel(
                     CustomAuthScreen.AddDOBScreen,
                     CustomAuthScreen.ZodiacScreen,
                     CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.ProfilePictureScreen
+                    CustomAuthScreen.SetProfilePictureScreen
                 )
             )
         } else {
@@ -505,7 +530,7 @@ class AuthViewModel(
                     CustomAuthScreen.AddDOBScreen,
                     CustomAuthScreen.ZodiacScreen,
                     CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.ProfilePictureScreen
+                    CustomAuthScreen.SetProfilePictureScreen
                 )
             )
         }
@@ -514,8 +539,6 @@ class AuthViewModel(
             screenStack = screenStack
         )
 
-        AppLogger.log("SCREEN STACK = ${this._authUiState.value.screenStack}")
-        AppLogger.log("SCREEN STACK SCREEN ORDER = ${CustomAuthScreen.screenOrder}")
         updateCurrentScreen()
     }
 
@@ -531,7 +554,6 @@ class AuthViewModel(
                 ?: CustomAuthScreen.SelectGenderScreen
         )
 
-        AppLogger.log("FIRST SCREEN = ${this._authUiState.value.screenStack.firstOrNull()}")
 
     }
 
@@ -554,7 +576,6 @@ class AuthViewModel(
             removeCurrentScreen()
             updateCurrentScreen()
             updateProgress(isIncrease = isIncrease)
-            AppLogger.log("current screen order = ${CustomAuthScreen.screenOrder}")
         }
 
     }
