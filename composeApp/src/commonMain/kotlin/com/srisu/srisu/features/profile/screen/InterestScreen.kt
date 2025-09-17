@@ -1,6 +1,7 @@
 package com.srisu.srisu.features.profile.screen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -22,12 +23,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +49,7 @@ import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.features.profile.state.InterestCategoryUI
 import com.srisu.srisu.features.profile.state.InterestUI
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -122,14 +126,29 @@ fun CategorizedInterestListCompo(
     previousInterest: List<User.UserInterest?>,
     onInterestSelected: (List<User.UserInterest?>) -> Unit
 ) {
+    val lazyGridState = rememberLazyGridState()
+    val animatedItems = remember { mutableSetOf<String>() }
+
+    // Track the highest visible item index to determine scroll direction
+    var lastFirstVisibleItemIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(lazyGridState.firstVisibleItemIndex) {
+        val currentIndex = lazyGridState.firstVisibleItemIndex
+        val isScrollingDown = currentIndex >= lastFirstVisibleItemIndex
+
+        if (isScrollingDown) {
+            // Only allow animations when scrolling down
+            lastFirstVisibleItemIndex = currentIndex
+        }
+    }
+
     LazyVerticalGrid(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        state = lazyGridState,
+        modifier = Modifier.fillMaxWidth(),
         columns = GridCells.Fixed(3),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = PaddingValues(all = 16.dp)
     ) {
         if (interestList.isEmpty()) {
             item(span = { GridItemSpan(3) }) {
@@ -151,20 +170,12 @@ fun CategorizedInterestListCompo(
         } else {
             interestList.forEachIndexed { index, category ->
                 item(span = { GridItemSpan(3) }, key = "category_${category.category}") {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn(animationSpec = tween(500, delayMillis = index * 100)) +
-                                slideInVertically(
-                                    animationSpec = tween(500, delayMillis = index * 100),
-                                    initialOffsetY = { 50 }
-                                )
-                    ) {
+
                         Text(
                             text = category.category,
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier
                         )
-                    }
                 }
 
                 items(
@@ -172,6 +183,19 @@ fun CategorizedInterestListCompo(
                     key = { it.id ?: it.hashCode() },
                     contentType = { "interest" }
                 ) { interest ->
+                    val itemKey = interest.id.toString()
+                    var isVisible by remember { mutableStateOf(animatedItems.contains(itemKey)) }
+                    val isScrollingDown = lazyGridState.firstVisibleItemIndex >= lastFirstVisibleItemIndex
+
+                    LaunchedEffect(itemKey, isScrollingDown) {
+                        if (!animatedItems.contains(itemKey) && isScrollingDown) {
+                            animatedItems.add(itemKey)
+                            isVisible = true
+                        } else if (animatedItems.contains(itemKey)) {
+                            isVisible = true
+                        }
+                    }
+
                     val isSelected = selectedInterests.any {
                         it?.removed == false && it.interest == interest.id
                     }
@@ -186,26 +210,25 @@ fun CategorizedInterestListCompo(
                         label = "ChipBackgroundAnimation_${interest.id}"
                     )
 
-                    val scale by animateFloatAsState(
+                  /*  val scale by animateFloatAsState(
                         targetValue = if (isSelected) 1.05f else 1f,
                         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
                         label = "ChipScaleAnimation_${interest.id}"
                     )
-
-                    // Wrap chip in AnimatedVisibility for initial appearance
+*/
                     AnimatedVisibility(
-                        visible = true, // Always visible unless filtering
-                        enter = fadeIn(animationSpec = tween(500, delayMillis = 50)) +
-                                slideInHorizontally(
-                                    animationSpec = tween(500, delayMillis = 50),
-                                    initialOffsetX = { if (index % 2 == 0) -50 else 50 }
+                        visible = isVisible,
+                        enter = fadeIn(animationSpec = tween(300)) +
+                                slideInVertically(
+                                    animationSpec = tween(300),
+                                    initialOffsetY = { if (index % 2 == 0) -50 else 50 }
                                 ),
-                        exit = fadeOut(animationSpec = tween(300))
+                        exit = ExitTransition.None
                     ) {
                         InterestChip(
                             modifier = Modifier
-                                .scale(scale)
-                                .animateItem(), // Animates list reordering
+//                                .scale(scale)
+                                .animateItem(),
                             label = interest.interestName.orEmpty(),
                             backgroundColor = backgroundColor,
                             onChipClick = {

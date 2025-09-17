@@ -646,9 +646,9 @@ fun InterestChip(
 ) {
 
     Card(
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
-        modifier = modifier,
         onClick = {
             onChipClick()
         }
