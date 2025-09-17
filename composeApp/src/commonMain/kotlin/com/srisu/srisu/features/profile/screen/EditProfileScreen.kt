@@ -1,5 +1,10 @@
 package com.srisu.srisu.features.profile.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -107,16 +112,30 @@ fun EditProfileScreen(
         editProfileUIState = editProfileUIState
     )
 
-    EditProfileScreenContent(
-        editProfileUIState = editProfileUIState,
-        editProfileViewModel = editProfileViewModel,
-        onNavigateInterestScreen = { currentInterest ->
-            onNavigateInterestScreen(
-                editProfileUIState.interestList,
-                currentInterest
-            )
-        }
-    )
+    AnimatedVisibility(
+        visible = true,
+        enter = slideInVertically(
+            animationSpec = tween(500),
+        ) + fadeIn(
+            animationSpec = tween(500)
+        ),
+        exit = fadeOut(
+            animationSpec = tween(300)
+        )
+
+    ) {
+
+        EditProfileScreenContent(
+            editProfileUIState = editProfileUIState,
+            editProfileViewModel = editProfileViewModel,
+            onNavigateInterestScreen = { currentInterest ->
+                onNavigateInterestScreen(
+                    editProfileUIState.interestList,
+                    currentInterest
+                )
+            }
+        )
+    }
 }
 
 @Composable
@@ -483,7 +502,7 @@ private fun GeneralInfoCompo(
 
         CountryDropDownCompo(
             selectedCountry = country,
-            countryList = countryList ,
+            countryList = countryList,
             onCountrySelected = {
                 onUpdateCountry(it)
             }
@@ -627,9 +646,9 @@ fun InterestChip(
 ) {
 
     Card(
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
-        modifier = modifier,
         onClick = {
             onChipClick()
         }
