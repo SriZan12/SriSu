@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
@@ -25,6 +26,7 @@ import com.srisu.srisu.navigation.homeGraph
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.theme.AppTheme
+import com.srisu.srisu.utils.Constants.Auth.FIRST_INSTALL_FLAG
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -50,8 +52,8 @@ fun App(
             darkTheme = darkTheme,
             dynamicColor = dynamicColor
         ) {
+            session.clearOnReinstall(key = FIRST_INSTALL_FLAG)
             NavHostController(session = checkSession(session = session))
-            InitCoilImageLoader()
         }
     }
 }
@@ -117,6 +119,7 @@ private fun startDestination(session: Session?): Route {
     }
 }
 
+/*
 @Composable
 private fun InitCoilImageLoader() {
 
@@ -132,4 +135,4 @@ private fun InitCoilImageLoader() {
             .build()
     }
 
-}
+}*/
