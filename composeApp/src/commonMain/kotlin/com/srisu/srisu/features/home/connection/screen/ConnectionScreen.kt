@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,17 +33,17 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.cash.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
-import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.TransparentToolBar
 import com.srisu.srisu.features.home.connection.state.ConnectionUIState
 import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
+import com.srisu.srisu.utils.DateTimeUtils
+import com.srisu.srisu.utils.ZodiacUtils
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -84,6 +82,8 @@ fun ConnectionScreenContent(
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
     ) { innerPadding ->
+
+
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
             LaunchedEffect(pagerState) {
@@ -138,7 +138,9 @@ fun ConnectionScreenContent(
                     .background(color = MaterialTheme.colorScheme.surfaceContainerLowest)
             ) { index ->
                 if (index == 0) {
-                    MyCrushScreen()
+                    MyCrushScreen(
+                        connectionUiState = connectionUiState
+                    )
                 } else {
                     CrushOnMeScreen()
                 }
@@ -150,68 +152,10 @@ fun ConnectionScreenContent(
 @Composable
 fun ConnectionItem(
     userName: String,
-    userImage: String,
-    age: String,
-    zodiacSign: String
+    userImage: String?,
+    dob: String?,
+    zodiacSign: String?
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(
-            modifier = Modifier,
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = userName,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Row(modifier = Modifier, verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = age,
-                    style = MaterialTheme.typography.titleSmall
-                )
-
-                Text(
-                    text = " | ",
-                    style = MaterialTheme.typography.titleSmall
-                )
-
-                Image(
-                    painter = painterResource(Res.drawable.leo),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-
-        }
-
-        Box(
-            modifier = Modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            AsyncImage(
-                model = userImage,
-                contentDescription = null,
-                modifier = Modifier.width(115.dp).clip(shape = RoundedCornerShape(8.dp))
-            )
-        }
-    }
-}
-
-data class Match(
-    val name: String,
-    val age: String,
-    val imageUrl: String,
-    val isNew: Boolean = true
-)
-
-
-@Composable
-fun MatchItem(match: Match) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -222,7 +166,7 @@ fun MatchItem(match: Match) {
         ) {
 
             Text(
-                match.name,
+                text = userName,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
             )
 
@@ -230,18 +174,24 @@ fun MatchItem(match: Match) {
                 modifier = Modifier,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val age = DateTimeUtils.calculateAge(dateString = dob).toString()
+
                 Text(
-                    text = match.age,
+                    text = age,
                     style = MaterialTheme.typography.titleSmall
                 )
 
                 Text(" | ", style = MaterialTheme.typography.titleSmall)
 
-                Image(
-                    painter = painterResource(Res.drawable.leo),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
+                val zodiacSignImage = ZodiacUtils.getZodiacSignImage(zodiacSign?.trim() ?: "")
+
+                zodiacSignImage?.let {
+                    Image(
+                        painter = painterResource(resource = zodiacSignImage),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
             }
 
@@ -258,7 +208,7 @@ fun MatchItem(match: Match) {
         Spacer(modifier = Modifier.width(12.dp))
 
         AsyncImage(
-            model = match.imageUrl,
+            model = userImage,
             contentDescription = null,
             modifier = Modifier
                 .size(100.dp).clip(shape = RoundedCornerShape(16.dp)),
@@ -311,7 +261,7 @@ fun PreviewConnectionItem() {
     ConnectionItem(
         userName = "Srisu",
         userImage = "https://photosmint.com/wp-content/uploads/2025/03/Indian-Beauty-DP.jpeg",
-        age = "23",
+        dob = "23",
         zodiacSign = "Leo"
 
     )

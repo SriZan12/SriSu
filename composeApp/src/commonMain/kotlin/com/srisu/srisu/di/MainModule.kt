@@ -39,6 +39,9 @@ val mainModule = module {
     }
 
     viewModel {
-        ConnectionViewModel()
+        ConnectionViewModel(
+            connectionRepository = get(),
+            connectivityObserver = get()
+        )
     }
 }
