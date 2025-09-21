@@ -11,7 +11,8 @@ import androidx.navigation.toRoute
 import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
-import com.srisu.srisu.features.home.HomeScreen
+import com.srisu.srisu.features.home.connection.screen.ConnectionScreen
+import com.srisu.srisu.features.home.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
 import com.srisu.srisu.features.profile.screen.InterestScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
@@ -47,6 +48,9 @@ sealed class HomeNavigation : Route {
     data class InterestScreen(
         val data: String
     ) : HomeNavigation()
+
+    @Serializable
+    data object Connection : HomeNavigation()
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -57,6 +61,10 @@ fun NavGraphBuilder.homeGraph(
 ) {
     composable<HomeNavigation.Home> { _ ->
         HomeScreen()
+    }
+
+    composable<HomeNavigation.Connection> {
+        ConnectionScreen()
     }
 
     composable<HomeNavigation.Suggestions> {

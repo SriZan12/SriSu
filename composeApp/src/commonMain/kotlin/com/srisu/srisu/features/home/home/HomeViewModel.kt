@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home
+package com.srisu.srisu.features.home.home
 
 import androidx.lifecycle.ViewModel
 import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository

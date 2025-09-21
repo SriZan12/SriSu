@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home
+package com.srisu.srisu.features.home.home
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

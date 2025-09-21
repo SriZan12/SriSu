@@ -6,28 +6,18 @@ import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.dto.suggestion.UserPreferenceDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
-import com.srisu.srisu.core.data.response.suggestion.CityResponse
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
-import com.srisu.srisu.core.logger.AppLogger
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import okio.IOException
 
 class SuggestionApiService(private val httpClient: HttpClient) {
 
