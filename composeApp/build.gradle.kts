@@ -96,9 +96,6 @@ kotlin {
             //type-safe navaigation
             implementation(libs.navigation.compose)
 
-            //shimmer
-            implementation(libs.accompanist.placeholder.material3)
-
             // ui-backhandler
             implementation(libs.ui.backhandler)
 

@@ -118,8 +118,8 @@ class ConnectionViewModel(
                     AppLogger.log("resultHandler: ${resultHandler.result}")
 
                     resultHandler.onSuccess { response, _ ->
-                        items = response?.results
                         idleScreen()
+                        items = response?.results
                     }.onError { error, errorType ->
                         idleScreen()
                         throw Exception("API Error: $error, Type: $errorType")

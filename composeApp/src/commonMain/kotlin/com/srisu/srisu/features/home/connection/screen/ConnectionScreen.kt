@@ -1,5 +1,12 @@
 package com.srisu.srisu.features.home.connection.screen
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +41,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cash.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.TransparentToolBar
+import com.srisu.srisu.components.shimmerEffect
 import com.srisu.srisu.features.home.connection.state.ConnectionUIState
 import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
 import com.srisu.srisu.utils.DateTimeUtils
@@ -50,6 +62,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.leo
+import srisu.composeapp.generated.resources.no_love
 
 @Composable
 fun ConnectionScreen(viewModel: ConnectionViewModel = koinViewModel<ConnectionViewModel>()) {
@@ -221,6 +234,55 @@ fun ConnectionItem(
 }
 
 @Composable
+fun ShimmerEffect(
+    modifier: Modifier,
+    widthOfShadowBrush: Int = 500,
+    angleOfAxisY: Float = 270f,
+    durationMillis: Int = 1000,
+) {
+    val shimmerColors = listOf(
+        Color.White.copy(alpha = 0.3f),
+        Color.White.copy(alpha = 0.5f),
+        Color.White.copy(alpha = 1.0f),
+        Color.White.copy(alpha = 0.5f),
+        Color.White.copy(alpha = 0.3f),
+    )
+    val transition = rememberInfiniteTransition(label = "")
+    val translateAnimation = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (durationMillis + widthOfShadowBrush).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = durationMillis,
+                easing = LinearEasing,
+            ),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "Shimmer loading animation",
+    )
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(x = translateAnimation.value - widthOfShadowBrush, y = 0.0f),
+        end = Offset(x = translateAnimation.value, y = angleOfAxisY),
+    )
+    Row(modifier = Modifier.fillMaxWidth()) {
+
+
+        Box(
+            modifier = modifier
+        ) {
+            Spacer(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(brush)
+            )
+        }
+    }
+
+}
+
+
+@Composable
 private fun CancelButtonCompo(label: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier.wrapContentSize(),
@@ -240,20 +302,122 @@ private fun CancelButtonCompo(label: String, onClick: () -> Unit) {
     }
 }
 
-/*
 @Composable
-@Preview
-fun PreviewConnectionScreen() {
-    ConnectionScreenContent(
-        viewModel = ConnectionViewModel(),
-        ConnectionUIState(
-            connectionTabList = listOf(
-                ConnectionUIState.Tab("My Crush"),
-                ConnectionUIState.Tab("Crush on me"),
+fun NoConnectionsFound(
+    modifier: Modifier = Modifier,
+    title: String
+) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(Res.drawable.no_love),
+                contentDescription = null,
+                modifier = Modifier.size(100.dp)
+
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
+
+@Composable
+fun ConnectionShimmerCompo() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(all = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        repeat(7) {
+            ConnectionItemShimmer()
+        }
+    }
+}
+
+@Composable
+fun ConnectionItemShimmer() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.4f)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmerEffect()
+            )
+
+            // Age and zodiac row shimmer
+            Row(
+                modifier = Modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Age shimmer
+                Box(
+                    modifier = Modifier
+                        .width(42.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .shimmerEffect()
+                )
+
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerEffect()
+                )
+                // Zodiac icon shimmer
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .shimmerEffect()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Cancel button shimmer
+            Box(
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(22.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .shimmerEffect()
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Profile image shimmer
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .shimmerEffect()
         )
-    )
-}*/
+    }
+}
+
+
+@Preview
+@Composable
+fun PreviewShimmerEffect() {
+
+    ConnectionItemShimmer()
+
+}
 
 @Preview
 @Composable
