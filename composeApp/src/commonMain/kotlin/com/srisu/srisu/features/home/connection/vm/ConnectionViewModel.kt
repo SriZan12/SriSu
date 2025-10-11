@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
+import app.cash.paging.PagingData
+import app.cash.paging.filter
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
@@ -16,7 +19,17 @@ import com.srisu.srisu.features.home.connection.state.ConnectionUIState
 import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.utils.ConnectivityObserver
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.math.sin
 
 class ConnectionViewModel(
     private val connectivityObserver: ConnectivityObserver,
@@ -27,6 +40,37 @@ class ConnectionViewModel(
         MutableStateFlow(ConnectionUIState())
 
     val connectionUiState = _connectionUiState.asStateFlow()
+
+    // Separate flow for crush list paging
+    private val myCrushPagingFlow =
+        MutableStateFlow<PagingData<MyCrushListResponse.Result>>(PagingData.empty())
+
+    /*Exposes a reactive PagingData stream of crush list results
+    Automatically filters out any items whose IDs are in the cancelledRequestIds set
+    Updates in real-time when either the paging data OR the cancelled set changes*/
+
+    val myCrushList: StateFlow<PagingData<MyCrushListResponse.Result>> =
+        combine(
+            // Combine the live paging data stream...
+            myCrushPagingFlow,
+
+            // ...with the UI state's cancelled request IDs set
+            _connectionUiState.map { it.cancelledRequestIds }
+        ) { pagingData, cancelledIds ->
+            // Filter out any results whose ID is in the cancelled list
+            pagingData.filter { it.id?.toLong() !in cancelledIds }
+        }
+            // Convert the combined Flow into a StateFlow for UI consumption
+            .stateIn(
+                scope = viewModelScope,
+
+                // Keeps collecting the flow while there are active collectors (e.g., Composable)
+                // and stops automatically when there are none for 5 seconds
+                // This prevents unnecessary work when the screen is not visible
+                started = SharingStarted.WhileSubscribed(5000),
+
+                initialValue = PagingData.empty()
+            )
 
 
     init {
@@ -100,8 +144,6 @@ class ConnectionViewModel(
 
     fun getMyCrushList() {
 
-        showLoading()
-
         val pagerFlow = Pager(
             config = PagingConfig(
                 pageSize = 20,
@@ -113,23 +155,81 @@ class ConnectionViewModel(
                     val resultHandler =
                         connectionRepository.getMyCrushList(pageSize = 20, page = page)
 
-                    var items: List<MyCrushListResponse.Result?>? = emptyList()
-
-                    AppLogger.log("resultHandler: ${resultHandler.result}")
+                    var items: List<MyCrushListResponse.Result?> = emptyList()
 
                     resultHandler.onSuccess { response, _ ->
-                        idleScreen()
-                        items = response?.results
+                        items = response?.results ?: emptyList()
                     }.onError { error, errorType ->
-                        idleScreen()
                         throw Exception("API Error: $error, Type: $errorType")
                     }
 
                     items
                 }
-            }).flow.cachedIn(viewModelScope)
+            }
+        ).flow.cachedIn(viewModelScope)
 
-        _connectionUiState.value = _connectionUiState.value.copy(myCrushList = pagerFlow)
-
+        viewModelScope.launch {
+            pagerFlow.collectLatest {
+                myCrushPagingFlow.value = it
+            }
+        }
     }
+
+
+    fun cancelCrushRequest(
+        crushRequestId: Int?,
+        senderNumber: String?,
+        receiverNumber: String?
+    ) {
+        val requestId = crushRequestId?.toLong() ?: return
+
+        // Optimistic UI update
+        if (requestId !in _connectionUiState.value.cancelledRequestIds) {
+            _connectionUiState.update { state ->
+                state.copy(cancelledRequestIds = state.cancelledRequestIds + requestId)
+            }
+        }
+
+        viewModelScope.launch {
+            try {
+                connectionRepository.cancelCrushRequest(
+                    crushRequestId = crushRequestId,
+                    singleConnectionDTO = SingleConnectionDTO(
+                        senderNumber = senderNumber,
+                        receiverNumber = receiverNumber,
+                        connectionStatus = "NOTHING"
+                    )
+                ).onSuccess { response, _ ->
+                    AppLogger.log("CANCEL REQUEST SUCCESS = $response")
+                    _connectionUiState.update {
+                        it.copy(baseUIState = BaseUIState.Success("Request cancelled"))
+                    }
+                }.onError { error, errorType ->
+                    AppLogger.log("CANCEL REQUEST ERROR = $error")
+                    _connectionUiState.update { state ->
+                        state.copy(
+                            cancelledRequestIds = state.cancelledRequestIds - requestId,
+                            baseUIState = BaseUIState.Error(
+                                errorType = errorType.toString(),
+                                message = error
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.log("EXCEPTION: ${e.message}")
+                _connectionUiState.update { state ->
+                    state.copy(
+                        cancelledRequestIds = state.cancelledRequestIds - requestId,
+                        baseUIState = BaseUIState.Error(
+                            errorType = "",
+                            message = e.message ?: "Unknown error"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+
 }

@@ -14,7 +14,13 @@ data class MyCrushListResponse(
     @SerialName("previous")
     val previous: String? = null,
     @SerialName("results")
-    val results: List<Result?>? = null
+    val results: List<Result?>? = null,
+    @SerialName("sender_number")
+    val senderNumber: String? = null,
+    @SerialName("receiver_number")
+    val receiverNumber: String? = null,
+    @SerialName("connection_status")
+    val connectionStatus: String? = null
 ) {
     @Serializable
     data class Result(

@@ -1,6 +1,5 @@
 package com.srisu.srisu.features.home.connection.screen
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -9,6 +8,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.cash.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.TransparentToolBar
 import com.srisu.srisu.components.shimmerEffect
@@ -61,7 +61,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.leo
 import srisu.composeapp.generated.resources.no_love
 
 @Composable
@@ -151,8 +150,17 @@ fun ConnectionScreenContent(
                     .background(color = MaterialTheme.colorScheme.surfaceContainerLowest)
             ) { index ->
                 if (index == 0) {
+
                     MyCrushScreen(
-                        connectionUiState = connectionUiState
+                        crushList = viewModel.myCrushList,
+                        onNavigateToProfile = {},
+                        onCancelCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
+                            viewModel.cancelCrushRequest(
+                                crushRequestId = crushRequestId,
+                                senderNumber = senderNumber,
+                                receiverNumber = receiverNumber
+                            )
+                        }
                     )
                 } else {
                     CrushOnMeScreen()
@@ -164,13 +172,21 @@ fun ConnectionScreenContent(
 
 @Composable
 fun ConnectionItem(
+    modifier: Modifier,
     userName: String,
     userImage: String?,
     dob: String?,
-    zodiacSign: String?
+    zodiacSign: String?,
+    onClick: () -> Unit,
+    onCancel: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(
+            indication = null,
+            interactionSource = MutableInteractionSource(),
+            onClick = {
+                onClick()
+            }),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(
@@ -212,7 +228,9 @@ fun ConnectionItem(
 
             CancelButtonCompo(
                 label = "Cancel",
-                onClick = {}
+                onClick = {
+                    onCancel()
+                }
 
             )
 
@@ -290,8 +308,8 @@ private fun CancelButtonCompo(label: String, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
-
-        ) {
+        onClick = onClick
+    ) {
         Text(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             text = label,
@@ -308,7 +326,10 @@ fun NoConnectionsFound(
     title: String
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Image(
                 painter = painterResource(Res.drawable.no_love),
                 contentDescription = null,
@@ -423,10 +444,12 @@ fun PreviewShimmerEffect() {
 @Composable
 fun PreviewConnectionItem() {
     ConnectionItem(
+        modifier = Modifier,
         userName = "Srisu",
         userImage = "https://photosmint.com/wp-content/uploads/2025/03/Indian-Beauty-DP.jpeg",
         dob = "23",
-        zodiacSign = "Leo"
-
+        zodiacSign = "Leo",
+        onClick = {},
+        onCancel = {}
     )
 }
