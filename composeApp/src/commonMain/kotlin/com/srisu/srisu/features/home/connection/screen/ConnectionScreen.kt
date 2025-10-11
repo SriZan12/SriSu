@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.TransparentToolBar
 import com.srisu.srisu.components.shimmerEffect
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.features.home.connection.state.ConnectionUIState
 import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
 import com.srisu.srisu.utils.DateTimeUtils
@@ -64,14 +65,18 @@ import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.no_love
 
 @Composable
-fun ConnectionScreen(viewModel: ConnectionViewModel = koinViewModel<ConnectionViewModel>()) {
+fun ConnectionScreen(
+    viewModel: ConnectionViewModel = koinViewModel<ConnectionViewModel>(),
+    onNavigateToProfile: (userProfileData: String?) -> Unit
+) {
 
     val connectionUiState: ConnectionUIState by viewModel.connectionUiState.collectAsStateWithLifecycle()
 
     ConnectionScreenContent(
         viewModel = viewModel,
         connectionUiState =
-            connectionUiState
+            connectionUiState,
+        onNavigateToProfile = onNavigateToProfile
     )
 }
 
@@ -79,7 +84,8 @@ fun ConnectionScreen(viewModel: ConnectionViewModel = koinViewModel<ConnectionVi
 @Composable
 fun ConnectionScreenContent(
     viewModel: ConnectionViewModel,
-    connectionUiState: ConnectionUIState
+    connectionUiState: ConnectionUIState,
+    onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
     val tabItems = connectionUiState.connectionTabList
     val pagerState = rememberPagerState { tabItems.size }
@@ -153,7 +159,10 @@ fun ConnectionScreenContent(
 
                     MyCrushScreen(
                         crushList = viewModel.myCrushList,
-                        onNavigateToProfile = {},
+                        onNavigateToProfile = { userProfileData ->
+                            val user = viewModel.getUserProfile(userProfile = userProfileData)
+                            onNavigateToProfile(user)
+                        },
                         onCancelCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
                             viewModel.cancelCrushRequest(
                                 crushRequestId = crushRequestId,
@@ -248,54 +257,6 @@ fun ConnectionItem(
         )
     }
 
-
-}
-
-@Composable
-fun ShimmerEffect(
-    modifier: Modifier,
-    widthOfShadowBrush: Int = 500,
-    angleOfAxisY: Float = 270f,
-    durationMillis: Int = 1000,
-) {
-    val shimmerColors = listOf(
-        Color.White.copy(alpha = 0.3f),
-        Color.White.copy(alpha = 0.5f),
-        Color.White.copy(alpha = 1.0f),
-        Color.White.copy(alpha = 0.5f),
-        Color.White.copy(alpha = 0.3f),
-    )
-    val transition = rememberInfiniteTransition(label = "")
-    val translateAnimation = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = (durationMillis + widthOfShadowBrush).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = durationMillis,
-                easing = LinearEasing,
-            ),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "Shimmer loading animation",
-    )
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(x = translateAnimation.value - widthOfShadowBrush, y = 0.0f),
-        end = Offset(x = translateAnimation.value, y = angleOfAxisY),
-    )
-    Row(modifier = Modifier.fillMaxWidth()) {
-
-
-        Box(
-            modifier = modifier
-        ) {
-            Spacer(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(brush)
-            )
-        }
-    }
 
 }
 

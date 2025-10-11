@@ -12,6 +12,7 @@ import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.connection.MyCrushListResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import kotlin.math.sin
 
 class ConnectionViewModel(
@@ -141,6 +143,62 @@ class ConnectionViewModel(
         )
 
     }
+
+    fun MyCrushListResponse.Result.Receiver.toUser(): User {
+        return User(
+            bio = bio,
+            city = city,
+            country = country,
+            createdDate = createdDate,
+            dateJoined = dateJoined,
+            dob = dob,
+            email = email,
+            firstName = firstName,
+            fullName = fullName,
+            gender = gender,
+            id = id,
+            isActive = isActive,
+            isPhoneVerified = isPhoneVerified,
+            isProfileComplete = isProfileComplete,
+            isStaff = isStaff,
+            isSuperuser = isSuperuser,
+            lastName = lastName,
+            mood = mood,
+            phoneNumber = phoneNumber,
+            profilePhoto = profilePhoto,
+            updatedDate = updatedDate,
+            username = username,
+            zodiacSign = zodiacSign,
+            userInterests = userInterests?.map { receiverInterest ->
+                receiverInterest?.let {
+                    User.UserInterest(
+                        id = it.id,
+                        name = it.name,
+                        user = it.user,
+                        interest = it.interest?.interest, // map nested interest id
+                        removed = it.removed
+                    )
+                }
+            },
+            userPhotos = userPhotos?.map { receiverPhoto ->
+                receiverPhoto?.let {
+                    User.UserPhoto(
+                        createdDate = it.createdDate,
+                        id = it.id,
+                        photo = it.photo,
+                        updatedDate = it.updatedDate,
+                        user = it.user,
+                        removed = it.removed
+                    )
+                }
+            }
+        )
+    }
+
+    fun getUserProfile(userProfile: MyCrushListResponse.Result.Receiver?): String? {
+        return Json.encodeToString(userProfile?.toUser())
+    }
+
 
     fun getMyCrushList() {
 

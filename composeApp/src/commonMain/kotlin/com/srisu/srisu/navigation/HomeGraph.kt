@@ -11,6 +11,7 @@ import androidx.navigation.toRoute
 import com.srisu.srisu.core.data.response.auth.InterestResponse
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.home.connection.screen.ConnectionScreen
 import com.srisu.srisu.features.home.home.HomeScreen
 import com.srisu.srisu.features.profile.screen.EditProfileScreen
@@ -64,7 +65,10 @@ fun NavGraphBuilder.homeGraph(
     }
 
     composable<HomeNavigation.Connection> {
-        ConnectionScreen()
+        ConnectionScreen { userProfileData ->
+            AppLogger.log("WHILE NAVIGATING TO PROFILE SCREEN = $userProfileData")
+            navController.navigate(HomeNavigation.Profile(userProfileData = userProfileData))
+        }
     }
 
     composable<HomeNavigation.Suggestions> {
@@ -127,8 +131,9 @@ fun NavGraphBuilder.homeGraph(
 
 
     composable<HomeNavigation.Profile> { backStackEntry ->
-        val userProfileData = backStackEntry.toRoute<UserSuggestionResponse.Result?>()
-        ProfileScreen(userProfileData = Json.encodeToString(userProfileData))
+        val userProfileData =
+            backStackEntry.toRoute<HomeNavigation.Profile>().userProfileData
+        ProfileScreen(userProfileData =userProfileData)
     }
 
     composable<HomeNavigation.EditProfile> { navBackStackEntry ->
@@ -177,7 +182,6 @@ fun NavGraphBuilder.homeGraph(
             }
         )
     }
-
 
 }
 

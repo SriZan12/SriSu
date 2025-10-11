@@ -28,6 +28,7 @@ import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
 import com.srisu.srisu.core.data.response.connection.MyCrushListResponse
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 typealias crushRequestId = Int?
@@ -36,7 +37,7 @@ typealias receiverNumber = String?
 
 @Composable
 fun MyCrushScreen(
-    onNavigateToProfile: () -> Unit,
+    onNavigateToProfile: (userProfileData: MyCrushListResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
     crushList: StateFlow<PagingData<MyCrushListResponse.Result>>
 ) {
@@ -53,7 +54,7 @@ fun MyCrushScreen(
 fun MyCrushScreenContent(
     modifier: Modifier = Modifier,
     crushList: StateFlow<PagingData<MyCrushListResponse.Result>>,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToProfile: (userProfileData: MyCrushListResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit
 ) {
     val myCrushList = crushList.collectAsLazyPagingItems()
@@ -101,7 +102,7 @@ fun MyCrushScreenContent(
 private fun MyCrushListCompo(
     modifier: Modifier = Modifier,
     myCrushList: LazyPagingItems<MyCrushListResponse.Result>,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToProfile: (userProfileData: MyCrushListResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit
 ) {
 
@@ -139,7 +140,11 @@ private fun MyCrushListCompo(
                         userImage = it.receiver?.profilePhoto ?: "",
                         dob = it.receiver?.dob,
                         zodiacSign = it.receiver?.zodiacSign,
-                        onClick = { onNavigateToProfile() },
+                        onClick = {
+                            onNavigateToProfile(
+                                it.receiver
+                            )
+                        },
                         onCancel = {
                             val senderNumber = it.senderNumber
                             val receiverNumber = it.receiverNumber
