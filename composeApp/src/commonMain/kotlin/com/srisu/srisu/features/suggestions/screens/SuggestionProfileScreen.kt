@@ -273,25 +273,26 @@ fun ProfilePictureCompo(
     animatedContentScope: AnimatedContentScope,
     onSendRequest: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp), contentAlignment = Alignment.Center) {
 
         with(sharedTransitionScope) {
             AsyncImage(
                 model = profileUrl,
-//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
                 contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Crop, // still gives a natural fill look
+                alignment = Alignment.TopCenter,
                 imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
                 placeholder = painterResource(Res.drawable.image_placeholder),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .aspectRatio(1f) // ✅ keeps the image square, scales responsively
                     .sharedElement(
                         sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
                         animatedVisibilityScope = animatedContentScope,
                         renderInOverlayDuringTransition = false
                     )
             )
+
 
         }
 
