@@ -1,5 +1,6 @@
 package com.srisu.srisu.theme
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 
 @Composable
@@ -8,5 +9,10 @@ actual fun AppTheme(
     dynamicColor: Boolean,
     content: @Composable () -> Unit
 ) {
-    content()
+
+    MaterialTheme(
+        colorScheme = lightScheme,
+        typography = AppTypography(),
+        content = content
+    )
 }

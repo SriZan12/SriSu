@@ -1,11 +1,13 @@
 package com.srisu.srisu.utils
 
-import com.srisu.srisu.utils.Constants.COUNTRY_JSON_FILE_NAME
+import androidx.compose.runtime.Stable
+import com.srisu.srisu.utils.Constants.Auth.COUNTRY_JSON_FILE_NAME
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
+@Stable
 data class CountryModel(
     @SerialName("name")
     val name: String?,
@@ -21,6 +23,14 @@ object Country {
         return json?.let {
             Json.decodeFromString<List<CountryModel>>(it)
         }
+    }
+
+    fun getCountryModelFromName(country: String?): CountryModel? {
+        return getAllCountriesFromJson()?.find { it.name == country }
+    }
+
+    fun getCountryModelFromPrefix(prefix: String?): CountryModel? {
+        return getAllCountriesFromJson()?.find { it.prefix == prefix }
     }
 
 }

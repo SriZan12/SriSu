@@ -1,5 +1,4 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -11,6 +10,7 @@ plugins {
 }
 
 kotlin {
+    val xcf = XCFramework()
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -25,6 +25,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            xcf.add(this)
         }
     }
     
@@ -38,6 +39,9 @@ kotlin {
 //            implementation(libs.koin.android)
 //            implementation(libs.koin.androidx.compose)
             implementation(libs.androidx.foundation.android)
+            implementation (libs.androidx.paging.compose)
+            implementation (libs.androidx.paging.runtime)
+
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -56,7 +60,7 @@ kotlin {
             // ktor dependency
             implementation(libs.bundles.ktor)
             implementation(libs.bundles.coil)
-            implementation(libs.ktor.client.cio)
+//            implementation(libs.ktor.client.cio)
 
             //serialization
             implementation(libs.ktor.serialization.kotlinx.json)
@@ -71,7 +75,7 @@ kotlin {
 
 //            koin
             implementation(project.dependencies.platform(libs.koin.bom))
-            api(libs.koin.core)
+            implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.koin.compose.viewmodel.navigation)
@@ -92,13 +96,11 @@ kotlin {
             //type-safe navaigation
             implementation(libs.navigation.compose)
 
-            //shimmer
-            implementation(libs.accompanist.placeholder.material3)
+            // ui-backhandler
+            implementation(libs.ui.backhandler)
 
 
             //paging
-            implementation (libs.androidx.paging.runtime)
-            implementation (libs.androidx.paging.compose)
             implementation(libs.paging.compose.common)
             implementation(libs.paging.common)
 
@@ -106,7 +108,8 @@ kotlin {
             implementation(libs.material.icons.core)
 
         }
-        commonTest.dependencies {
+
+        iosMain.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)
 

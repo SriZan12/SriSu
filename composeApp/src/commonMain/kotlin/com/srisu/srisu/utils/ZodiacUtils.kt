@@ -2,7 +2,7 @@ package com.srisu.srisu.utils
 
 import org.jetbrains.compose.resources.DrawableResource
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.aquarius
+import srisu.composeapp.generated.resources.aquarus
 import srisu.composeapp.generated.resources.aries
 import srisu.composeapp.generated.resources.cancer
 import srisu.composeapp.generated.resources.capricorn
@@ -11,7 +11,7 @@ import srisu.composeapp.generated.resources.leo
 import srisu.composeapp.generated.resources.libra
 import srisu.composeapp.generated.resources.pisces
 import srisu.composeapp.generated.resources.sagittarus
-import srisu.composeapp.generated.resources.scorpius
+import srisu.composeapp.generated.resources.scorpio
 import srisu.composeapp.generated.resources.taurus
 import srisu.composeapp.generated.resources.virgo
 
@@ -101,8 +101,8 @@ object ZodiacUtils {
                 endDay = 22
             ),
             ZodiacSign(
-                sign = "SCORPIUS",
-                logo = Res.drawable.scorpius,
+                sign = "SCORPIO",
+                logo = Res.drawable.scorpio,
                 title = "You're a Scorpio",
                 zodiacDescription = "Scorpios are passionate and determined, with a deep emotional intensity. They are loyal and protective, but can also be mysterious and ambitious.",
                 startMonth = 10,
@@ -132,7 +132,7 @@ object ZodiacUtils {
             ),
             ZodiacSign(
                 sign = "AQUARIUS",
-                logo = Res.drawable.aquarius,
+                logo = Res.drawable.aquarus,
                 title = "You're an Aquarius",
                 zodiacDescription = "Aquarius is innovative, independent, and forward-thinking. They are visionaries who value individuality and often strive to bring positive change to the world.",
                 startMonth = 1,
@@ -152,6 +152,10 @@ object ZodiacUtils {
             )
         )
 
+    }
+
+    fun getZodiacFromName(name: String?): ZodiacSign? {
+        return getZodiacSignList().find { it.sign == name }
     }
 
     fun getZodiacSignImage(name: String): DrawableResource? {

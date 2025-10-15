@@ -1,7 +1,10 @@
 package com.srisu.srisu.session
 
-import com.srisu.srisu.core.data.response.auth.ProfileSetupResponse
+import com.srisu.srisu.core.data.response.auth.ProfileResponse
 import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.core.data.response.auth.User.UserInterest
+import com.srisu.srisu.core.data.response.auth.User.UserPhoto
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -52,33 +55,41 @@ data class Session(
     @SerialName("username")
     val username: String? = null,
     @SerialName("zodiac_sign")
-    val zodiacSign: String? = null
+    val zodiacSign: String? = null,
+    @SerialName("country")
+    val country: String? = null,
+    @SerialName("city")
+    val city: String? = null,
+    @SerialName("user_interests")
+    val userInterests: List<UserInterest?>? = null,
+    @SerialName("user_photos")
+    val userPhotos: List<UserPhoto?>? = null,
+    @SerialName("bio")
+    val bio: String? = null,
 )
 
-fun User.toSession(access: String?, refresh: String?): Session {
+fun User.toSession(access: String?, refresh: String?,id: Int?): Session {
     return Session(
         access = access,
         refresh = refresh,
-        createdDate = this.createdDate,
-        dateJoined = this.dateJoined,
         dob = this.dob,
-        email = this.email,
-        firstName = this.firstName,
+        bio = this.bio,
         fullName = this.fullName,
         gender = this.gender,
-        id = this.id,
+        id = id,
         isActive = this.isActive,
         isPhoneVerified = this.isPhoneVerified,
         isProfileComplete = this.isProfileComplete,
-        isStaff = this.isStaff,
-        isSuperuser = this.isSuperuser,
-        lastName = this.lastName,
         mood = this.mood,
         phoneNumber = this.phoneNumber,
         profilePhoto = this.profilePhoto,
         updatedDate = this.updatedDate,
         username = this.username,
-        zodiacSign = this.zodiacSign
+        zodiacSign = this.zodiacSign,
+        country = this.country,
+        city = this.city,
+        userInterests = this.userInterests,
+        userPhotos = this.userPhotos
     )
 }
 
@@ -86,12 +97,14 @@ fun User.toSession(access: String?, refresh: String?): Session {
 fun setUserWholeCredentials(
     access: String?,
     refresh: String?,
-    userInfo: ProfileSetupResponse.User?
+    userInfo: ProfileResponse.User?
 ): String {
     val credentials = Session(
         access = access,
         refresh = refresh,
+        id = userInfo?.id,
         dob = userInfo?.dob,
+        bio = userInfo?.bio,
         fullName = userInfo?.fullName,
         gender = userInfo?.gender,
         isPhoneVerified = userInfo?.isPhoneVerified,
@@ -99,7 +112,12 @@ fun setUserWholeCredentials(
         mood = userInfo?.mood,
         phoneNumber = userInfo?.phoneNumber,
         profilePhoto = userInfo?.profilePhoto,
-        zodiacSign = userInfo?.zodiacSign
+        username = userInfo?.username,
+        zodiacSign = userInfo?.zodiacSign,
+        country = userInfo?.country,
+        city = userInfo?.city,
+        userInterests = userInfo?.userInterests,
+        userPhotos = userInfo?.userPhotos
     )
 
     return Json.encodeToString(credentials)

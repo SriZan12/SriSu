@@ -1,28 +1,47 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.features.home.HomeViewModel
+import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
+import com.srisu.srisu.features.home.home.HomeViewModel
+import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
-    single {
+    viewModel {
         HomeViewModel(
             suggestionRepository = get(),
             sessionStorage = get()
         )
     }
 
-    single {
+    viewModel {
         SuggestionViewModel(
             suggestionRepository = get(),
             connectivityObserver = get(),
         )
     }
 
-    single {
+    viewModel {
         ProfileViewModel(
+            profileRepository = get(),
             connectivityObserver = get(),
+        )
+    }
+
+    viewModel {
+        EditProfileViewModel(
+            profileRepository = get(),
+            connectivityObserver = get(),
+            sessionStorage = get()
+        )
+    }
+
+    viewModel {
+        ConnectionViewModel(
+            connectionRepository = get(),
+            connectivityObserver = get()
         )
     }
 }

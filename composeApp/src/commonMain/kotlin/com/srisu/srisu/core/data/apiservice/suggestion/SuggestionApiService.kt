@@ -1,0 +1,149 @@
+package com.srisu.srisu.core.data.apiservice.suggestion
+
+import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
+import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
+import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
+import com.srisu.srisu.core.data.dto.suggestion.UserPreferenceDTO
+import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.network.safeRequest
+import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
+import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
+import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
+import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
+import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import io.ktor.client.HttpClient
+import io.ktor.client.request.parameter
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.http.ContentType
+import io.ktor.http.HttpMethod
+import io.ktor.http.contentType
+
+class SuggestionApiService(private val httpClient: HttpClient) {
+
+    companion object {
+        const val CITY_ENDPOINT = "https://countriesnow.space/api/v0.1/countries/cities/q"
+    }
+
+    suspend fun getUserSuggestions(
+        page: Int,
+        pageSize: Int
+    ): ResultHandler<UserSuggestionResponse?> {
+        return httpClient.safeRequest<UserSuggestionResponse?> {
+            url("${BASE_URL}api/social/user-suggestions/")
+            parameter("page", page)
+            parameter("page_size", pageSize)
+
+            method = HttpMethod.Get
+        }
+    }
+
+    suspend fun sendSingleConnectionRequest(
+        senderNumber: String?,
+        receiverNumber: String?
+    ): ResultHandler<SingleConnectionResponse?> {
+
+        val connectionRequest: HashMap<String, String> = HashMap()
+        connectionRequest["sender_number"] = senderNumber ?: ""
+        connectionRequest["receiver_number"] = receiverNumber ?: ""
+
+        return httpClient.safeRequest<SingleConnectionResponse?> {
+            url("${BASE_URL}api/social/connect-single/")
+            method = HttpMethod.Post
+            setBody(connectionRequest)
+        }
+    }
+
+    suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
+        return httpClient.safeRequest<UserPreferenceResponse?> {
+            url("${BASE_URL}api/social/user-preferences/me/")
+            contentType(ContentType.Application.Json)
+            method = HttpMethod.Get
+        }
+    }
+
+    suspend fun setUserPreferences(userPreferenceDTO: UserPreferenceDTO): ResultHandler<UserPreferenceResponse?> {
+        return httpClient.safeRequest<UserPreferenceResponse?> {
+            url("${BASE_URL}api/social/user-preferences/")
+            method = HttpMethod.Post
+            setBody(
+                userPreferenceDTO
+            )
+        }
+    }
+
+    suspend fun updateUserPreferences(
+        userPreferenceDTO: UserPreferenceDTO,
+        prefId: Int?
+    ): ResultHandler<UserPreferenceResponse?> {
+        return httpClient.safeRequest<UserPreferenceResponse?> {
+            url("${BASE_URL}api/social/user-preferences/${prefId}/")
+            method = HttpMethod.Put
+            contentType(ContentType.Application.Json)
+            setBody(
+                userPreferenceDTO
+            )
+        }
+    }
+
+    suspend fun sendCoupleConnectionRequest(
+        senderNumber: String,
+        receiverNumber: String
+    ): ResultHandler<CoupleConnectionResponse?> {
+
+        val connectionRequest: HashMap<String, String> = HashMap()
+        connectionRequest["sender_number"] = senderNumber
+        connectionRequest["receiver_number"] = receiverNumber
+
+        return httpClient.safeRequest<CoupleConnectionResponse?> {
+            url("${BASE_URL}api/social/connect-couple/")
+            method = HttpMethod.Post
+            setBody(connectionRequest)
+        }
+    }
+
+    suspend fun updateCoupleConnectionRequestStatus(
+        connectionId: Int,
+        coupleConnectionDTO: CoupleConnectionDTO
+    ): ResultHandler<CoupleConnectionResponse?> {
+        return httpClient.safeRequest<CoupleConnectionResponse?> {
+            url("${BASE_URL}api/social/connect-couple/${connectionId}/")
+            method = HttpMethod.Put
+            setBody(coupleConnectionDTO)
+        }
+    }
+
+    suspend fun updateSingleConnectionRequestStatus(
+        connectionId: Int,
+        singleConnectionDTO: SingleConnectionDTO
+    ): ResultHandler<SingleConnectionResponse?> {
+
+        return httpClient.safeRequest<SingleConnectionResponse?> {
+            url("${BASE_URL}api/social/connect-single/${connectionId}/")
+            method = HttpMethod.Put
+            setBody(singleConnectionDTO)
+        }
+    }
+
+    suspend fun getSentLoveRequests(
+        pageSize: Int,
+    ): ResultHandler<LoveRequestListResponse?> {
+
+        return httpClient.safeRequest<LoveRequestListResponse?> {
+            url("${BASE_URL}api/social/couple-connection/sent-requests/")
+            parameter("page_size", pageSize)
+            method = HttpMethod.Get
+        }
+    }
+
+    suspend fun getLoveRequests(
+        pageSize: Int
+    ): ResultHandler<LoveRequestListResponse?> {
+
+        return httpClient.safeRequest<LoveRequestListResponse?> {
+            url("${BASE_URL}api/social/couple-connection/received-requests/")
+            parameter("page_size", pageSize)
+            method = HttpMethod.Get
+        }
+    }
+}

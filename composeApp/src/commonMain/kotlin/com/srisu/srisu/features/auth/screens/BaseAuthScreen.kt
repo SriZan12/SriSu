@@ -34,7 +34,7 @@ import com.srisu.srisu.features.auth.common.CustomAuthScreen
 import com.srisu.srisu.features.auth.common.ProgressIndicator
 import com.srisu.srisu.features.auth.state.AuthUIStates
 import com.srisu.srisu.features.auth.vm.AuthViewModel
-import com.srisu.srisu.utils.Constants.TOTAL_PROGRESS
+import com.srisu.srisu.utils.Constants.Auth.TOTAL_PROGRESS
 import org.koin.compose.viewmodel.koinViewModel
 
 
@@ -127,7 +127,7 @@ private fun AuthScreenContent(
             }
 
             is CustomAuthScreen.ZodiacScreen -> {
-                // This will be handled specifically.
+                // This will be handled automatically.
             }
 
             is CustomAuthScreen.SelectGenderScreen -> {
@@ -136,8 +136,11 @@ private fun AuthScreenContent(
                 )
             }
 
-            CustomAuthScreen.ProfilePictureScreen -> {
-                ProfilePictureScreen(navController = navController, authViewModel = authViewModel)
+            CustomAuthScreen.SetProfilePictureScreen -> {
+                SetProfilePictureScreen(
+                    navController = navController,
+                    authViewModel = authViewModel
+                )
             }
         }
     }

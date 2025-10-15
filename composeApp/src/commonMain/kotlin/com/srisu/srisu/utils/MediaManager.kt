@@ -1,7 +1,15 @@
 package com.srisu.srisu.utils
 
 import androidx.compose.runtime.Composable
+import coil3.Uri
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.utils.io.toByteArray
+import kotlinx.serialization.Required
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 enum class MediaType {
     IMAGE_ONLY,
@@ -13,16 +21,43 @@ enum class MediaType {
 
 @Serializable
 data class MediaFile(
-    val fileName: String,
-    val mimeType: String,
-    val fileSize: Long,
-    val fileBytes: ByteArray,
-    val fileType: MediaType
-)
+    @Required val id: Int?,
+    @Required val removed: Boolean? = false,
+    @Required val fileName: String? = null,
+    @Required val mimeType: String? = null,
+    @Required val fileSize: Long? = null,
+    @Required val fileBytes: ByteArray? = null,
+    @Required val fileType: MediaType? = null,
+    @Required val url: String? = null
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as MediaFile
+
+        if (fileSize != other.fileSize) return false
+        if (fileName != other.fileName) return false
+        if (mimeType != other.mimeType) return false
+        if (!fileBytes.contentEquals(other.fileBytes)) return false
+        if (fileType != other.fileType) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = fileSize.hashCode()
+        result = 31 * result + fileName.hashCode()
+        result = 31 * result + mimeType.hashCode()
+        result = 31 * result + fileBytes.contentHashCode()
+        result = 31 * result + fileType.hashCode()
+        return result
+    }
+}
 
 @Composable
 expect fun rememberGalleryManager(
-    onResult: (List<String>) -> Unit,
+    onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?
 ): GalleryManager
 
@@ -33,5 +68,10 @@ expect class GalleryManager(
 }
 
 expect class FileManager() {
-    suspend fun createMediaFileFromPath(path: String?): MediaFile?
+    suspend fun createMediaFileFromPath(path: String?, id: Int?, removed: Boolean?): MediaFile?
+}
+
+suspend fun getMediaFileFromUri(uri: Uri?, id: Int?,removed: Boolean?): MediaFile? {
+    val fileManager = FileManager()
+    return fileManager.createMediaFileFromPath(path = uri.toString(), id = id, removed = removed)
 }

@@ -1,12 +1,15 @@
 package com.srisu.srisu.features.auth.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -16,19 +19,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.features.auth.vm.AuthViewModel
 import org.jetbrains.compose.resources.painterResource
+import srisu.composeapp.generated.resources.Res
+import srisu.composeapp.generated.resources.leo
 
 @Composable
 fun ZodiacScreen(authViewModel: AuthViewModel) {
 
     Scaffold { innerPadding ->
-        Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surfaceContainerLowest) {
 
             Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding),
@@ -38,7 +45,7 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
                 val authUIStates by authViewModel.authUiState.collectAsState()
                 val zodiacSign = authUIStates.zodiacSign
 
-                zodiacSign?.let { it ->
+                zodiacSign?.let {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
 
                         Image(
@@ -89,5 +96,36 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun GlowingRedIcon(
+
+) {
+    val primaryLight = Color(0xFFDE6F79)
+    val darker = Color(0xFFE45A68)
+
+    Box(
+        modifier = Modifier
+            .size(64.dp)
+            .graphicsLayer {
+                shadowElevation = 24f
+                shape = RoundedCornerShape(16.dp)
+                clip = true
+            }
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(primaryLight, darker)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(Res.drawable.leo), // replace with your icon
+            contentDescription = "Aries",
+            modifier = Modifier.size(28.dp)
+        )
     }
 }

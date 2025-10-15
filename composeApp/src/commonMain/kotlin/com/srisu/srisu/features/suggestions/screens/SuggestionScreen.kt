@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.suggestions.screens
 
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -24,26 +28,19 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,18 +48,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.decode.BlackholeDecoder
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.OfflineBottomSheetCompo
@@ -76,29 +79,34 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.country_flag
+import srisu.composeapp.generated.resources.cross_love
 import srisu.composeapp.generated.resources.filter_icon
 
 typealias UserProfileData = String
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Preview
 @Composable
 fun SuggestionScreen(
-    suggestionViewModel: SuggestionViewModel = koinViewModel<SuggestionViewModel>(),
-    navigateProfileScreen: (UserProfileData) -> Unit
+    suggestionViewModel: SuggestionViewModel,
+    filterApplied: Boolean,
+    filterCleared: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
+    navigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit,
+    navigateFilterScreen: () -> Unit,
 ) {
     Scaffold(
         topBar = {
 
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { paddingValues ->
 
         val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
-        var showFilterDialog by rememberSaveable {
-            mutableStateOf(false)
-        }
 
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues)
@@ -106,8 +114,14 @@ fun SuggestionScreen(
 
             SuggestionTopBarCompo(
                 showFilterDialog = {
-                    showFilterDialog = true
+                    navigateFilterScreen()
                 }
+            )
+
+            Initialization(
+                suggestionViewModel = suggestionViewModel,
+                filterApplied = filterApplied,
+                filterCleared = filterCleared
             )
 
             HandleUiStates(
@@ -115,21 +129,34 @@ fun SuggestionScreen(
                 authUIStates = suggestionUIState
             )
 
+
             SuggestionContent(
                 suggestionUIState = suggestionUIState,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedContentScope = animatedContentScope,
+                onRetry = {
+                    suggestionViewModel.getUserSuggestions()
+                },
                 onNavigateProfileScreen = {
-                    val userProfileData = Json.encodeToString(it)
-                    navigateProfileScreen(userProfileData)
+//                    val userProfileData = Json.encodeToString(it)
+                    navigateProfileScreen(it)
                 }
             )
-
-            if (showFilterDialog) {
-                FilterSuggestionDialog {
-                    showFilterDialog = false
-                }
-            }
         }
 
+    }
+}
+
+@Composable
+private fun Initialization(
+    suggestionViewModel: SuggestionViewModel,
+    filterApplied: Boolean,
+    filterCleared: Boolean,
+) {
+    LaunchedEffect(Unit) {
+        if (filterCleared || filterApplied) {
+            suggestionViewModel.getUserSuggestions()
+        }
     }
 }
 
@@ -219,21 +246,21 @@ private fun SuggestionTopBarCompo(
 
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SuggestionContent(
     suggestionUIState: SuggestionUIStates,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
+    onRetry: () -> Unit,
     onNavigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit
 ) {
     suggestionUIState.suggestions?.let { suggestionsFlow ->
         val suggestions = suggestionsFlow.collectAsLazyPagingItems()
 
-        if (suggestions.itemCount == 0) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No Suggestions",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
+        if (suggestions.itemCount == 0 && suggestionUIState.baseUIState != BaseUIState.Loading) {
+            NoSuggestionComp {
+                onRetry()
             }
         } else {
             LazyVerticalStaggeredGrid(
@@ -245,7 +272,7 @@ private fun SuggestionContent(
             ) {
                 items(
                     count = suggestions.itemCount,
-                    key = { it -> suggestions[it]?.id!! },
+                    key = { suggestions[it]?.id!! },
                     contentType = suggestions.itemContentType { "Suggestion Items" },
                 ) { index ->
                     val item = suggestions[index]
@@ -257,6 +284,8 @@ private fun SuggestionContent(
                             fadeInSpec = tween(200),
                             fadeOutSpec = tween(200)
                         ),
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedContentScope = animatedContentScope,
                         height = height,
                         suggestionItem = item
                     ) { userProfileData ->
@@ -265,6 +294,8 @@ private fun SuggestionContent(
 
                 }
             }
+
+
         }
     }
 }
@@ -288,13 +319,17 @@ private fun SuggestionShimmerCompo() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SuggestionCardCompo(
     modifier: Modifier,
     height: Dp,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     suggestionItem: UserSuggestionResponse.Result?,
     onClick: (UserSuggestionResponse.Result?) -> Unit
 ) {
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
@@ -303,78 +338,95 @@ private fun SuggestionCardCompo(
             onClick(suggestionItem)
         }
     ) {
+
         Box(modifier = Modifier.fillMaxWidth()) {
-            AsyncImage(
-                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                contentDescription = "User Image",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(height)
-            )
 
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                    .align(Alignment.BottomStart)
-            ) {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = suggestionItem?.username ?: suggestionItem?.fullName ?: "",
-                    textAlign = TextAlign.Start,
-                    style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1
+            val profileUrl = suggestionItem?.profilePhoto
+//                "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val zodiacSignImg =
-                        ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
-
-                    zodiacSignImg?.let {
-                        Image(
-                            modifier = Modifier.size(38.dp),
-                            painter = painterResource(zodiacSignImg),
-                            contentDescription = "Zodiac Sign",
-                        )
-                    }
-
-                    suggestionItem?.dob?.let { dob ->
-                        Text(
-                            text = "${DateTimeUtils.calculateAge(dob)}",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
-                        )
-                    }
-
-                }
-
-
+            val context = LocalPlatformContext.current
+            val imageLoader = remember { SingletonImageLoader.get(context) }
+            LaunchedEffect(profileUrl) {
+                val request = ImageRequest.Builder(context)
+                    .data(profileUrl)
+                    .size(Size.ORIGINAL)
+                    .build()
+                imageLoader.enqueue(request)
             }
 
+            with(sharedTransitionScope) {
 
-//            Button(
-//                onClick = { },
-//                modifier = Modifier
-//                    .padding(top = 6.dp, bottom = 8.dp)
-//                    .align(Alignment.BottomCenter),
-//                shape = RoundedCornerShape(18.dp),
-//                contentPadding = PaddingValues(horizontal = 28.dp),
-//                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-//            ) {
-//                Icon(
-//                    modifier = Modifier.size(32.dp).align(Alignment.CenterVertically),
-//                    painter = painterResource(Res.drawable.love_icon),
-//                    contentDescription = "Request Button",
-//                    tint = Color.White
-//                )
-//            }
+                AsyncImage(
+                    contentDescription = "User Image",
+                    contentScale = ContentScale.Crop,
+                    model = profileUrl,
+                    imageLoader = imageLoader,
+                    modifier = Modifier
+                        .sharedElement(
+                            sharedTransitionScope.rememberSharedContentState(key = "profile_image-${suggestionItem?.id}"),
+                            animatedVisibilityScope = animatedContentScope
+                        )
+                        .fillMaxWidth()
+                        .height(height)
+                )
 
+
+
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                        .align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth().sharedElement(
+                            sharedTransitionScope.rememberSharedContentState(key = "username_text-${suggestionItem?.id}"),
+                            animatedVisibilityScope = animatedContentScope
+                        ),
+                        text = suggestionItem?.username ?: suggestionItem?.fullName ?: "",
+                        textAlign = TextAlign.Start,
+                        style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val zodiacSignImg =
+                            ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
+
+                        zodiacSignImg?.let {
+                            Image(
+                                modifier = Modifier.size(38.dp).sharedElement(
+                                    sharedTransitionScope.rememberSharedContentState(key = "zodiac_image-${suggestionItem?.id}"),
+                                    animatedVisibilityScope = animatedContentScope
+                                ),
+                                painter = painterResource(zodiacSignImg),
+                                contentDescription = "Zodiac Sign",
+                            )
+                        }
+
+                        suggestionItem?.dob?.let { dob ->
+                            Text(
+                                modifier = Modifier.sharedElement(
+                                    sharedTransitionScope.rememberSharedContentState(key = "dob_text-${suggestionItem?.id}"),
+                                    animatedVisibilityScope = animatedContentScope
+                                ),
+                                text = "${DateTimeUtils.calculateAge(dob)}",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
+                            )
+                        }
+
+                    }
+
+
+                }
+            }
         }
+
     }
 }
 
@@ -464,255 +516,49 @@ fun SuggestionCardShimmerCompo(
     }
 }
 
-
 @Composable
-private fun FilterSuggestionDialog(
-    onDismiss: () -> Unit
+private fun NoSuggestionComp(
+    onRetry: () -> Unit
 ) {
-    Dialog(
-        onDismissRequest = {
-            onDismiss()
-        },
-        content = {
-            FilterSuggestionCompo {
-
-            }
-        }
-    )
-}
-
-@Composable
-private fun FilterSuggestionCompo(
-    onDismiss: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
-
-            IconButton(
-                modifier = Modifier.align(Alignment.End),
-                onClick = {
-                    onDismiss()
-                },
-                colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-            ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Close Icon",
-                )
-            }
-
-            AgeFilterCompo(onReset = {
-                onDismiss()
-            })
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            CountryFilterCompo {
-                onDismiss()
-            }
-
-
-        }
-    }
-
-}
-
-@Composable
-private fun FilterTitle(
-    headerTitle: String,
-    onReset: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = headerTitle,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        TextButton(
-            onClick = {
-                onReset()
-            },
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
-                text = "Reset",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
+                text = "No Suggestions",
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AgeFilterCompo(
-    onReset: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        FilterTitle(headerTitle = "Age") {
-            onReset()
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            Text(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                text = "Min Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-            Text(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                text = "Max Age",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Start
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            var minAge by rememberSaveable {
-                mutableStateOf("20")
-            }
-
-            var maxAge by rememberSaveable {
-                mutableStateOf("25")
-            }
-
-            AgeFilterCardCompo(
-                modifier = Modifier.weight(1f),
-                age = minAge,
-                onValueChanged = {
-                    minAge = it
-                }
+                color = Color.Black
             )
 
-            AgeFilterCardCompo(
-                modifier = Modifier.weight(1f),
-                age = maxAge,
-                onValueChanged = {
-                    maxAge = it
-                }
+
+            Image(
+                painter = painterResource(Res.drawable.cross_love),
+                contentDescription = "Love Icon",
+                modifier = Modifier.size(60.dp)
             )
-        }
-    }
 
-
-}
-
-@Composable
-private fun AgeFilterCardCompo(
-    modifier: Modifier,
-    age: String,
-    readOnly: Boolean = false,
-    onValueChanged: (String) -> Unit
-) {
-
-    OutlinedTextField(
-        modifier = modifier,
-        value = age,
-        onValueChange = {
-            onValueChanged(it)
-        },
-        readOnly = readOnly,
-        shape = RoundedCornerShape(12.dp),
-        textStyle = TextStyle(
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-        ),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.Gray,
-        ).copy(focusedTextColor = Color.Black),
-        trailingIcon = {
-            IconButton(
-                modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
-                onClick = {
-
-                },
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceDim,
-                    contentColor = Color.Black
-                ),
+            OutlinedButton(
+                onClick = { onRetry() },
+                border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
+                contentPadding = PaddingValues(vertical = 4.dp, horizontal = 24.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Filter Icon",
+                Text(
+                    text = "Retry",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
-    )
-
-
-}
-
-@Composable
-private fun CountryFilterCompo(
-    onReset: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        FilterTitle(headerTitle = "Country") {
-            onReset()
-        }
-
-//        CountryCityDropDown(
-//            modifier = Modifier.fillMaxWidth(),
-//            onOptionSelected = {
-//
-//            }
-//        )
     }
 }
 
-@Composable
-private fun CountryCityDropDown(
-    modifier: Modifier,
-    visibleLeadingIcon: Boolean = false,
-    option: String,
-    onOptionSelected: (String) -> Unit
 
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = BorderStroke(
-            1.dp, color = Color.Gray
-        )
-    ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            if (visibleLeadingIcon) {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    painter = painterResource(Res.drawable.country_flag),
-                    contentDescription = "Filter Icon",
-                )
-            }
 
-          /*  Text(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            )*/
-        }
-    }
-}
 
 
 

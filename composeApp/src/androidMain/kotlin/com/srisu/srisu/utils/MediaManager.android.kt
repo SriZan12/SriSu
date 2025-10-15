@@ -8,7 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.srisu.srisu.core.logger.AppLogger
+import java.io.File
 import java.net.URLConnection
+import androidx.core.net.toUri
 
 actual class GalleryManager actual constructor(private val onLaunch: () -> Unit) {
 
@@ -19,7 +21,7 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 
 @Composable
 actual fun rememberGalleryManager(
-    onResult: (List<String>) -> Unit, mediaType: MediaType?
+    onResult: (List<String?>?) -> Unit, mediaType: MediaType?
 ): GalleryManager {
 
     var pickVisualMediaRequest =
@@ -42,12 +44,10 @@ actual fun rememberGalleryManager(
 
     val pickMedia =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-
             if (uri != null) {
-                AppLogger.log("PhotoPicker : Selected URI: $uri")
                 onResult(listOf(uri.toString()))
             } else {
-                AppLogger.log("PhotoPicker : No media selected")
+                onResult(null)
             }
         }
 
@@ -63,41 +63,51 @@ actual class FileManager {
 
     private val context = AppContext.get()
 
-    actual suspend fun createMediaFileFromPath(path: String?): MediaFile? {
-        path?.let {
-            val uri = Uri.parse(path)
+    actual suspend fun createMediaFileFromPath(
+        path: String?,
+        id: Int?,
+        removed: Boolean?
+    ): MediaFile? {
+        try {
+            path?.let {
+                val uri = path.toUri()
 
-            val contentResolver = context.contentResolver
-            val fileName = getFileName(uri) ?: return null
-            val mimeType =
-                contentResolver.getType(uri) ?: URLConnection.guessContentTypeFromName(fileName)
-                ?: "application/octet-stream"
-            val fileType = determineFileType(mimeType)
+                val contentResolver = context.contentResolver
+                val fileName = getFileName(uri) ?: return null
+                val mimeType =
+                    contentResolver.getType(uri) ?: URLConnection.guessContentTypeFromName(fileName)
+                    ?: "application/octet-stream"
+                val fileType = determineFileType(mimeType)
 
-            val inputStream = contentResolver.openInputStream(uri) ?: return null
-            val fileBytes = inputStream.use { it.readBytes() }
-            val fileSize = fileBytes.size.toLong()
+                val inputStream = contentResolver.openInputStream(uri) ?: return null
+                val fileBytes = inputStream.use { it.readBytes() }
+                val fileSize = fileBytes.size.toLong()
 
-            val file = MediaFile(
-                fileName = fileName,
-                mimeType = mimeType,
-                fileSize = fileSize,
-                fileBytes = fileBytes,
-                fileType = fileType
-            )
-
-//        AppLogger.log("MEDIA FILE = ${Json.encodeToString(file)}")
-
+                return MediaFile(
+                    id = id,
+                    removed = removed,
+                    fileName = fileName,
+                    mimeType = mimeType,
+                    fileSize = fileSize,
+                    fileBytes = fileBytes,
+                    fileType = fileType
+                )
+            }
+        } catch (exception: Exception) {
+            AppLogger.log("INSIDE EXCEPTION = Error creating media file from path: ${exception.message}")
             return MediaFile(
-                fileName = fileName,
-                mimeType = mimeType,
-                fileSize = fileSize,
-                fileBytes = fileBytes,
-                fileType = fileType
+                id = id,
+                url = path,
+                removed = removed
             )
         }
 
-        return null
+
+        return MediaFile(
+            id = id,
+            url = path,
+            removed = removed
+        )
 
     }
 
@@ -135,3 +145,11 @@ actual class FileManager {
         }
     }
 }
+
+
+// In androidMain
+//actual fun saveImageToCache(bytes: ByteArray): File {
+//    val file = File.createTempFile("image_", ".jpg", AppContext.get().cacheDir)
+//    file.writeBytes(bytes)
+//    return file
+//}

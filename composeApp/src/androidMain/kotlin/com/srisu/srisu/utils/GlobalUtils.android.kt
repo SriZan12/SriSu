@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import java.io.IOException
 
-actual fun getCountryFlagFromAssets(countryCode: String): ImageBitmap? {
+actual suspend fun getCountryFlagFromAssets(countryCode: String): ImageBitmap? {
     val context = AppContext.get()
     val resourceName = countryCode.lowercase()
     val assetPath = "Countries/${resourceName}.imageset/${resourceName}.png"

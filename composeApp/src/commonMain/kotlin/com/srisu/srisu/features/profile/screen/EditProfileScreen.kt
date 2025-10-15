@@ -1,0 +1,874 @@
+package com.srisu.srisu.features.profile.screen
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.Uri
+import coil3.compose.AsyncImage
+import coil3.toUri
+import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.CityDropDown
+import com.srisu.srisu.components.CountryDropDown
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.FormFieldCompo
+import com.srisu.srisu.components.LoadingScrim
+import com.srisu.srisu.components.OfflineBottomSheetCompo
+import com.srisu.srisu.components.PrimaryButtonCompo
+import com.srisu.srisu.components.PrimaryTextButton
+import com.srisu.srisu.components.PrimaryToolBar
+import com.srisu.srisu.components.SuccessDialog
+import com.srisu.srisu.components.TextAreaCompo
+import com.srisu.srisu.core.data.response.auth.InterestResponse
+import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.profile.state.EditProfileUIState
+import com.srisu.srisu.features.profile.state.GalleyPhotoModel
+import com.srisu.srisu.features.profile.vm.EditProfileViewModel
+import com.srisu.srisu.permissionmanager.PermissionCallback
+import com.srisu.srisu.permissionmanager.PermissionState
+import com.srisu.srisu.permissionmanager.PermissionType
+import com.srisu.srisu.permissionmanager.createPermissionsManager
+import com.srisu.srisu.utils.CountryModel
+import com.srisu.srisu.utils.MediaType
+import com.srisu.srisu.utils.isInternetAvailable
+import com.srisu.srisu.utils.rememberGalleryManager
+import kotlinx.serialization.json.Json
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
+
+enum class PhotoType { LARGE, SMALL }
+
+
+@Composable
+fun EditProfileScreen(
+    editedInterest: List<User.UserInterest?>? = null,
+    editProfileViewModel: EditProfileViewModel = koinViewModel<EditProfileViewModel>(),
+    onNavigateInterestScreen: (List<InterestResponse.Interest?>?, List<User.UserInterest?>?) -> Unit
+) {
+
+    val editProfileUIState by editProfileViewModel.editProfileUIState.collectAsStateWithLifecycle()
+
+    Initialization(
+        editedInterest = editedInterest,
+        editProfileViewModel = editProfileViewModel
+    )
+
+    HandleUiStates(
+        editProfileViewModel = editProfileViewModel,
+        editProfileUIState = editProfileUIState
+    )
+
+    AnimatedVisibility(
+        visible = true,
+        enter = slideInVertically(
+            animationSpec = tween(500),
+        ) + fadeIn(
+            animationSpec = tween(500)
+        ),
+        exit = fadeOut(
+            animationSpec = tween(300)
+        )
+
+    ) {
+
+        EditProfileScreenContent(
+            editProfileUIState = editProfileUIState,
+            editProfileViewModel = editProfileViewModel,
+            onNavigateInterestScreen = { currentInterest ->
+                onNavigateInterestScreen(
+                    editProfileUIState.interestList,
+                    currentInterest
+                )
+            }
+        )
+    }
+}
+
+@Composable
+fun Initialization(
+    editedInterest: List<User.UserInterest?>? = null,
+    editProfileViewModel: EditProfileViewModel
+) {
+    LaunchedEffect(Unit) {
+        if (editedInterest != null) {
+            AppLogger.log("INSIDE INITIALIZATION = ${Json.encodeToString(editedInterest)}")
+            editProfileViewModel.updateCurrentInterests(interests = editedInterest)
+        }
+    }
+}
+
+@Composable
+private fun HandleUiStates(
+    editProfileViewModel: EditProfileViewModel,
+    editProfileUIState: EditProfileUIState
+) {
+
+    val isConnected = isInternetAvailable()
+    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+
+    LaunchedEffect(isConnected) {
+        showBottomSheet = !isConnected
+    }
+
+    when (val baseUIState = editProfileUIState.baseUIState) {
+        is BaseUIState.Error -> {
+            ErrorDialog(
+                title = baseUIState.errorType,
+                errorMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    editProfileViewModel.idleScreen()
+                },
+            )
+        }
+
+        is BaseUIState.Loading -> {
+            LoadingScrim(
+                onDismissRequest = {
+                    editProfileViewModel.idleScreen()
+                }
+            )
+        }
+
+        is BaseUIState.Success<*> -> {
+            SuccessDialog(
+                successMessage = baseUIState.message,
+                show = true,
+                onDismiss = {
+                    editProfileViewModel.idleScreen()
+                }
+            )
+        }
+
+        is BaseUIState.NoInternetConnection -> {
+            showBottomSheet = baseUIState.isOffline
+        }
+
+        is BaseUIState.Idle -> {
+            Unit
+        }
+    }
+
+    if (showBottomSheet) {
+        OfflineBottomSheetCompo(
+            show = showBottomSheet,
+            onDismiss = {
+                showBottomSheet = false
+                editProfileViewModel.idleScreen()
+            }
+        )
+    }
+}
+
+@Composable
+fun EditProfileScreenContent(
+    editProfileUIState: EditProfileUIState,
+    editProfileViewModel: EditProfileViewModel,
+    onNavigateInterestScreen: (List<User.UserInterest?>?) -> Unit,
+) {
+    Scaffold(
+        modifier = Modifier,
+        topBar = {
+            PrimaryToolBar(
+                title = "Edit Profile",
+                onNavigate = {
+
+                }
+            )
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ProfilePictureCompo(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    editProfileViewModel = editProfileViewModel,
+                    editProfileUIState = editProfileUIState
+                )
+
+                GeneralInfoCompo(
+                    modifier = Modifier,
+                    countryList = editProfileUIState.countryList,
+                    fullName = editProfileUIState.fullName,
+                    userName = editProfileUIState.userName,
+                    bio = editProfileUIState.bio,
+                    country = editProfileUIState.country,
+                    city = editProfileUIState.city,
+                    cities = editProfileUIState.cities,
+                    onUpdateFullName = { fullName ->
+                        editProfileViewModel.updateFullName(fullName)
+                    },
+                    onUpdateUserName = { userName ->
+                        editProfileViewModel.updateUserName(userName)
+                    },
+                    onUpdateBio = { bio ->
+                        editProfileViewModel.updateBio(bio)
+
+                    },
+                    onUpdateCountry = { countryModel ->
+                        editProfileViewModel.updateCountry(countryModel)
+                        editProfileViewModel.updateCity("")
+                    },
+                    onUpdateCity = {
+                        editProfileViewModel.updateCity(it)
+                    }
+                )
+
+                val allInterests =
+                    editProfileUIState.currentInterests?.filter { it?.removed == false }
+                        ?.map { it?.name }
+
+                InterestCompo(allInterests = allInterests) {
+                    onNavigateInterestScreen(
+                        editProfileUIState.currentInterests
+                    )
+                }
+
+                val openGallery = remember { mutableStateOf(false) }
+                val photoType = remember { mutableStateOf(PhotoType.LARGE) }
+                val photoIndex = remember { mutableStateOf(0) }
+                val photoId = remember { mutableStateOf<Int?>(null) }
+
+                GalleryCompo(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    largePhotos = editProfileUIState.largePhotos,
+                    smallPhotos = editProfileUIState.smallPhotos,
+                    onAddImageClicked = { index, type, id ->
+                        photoId.value = id
+                        photoIndex.value = index
+                        photoType.value = type
+                        openGallery.value = true
+                    },
+                    onRemoveImage = { index, type, id ->
+                        photoIndex.value = index
+                        photoType.value = type
+                        if (photoType.value == PhotoType.LARGE) {
+                            editProfileViewModel.updateLargePhoto(
+                                photo = GalleyPhotoModel(
+                                    id = id,
+                                    photoUri = null,
+                                    removed = true,
+                                    index = photoIndex.value
+                                )
+                            )
+                        } else {
+                            editProfileViewModel.updateSmallPhotos(
+                                photo = GalleyPhotoModel(
+                                    id = id,
+                                    photoUri = null,
+                                    removed = true,
+                                    index = photoIndex.value
+                                )
+                            )
+                        }
+                    }
+                )
+
+                if (openGallery.value) {
+                    OpenGallery { photoUri ->
+                        if (photoUri != null) {
+                            if (photoType.value == PhotoType.LARGE) {
+                                AppLogger.log("WHILE UPDATING THE PHOTO = $photoId")
+                                editProfileViewModel.updateLargePhoto(
+                                    photo = GalleyPhotoModel(
+                                        id = photoId.value,
+                                        photoUri = photoUri,
+                                        index = photoIndex.value,
+                                    )
+                                )
+
+                            } else {
+                                editProfileViewModel.updateSmallPhotos(
+                                    photo = GalleyPhotoModel(
+                                        id = photoId.value,
+                                        photoUri = photoUri,
+                                        index = photoIndex.value
+                                    )
+                                )
+                            }
+
+                        }
+                        openGallery.value = false
+
+                    }
+
+                }
+
+                PrimaryButtonCompo(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    label = "Update Profile",
+                    onClick = {
+                        editProfileViewModel.updateProfile()
+                    })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfilePictureCompo(
+    modifier: Modifier = Modifier,
+    editProfileViewModel: EditProfileViewModel,
+    editProfileUIState: EditProfileUIState,
+) {
+    val profilePictureUri = editProfileUIState.profilePictureUri
+    var showPermissionDialog by remember { mutableStateOf(false) }
+//    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
+
+
+    val permissionManager = createPermissionsManager(object : PermissionCallback {
+        override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
+            AppLogger.log("INSIDE CALLBACK = $status")
+            when (status) {
+                PermissionState.GRANTED -> {
+//                    permissionState = PermissionState.GRANTED
+                }
+
+                PermissionState.SHOW_RATIONALE -> {
+//                    permissionState = PermissionState.SHOW_RATIONALE
+                }
+
+                PermissionState.DENIED -> {
+//                    permissionState = PermissionState.DENIED
+                }
+
+                PermissionState.NOT_ASKED_YET -> {
+                }
+
+                PermissionState.REQUEST_LAUNCHED -> {
+//                    permissionState = PermissionState.REQUEST_LAUNCHED
+                }
+            }
+        }
+    })
+
+    val galleryManager = rememberGalleryManager(
+        onResult = { uris ->
+            if (!uris.isNullOrEmpty()) {
+                editProfileViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
+            }
+        },
+        mediaType = MediaType.IMAGE_ONLY
+    )
+
+    Box(
+        modifier = modifier.padding(horizontal = 16.dp)
+            .size(180.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceDim)
+            .clickable {
+                showPermissionDialog = true
+
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (profilePictureUri != null) {
+            AsyncImage(
+                model = profilePictureUri,
+                contentDescription = "Selected Profile Picture",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                imageVector = Icons.Outlined.Person,
+                contentDescription = "Image_picker",
+                modifier = Modifier.size(80.dp)
+            )
+        }
+
+        if (showPermissionDialog) {
+            if (!permissionManager.isPermissionGranted(permission = PermissionType.STORAGE)) {
+                permissionManager.askPermission(permission = PermissionType.STORAGE)
+            } else {
+                galleryManager.launch()
+            }
+            showPermissionDialog = false
+        }
+
+    }
+
+}
+
+
+typealias fullName = String
+typealias userName = String
+typealias bio = String
+typealias city = String
+
+@Composable
+private fun GeneralInfoCompo(
+    modifier: Modifier = Modifier,
+    countryList: List<CountryModel>,
+    fullName: String? = null,
+    userName: String? = null,
+    bio: String? = null,
+    country: CountryModel? = null,
+    city: String? = null,
+    cities: List<String?>? = null,
+    onUpdateFullName: (fullName) -> Unit,
+    onUpdateUserName: (userName) -> Unit,
+    onUpdateBio: (bio) -> Unit,
+    onUpdateCountry: (CountryModel) -> Unit,
+    onUpdateCity: (city) -> Unit,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FormFieldCompo(
+            label = "Full Name",
+            value = fullName ?: "",
+            imeAction = ImeAction.Done,
+            onValueChange = {
+                onUpdateFullName(it)
+            }
+        )
+
+        FormFieldCompo(
+            label = "Username",
+            value = userName ?: "",
+            imeAction = ImeAction.Done,
+            onValueChange = {
+                onUpdateUserName(it)
+            }
+        )
+
+
+        TextAreaCompo(
+            label = "Bio",
+            placeholder = "Enter your bio...",
+            imeAction = ImeAction.Done,
+            value = bio ?: "",
+            onValueChange = { onUpdateBio(it) }
+        )
+
+        CountryDropDownCompo(
+            selectedCountry = country,
+            countryList = countryList,
+            onCountrySelected = {
+                onUpdateCountry(it)
+            }
+        )
+
+        CityDropDownCompo(
+            modifier = Modifier.fillMaxWidth(),
+            selectedCity = city,
+            onCitySelected = {
+                onUpdateCity(it)
+            },
+            cityList = cities,
+        )
+
+    }
+}
+
+@Composable
+private fun CountryDropDownCompo(
+    selectedCountry: CountryModel?,
+    countryList: List<CountryModel>,
+    onCountrySelected: (CountryModel) -> Unit
+) {
+    var showCountryBottomSheet by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+
+        Text(
+            text = "Country",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+
+        )
+
+        CountryDropDown(
+            modifier = Modifier.fillMaxWidth(),
+            countryList = countryList,
+            option = selectedCountry,
+            backgroundColor = MaterialTheme.colorScheme.surface,
+            onOptionSelected = {
+                onCountrySelected(it)
+            },
+            onShowCountryBottomSheetChange = {
+                showCountryBottomSheet = !showCountryBottomSheet
+            },
+            showCountryBottomSheet = showCountryBottomSheet
+        )
+    }
+}
+
+
+@Composable
+private fun CityDropDownCompo(
+    modifier: Modifier = Modifier,
+    selectedCity: String?,
+    onCitySelected: (String) -> Unit,
+    cityList: List<String?>?,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+
+        Text(
+            text = "City",
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+
+            )
+
+        CityDropDown(
+            modifier = modifier,
+            selectedCity = selectedCity,
+            onCitySelected = onCitySelected,
+            cityList = cityList,
+            backgroundColor = MaterialTheme.colorScheme.surface,
+            onExpandedChange = {
+                expanded = !expanded
+            },
+            expanded = expanded
+        )
+    }
+}
+
+@Composable
+private fun InterestCompo(
+    allInterests: List<String?>? = null,
+    onEditInterest: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Interest",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            PrimaryTextButton(
+                modifier = Modifier,
+                label = if (allInterests.isNullOrEmpty()) "Add" else "Edit",
+                textStyle = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary),
+                fontWeight = FontWeight.SemiBold,
+                onClick = {
+                    onEditInterest()
+                }
+            )
+
+        }
+
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
+            items(items = allInterests ?: emptyList()) { interest ->
+                if (!interest.isNullOrEmpty()) {
+                    InterestChip(modifier = Modifier, label = interest)
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun InterestChip(
+    modifier: Modifier,
+    label: String,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceDim,
+    iterations: Int = 10,
+    onChipClick: () -> Unit = {}
+) {
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        shape = RoundedCornerShape(24.dp),
+        onClick = {
+            onChipClick()
+        }
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                .basicMarquee(iterations = iterations),
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+
+}
+
+typealias index = Int
+
+@Composable
+fun GalleryCompo(
+    modifier: Modifier = Modifier,
+    largePhotos: List<GalleyPhotoModel?>? = emptyList(),
+    smallPhotos: List<GalleyPhotoModel?>? = emptyList(),
+    onAddImageClicked: (index, PhotoType, Int?) -> Unit,
+    onRemoveImage: (index, PhotoType, Int?) -> Unit
+) {
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+    ) {
+        Text(
+            text = "Gallery",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // First row: 2 large cards
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val photos = largePhotos?.sortedBy { it?.index }
+            AppLogger.log("LARGE PHOTOS SIZE = ${photos?.size}")
+            photos?.forEachIndexed { index, photo ->
+                GalleryAddCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    photoUri = photo?.photoUri,
+                    onClick = { onAddImageClicked(index, PhotoType.LARGE, photo?.id) },
+                    onRemove = {
+                        AppLogger.log("WHILE REMOVING ID = ${photo?.id}")
+                        onRemoveImage(index, PhotoType.LARGE, photo?.id)
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val photos = smallPhotos?.sortedBy { it?.index }
+            AppLogger.log("small photos size = ${photos?.size}")
+            photos?.forEachIndexed { index, photo ->
+                GalleryAddCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    photoUri = photo?.photoUri,
+                    onClick = {
+                        onAddImageClicked(index, PhotoType.SMALL, photo?.id)
+                    },
+                    onRemove = {
+                        onRemoveImage(index, PhotoType.SMALL, photo?.id)
+                    }
+                )
+            }
+        }
+
+        /* Spacer(modifier = Modifier.height(12.dp))
+
+         PrimaryTextButton(
+             modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally),
+             label = "View all",
+             textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary),
+             fontWeight = FontWeight.SemiBold,
+             onClick = {
+
+             }
+         )*/
+    }
+}
+
+@Composable
+fun GalleryAddCard(
+    modifier: Modifier = Modifier,
+    photoUri: Uri? = null,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Box(modifier = modifier) {
+
+        Card(
+            modifier = Modifier
+                .shadow(6.dp, shape = RoundedCornerShape(16.dp))
+                .clickable { onClick() },
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+            ) {
+                if (photoUri == null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Image",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+
+                    AsyncImage(
+                        model = photoUri,
+                        contentDescription = "Selected Image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+
+                    )
+                }
+            }
+
+        }
+
+        if (photoUri != null) {
+            IconButton(
+                onClick = {
+                    onRemove()
+                },
+
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(24.dp)
+                    .offset(y = (-6).dp)
+                    .clip(shape = CircleShape),
+                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.padding(all = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OpenGallery(
+    photoPicked: (Uri?) -> Unit
+) {
+
+    val galleryManager = rememberGalleryManager(
+        onResult = { uris ->
+            if (uris.isNullOrEmpty()) {
+                photoPicked(null)
+            } else {
+                photoPicked(uris.firstOrNull()?.toUri())
+
+            }
+        },
+        mediaType = MediaType.IMAGE_ONLY
+    )
+
+    LaunchedEffect(Unit) {
+        galleryManager.launch()
+    }
+}
+
+
+@Preview()
+@Composable
+fun GalleryCompoPreview() {
+    val fakeLargePhotos = listOf(
+        GalleyPhotoModel(photoUri = null, index = 0),
+        GalleyPhotoModel(photoUri = null, index = 1)
+    )
+    val fakeSmallPhotos = listOf(
+        GalleyPhotoModel(photoUri = null, index = 0),
+        GalleyPhotoModel(photoUri = null, index = 1),
+        GalleyPhotoModel(photoUri = null, index = 2)
+    )
+    GalleryCompo(
+        largePhotos = fakeLargePhotos,
+        smallPhotos = fakeSmallPhotos,
+        onAddImageClicked = { _, _, _ -> },
+        onRemoveImage = { _, _, _ -> }
+    )
+}

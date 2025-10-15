@@ -16,7 +16,7 @@ import platform.UIKit.UIImage
 import platform.UIKit.UIImagePNGRepresentation
 
 
-actual fun getCountryFlagFromAssets(countryCode: String): ImageBitmap? {
+actual suspend fun getCountryFlagFromAssets(countryCode: String): ImageBitmap? {
     val resourceName = countryCode.lowercase()
     return try {
         val image = UIImage.imageNamed(resourceName)
