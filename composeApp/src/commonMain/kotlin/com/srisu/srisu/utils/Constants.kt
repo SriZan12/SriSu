@@ -8,6 +8,8 @@ object Constants {
         const val COUNTRY_JSON_FILE_NAME = "Countries.json"
         const val SESSION_FILE = "Session_File"
         const val SESSION_KEY = "Session_Key"
+
+        const val FIRST_INSTALL_FLAG = "firstInstallFlag"
         const val PHONE_NUMBER_VERIFICATION_PROGRESS = 2
         const val FULL_NAME_PROGRESS = 3
         const val OTP_WAITING_TIME = 2 * 60 * 1000L // 2 minutes
