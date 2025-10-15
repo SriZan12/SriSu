@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
@@ -67,9 +68,11 @@ class ProfileViewModel(
 
     fun updateUserProfileData(userProfileData: String?) {
         userProfileData?.let {
-            val profileData = Json.decodeFromString<UserSuggestionResponse.Result?>(
+            val profileData = Json.decodeFromString<User?>(
                 userProfileData
             )
+
+            AppLogger.log("USER PROFILE DATA: $userProfileData")
             _profileUIState.value = _profileUIState.value.copy(userProfileData = profileData)
         }
     }

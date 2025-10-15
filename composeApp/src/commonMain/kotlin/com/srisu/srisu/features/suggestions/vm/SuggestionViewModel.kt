@@ -51,7 +51,6 @@ class SuggestionViewModel(
     val suggestionUIStates = _suggestionUIStates.asStateFlow()
 
     init {
-        AppLogger.log("SUGGESTION VIEW MODEL INITIALIZED")
         setSession()
         getUserSuggestions()
         loadAllCountries()
@@ -230,8 +229,6 @@ class SuggestionViewModel(
     fun getUserSuggestions() {
 
         showLoading()
-
-        AppLogger.log("INSIDE SUGGESTION API CALL")
 
         val pagerFlow = Pager(
             config = PagingConfig(

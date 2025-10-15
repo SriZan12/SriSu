@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -53,6 +55,7 @@ import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
 import com.srisu.srisu.components.RequestSentDialog
+import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
@@ -185,10 +188,12 @@ private fun ProfilePictureContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
     ) {
         ProfilePictureCompo(
             profileUrl = userProfileData?.profilePhoto,
-            hasSentRequest = userProfileData?.crushed,
+//            hasSentRequest = userProfileData?.crushed,
+            hasSentRequest = false,
             shouldShowRequestButton = shouldShowRequestButton,
             isRequestSentSuccessfully = profileUIState.isRequestSentSuccessfully,
             onSendRequest = {
@@ -272,7 +277,7 @@ fun ProfilePictureCompo(
 
         }
 
-        if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
+      /*  if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
 
             IconButton(
                 onClick = {
@@ -291,7 +296,7 @@ fun ProfilePictureCompo(
                     tint = Color.White
                 )
             }
-        }
+        }*/
     }
 }
 
@@ -337,7 +342,7 @@ fun UserInfo(
 }
 
 @Composable
-fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?) {
+fun InterestCompo(interests: List<User.UserInterest?>?) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)
     ) {
@@ -442,7 +447,7 @@ private fun AboutCompo(
 @Preview
 @Composable
 fun GallerySection(
-    photos: List<UserSuggestionResponse.Result.UserPhoto?>?
+    photos: List<User.UserPhoto?>?
 ) {
 
     val listPhotos = listOf(

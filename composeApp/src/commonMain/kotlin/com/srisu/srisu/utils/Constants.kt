@@ -29,4 +29,10 @@ object Constants {
     object UI {
         const val ANIMATION_DURATION = 300
     }
+
+    object ConnectionStatus{
+        const val NOTHING = "NOTHING"
+        const val ACCEPTED = "ACCEPTED"
+        const val REJECTED = "REJECTED"
+    }
 }

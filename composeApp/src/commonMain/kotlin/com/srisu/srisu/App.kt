@@ -113,7 +113,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.EditProfile
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.Connection
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }

@@ -1,6 +1,7 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.features.home.HomeViewModel
+import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
+import com.srisu.srisu.features.home.home.HomeViewModel
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
@@ -34,6 +35,13 @@ val mainModule = module {
             profileRepository = get(),
             connectivityObserver = get(),
             sessionStorage = get()
+        )
+    }
+
+    viewModel {
+        ConnectionViewModel(
+            connectionRepository = get(),
+            connectivityObserver = get()
         )
     }
 }
