@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,9 +27,8 @@ import app.cash.paging.PagingData
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
-import com.srisu.srisu.core.data.response.connection.MyCrushListResponse
+import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 typealias crushRequestId = Int?
@@ -37,9 +37,9 @@ typealias receiverNumber = String?
 
 @Composable
 fun MyCrushScreen(
-    onNavigateToProfile: (userProfileData: MyCrushListResponse.Result.Receiver?) -> Unit,
+    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
-    crushList: StateFlow<PagingData<MyCrushListResponse.Result>>
+    crushList: StateFlow<PagingData<SingleConnectionResponse.Result>>
 ) {
     MyCrushScreenContent(
         crushList = crushList,
@@ -53,47 +53,50 @@ fun MyCrushScreen(
 @Composable
 fun MyCrushScreenContent(
     modifier: Modifier = Modifier,
-    crushList: StateFlow<PagingData<MyCrushListResponse.Result>>,
-    onNavigateToProfile: (userProfileData: MyCrushListResponse.Result.Receiver?) -> Unit,
+    crushList: StateFlow<PagingData<SingleConnectionResponse.Result>>,
+    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit
 ) {
-    val myCrushList = crushList.collectAsLazyPagingItems()
-    val loadState = myCrushList.loadState
+    Box(modifier = Modifier.fillMaxSize()) {
 
-    when {
-        loadState.refresh is LoadState.Loading -> {
-            ConnectionShimmerCompo()
-        }
+        val myCrushList = crushList.collectAsLazyPagingItems()
+        val loadState = myCrushList.loadState
 
-        myCrushList.itemCount == 0 -> {
-            var isVisible by remember { mutableStateOf(false) }
-
-            LaunchedEffect(Unit) {
-                isVisible = true
+        when {
+            loadState.refresh is LoadState.Loading -> {
+                ConnectionShimmerCompo()
             }
 
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(animationSpec = tween(600)) + slideInVertically(
-                    initialOffsetY = { it / 2 },
-                    animationSpec = tween(600, easing = FastOutSlowInEasing)
-                ),
-            ) {
-                NoConnectionsFound(
-                    modifier = Modifier.fillMaxSize(),
-                    title = "You don't have any crush"
+            myCrushList.itemCount == 0 -> {
+                var isVisible by remember { mutableStateOf(false) }
+
+                LaunchedEffect(Unit) {
+                    isVisible = true
+                }
+
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn(animationSpec = tween(600)) + slideInVertically(
+                        initialOffsetY = { it / 2 },
+                        animationSpec = tween(600, easing = FastOutSlowInEasing)
+                    ),
+                ) {
+                    NoConnectionsFound(
+                        modifier = Modifier.fillMaxSize(),
+                        title = "maybe it’s time to find one?"
+                    )
+                }
+            }
+
+            else -> {
+                MyCrushListCompo(
+                    modifier = modifier,
+                    myCrushList = myCrushList,
+                    onNavigateToProfile = onNavigateToProfile,
+                    onCancelCrushRequest = onCancelCrushRequest
+
                 )
             }
-        }
-
-        else -> {
-            MyCrushListCompo(
-                modifier = modifier,
-                myCrushList = myCrushList,
-                onNavigateToProfile = onNavigateToProfile,
-                onCancelCrushRequest = onCancelCrushRequest
-
-            )
         }
     }
 }
@@ -101,8 +104,8 @@ fun MyCrushScreenContent(
 @Composable
 private fun MyCrushListCompo(
     modifier: Modifier = Modifier,
-    myCrushList: LazyPagingItems<MyCrushListResponse.Result>,
-    onNavigateToProfile: (userProfileData: MyCrushListResponse.Result.Receiver?) -> Unit,
+    myCrushList: LazyPagingItems<SingleConnectionResponse.Result>,
+    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit
 ) {
 
@@ -145,7 +148,8 @@ private fun MyCrushListCompo(
                                 it.receiver
                             )
                         },
-                        onCancel = {
+                        firstButtonTitle = "Cancel",
+                        onClickFirstButton = {
                             val senderNumber = it.senderNumber
                             val receiverNumber = it.receiverNumber
                             onCancelCrushRequest(

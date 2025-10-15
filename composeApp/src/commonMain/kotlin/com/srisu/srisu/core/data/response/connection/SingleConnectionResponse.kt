@@ -2,11 +2,12 @@ package com.srisu.srisu.core.data.response.connection
 
 
 import com.srisu.srisu.core.data.response.auth.User
+import io.ktor.http.auth.HttpAuthHeader
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MyCrushListResponse(
+data class SingleConnectionResponse(
     @SerialName("count")
     val count: Int? = null,
     @SerialName("next")
@@ -30,7 +31,7 @@ data class MyCrushListResponse(
         val createdAt: String? = null,
         @SerialName("id")
         val id: Int? = null,
-        @SerialName("receiver")
+        @SerialName("partner")
         val `receiver`: Receiver? = null,
         @SerialName("receiver_number")
         val receiverNumber: String? = null,
@@ -47,34 +48,18 @@ data class MyCrushListResponse(
             val city: String? = null,
             @SerialName("country")
             val country: String? = null,
-            @SerialName("created_date")
-            val createdDate: String? = null,
-            @SerialName("date_joined")
-            val dateJoined: String? = null,
             @SerialName("dob")
             val dob: String? = null,
-            @SerialName("email")
-            val email: String? = null,
-            @SerialName("first_name")
-            val firstName: String? = null,
             @SerialName("full_name")
             val fullName: String? = null,
             @SerialName("gender")
             val gender: String? = null,
             @SerialName("id")
             val id: Int? = null,
-            @SerialName("is_active")
-            val isActive: Boolean? = null,
             @SerialName("is_phone_verified")
             val isPhoneVerified: Boolean? = null,
             @SerialName("is_profile_complete")
             val isProfileComplete: Boolean? = null,
-            @SerialName("is_staff")
-            val isStaff: Boolean? = null,
-            @SerialName("is_superuser")
-            val isSuperuser: Boolean? = null,
-            @SerialName("last_name")
-            val lastName: String? = null,
             @SerialName("mood")
             val mood: String? = null,
             @SerialName("phone_number")

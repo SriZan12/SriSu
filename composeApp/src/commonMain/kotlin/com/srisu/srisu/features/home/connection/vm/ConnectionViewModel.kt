@@ -11,27 +11,24 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
-import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.data.response.connection.MyCrushListResponse
-import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.home.connection.state.ConnectionUIState
-import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.utils.ConnectivityObserver
+import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
+import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlin.math.sin
 
 class ConnectionViewModel(
     private val connectivityObserver: ConnectivityObserver,
@@ -45,13 +42,17 @@ class ConnectionViewModel(
 
     // Separate flow for crush list paging
     private val myCrushPagingFlow =
-        MutableStateFlow<PagingData<MyCrushListResponse.Result>>(PagingData.empty())
+        MutableStateFlow<PagingData<SingleConnectionResponse.Result>>(PagingData.empty())
+
+    private val crushOnMePagingFlow =
+        MutableStateFlow<PagingData<SingleConnectionResponse.Result>>(PagingData.empty())
+
 
     /*Exposes a reactive PagingData stream of crush list results
     Automatically filters out any items whose IDs are in the cancelledRequestIds set
     Updates in real-time when either the paging data OR the cancelled set changes*/
 
-    val myCrushList: StateFlow<PagingData<MyCrushListResponse.Result>> =
+    val myCrushList: StateFlow<PagingData<SingleConnectionResponse.Result>> =
         combine(
             // Combine the live paging data stream...
             myCrushPagingFlow,
@@ -74,10 +75,29 @@ class ConnectionViewModel(
                 initialValue = PagingData.empty()
             )
 
+    val crushOnMeList: StateFlow<PagingData<SingleConnectionResponse.Result>> =
+        combine(
+            crushOnMePagingFlow,
+            _connectionUiState.map { it.acceptedRejectedIds }
+        ) { pagingData, cancelledIds ->
+            pagingData.filter { it.id?.toLong() !in cancelledIds }
+        }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = PagingData.empty()
+            )
+
+    companion object {
+        const val PAGE_SIZE = 10
+        const val PREFETCH_DISTANCE = 5
+    }
+
 
     init {
         initTabs()
         getMyCrushList()
+        getCrushOnMeList()
     }
 
 
@@ -144,25 +164,17 @@ class ConnectionViewModel(
 
     }
 
-    fun MyCrushListResponse.Result.Receiver.toUser(): User {
+    fun SingleConnectionResponse.Result.Receiver.toUser(): User {
         return User(
             bio = bio,
             city = city,
             country = country,
-            createdDate = createdDate,
-            dateJoined = dateJoined,
             dob = dob,
-            email = email,
-            firstName = firstName,
             fullName = fullName,
             gender = gender,
             id = id,
-            isActive = isActive,
             isPhoneVerified = isPhoneVerified,
             isProfileComplete = isProfileComplete,
-            isStaff = isStaff,
-            isSuperuser = isSuperuser,
-            lastName = lastName,
             mood = mood,
             phoneNumber = phoneNumber,
             profilePhoto = profilePhoto,
@@ -195,7 +207,7 @@ class ConnectionViewModel(
         )
     }
 
-    fun getUserProfile(userProfile: MyCrushListResponse.Result.Receiver?): String? {
+    fun getUserProfile(userProfile: SingleConnectionResponse.Result.Receiver?): String? {
         return Json.encodeToString(userProfile?.toUser())
     }
 
@@ -213,7 +225,7 @@ class ConnectionViewModel(
                     val resultHandler =
                         connectionRepository.getMyCrushList(pageSize = 20, page = page)
 
-                    var items: List<MyCrushListResponse.Result?> = emptyList()
+                    var items: List<SingleConnectionResponse.Result?> = emptyList()
 
                     resultHandler.onSuccess { response, _ ->
                         items = response?.results ?: emptyList()
@@ -233,61 +245,151 @@ class ConnectionViewModel(
         }
     }
 
+    fun getCrushOnMeList() {
 
-    fun cancelCrushRequest(
-        crushRequestId: Int?,
-        senderNumber: String?,
-        receiverNumber: String?
-    ) {
-        val requestId = crushRequestId?.toLong() ?: return
+        val pagerFlow = Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                prefetchDistance = 20,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                BasePagingSource { page ->
+                    val resultHandler =
+                        connectionRepository.getCrushOnMeRequest(pageSize = 20, page = page)
 
-        // Optimistic UI update
-        if (requestId !in _connectionUiState.value.cancelledRequestIds) {
-            _connectionUiState.update { state ->
-                state.copy(cancelledRequestIds = state.cancelledRequestIds + requestId)
+                    var items: List<SingleConnectionResponse.Result?> = emptyList()
+
+                    resultHandler.onSuccess { response, _ ->
+                        items = response?.results ?: emptyList()
+                    }.onError { error, errorType ->
+                        throw Exception("API Error: $error, Type: $errorType")
+                    }
+
+                    items
+                }
             }
-        }
+        ).flow.cachedIn(viewModelScope)
 
         viewModelScope.launch {
-            try {
-                connectionRepository.cancelCrushRequest(
-                    crushRequestId = crushRequestId,
-                    singleConnectionDTO = SingleConnectionDTO(
-                        senderNumber = senderNumber,
-                        receiverNumber = receiverNumber,
-                        connectionStatus = "NOTHING"
-                    )
-                ).onSuccess { response, _ ->
-                    AppLogger.log("CANCEL REQUEST SUCCESS = $response")
-                    _connectionUiState.update {
-                        it.copy(baseUIState = BaseUIState.Success("Request cancelled"))
-                    }
-                }.onError { error, errorType ->
-                    AppLogger.log("CANCEL REQUEST ERROR = $error")
-                    _connectionUiState.update { state ->
-                        state.copy(
-                            cancelledRequestIds = state.cancelledRequestIds - requestId,
-                            baseUIState = BaseUIState.Error(
-                                errorType = errorType.toString(),
-                                message = error
-                            )
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                AppLogger.log("EXCEPTION: ${e.message}")
-                _connectionUiState.update { state ->
-                    state.copy(
-                        cancelledRequestIds = state.cancelledRequestIds - requestId,
-                        baseUIState = BaseUIState.Error(
-                            errorType = "",
-                            message = e.message ?: "Unknown error"
-                        )
-                    )
-                }
+            pagerFlow.collectLatest {
+                crushOnMePagingFlow.value = it
             }
         }
     }
 
+    fun updateCrushRequest(
+        crushRequestId: Int?,
+        senderNumber: String?,
+        receiverNumber: String?,
+        connectionStatus: String?
+    ) {
+        val requestId = crushRequestId?.toLong() ?: return
+
+        when (connectionStatus) {
+            ACCEPTED, REJECTED -> markAsAcceptedOrRejected(requestId)
+            else -> markAsCancelled(requestId)
+        }
+
+        viewModelScope.launch {
+            try {
+                connectionRepository.updateCrushRequest(
+                    crushRequestId = crushRequestId,
+                    singleConnectionDTO = SingleConnectionDTO(
+                        senderNumber = senderNumber,
+                        receiverNumber = receiverNumber,
+                        connectionStatus = connectionStatus
+                    )
+                ).onSuccess { response, _ ->
+                    _connectionUiState.update {
+                        it.copy(baseUIState = BaseUIState.Success("Request updated successfully"))
+                    }
+
+                }.onError { error, errorType ->
+                    rollbackRequests(
+                        connectionStatus = connectionStatus ?: "",
+                        requestId = requestId,
+                        message = error.toString(),
+                        errorType = errorType.toString()
+                    )
+                }
+
+            } catch (e: Exception) {
+                rollbackRequests(
+                    connectionStatus = connectionStatus ?: "",
+                    requestId = requestId,
+                    message = e.message ?: "Unknown error",
+                    errorType = "Exception"
+                )
+            }
+        }
+    }
+
+    private fun markAsAcceptedOrRejected(requestId: Long) {
+        val currentIds = _connectionUiState.value.acceptedRejectedIds
+        if (requestId !in currentIds) {
+            _connectionUiState.update { state ->
+                state.copy(acceptedRejectedIds = state.acceptedRejectedIds + requestId)
+            }
+        }
+    }
+
+    private fun markAsCancelled(requestId: Long) {
+        val currentIds = _connectionUiState.value.cancelledRequestIds
+        if (requestId !in currentIds) {
+            _connectionUiState.update { state ->
+                state.copy(cancelledRequestIds = state.cancelledRequestIds + requestId)
+            }
+        }
+    }
+
+    private fun rollbackRequests(
+        connectionStatus: String,
+        requestId: Long,
+        message: String,
+        errorType: String
+    ) {
+        if (connectionStatus == ACCEPTED || connectionStatus == REJECTED) {
+            rollbackAcceptedRejectedRequest(
+                requestId,
+                message,
+                errorType.toString()
+            )
+        } else {
+            rollbackCancelledRequest(requestId, message = message, errorType = errorType)
+        }
+    }
+
+    private fun rollbackCancelledRequest(
+        requestId: Long,
+        message: String,
+        errorType: String
+    ) {
+        _connectionUiState.update { state ->
+            state.copy(
+                cancelledRequestIds = state.cancelledRequestIds - requestId,
+                baseUIState = BaseUIState.Error(
+                    errorType = errorType,
+                    message = message
+                )
+            )
+        }
+    }
+
+    private fun rollbackAcceptedRejectedRequest(
+        requestId: Long,
+        message: String,
+        errorType: String
+    ) {
+        _connectionUiState.update { state ->
+            state.copy(
+                acceptedRejectedIds = state.acceptedRejectedIds - requestId,
+                baseUIState = BaseUIState.Error(
+                    errorType = errorType,
+                    message = message
+                )
+            )
+        }
+    }
 
 }

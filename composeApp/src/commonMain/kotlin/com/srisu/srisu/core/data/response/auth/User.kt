@@ -13,16 +13,8 @@ data class User(
     val city: String? = null,
     @SerialName("country")
     val country: String? = null,
-    @SerialName("created_date")
-    val createdDate: String? = null,
-    @SerialName("date_joined")
-    val dateJoined: String? = null,
     @SerialName("dob")
     val dob: String? = null,
-    @SerialName("email")
-    val email: String? = null,
-    @SerialName("first_name")
-    val firstName: String? = null,
     @SerialName("full_name")
     val fullName: String? = null,
     @SerialName("gender")
@@ -35,12 +27,6 @@ data class User(
     val isPhoneVerified: Boolean? = null,
     @SerialName("is_profile_complete")
     val isProfileComplete: Boolean? = null,
-    @SerialName("is_staff")
-    val isStaff: Boolean? = null,
-    @SerialName("is_superuser")
-    val isSuperuser: Boolean? = null,
-    @SerialName("last_name")
-    val lastName: String? = null,
     @SerialName("mood")
     val mood: String? = null,
     @SerialName("phone_number")

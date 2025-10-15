@@ -1,11 +1,5 @@
 package com.srisu.srisu.features.home.connection.screen
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,19 +36,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.TransparentToolBar
 import com.srisu.srisu.components.shimmerEffect
-import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.features.home.connection.state.ConnectionUIState
 import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
+import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
+import com.srisu.srisu.utils.Constants.ConnectionStatus.NOTHING
+import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
 import kotlinx.coroutines.launch
@@ -63,6 +57,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.no_love
+
 
 @Composable
 fun ConnectionScreen(
@@ -164,15 +159,38 @@ fun ConnectionScreenContent(
                             onNavigateToProfile(user)
                         },
                         onCancelCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
-                            viewModel.cancelCrushRequest(
+                            viewModel.updateCrushRequest(
                                 crushRequestId = crushRequestId,
                                 senderNumber = senderNumber,
-                                receiverNumber = receiverNumber
+                                receiverNumber = receiverNumber,
+                                connectionStatus = NOTHING
                             )
                         }
                     )
                 } else {
-                    CrushOnMeScreen()
+                    CrushOnMeScreen(
+                        crushOnMeList = viewModel.crushOnMeList,
+                        onAcceptCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
+                            viewModel.updateCrushRequest(
+                                crushRequestId = crushRequestId,
+                                senderNumber = senderNumber,
+                                receiverNumber = receiverNumber,
+                                connectionStatus = ACCEPTED
+                            )
+                        },
+                        onRejectCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
+                            viewModel.updateCrushRequest(
+                                crushRequestId = crushRequestId,
+                                senderNumber = senderNumber,
+                                receiverNumber = receiverNumber,
+                                connectionStatus = REJECTED
+                            )
+                        },
+                        onNavigateToProfile = { userProfileData ->
+                            val user = viewModel.getUserProfile(userProfile = userProfileData)
+                            onNavigateToProfile(user)
+                        },
+                    )
                 }
             }
         }
@@ -186,8 +204,12 @@ fun ConnectionItem(
     userImage: String?,
     dob: String?,
     zodiacSign: String?,
+    firstButtonTitle: String,
+    secondButtonTitle: String = "Reject",
     onClick: () -> Unit,
-    onCancel: () -> Unit
+    showSecondButton: Boolean = false,
+    onClickFirstButton: () -> Unit,
+    onClickSecondButton: () -> Unit = {}
 ) {
     Row(
         modifier = modifier.fillMaxWidth().clickable(
@@ -235,13 +257,28 @@ fun ConnectionItem(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            CancelButtonCompo(
-                label = "Cancel",
-                onClick = {
-                    onCancel()
+            Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ConnectionButtonCompo(
+                    label = firstButtonTitle,
+                    onClick = {
+                        onClickFirstButton()
+                    }
+
+                )
+
+                if (showSecondButton) {
+
+                    ConnectionButtonCompo(
+                        label = secondButtonTitle,
+                        onClick = {
+                            onClickSecondButton()
+                        }
+
+                    )
                 }
 
-            )
+            }
+
 
         }
 
@@ -262,7 +299,7 @@ fun ConnectionItem(
 
 
 @Composable
-private fun CancelButtonCompo(label: String, onClick: () -> Unit) {
+private fun ConnectionButtonCompo(label: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier.wrapContentSize(),
         shape = RoundedCornerShape(16.dp),
@@ -300,6 +337,8 @@ fun NoConnectionsFound(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
                 text = title,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -410,7 +449,9 @@ fun PreviewConnectionItem() {
         userImage = "https://photosmint.com/wp-content/uploads/2025/03/Indian-Beauty-DP.jpeg",
         dob = "23",
         zodiacSign = "Leo",
+        firstButtonTitle = "Connect",
+        secondButtonTitle = "Cancel",
         onClick = {},
-        onCancel = {}
+        onClickFirstButton = {}
     )
 }

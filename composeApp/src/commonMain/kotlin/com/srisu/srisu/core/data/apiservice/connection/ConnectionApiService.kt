@@ -4,8 +4,7 @@ import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_U
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
-import com.srisu.srisu.core.data.response.connection.MyCrushListResponse
-import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
+import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.setBody
@@ -17,8 +16,8 @@ class ConnectionApiService(private val httpClient: HttpClient) {
     suspend fun getMyCrushList(
         page: Int,
         pageSize: Int
-    ): ResultHandler<MyCrushListResponse?> {
-        return httpClient.safeRequest<MyCrushListResponse?> {
+    ): ResultHandler<SingleConnectionResponse?> {
+        return httpClient.safeRequest<SingleConnectionResponse?> {
             url("${BASE_URL}api/social/single-connection/sent-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)
@@ -27,7 +26,20 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun cancelCrushRequest(
+    suspend fun getCrushOnMeList(
+        page: Int,
+        pageSize: Int
+    ): ResultHandler<SingleConnectionResponse?> {
+        return httpClient.safeRequest<SingleConnectionResponse?> {
+            url("${BASE_URL}api/social/single-connection/received-requests/")
+            parameter("page", page)
+            parameter("page_size", pageSize)
+
+            method = HttpMethod.Get
+        }
+    }
+
+    suspend fun updateCrushRequest(
         crushRequestId: Int?,
         singleConnectionDTO: SingleConnectionDTO
     ): ResultHandler<SingleConnectionResponse?> {
