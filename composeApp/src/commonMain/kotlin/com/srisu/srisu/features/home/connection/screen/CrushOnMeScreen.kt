@@ -62,7 +62,9 @@ fun CrushOnMeScreenContent(
 
         when {
             loadState.refresh is LoadState.Loading -> {
-                ConnectionShimmerCompo()
+                ConnectionShimmerCompo(
+                    showSecondButton = false
+                )
             }
 
             crushOnMeList.itemCount == 0 -> {

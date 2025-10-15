@@ -347,19 +347,25 @@ fun NoConnectionsFound(
 }
 
 @Composable
-fun ConnectionShimmerCompo() {
+fun ConnectionShimmerCompo(
+    showSecondButton: Boolean = false
+) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(all = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         repeat(7) {
-            ConnectionItemShimmer()
+            ConnectionItemShimmer(
+                showSecondButton = showSecondButton
+            )
         }
     }
 }
 
 @Composable
-fun ConnectionItemShimmer() {
+fun ConnectionItemShimmer(
+    showSecondButton: Boolean = false
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -410,13 +416,26 @@ fun ConnectionItemShimmer() {
             Spacer(modifier = Modifier.height(4.dp))
 
             // Cancel button shimmer
-            Box(
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(22.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .shimmerEffect()
-            )
+            Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(22.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shimmerEffect()
+                )
+
+                if (showSecondButton) {
+                    Box(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .height(22.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .shimmerEffect()
+                    )
+                }
+            }
+
         }
 
         Spacer(modifier = Modifier.width(12.dp))
