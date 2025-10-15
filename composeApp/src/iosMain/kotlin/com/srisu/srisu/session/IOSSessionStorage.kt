@@ -2,6 +2,7 @@ package com.srisu.srisu.session
 
 import com.liftric.kvault.KVault
 import com.srisu.srisu.core.logger.AppLogger
+import platform.Foundation.NSUserDefaults
 
 
 class IOSSessionStorage(private val kvault: KVault) : SessionStorage {
@@ -17,4 +18,15 @@ class IOSSessionStorage(private val kvault: KVault) : SessionStorage {
     override fun clearSession(): Boolean {
         return kvault.clear()
     }
+
+    override fun clearOnReinstall(key: String) {
+        val defaults = NSUserDefaults.standardUserDefaults
+        if (defaults.objectForKey(key) == null) {
+            kvault.clear()
+            AppLogger.log("INSIDE CLEAR ON REINSTALL")
+            defaults.setBool(true, forKey = key)
+        }
+    }
+
+
 }

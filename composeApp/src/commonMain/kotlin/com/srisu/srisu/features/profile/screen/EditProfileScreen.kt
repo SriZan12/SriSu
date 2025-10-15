@@ -39,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,30 +113,17 @@ fun EditProfileScreen(
         editProfileUIState = editProfileUIState
     )
 
-    AnimatedVisibility(
-        visible = true,
-        enter = slideInVertically(
-            animationSpec = tween(500),
-        ) + fadeIn(
-            animationSpec = tween(500)
-        ),
-        exit = fadeOut(
-            animationSpec = tween(300)
-        )
+    EditProfileScreenContent(
+        editProfileUIState = editProfileUIState,
+        editProfileViewModel = editProfileViewModel,
+        onNavigateInterestScreen = { currentInterest ->
+            onNavigateInterestScreen(
+                editProfileUIState.interestList,
+                currentInterest
+            )
+        }
+    )
 
-    ) {
-
-        EditProfileScreenContent(
-            editProfileUIState = editProfileUIState,
-            editProfileViewModel = editProfileViewModel,
-            onNavigateInterestScreen = { currentInterest ->
-                onNavigateInterestScreen(
-                    editProfileUIState.interestList,
-                    currentInterest
-                )
-            }
-        )
-    }
 }
 
 @Composable
@@ -231,132 +219,134 @@ fun EditProfileScreenContent(
             )
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ProfilePictureCompo(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    editProfileViewModel = editProfileViewModel,
-                    editProfileUIState = editProfileUIState
-                )
-
-                GeneralInfoCompo(
-                    modifier = Modifier,
-                    countryList = editProfileUIState.countryList,
-                    fullName = editProfileUIState.fullName,
-                    userName = editProfileUIState.userName,
-                    bio = editProfileUIState.bio,
-                    country = editProfileUIState.country,
-                    city = editProfileUIState.city,
-                    cities = editProfileUIState.cities,
-                    onUpdateFullName = { fullName ->
-                        editProfileViewModel.updateFullName(fullName)
-                    },
-                    onUpdateUserName = { userName ->
-                        editProfileViewModel.updateUserName(userName)
-                    },
-                    onUpdateBio = { bio ->
-                        editProfileViewModel.updateBio(bio)
-
-                    },
-                    onUpdateCountry = { countryModel ->
-                        editProfileViewModel.updateCountry(countryModel)
-                        editProfileViewModel.updateCity("")
-                    },
-                    onUpdateCity = {
-                        editProfileViewModel.updateCity(it)
-                    }
-                )
-
-                val allInterests =
-                    editProfileUIState.currentInterests?.filter { it?.removed == false }
-                        ?.map { it?.name }
-
-                InterestCompo(allInterests = allInterests) {
-                    onNavigateInterestScreen(
-                        editProfileUIState.currentInterests
+        Surface {
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ProfilePictureCompo(
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        editProfileViewModel = editProfileViewModel,
+                        editProfileUIState = editProfileUIState
                     )
-                }
 
-                val openGallery = remember { mutableStateOf(false) }
-                val photoType = remember { mutableStateOf(PhotoType.LARGE) }
-                val photoIndex = remember { mutableStateOf(0) }
-                val photoId = remember { mutableStateOf<Int?>(null) }
+                    GeneralInfoCompo(
+                        modifier = Modifier,
+                        countryList = editProfileUIState.countryList,
+                        fullName = editProfileUIState.fullName,
+                        userName = editProfileUIState.userName,
+                        bio = editProfileUIState.bio,
+                        country = editProfileUIState.country,
+                        city = editProfileUIState.city,
+                        cities = editProfileUIState.cities,
+                        onUpdateFullName = { fullName ->
+                            editProfileViewModel.updateFullName(fullName)
+                        },
+                        onUpdateUserName = { userName ->
+                            editProfileViewModel.updateUserName(userName)
+                        },
+                        onUpdateBio = { bio ->
+                            editProfileViewModel.updateBio(bio)
 
-                GalleryCompo(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    largePhotos = editProfileUIState.largePhotos,
-                    smallPhotos = editProfileUIState.smallPhotos,
-                    onAddImageClicked = { index, type, id ->
-                        photoId.value = id
-                        photoIndex.value = index
-                        photoType.value = type
-                        openGallery.value = true
-                    },
-                    onRemoveImage = { index, type, id ->
-                        photoIndex.value = index
-                        photoType.value = type
-                        if (photoType.value == PhotoType.LARGE) {
-                            editProfileViewModel.updateLargePhoto(
-                                photo = GalleyPhotoModel(
-                                    id = id,
-                                    photoUri = null,
-                                    removed = true,
-                                    index = photoIndex.value
-                                )
-                            )
-                        } else {
-                            editProfileViewModel.updateSmallPhotos(
-                                photo = GalleyPhotoModel(
-                                    id = id,
-                                    photoUri = null,
-                                    removed = true,
-                                    index = photoIndex.value
-                                )
-                            )
+                        },
+                        onUpdateCountry = { countryModel ->
+                            editProfileViewModel.updateCountry(countryModel)
+                            editProfileViewModel.updateCity("")
+                        },
+                        onUpdateCity = {
+                            editProfileViewModel.updateCity(it)
                         }
-                    }
-                )
+                    )
 
-                if (openGallery.value) {
-                    OpenGallery { photoUri ->
-                        if (photoUri != null) {
+                    val allInterests =
+                        editProfileUIState.currentInterests?.filter { it?.removed == false }
+                            ?.map { it?.name }
+
+                    InterestCompo(allInterests = allInterests) {
+                        onNavigateInterestScreen(
+                            editProfileUIState.currentInterests
+                        )
+                    }
+
+                    val openGallery = remember { mutableStateOf(false) }
+                    val photoType = remember { mutableStateOf(PhotoType.LARGE) }
+                    val photoIndex = remember { mutableStateOf(0) }
+                    val photoId = remember { mutableStateOf<Int?>(null) }
+
+                    GalleryCompo(
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        largePhotos = editProfileUIState.largePhotos,
+                        smallPhotos = editProfileUIState.smallPhotos,
+                        onAddImageClicked = { index, type, id ->
+                            photoId.value = id
+                            photoIndex.value = index
+                            photoType.value = type
+                            openGallery.value = true
+                        },
+                        onRemoveImage = { index, type, id ->
+                            photoIndex.value = index
+                            photoType.value = type
                             if (photoType.value == PhotoType.LARGE) {
-                                AppLogger.log("WHILE UPDATING THE PHOTO = $photoId")
                                 editProfileViewModel.updateLargePhoto(
                                     photo = GalleyPhotoModel(
-                                        id = photoId.value,
-                                        photoUri = photoUri,
-                                        index = photoIndex.value,
+                                        id = id,
+                                        photoUri = null,
+                                        removed = true,
+                                        index = photoIndex.value
                                     )
                                 )
-
                             } else {
                                 editProfileViewModel.updateSmallPhotos(
                                     photo = GalleyPhotoModel(
-                                        id = photoId.value,
-                                        photoUri = photoUri,
+                                        id = id,
+                                        photoUri = null,
+                                        removed = true,
                                         index = photoIndex.value
                                     )
                                 )
                             }
+                        }
+                    )
+
+                    if (openGallery.value) {
+                        OpenGallery { photoUri ->
+                            if (photoUri != null) {
+                                if (photoType.value == PhotoType.LARGE) {
+                                    AppLogger.log("WHILE UPDATING THE PHOTO = $photoId")
+                                    editProfileViewModel.updateLargePhoto(
+                                        photo = GalleyPhotoModel(
+                                            id = photoId.value,
+                                            photoUri = photoUri,
+                                            index = photoIndex.value,
+                                        )
+                                    )
+
+                                } else {
+                                    editProfileViewModel.updateSmallPhotos(
+                                        photo = GalleyPhotoModel(
+                                            id = photoId.value,
+                                            photoUri = photoUri,
+                                            index = photoIndex.value
+                                        )
+                                    )
+                                }
+
+                            }
+                            openGallery.value = false
 
                         }
-                        openGallery.value = false
 
                     }
 
+                    PrimaryButtonCompo(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        label = "Update Profile",
+                        onClick = {
+                            editProfileViewModel.updateProfile()
+                        })
                 }
-
-                PrimaryButtonCompo(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    label = "Update Profile",
-                    onClick = {
-                        editProfileViewModel.updateProfile()
-                    })
             }
         }
     }
