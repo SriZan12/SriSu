@@ -93,11 +93,14 @@ fun ConnectionScreenContent(
                 title = connectionUiState.currentTab?.title ?: "Connection"
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { innerPadding ->
 
 
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
+                .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
+        ) {
 
             LaunchedEffect(pagerState) {
                 snapshotFlow { pagerState.currentPage }

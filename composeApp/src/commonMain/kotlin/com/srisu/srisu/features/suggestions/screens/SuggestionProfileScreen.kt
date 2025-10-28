@@ -211,7 +211,6 @@ private fun ProfilePictureContent(
         modifier = Modifier
             .animateContentSize()
             .fillMaxSize()
-            .safeContentPadding()
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .verticalScroll(rememberScrollState())
     ) {
