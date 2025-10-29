@@ -9,6 +9,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
@@ -17,6 +18,7 @@ import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+@Serializable
 sealed class SuggestionsNav : Route {
 
     @Serializable
@@ -32,7 +34,7 @@ sealed class SuggestionsNav : Route {
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.suggestionsGraph(
     navController: NavController,
-    viewModel: SuggestionViewModel,
+    suggestionViewModel: SuggestionViewModel,
     sharedTransitionScope: SharedTransitionScope
 ) {
     composable<SuggestionsNav.Suggestions> {
@@ -43,8 +45,11 @@ fun NavGraphBuilder.suggestionsGraph(
         val filterApplied = savedStateHandle?.getStateFlow(FILTER_APPLIED, false)?.value ?: false
         val filterCleared = savedStateHandle?.getStateFlow(FILTER_CLEARED, false)?.value ?: false
 
+
         SuggestionScreen(
-            suggestionViewModel = viewModel,
+            suggestionViewModel = suggestionViewModel,
+            filterApplied = filterApplied,
+            filterCleared = filterCleared,
             sharedTransitionScope = sharedTransitionScope,
             animatedContentScope = this@composable,
             navigateFilterScreen = { navController.navigate(SuggestionsNav.Filter) },
@@ -52,27 +57,63 @@ fun NavGraphBuilder.suggestionsGraph(
                 val json = Json.encodeToString(suggestionProfileData)
                 navController.navigate(SuggestionsNav.SuggestionProfile(json))
             },
-            filterApplied = filterApplied,
-            filterCleared = filterCleared
         )
     }
 
     composable<SuggestionsNav.SuggestionProfile> { backStackEntry ->
-        val data = backStackEntry.toRoute<SuggestionsNav.SuggestionProfile>().suggestionProfileData
+        val userProfileData =
+            backStackEntry.toRoute<HomeNavigation.SuggestionProfile>().suggestionProfileData
+        clearFilterFlags(navController = navController)
+
         SuggestionProfileScreen(
-            suggestionViewModel = viewModel,
-            userProfileData = data,
+            suggestionViewModel = suggestionViewModel,
+            userProfileData = userProfileData,
             sharedTransitionScope = sharedTransitionScope,
             animatedContentScope = this@composable,
         )
+
     }
 
-    composable<SuggestionsNav.Filter> {
+
+    composable<SuggestionsNav.Filter> { backStackEntry ->
+
         FilterSuggestionScreen(
-            suggestionViewModel = viewModel,
-            onNavigateBack = { navController.popBackStack() },
-            onClearFilter = { navController.popBackStack() },
-            onFilterApplied = { navController.popBackStack() }
+            suggestionViewModel = suggestionViewModel,
+            onNavigateBack = {
+                clearFilterFlags(navController = navController)
+                navController.popBackStack()
+            },
+            onClearFilter = {
+                clearFilter(navController = navController)
+                navController.popBackStack()
+            },
+            onFilterApplied = {
+                applyFilter(navController = navController)
+                navController.popBackStack()
+            }
         )
     }
+}
+
+
+fun clearFilterFlags(navController: NavController) {
+    navController.previousBackStackEntry
+        ?.savedStateHandle
+        ?.set(FILTER_CLEARED, false)
+
+    navController.previousBackStackEntry
+        ?.savedStateHandle
+        ?.set(FILTER_APPLIED, false)
+}
+
+fun clearFilter(navController: NavController) {
+    navController.previousBackStackEntry
+        ?.savedStateHandle
+        ?.set(FILTER_CLEARED, true)
+}
+
+fun applyFilter(navController: NavController) {
+    navController.previousBackStackEntry
+        ?.savedStateHandle
+        ?.set(FILTER_APPLIED, true)
 }

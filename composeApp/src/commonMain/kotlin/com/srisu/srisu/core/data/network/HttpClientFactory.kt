@@ -25,6 +25,7 @@ object HttpClientFactory {
             install(ContentNegotiation) {
                 json(
                     json = Json {
+                        classDiscriminator = "type"
                         prettyPrint = true
                         ignoreUnknownKeys = true
                         explicitNulls = true

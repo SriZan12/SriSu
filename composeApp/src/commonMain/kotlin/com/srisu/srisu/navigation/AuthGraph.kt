@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import com.srisu.srisu.features.auth.screens.BaseAuthScreen
 import kotlinx.serialization.Serializable
 
+@Serializable
 sealed class AuthNavigation: Route {
     @Serializable
     data object Auth : AuthNavigation()

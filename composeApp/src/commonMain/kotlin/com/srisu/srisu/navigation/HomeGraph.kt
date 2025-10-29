@@ -25,6 +25,7 @@ import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+@Serializable
 sealed class HomeNavigation : Route {
     @Serializable
     data object Home : HomeNavigation()
@@ -70,63 +71,6 @@ fun NavGraphBuilder.homeGraph(
             navController.navigate(HomeNavigation.Profile(userProfileData = userProfileData))
         }
     }
-
-    composable<HomeNavigation.Suggestions> {
-
-        val navBackStackEntry = remember { navController.currentBackStackEntry }
-        val savedStateHandle = navBackStackEntry?.savedStateHandle
-
-        val filterApplied = savedStateHandle?.getStateFlow(FILTER_APPLIED, false)?.value ?: false
-        val filterCleared = savedStateHandle?.getStateFlow(FILTER_CLEARED, false)?.value ?: false
-
-
-        SuggestionScreen(
-            suggestionViewModel = suggestionViewModel,
-            filterApplied = filterApplied,
-            filterCleared = filterCleared,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedContentScope = this@composable,
-            navigateFilterScreen = { navController.navigate(SuggestionsNav.Filter) },
-            navigateProfileScreen = { suggestionProfileData ->
-                val json = Json.encodeToString(suggestionProfileData)
-                navController.navigate(SuggestionsNav.SuggestionProfile(json))
-            },
-        )
-    }
-
-/*    composable<HomeNavigation.SuggestionProfile> { backStackEntry ->
-        val userProfileData =
-            backStackEntry.toRoute<HomeNavigation.SuggestionProfile>().suggestionProfileData
-        clearFilterFlags(navController = navController)
-
-        SuggestionProfileScreen(
-            suggestionViewModel = suggestionViewModel,
-            userProfileData = userProfileData,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedContentScope = this@composable,
-        )
-
-    }*/
-
-
-   /* composable<HomeNavigation.Filter> { backStackEntry ->
-
-        FilterSuggestionScreen(
-            suggestionViewModel = suggestionViewModel,
-            onNavigateBack = {
-                clearFilterFlags(navController = navController)
-                navController.popBackStack()
-            },
-            onClearFilter = {
-                clearFilter(navController = navController)
-                navController.popBackStack()
-            },
-            onFilterApplied = {
-                applyFilter(navController = navController)
-                navController.popBackStack()
-            }
-        )
-    }*/
 
 
 
@@ -186,27 +130,7 @@ fun NavGraphBuilder.homeGraph(
 }
 
 
-fun clearFilterFlags(navController: NavController) {
-    navController.previousBackStackEntry
-        ?.savedStateHandle
-        ?.set(FILTER_CLEARED, false)
 
-    navController.previousBackStackEntry
-        ?.savedStateHandle
-        ?.set(FILTER_APPLIED, false)
-}
-
-fun clearFilter(navController: NavController) {
-    navController.previousBackStackEntry
-        ?.savedStateHandle
-        ?.set(FILTER_CLEARED, true)
-}
-
-fun applyFilter(navController: NavController) {
-    navController.previousBackStackEntry
-        ?.savedStateHandle
-        ?.set(FILTER_APPLIED, true)
-}
 
 object ScreenData {
     @Serializable

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -28,18 +29,19 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
@@ -55,7 +57,6 @@ import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.theme.AppTheme
 import com.srisu.srisu.utils.Constants.Auth.FIRST_INSTALL_FLAG
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinMultiplatformApplication
@@ -104,23 +105,41 @@ private fun checkSession(session: SessionStorage): Session? {
 private fun NavHostController(session: Session?) {
 
     val navController = rememberNavController()
+    val startDestination = startDestination(session = session)
+
+    val bottomNavTabClasses = listOf(
+        HomeNavigation.Home::class,
+        SuggestionsNav.Suggestions::class,
+        HomeNavigation.Connection::class,
+        HomeNavigation.Profile::class
+    )
+
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            val currentRoute = navController.currentDestination?.route ?: HomeNavigation.Home
-            AppLogger.log("CURRENT ROUTE: $currentRoute")
+
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
+
+            // ✅ Use hasRoute for visibility check (handles params/nesting)
+            val shouldShowBottom = bottomNavTabClasses.any { tabClass ->
+                currentDestination?.hasRoute(tabClass) == true
+            }
+
+            AppLogger.log("CURRENT ROUTE: ${currentDestination?.route}")
+            AppLogger.log("SHOULD SHOW BOTTOM: $shouldShowBottom")
+
             BottomNavigation(
                 navController = navController,
-                session = session
+                session = session,
+                show = shouldShowBottom
             )
-
 
         }
     ) {
         SharedTransitionLayout {
             val navController = navController
-            val startDestination = startDestination(session = session)
             val suggestionViewModel = koinViewModel<SuggestionViewModel>()
 
             NavHost(
@@ -151,7 +170,7 @@ private fun NavHostController(session: Session?) {
 
                 suggestionsGraph(
                     navController = navController,
-                    viewModel = suggestionViewModel,
+                    suggestionViewModel = suggestionViewModel,
                     sharedTransitionScope = this@SharedTransitionLayout
                 )
             }
@@ -179,86 +198,86 @@ enum class BottomNavDestination(
     PROFILE(Icons.Filled.Person, "Profile")
 }
 
-fun shouldShowBottomNav(route: Any?): Boolean {
-    return route is HomeNavigation
-}
-
-fun getTabForRoute(route: HomeNavigation?): BottomNavDestination? {
-    return when (route) {
-        is HomeNavigation.Home -> BottomNavDestination.HOME
-        is HomeNavigation.Suggestions -> BottomNavDestination.SUGGESTIONS
-        is HomeNavigation.Connection -> BottomNavDestination.CONNECTION
-        is HomeNavigation.Profile -> BottomNavDestination.PROFILE
-        else -> null
-    }
-}
-
 @Composable
 private fun BottomNavigation(
     navController: NavHostController,
-    session: Session?
+    session: Session?,
+    show: Boolean
 ) {
-    NavigationBar(
-        windowInsets = NavigationBarDefaults.windowInsets,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        tonalElevation = 0.dp
-    ) {
-        BottomNavDestination.entries.forEach { destination ->
-            val currentRoute = navController.currentBackStackEntry?.toRoute<HomeNavigation>()
-            val selected = getTabForRoute(currentRoute) == destination
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    when (destination) {
-                        BottomNavDestination.HOME -> navController.navigate(HomeNavigation.Home) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
 
-                        BottomNavDestination.SUGGESTIONS -> navController.navigate(HomeNavigation.Suggestions) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+    if (show) {
+        NavigationBar(
+            windowInsets = NavigationBarDefaults.windowInsets,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            tonalElevation = 0.dp
+        ) {
+            BottomNavDestination.entries.forEach { destination ->
+                // Use hasRoute per destination (no toRoute or full sealed deserialization)
+                val selected = when (destination) {
+                    BottomNavDestination.HOME -> currentDestination?.hasRoute<HomeNavigation.Home>() == true
+                    BottomNavDestination.SUGGESTIONS -> currentDestination?.hasRoute<SuggestionsNav.Suggestions>() == true
+                    BottomNavDestination.CONNECTION -> currentDestination?.hasRoute<HomeNavigation.Connection>() == true
+                    BottomNavDestination.PROFILE -> currentDestination?.hasRoute<HomeNavigation.Profile>() == true
+                }
 
-                        BottomNavDestination.CONNECTION -> navController.navigate(HomeNavigation.Connection) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-
-                        BottomNavDestination.PROFILE -> {
-                            val userProfileData = Json.encodeToString(session)
-                            navController.navigate(
-                                HomeNavigation.Profile(
-                                    userProfileData
-                                )
-                            ) {
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = {
+                        when (destination) {
+                            BottomNavDestination.HOME -> navController.navigate(HomeNavigation.Home) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }
                                 launchSingleTop = true
                                 restoreState = true
                             }
+
+                            BottomNavDestination.SUGGESTIONS -> navController.navigate(
+                                SuggestionsNav.Suggestions                            ) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+
+                            BottomNavDestination.CONNECTION -> navController.navigate(HomeNavigation.Connection) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+
+                            BottomNavDestination.PROFILE -> {
+                                val userProfileData = Json.encodeToString(session)
+                                navController.navigate(
+                                    HomeNavigation.Profile(
+                                        userProfileData
+                                    )
+                                ) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         }
-                    }
-                },
-                icon = {
-                    GlowingIcon(
-                        imageVector = destination.icon,
-                        contentDescription = destination.label,
-                        selected = selected
-                    )
-                },
-                label = { Text(destination.label) }
-            )
+                    },
+                    icon = {
+                        GlowingIcon(
+                            imageVector = destination.icon,
+                            contentDescription = destination.label,
+                            selected = selected
+                        )
+                    },
+
+                    label = { Text(destination.label) }
+                )
+            }
         }
     }
 }
@@ -270,53 +289,49 @@ fun GlowingIcon(
     selected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "glow")
+    val infiniteTransition = rememberInfiniteTransition()
     val glowAlpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
-        targetValue = 0.8f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = 1500,
-                easing = FastOutSlowInEasing
-            ),
+            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
+        )
     )
 
-    val glowRadius by animateDpAsState(
-        targetValue = if (selected) 12.dp else 0.dp,
-        animationSpec = tween(durationMillis = 300),
-        label = "glowRadius"
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.2f else 1f,
+        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
     )
 
     Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
+        modifier = modifier
     ) {
-        // Glow effect layer
         if (selected) {
             Icon(
                 imageVector = imageVector,
                 contentDescription = contentDescription,
                 modifier = Modifier
-                    .size(36.dp) // Slightly larger for glow spread
-                    .blur(glowRadius)
+                    .size(36.dp)
+                    .blur(8.dp)
                     .alpha(glowAlpha),
-                tint = MaterialTheme.colorScheme.primary // Use theme primary for glow color
-            )
-        } else {
-            // Main icon
-            Icon(
-                imageVector = imageVector,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(24.dp),
-                tint = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                tint = MaterialTheme.colorScheme.primary
             )
         }
+
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                },
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
+
