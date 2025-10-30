@@ -62,7 +62,7 @@ fun NavGraphBuilder.suggestionsGraph(
 
     composable<SuggestionsNav.SuggestionProfile> { backStackEntry ->
         val userProfileData =
-            backStackEntry.toRoute<HomeNavigation.SuggestionProfile>().suggestionProfileData
+            backStackEntry.toRoute<SuggestionsNav.SuggestionProfile>().suggestionProfileData
         clearFilterFlags(navController = navController)
 
         SuggestionProfileScreen(

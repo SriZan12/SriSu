@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -85,7 +86,6 @@ import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.cross_love
 import srisu.composeapp.generated.resources.filter_icon
 
-typealias UserProfileData = String
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Preview
@@ -103,7 +103,8 @@ fun SuggestionScreen(
         topBar = {
 
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier.navigationBarsPadding().padding(bottom = 76.dp)
     ) { paddingValues ->
 
         val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()

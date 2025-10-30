@@ -41,6 +41,8 @@ kotlin {
             implementation(libs.androidx.foundation.android)
             implementation (libs.androidx.paging.compose)
             implementation (libs.androidx.paging.runtime)
+            implementation(libs.androidx.material.icons.extended.android)
+
 
         }
         commonMain.dependencies {
@@ -52,6 +54,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+
 
             // accompanist permissions.
 

@@ -5,7 +5,6 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -14,11 +13,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -46,11 +47,15 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.AuthNavigation
+import com.srisu.srisu.navigation.ConnectionNav
 import com.srisu.srisu.navigation.HomeNavigation
+import com.srisu.srisu.navigation.ProfileNav
 import com.srisu.srisu.navigation.Route
 import com.srisu.srisu.navigation.SuggestionsNav
 import com.srisu.srisu.navigation.authGraph
+import com.srisu.srisu.navigation.connectionGraph
 import com.srisu.srisu.navigation.homeGraph
+import com.srisu.srisu.navigation.profileGraph
 import com.srisu.srisu.navigation.suggestionsGraph
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.session.SessionStorage
@@ -110,8 +115,8 @@ private fun NavHostController(session: Session?) {
     val bottomNavTabClasses = listOf(
         HomeNavigation.Home::class,
         SuggestionsNav.Suggestions::class,
-        HomeNavigation.Connection::class,
-        HomeNavigation.Profile::class
+        ConnectionNav.Connection::class,
+        ProfileNav.EditProfile::class
     )
 
 
@@ -122,7 +127,7 @@ private fun NavHostController(session: Session?) {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
 
-            // ✅ Use hasRoute for visibility check (handles params/nesting)
+            // Use hasRoute for visibility check (handles params/nesting)
             val shouldShowBottom = bottomNavTabClasses.any { tabClass ->
                 currentDestination?.hasRoute(tabClass) == true
             }
@@ -132,17 +137,17 @@ private fun NavHostController(session: Session?) {
 
             BottomNavigation(
                 navController = navController,
-                session = session,
                 show = shouldShowBottom
             )
 
         }
-    ) {
+    ) { innerPadding ->
         SharedTransitionLayout {
             val navController = navController
             val suggestionViewModel = koinViewModel<SuggestionViewModel>()
 
             NavHost(
+                modifier = Modifier,
                 navController = navController,
                 startDestination = startDestination,
                 popEnterTransition = {
@@ -163,15 +168,20 @@ private fun NavHostController(session: Session?) {
                 authGraph(navController = navController)
 
                 homeGraph(
-                    navController = navController,
-                    suggestionViewModel = suggestionViewModel,
-                    sharedTransitionScope = this@SharedTransitionLayout,
                 )
 
                 suggestionsGraph(
                     navController = navController,
                     suggestionViewModel = suggestionViewModel,
                     sharedTransitionScope = this@SharedTransitionLayout
+                )
+
+                connectionGraph(
+                    navController = navController
+                )
+
+                profileGraph(
+                    navController = navController
                 )
             }
         }
@@ -194,14 +204,13 @@ enum class BottomNavDestination(
 ) {
     HOME(Icons.Filled.Home, "Home"),
     SUGGESTIONS(Icons.Filled.Favorite, "Suggestions"),
-    CONNECTION(Icons.Filled.Group, "Matches"),
+    CONNECTION(Icons.Filled.Groups, "Matches"),
     PROFILE(Icons.Filled.Person, "Profile")
 }
 
 @Composable
 private fun BottomNavigation(
     navController: NavHostController,
-    session: Session?,
     show: Boolean
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -209,6 +218,7 @@ private fun BottomNavigation(
 
     if (show) {
         NavigationBar(
+            modifier = Modifier,
             windowInsets = NavigationBarDefaults.windowInsets,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 0.dp
@@ -218,8 +228,8 @@ private fun BottomNavigation(
                 val selected = when (destination) {
                     BottomNavDestination.HOME -> currentDestination?.hasRoute<HomeNavigation.Home>() == true
                     BottomNavDestination.SUGGESTIONS -> currentDestination?.hasRoute<SuggestionsNav.Suggestions>() == true
-                    BottomNavDestination.CONNECTION -> currentDestination?.hasRoute<HomeNavigation.Connection>() == true
-                    BottomNavDestination.PROFILE -> currentDestination?.hasRoute<HomeNavigation.Profile>() == true
+                    BottomNavDestination.CONNECTION -> currentDestination?.hasRoute<ConnectionNav.Connection>() == true
+                    BottomNavDestination.PROFILE -> currentDestination?.hasRoute<ProfileNav.EditProfile>() == true
                 }
 
                 NavigationBarItem(
@@ -235,7 +245,8 @@ private fun BottomNavigation(
                             }
 
                             BottomNavDestination.SUGGESTIONS -> navController.navigate(
-                                SuggestionsNav.Suggestions                            ) {
+                                SuggestionsNav.Suggestions
+                            ) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }
@@ -243,7 +254,7 @@ private fun BottomNavigation(
                                 restoreState = true
                             }
 
-                            BottomNavDestination.CONNECTION -> navController.navigate(HomeNavigation.Connection) {
+                            BottomNavDestination.CONNECTION -> navController.navigate(ConnectionNav.Connection) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }
@@ -252,11 +263,8 @@ private fun BottomNavigation(
                             }
 
                             BottomNavDestination.PROFILE -> {
-                                val userProfileData = Json.encodeToString(session)
                                 navController.navigate(
-                                    HomeNavigation.Profile(
-                                        userProfileData
-                                    )
+                                    ProfileNav.EditProfile
                                 ) {
                                     popUpTo(navController.graph.startDestinationId) {
                                         saveState = true

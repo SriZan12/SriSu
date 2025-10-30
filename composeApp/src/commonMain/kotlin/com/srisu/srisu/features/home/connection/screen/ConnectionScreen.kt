@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,11 +24,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,7 +47,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.srisu.srisu.components.TransparentToolBar
 import com.srisu.srisu.components.shimmerEffect
 import com.srisu.srisu.features.home.connection.state.ConnectionUIState
 import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
@@ -56,6 +60,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
+import srisu.composeapp.generated.resources.filter_icon
 import srisu.composeapp.generated.resources.no_love
 
 
@@ -67,12 +72,24 @@ fun ConnectionScreen(
 
     val connectionUiState: ConnectionUIState by viewModel.connectionUiState.collectAsStateWithLifecycle()
 
+    Initialization(connectionViewModel = viewModel)
+
     ConnectionScreenContent(
         viewModel = viewModel,
         connectionUiState =
             connectionUiState,
         onNavigateToProfile = onNavigateToProfile
     )
+}
+
+@Composable
+private fun Initialization(
+    connectionViewModel: ConnectionViewModel
+){
+//    LaunchedEffect(Unit){
+//        connectionViewModel.getMyCrushList()
+//        connectionViewModel.getCrushOnMeList()
+//    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,13 +104,13 @@ fun ConnectionScreenContent(
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 64.dp),
         topBar = {
-            TransparentToolBar(
+            ConnectionToolBar(
                 title = connectionUiState.currentTab?.title ?: "Connection"
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) { innerPadding ->
 
 
@@ -110,6 +127,7 @@ fun ConnectionScreenContent(
             }
 
             TabRow(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 selectedTabIndex = pagerState.currentPage,
             ) {
                 tabItems.forEachIndexed { index, item ->
@@ -151,7 +169,6 @@ fun ConnectionScreenContent(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxWidth()
-                    .background(color = MaterialTheme.colorScheme.surfaceContainerLowest)
             ) { index ->
                 if (index == 0) {
 
@@ -198,6 +215,41 @@ fun ConnectionScreenContent(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+@Preview
+fun ConnectionToolBar(
+    title: String,
+    onClickAction: () -> Unit = {}
+) {
+
+    TopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+        },
+        actions = {
+            IconButton(
+                onClick = {
+                    onClickAction()
+                }
+            ) {
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(Res.drawable.filter_icon),
+                    contentDescription = "Filter Icon",
+                )
+            }
+        }
+    )
+
 }
 
 @Composable

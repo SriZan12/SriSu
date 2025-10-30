@@ -18,6 +18,7 @@ kotlinxSerializationJson = "1.9.0"
 kotlinSerilization = "1.9.10"
 ktorClientCore = "3.2.3"
 kvault = "1.12.0"
+materialIconsExtendedAndroid = "1.7.8"
 napier = "2.7.1"
 coil3 = "3.3.0"
 navigationCompose = "2.8.0-alpha13"
@@ -37,6 +38,7 @@ materialIconsCore = "1.7.3"
 
 
 [libraries]
+androidx-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
