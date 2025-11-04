@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -407,4 +406,50 @@ fun SearchBar(
     }
 }
 
+@Composable
+fun PhoneNumberCompo(
+    modifier: Modifier,
+    countryCode: String,
+    countryPrefix: String,
+    phoneNumber: String,
+    isError: Boolean,
+    backgroundColor: Color = Color.Transparent,
+    updatePhoneNumber: (String) -> Unit,
+    onShowCountryList: () -> Unit
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+
+        CountryCodeDropDown(
+            selectedCountryPrefix = countryPrefix,
+            selectedCountryCode = countryCode,
+            backgroundColor = backgroundColor,
+            onClick = {
+                onShowCountryList()
+            },
+        )
+
+        OutlinedTextFieldCompo(
+            modifier = Modifier.fillMaxWidth(),
+            value = phoneNumber,
+            isError = isError,
+            textStyle = MaterialTheme.typography.titleMedium,
+            imeAction = ImeAction.Done,
+            keyboardActions = KeyboardActions.Default,
+            keyboardType = KeyboardType.Number,
+            placeholder = "Enter your number",
+            onValueChange = { input ->
+                if (input.all { it.isDigit() }) {
+                    updatePhoneNumber(input)
+                }
+            }
+        )
+
+
+    }
+
+}
 

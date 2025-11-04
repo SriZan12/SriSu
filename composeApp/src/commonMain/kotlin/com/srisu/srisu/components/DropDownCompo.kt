@@ -24,11 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,7 +71,8 @@ fun CountryCodeDropDown(
     modifier: Modifier = Modifier,
     selectedCountryPrefix: String,
     selectedCountryCode: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    backgroundColor: Color
 ) {
 
     val flag by produceState<ImageBitmap?>(initialValue = null, key1 = selectedCountryCode) {
@@ -90,7 +87,7 @@ fun CountryCodeDropDown(
 
         },
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outline)
     ) {
         Row(

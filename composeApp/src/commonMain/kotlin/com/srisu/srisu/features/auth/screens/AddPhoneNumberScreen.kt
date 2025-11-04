@@ -1,15 +1,12 @@
 package com.srisu.srisu.features.auth.screens
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,20 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.CommonBottomSheetCompo
-import com.srisu.srisu.components.CountryCodeDropDown
 import com.srisu.srisu.components.CountrySelectionBottomSheet
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.ErrorText
 import com.srisu.srisu.components.HighlightedTextComponent
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
-import com.srisu.srisu.components.OutlinedTextFieldCompo
+import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
 import com.srisu.srisu.features.auth.common.CommonAuthContainerCompo
@@ -193,37 +187,22 @@ private fun PhoneNumberCompo(
     onShowCountryList: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
+        PhoneNumberCompo(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-
-            CountryCodeDropDown(
-                selectedCountryCode = authUIStates.countryCode,
-                selectedCountryPrefix = authUIStates.countryPrefix
-            ) {
-                onShowCountryList()
-            }
-
-            OutlinedTextFieldCompo(
-                modifier = Modifier.fillMaxWidth(),
-                value = authUIStates.phoneNumber,
-                isError = authUIStates.validationError.isPhoneNumber,
-                textStyle = MaterialTheme.typography.titleMedium,
-                imeAction = ImeAction.Done,
-                keyboardActions = KeyboardActions.Default,
-                keyboardType = KeyboardType.Number,
-                placeholder = "Enter your number",
-                onValueChange = { input ->
-                    if (input.all { it.isDigit() }) {
-                        authViewModel.updatePhoneNumber(phoneNumber = input) { }
-                        authViewModel.updateValidationError(Validation(isPhoneNumber = false))
-                    }
+            countryCode = authUIStates.countryCode,
+            countryPrefix = authUIStates.countryPrefix,
+            phoneNumber = authUIStates.phoneNumber,
+            isError = authUIStates.validationError.isPhoneNumber,
+            updatePhoneNumber = { input ->
+                if (input.all { it.isDigit() }) {
+                    authViewModel.updatePhoneNumber(phoneNumber = input) { }
+                    authViewModel.updateValidationError(Validation(isPhoneNumber = false))
                 }
-            )
-
-        }
+            },
+            onShowCountryList = {
+                onShowCountryList()
+            },
+        )
 
         val validationError = authUIStates.validationError
 

@@ -47,12 +47,14 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.AuthNavigation
+import com.srisu.srisu.navigation.ChatNav
 import com.srisu.srisu.navigation.ConnectionNav
 import com.srisu.srisu.navigation.HomeNavigation
 import com.srisu.srisu.navigation.ProfileNav
 import com.srisu.srisu.navigation.Route
 import com.srisu.srisu.navigation.SuggestionsNav
 import com.srisu.srisu.navigation.authGraph
+import com.srisu.srisu.navigation.chatGraph
 import com.srisu.srisu.navigation.connectionGraph
 import com.srisu.srisu.navigation.homeGraph
 import com.srisu.srisu.navigation.profileGraph
@@ -183,6 +185,10 @@ private fun NavHostController(session: Session?) {
                 profileGraph(
                     navController = navController
                 )
+
+                chatGraph(
+                    navController = navController
+                )
             }
         }
 
@@ -192,7 +198,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.Home
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> ChatNav.FindPartnerScreen
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }
