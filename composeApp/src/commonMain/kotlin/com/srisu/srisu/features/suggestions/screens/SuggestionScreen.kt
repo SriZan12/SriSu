@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
 import coil3.ImageLoader
@@ -256,47 +257,55 @@ private fun SuggestionContent(
     onRetry: () -> Unit,
     onNavigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit
 ) {
+
     suggestionUIState.suggestions?.let { suggestionsFlow ->
         val suggestions = suggestionsFlow.collectAsLazyPagingItems()
+        val loadState = suggestions.loadState
 
-        if (suggestions.itemCount == 0 && suggestionUIState.baseUIState != BaseUIState.Loading) {
-            NoSuggestionComp {
-                onRetry()
+        when {
+            loadState.refresh is LoadState.Loading -> {
+                SuggestionShimmerCompo()
             }
-        } else {
-            LazyVerticalStaggeredGrid(
-                modifier = Modifier.padding(horizontal = 12.dp),
-                columns = StaggeredGridCells.Fixed(2),
-                contentPadding = PaddingValues(8.dp),
-                verticalItemSpacing = 12.dp,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(
-                    count = suggestions.itemCount,
-                    key = { suggestions[it]?.id!! },
-                    contentType = suggestions.itemContentType { "Suggestion Items" },
-                ) { index ->
-                    val item = suggestions[index]
 
-                    val height = if (index % 2 == 0) 188.dp else 252.dp
-
-                    SuggestionCardCompo(
-                        modifier = Modifier.animateItem(
-                            fadeInSpec = tween(200),
-                            fadeOutSpec = tween(200)
-                        ),
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedContentScope = animatedContentScope,
-                        height = height,
-                        suggestionItem = item
-                    ) { userProfileData ->
-                        onNavigateProfileScreen(userProfileData)
-                    }
-
+            suggestions.itemCount == 0 -> {
+                NoSuggestionComp {
+                    onRetry()
                 }
             }
 
+            else -> {
+                LazyVerticalStaggeredGrid(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    columns = StaggeredGridCells.Fixed(2),
+                    contentPadding = PaddingValues(8.dp),
+                    verticalItemSpacing = 12.dp,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        count = suggestions.itemCount,
+                        key = { suggestions[it]?.id!! },
+                        contentType = suggestions.itemContentType { "Suggestion Items" },
+                    ) { index ->
+                        val item = suggestions[index]
 
+                        val height = if (index % 2 == 0) 188.dp else 252.dp
+
+                        SuggestionCardCompo(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = tween(200),
+                                fadeOutSpec = tween(200)
+                            ),
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedContentScope = animatedContentScope,
+                            height = height,
+                            suggestionItem = item
+                        ) { userProfileData ->
+                            onNavigateProfileScreen(userProfileData)
+                        }
+
+                    }
+                }
+            }
         }
     }
 }
