@@ -58,13 +58,14 @@ fun PrimaryOutlinedButtonCompo(
 fun CustomButtonCompo(
     modifier: Modifier,
     label: String,
-    backgroundColor: Color,
+    shape: RoundedCornerShape = RoundedCornerShape(8.dp),
+    backgroundColor: Color = MaterialTheme.colorScheme.primary,
     textStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary),
     onClick: () -> Unit
 ) {
     Button(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = shape,
         colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
         onClick = onClick
     ) {

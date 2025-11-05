@@ -2,6 +2,7 @@ package com.srisu.srisu.features.chat.findpartner
 
 import androidx.compose.runtime.Stable
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
 import com.srisu.srisu.utils.CountryModel
 
 @Stable
@@ -13,4 +14,6 @@ data class FindPartnerState(
     val isPhoneNumberInvalid: Boolean = false,
     val validationErrorMsg: String = "",
     val baseUIState: BaseUIState = BaseUIState.Idle,
+    val showPartnerProfile: Boolean = false,
+    val partnerResponse: FindYourPartnerResponse? = null
     )

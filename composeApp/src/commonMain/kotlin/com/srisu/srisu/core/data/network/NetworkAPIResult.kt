@@ -142,12 +142,12 @@ suspend inline fun <reified T> handleErrorResponse(response: HttpResponse): Resu
 
         HttpStatusCode.Forbidden -> {
             errorType = NetworkAPIResult.ErrorType.FORBIDDEN
-            "Forbidden: You do not have permission to access this resource."
+            errorResponse?.message ?: "Forbidden: You do not have permission to access this resource."
         }
 
         HttpStatusCode.NotFound -> {
             errorType = NetworkAPIResult.ErrorType.NOT_FOUND
-            "Not Found: The requested resource could not be found."
+            errorResponse?.message ?: "Not Found: The requested resource could not be found."
         }
 
         else -> {

@@ -131,3 +131,14 @@ fun ReadMoreText(
 
     }
 }
+
+@Composable
+fun TextIfNotEmpty(
+    text: String?,
+    style: TextStyle,
+    modifier: Modifier = Modifier
+) {
+    if (!text.isNullOrBlank()) {
+        Text(text = text, style = style, modifier = modifier)
+    }
+}

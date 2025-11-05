@@ -47,6 +47,8 @@ val mainModule = module {
     }
 
     viewModel {
-        FindPartnerViewModel()
+        FindPartnerViewModel(
+            chatRepository = get()
+        )
     }
 }
