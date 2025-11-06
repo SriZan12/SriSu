@@ -38,21 +38,6 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String?,
-        receiverNumber: String?
-    ): ResultHandler<SingleConnectionResponse?> {
-
-        val connectionRequest: HashMap<String, String> = HashMap()
-        connectionRequest["sender_number"] = senderNumber ?: ""
-        connectionRequest["receiver_number"] = receiverNumber ?: ""
-
-        return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BASE_URL}api/social/connect-single/")
-            method = HttpMethod.Post
-            setBody(connectionRequest)
-        }
-    }
 
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
@@ -86,64 +71,4 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         }
     }
 
-    suspend fun sendCoupleConnectionRequest(
-        senderNumber: String,
-        receiverNumber: String
-    ): ResultHandler<CoupleConnectionResponse?> {
-
-        val connectionRequest: HashMap<String, String> = HashMap()
-        connectionRequest["sender_number"] = senderNumber
-        connectionRequest["receiver_number"] = receiverNumber
-
-        return httpClient.safeRequest<CoupleConnectionResponse?> {
-            url("${BASE_URL}api/social/connect-couple/")
-            method = HttpMethod.Post
-            setBody(connectionRequest)
-        }
-    }
-
-    suspend fun updateCoupleConnectionRequestStatus(
-        connectionId: Int,
-        coupleConnectionDTO: CoupleConnectionDTO
-    ): ResultHandler<CoupleConnectionResponse?> {
-        return httpClient.safeRequest<CoupleConnectionResponse?> {
-            url("${BASE_URL}api/social/connect-couple/${connectionId}/")
-            method = HttpMethod.Put
-            setBody(coupleConnectionDTO)
-        }
-    }
-
-    suspend fun updateSingleConnectionRequestStatus(
-        connectionId: Int,
-        singleConnectionDTO: SingleConnectionDTO
-    ): ResultHandler<SingleConnectionResponse?> {
-
-        return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BASE_URL}api/social/connect-single/${connectionId}/")
-            method = HttpMethod.Put
-            setBody(singleConnectionDTO)
-        }
-    }
-
-    suspend fun getSentLoveRequests(
-        pageSize: Int,
-    ): ResultHandler<LoveRequestListResponse?> {
-
-        return httpClient.safeRequest<LoveRequestListResponse?> {
-            url("${BASE_URL}api/social/couple-connection/sent-requests/")
-            parameter("page_size", pageSize)
-            method = HttpMethod.Get
-        }
-    }
-
-    suspend fun getLoveRequests(
-        pageSize: Int
-    ): ResultHandler<LoveRequestListResponse?> {
-
-        return httpClient.safeRequest<LoveRequestListResponse?> {
-            url("${BASE_URL}api/social/couple-connection/received-requests/")
-            parameter("page_size", pageSize)
-            method = HttpMethod.Get
-        }
-    }
 }

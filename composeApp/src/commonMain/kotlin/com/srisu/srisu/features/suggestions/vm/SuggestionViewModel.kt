@@ -10,6 +10,7 @@ import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.dto.suggestion.UserPreferenceDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
+import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
 import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
@@ -36,6 +37,7 @@ import kotlinx.serialization.json.Json
 
 class SuggestionViewModel(
     private val suggestionRepository: SuggestionRepository,
+    private val connectionRepository: ConnectionRepository,
     private val connectivityObserver: ConnectivityObserver,
 
     ) : ViewModel() {
@@ -351,7 +353,7 @@ class SuggestionViewModel(
             val myPhoneNumber = SessionUtils().getPhoneNumber()
             val receiverNumber = suggestionUIStates.value.suggestionProfileData?.phoneNumber
 
-            suggestionRepository.sendSingleConnectionRequest(
+            connectionRepository.sendSingleConnectionRequest(
                 senderNumber = myPhoneNumber,
                 receiverNumber = receiverNumber
             ).onSuccess { response, message ->
@@ -377,73 +379,6 @@ class SuggestionViewModel(
 
     }
 
-
-    fun sendCoupleConnectionRequest() {
-        viewModelScope.launch {
-            suggestionRepository.sendCoupleConnectionRequest(
-                senderNumber = "+9779865103764", receiverNumber = "+919720304050"
-            ).onSuccess { response, _ ->
-
-                AppLogger.log("COUPLE CONNECTION SUCCESS = $response")
-            }.onError { error, errorType ->
-                AppLogger.log("COUPLE CONNECTION ERROR = $error")
-                AppLogger.log("COUPLE CONNECTION ERROR TYPE = ${errorType.name}")
-            }
-        }
-    }
-
-
-    private fun updateCoupleConnectionStatus() {
-        viewModelScope.launch {
-            suggestionRepository.updateCoupleConnectionRequestStatus(
-                connectionId = 21,
-                coupleConnectionDTO = CoupleConnectionDTO(
-                    senderNumber = "+919720304050",
-                    receiverNumber = "+9779863938267",
-                    connectionStatus = "ACCEPTED"
-                ),
-            ).onSuccess { response, _ ->
-
-                AppLogger.log("UPDATE SINGLE CONNECTION SUCCESS = $response")
-            }.onError { error, errorType ->
-                AppLogger.log("UPDATE SINGLE CONNECTION ERROR = $error")
-                AppLogger.log("UPDATE SINGLE CONNECTION ERROR TYPE = ${errorType.name}")
-            }
-        }
-    }
-
-    fun updateSingleConnectionStatus() {
-        viewModelScope.launch {
-            suggestionRepository.updateSingleConnectionRequestStatus(
-                connectionId = 4, singleConnectionDTO = SingleConnectionDTO(
-                    senderNumber = "+9779865103764",
-                    receiverNumber = "+919720304050",
-                    connectionStatus = "ACCEPTED"
-                )
-            ).onSuccess { response, _ ->
-
-                AppLogger.log("UPDATE SINGLE CONNECTION SUCCESS = $response")
-            }.onError { error, errorType ->
-                AppLogger.log("UPDATE SINGLE CONNECTION ERROR = $error")
-                AppLogger.log("UPDATE SINGLE CONNECTION ERROR TYPE = ${errorType.name}")
-            }
-        }
-    }
-
-    fun getSentLoveRequests() {
-        viewModelScope.launch {
-            val loveRequests =
-                suggestionRepository.getSentLoveRequests().flow.cachedIn(viewModelScope)
-        }
-    }
-
-    fun getSentRequests() {
-        viewModelScope.launch {
-            val loveRequests =
-                suggestionRepository.getLoveRequests().flow.cachedIn(viewModelScope)
-        }
-    }
-
     fun getCityList(country: String? = null, showLoading: Boolean = false) {
 
         if (!isInternetAvailable()) {
@@ -465,7 +400,7 @@ class SuggestionViewModel(
                     updateCities(cities = cities.data)
                 }
                 idleScreen()
-            } catch (exception: UnresolvedAddressException) {
+            } catch (_: UnresolvedAddressException) {
                 showNoInternetConnection(isOffline = true)
             }
 

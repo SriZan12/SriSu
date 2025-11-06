@@ -2,7 +2,6 @@ package com.srisu.srisu.features.chat.findpartner
 
 import InterestChip
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,15 +55,13 @@ import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
+import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.components.TextIfNotEmpty
-import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
-import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
-import io.ktor.client.HttpClient
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -124,12 +121,11 @@ private fun HandleUiStates(
         }
 
         is BaseUIState.Success<*> -> {
-            SuccessDialog(
+            RequestSentDialog(
                 successMessage = baseUIState.message,
-                show = true,
                 onDismiss = {
                     findPartnerViewModel.idleScreen()
-                }
+                },
             )
         }
 
@@ -241,7 +237,8 @@ private fun FindYourPartnerContent(
                     interests = partnerProfile?.userInterests,
                     profilePhotoUrl = partnerProfile?.profilePhoto,
                     onConnectClick = {
-//                        findPartnerViewModel.connectToPartner()
+                        findPartnerViewModel.sendCoupleConnectionRequest()
+                        findPartnerViewModel.updateShowPartnerProfile(showPartnerProfile = false)
                     },
                     onDismiss = {
                         findPartnerViewModel.updateShowPartnerProfile(showPartnerProfile = false)
@@ -316,7 +313,12 @@ fun PartnerProfileDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp),
+                    modifier = Modifier.padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        top = 24.dp,
+                        bottom = 12.dp
+                    ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
@@ -337,8 +339,7 @@ fun PartnerProfileDialog(
                             contentDescription = "Profile photo",
                             modifier = Modifier
                                 .size(100.dp)
-                                .clip(CircleShape)
-                                .border(2.dp, Color.White, CircleShape),
+                                .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -392,9 +393,15 @@ fun PartnerProfileDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    if (bio.isNotEmpty()) {
+                    val trimmedBio = bio
+                        .split("\\s+".toRegex())        // split by whitespace
+                        .take(30)                       // take only first 40 words
+                        .joinToString(" ")              // join them back
+                        .let { if (it.length < bio.length) "$it..." else it } // add ellipsis if trimmed
+
+                    if (trimmedBio.isNotBlank()) {
                         Text(
-                            text = "\"$bio\"",
+                            text = "\"$trimmedBio\"",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontStyle = FontStyle.Italic,
                                 color = Color.Black
@@ -402,6 +409,7 @@ fun PartnerProfileDialog(
                             textAlign = TextAlign.Center
                         )
                     }
+
 
                 }
 
@@ -482,19 +490,4 @@ private fun PartnerProfileDialog() {
     )
 }
 
-
-@Preview
-@Composable
-private fun PreviewFindYourScreen() {
-    FindYourPartnerContent(
-        findPartnerViewModel = FindPartnerViewModel(
-            chatRepository = ChatRepository(
-                chatApiService = ChatApiService(
-                    httpClient = HttpClient()
-                )
-            )
-        ),
-        findPartnerUIStates = FindPartnerState()
-    )
-}
 

@@ -6,7 +6,4 @@ import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
 
 class ChatRepository(val chatApiService: ChatApiService) {
 
-    suspend fun sendFindYourPartnerRequest(partnerNumber: String): ResultHandler<FindYourPartnerResponse?> {
-        return chatApiService.sendFindYourPartnerRequest(partnerNumber)
-    }
 }

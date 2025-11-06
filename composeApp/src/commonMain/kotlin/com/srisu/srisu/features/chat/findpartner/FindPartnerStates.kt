@@ -15,5 +15,6 @@ data class FindPartnerState(
     val validationErrorMsg: String = "",
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val showPartnerProfile: Boolean = false,
-    val partnerResponse: FindYourPartnerResponse? = null
-    )
+    val partnerResponse: FindYourPartnerResponse? = null,
+    val senderPhoneNumber: String = ""
+)

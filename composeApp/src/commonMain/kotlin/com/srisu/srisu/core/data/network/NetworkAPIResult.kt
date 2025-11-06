@@ -60,7 +60,7 @@ suspend inline fun <reified T> handleResponse(response: HttpResponse): ResultHan
         response.status.isSuccess() -> {
             val defaultResponse: DefaultResponse<T> = response.body()
             ResultHandler(
-                NetworkAPIResult.Success(
+                result = NetworkAPIResult.Success(
                     response = defaultResponse.data,
                     message = defaultResponse.message
                 )
@@ -142,7 +142,8 @@ suspend inline fun <reified T> handleErrorResponse(response: HttpResponse): Resu
 
         HttpStatusCode.Forbidden -> {
             errorType = NetworkAPIResult.ErrorType.FORBIDDEN
-            errorResponse?.message ?: "Forbidden: You do not have permission to access this resource."
+            errorResponse?.message
+                ?: "Forbidden: You do not have permission to access this resource."
         }
 
         HttpStatusCode.NotFound -> {

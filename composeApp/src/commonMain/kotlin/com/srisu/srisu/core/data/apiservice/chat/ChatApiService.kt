@@ -11,11 +11,5 @@ import io.ktor.http.HttpMethod
 
 class ChatApiService(private val httpClient: HttpClient) {
 
-    suspend fun sendFindYourPartnerRequest(partnerNumber: String): ResultHandler<FindYourPartnerResponse?> {
-        return httpClient.safeRequest<FindYourPartnerResponse?> {
-            url("${BASE_URL}api/social/find-partner/")
-            parameter("phone_number", partnerNumber)
-            method = HttpMethod.Get
-        }
-    }
+
 }

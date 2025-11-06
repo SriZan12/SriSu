@@ -21,55 +21,11 @@ class SuggestionRepository(
     private val baseApiService: BaseApiService,
 ) {
 
-    @Throws(Exception::class)
-    suspend fun sendCoupleConnectionRequest(
-        senderNumber: String,
-        receiverNumber: String
-    ): ResultHandler<CoupleConnectionResponse?> {
-        return suggestionApiService.sendCoupleConnectionRequest(
-            senderNumber = senderNumber,
-            receiverNumber = receiverNumber
-        )
-    }
-
-    @Throws(Exception::class)
-    suspend fun updateCoupleConnectionRequestStatus(
-        connectionId: Int,
-        coupleConnectionDTO: CoupleConnectionDTO
-    ): ResultHandler<CoupleConnectionResponse?> {
-        return suggestionApiService.updateCoupleConnectionRequestStatus(
-            connectionId = connectionId,
-            coupleConnectionDTO = coupleConnectionDTO
-        )
-    }
-
-    @Throws(Exception::class)
-    suspend fun updateSingleConnectionRequestStatus(
-        connectionId: Int,
-        singleConnectionDTO: SingleConnectionDTO,
-    ): ResultHandler<SingleConnectionResponse?> {
-        return suggestionApiService.updateSingleConnectionRequestStatus(
-            connectionId = connectionId,
-            singleConnectionDTO = singleConnectionDTO
-        )
-    }
-
     suspend fun getUserSuggestions(
         pageSize: Int,
         page: Int
     ): ResultHandler<UserSuggestionResponse?> {
         return suggestionApiService.getUserSuggestions(pageSize = pageSize, page = page)
-    }
-
-    @Throws(Exception::class)
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String?,
-        receiverNumber: String?
-    ): ResultHandler<SingleConnectionResponse?> {
-        return suggestionApiService.sendSingleConnectionRequest(
-            senderNumber = senderNumber,
-            receiverNumber = receiverNumber
-        )
     }
 
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
@@ -87,60 +43,6 @@ class SuggestionRepository(
         return suggestionApiService.updateUserPreferences(
             userPreferenceDTO = userPreferenceDTO,
             prefId = prefId
-        )
-    }
-
-    fun getSentLoveRequests(): Pager<Int, LoveRequestListResponse.Result> {
-        return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false
-            ),
-            pagingSourceFactory = {
-                BasePagingSource { pageSize ->
-                    val resultHandler = suggestionApiService.getSentLoveRequests(pageSize)
-
-
-                    var items: List<LoveRequestListResponse.Result> = emptyList()
-
-                    resultHandler
-                        .onSuccess { response, _ ->
-                            items = response?.results?.filterNotNull() ?: emptyList()
-                        }
-                        .onError { error, errorType ->
-                            throw Exception("API Error: $error, Type: $errorType")
-                        }
-
-                    items
-                }
-            }
-        )
-    }
-
-    @Throws(Exception::class)
-    fun getLoveRequests(): Pager<Int, LoveRequestListResponse.Result> {
-        return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false
-            ),
-            pagingSourceFactory = {
-                BasePagingSource { pageSize ->
-                    val resultHandler = suggestionApiService.getLoveRequests(pageSize)
-
-                    var items: List<LoveRequestListResponse.Result> = emptyList()
-
-                    resultHandler
-                        .onSuccess { response, _ ->
-                            items = response?.results?.filterNotNull() ?: emptyList()
-                        }
-                        .onError { error, errorType ->
-                            throw Exception("API Error: $error, Type: $errorType")
-                        }
-
-                    items
-                }
-            }
         )
     }
 

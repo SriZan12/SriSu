@@ -1,14 +1,79 @@
 package com.srisu.srisu.core.data.repository.connection
 
 import com.srisu.srisu.core.data.apiservice.connection.ConnectionApiService
+import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
+import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
+import com.srisu.srisu.core.data.response.suggestion.LoveRequestListResponse
 import com.srisu.srisu.core.logger.AppLogger
 
 class ConnectionRepository(
     private val connectionApiService: ConnectionApiService,
 ) {
+
+    suspend fun sendSingleConnectionRequest(
+        senderNumber: String?,
+        receiverNumber: String?
+    ): ResultHandler<SingleConnectionResponse?> {
+        return connectionApiService.sendSingleConnectionRequest(
+            senderNumber = senderNumber,
+            receiverNumber = receiverNumber
+        )
+    }
+
+    suspend fun sendFindYourPartnerRequest(partnerNumber: String): ResultHandler<FindYourPartnerResponse?> {
+        return connectionApiService.sendFindYourPartnerRequest(partnerNumber = partnerNumber)
+    }
+
+    suspend fun sendCoupleConnectionRequest(
+        senderNumber: String?,
+        receiverNumber: String?
+    ): ResultHandler<CoupleConnectionResponse?> {
+        return connectionApiService.sendCoupleConnectionRequest(
+            receiverNumber = receiverNumber,
+            senderNumber = senderNumber
+        )
+    }
+
+    suspend fun updateCoupleConnectionRequestStatus(
+        connectionId: Int?,
+        coupleConnectionDTO: CoupleConnectionDTO
+    ): ResultHandler<CoupleConnectionResponse?> {
+        return connectionApiService.updateCoupleConnectionRequestStatus(
+            connectionId = connectionId,
+            coupleConnectionDTO = coupleConnectionDTO
+        )
+    }
+
+    suspend fun updateSingleConnectionRequestStatus(
+        connectionId: Int?,
+        singleConnectionDTO: SingleConnectionDTO
+    ): ResultHandler<SingleConnectionResponse?> {
+        return connectionApiService.updateSingleConnectionRequestStatus(
+            connectionId = connectionId,
+            singleConnectionDTO = singleConnectionDTO
+        )
+    }
+
+    suspend fun getSentLoveRequests(
+        pageSize: Int
+    ): ResultHandler<LoveRequestListResponse?> {
+        return connectionApiService.getSentLoveRequests(
+            pageSize = pageSize
+        )
+    }
+
+    suspend fun getLoveRequests(
+        pageSize: Int
+    ): ResultHandler<LoveRequestListResponse?> {
+        return connectionApiService.getLoveRequests(
+            pageSize = pageSize
+        )
+    }
+
 
     suspend fun getMyCrushList(
         page: Int,

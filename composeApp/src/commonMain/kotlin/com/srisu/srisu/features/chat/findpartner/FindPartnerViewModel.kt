@@ -3,16 +3,24 @@ package com.srisu.srisu.features.chat.findpartner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.data.apiservice.connection.ConnectionApiService
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
+import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
+import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.session.Session
+import com.srisu.srisu.session.SessionStorage
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 class FindPartnerViewModel(
-    val chatRepository: ChatRepository
+    val connectionRepository: ConnectionRepository,
+    private val sessionStorage: SessionStorage,
 ) : ViewModel() {
 
     private val _findPartnerUIState: MutableStateFlow<FindPartnerState> =
@@ -27,11 +35,12 @@ class FindPartnerViewModel(
 
     init {
         loadAllCountries()
+        setSenderPhoneNumber()
     }
 
     private fun showSuccessMessage(message: String) {
         this._findPartnerUIState.value =
-            this._findPartnerUIState.value.copy(baseUIState = BaseUIState.Success(message))
+            this._findPartnerUIState.value.copy(baseUIState = BaseUIState.Success(data = null, message = message))
     }
 
     private fun showLoading() {
@@ -64,11 +73,25 @@ class FindPartnerViewModel(
 //        return connectivityObserver.isConnected.value
 //    }
 
+    fun setSenderPhoneNumber() {
+        val sessionData = sessionStorage.getSession(sessionKey = SESSION_KEY)
+        var session: Session? = null
+        if (sessionData != null) {
+            session = Json.decodeFromString<Session>(sessionData)
+        }
+        updateSenderPhoneNumber(phoneNumber = session?.phoneNumber)
+    }
+
     fun updatePhoneNumber(phoneNumber: String) {
         if (phoneNumber.length <= 10) {
             this._findPartnerUIState.value =
                 this._findPartnerUIState.value.copy(phoneNumber = phoneNumber)
         }
+    }
+
+    fun updateSenderPhoneNumber(phoneNumber: String?) {
+        this._findPartnerUIState.value =
+            this._findPartnerUIState.value.copy(senderPhoneNumber = phoneNumber ?: "")
     }
 
     fun updateCountry(code: String, prefix: String) {
@@ -133,11 +156,39 @@ class FindPartnerViewModel(
             val phoneNumber =
                 "${_findPartnerUIState.value.countryPrefix}${_findPartnerUIState.value.phoneNumber}"
 
-            chatRepository.sendFindYourPartnerRequest(partnerNumber = phoneNumber)
+            connectionRepository.sendFindYourPartnerRequest(partnerNumber = phoneNumber)
                 .onSuccess { response, _ ->
                     idleScreen()
                     updatePartnerResponse(partnerResponse = response)
                     updateShowPartnerProfile(showPartnerProfile = true)
+                }
+                .onError { errorMessage, errorType ->
+                    showErrorMessage(
+                        errorType = errorType.name,
+                        message = errorMessage.toString()
+                    )
+                }
+
+        }
+    }
+
+    fun sendCoupleConnectionRequest() {
+        viewModelScope.launch {
+            showLoading()
+
+            val receiverNumber = _findPartnerUIState.value.partnerResponse?.phoneNumber
+            val senderPhoneNumber = _findPartnerUIState.value.senderPhoneNumber
+
+
+            connectionRepository.sendCoupleConnectionRequest(
+                senderNumber = senderPhoneNumber,
+                receiverNumber = receiverNumber
+            )
+                .onSuccess { _, message ->
+                    AppLogger.log("MESSAGE = ${message}")
+                    showSuccessMessage(
+                        message = message ?: "Love request sent successfully"
+                    )
                 }
                 .onError { errorMessage, errorType ->
                     showErrorMessage(

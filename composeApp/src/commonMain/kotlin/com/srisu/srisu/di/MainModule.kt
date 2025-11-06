@@ -20,6 +20,7 @@ val mainModule = module {
     viewModel {
         SuggestionViewModel(
             suggestionRepository = get(),
+            connectionRepository = get(),
             connectivityObserver = get(),
         )
     }
@@ -48,7 +49,8 @@ val mainModule = module {
 
     viewModel {
         FindPartnerViewModel(
-            chatRepository = get()
+            connectionRepository = get(),
+            sessionStorage = get()
         )
     }
 }
