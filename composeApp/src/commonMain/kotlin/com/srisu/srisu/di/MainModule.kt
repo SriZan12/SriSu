@@ -1,6 +1,6 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.features.chat.findpartner.FindPartnerViewModel
+import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
 import com.srisu.srisu.features.home.home.vm.HomeViewModel
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel

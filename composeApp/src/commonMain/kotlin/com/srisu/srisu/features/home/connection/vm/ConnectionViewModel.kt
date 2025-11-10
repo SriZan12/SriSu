@@ -88,11 +88,6 @@ class ConnectionViewModel(
                 initialValue = PagingData.empty()
             )
 
-    companion object {
-        const val PAGE_SIZE = 10
-        const val PREFETCH_DISTANCE = 5
-    }
-
 
     init {
         initTabs()

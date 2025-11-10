@@ -85,7 +85,7 @@ fun ConnectionScreen(
 @Composable
 private fun Initialization(
     connectionViewModel: ConnectionViewModel
-){
+) {
 //    LaunchedEffect(Unit){
 //        connectionViewModel.getMyCrushList()
 //        connectionViewModel.getCrushOnMeList()
