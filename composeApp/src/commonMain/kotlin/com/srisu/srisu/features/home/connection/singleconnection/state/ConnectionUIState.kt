@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.state
+package com.srisu.srisu.features.home.connection.singleconnection.state
 
 import app.cash.paging.PagingData
 import com.srisu.srisu.baseframework.BaseUIState

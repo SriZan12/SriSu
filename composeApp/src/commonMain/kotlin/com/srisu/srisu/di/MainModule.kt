@@ -1,7 +1,8 @@
 package com.srisu.srisu.di
 
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerViewModel
-import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
+import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.vm.LoveRequestViewModel
+import com.srisu.srisu.features.home.connection.singleconnection.vm.ConnectionViewModel
 import com.srisu.srisu.features.home.home.vm.HomeViewModel
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
@@ -51,6 +52,12 @@ val mainModule = module {
         FindPartnerViewModel(
             connectionRepository = get(),
             sessionStorage = get()
+        )
+    }
+
+    viewModel {
+        LoveRequestViewModel(
+             connectionRepository = get()
         )
     }
 }

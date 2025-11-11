@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.screen
+package com.srisu.srisu.features.home.connection.singleconnection.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize

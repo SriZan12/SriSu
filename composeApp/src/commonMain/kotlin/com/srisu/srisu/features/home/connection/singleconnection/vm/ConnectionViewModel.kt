@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.vm
+package com.srisu.srisu.features.home.connection.singleconnection.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,8 +13,7 @@ import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
-import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.home.connection.state.ConnectionUIState
+import com.srisu.srisu.features.home.connection.singleconnection.state.ConnectionUIState
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
 import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED

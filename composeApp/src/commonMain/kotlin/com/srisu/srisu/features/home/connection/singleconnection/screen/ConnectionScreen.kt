@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.screen
+package com.srisu.srisu.features.home.connection.singleconnection.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,8 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.shimmerEffect
-import com.srisu.srisu.features.home.connection.state.ConnectionUIState
-import com.srisu.srisu.features.home.connection.vm.ConnectionViewModel
+import com.srisu.srisu.features.home.connection.singleconnection.state.ConnectionUIState
+import com.srisu.srisu.features.home.connection.singleconnection.vm.ConnectionViewModel
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
 import com.srisu.srisu.utils.Constants.ConnectionStatus.NOTHING
 import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED

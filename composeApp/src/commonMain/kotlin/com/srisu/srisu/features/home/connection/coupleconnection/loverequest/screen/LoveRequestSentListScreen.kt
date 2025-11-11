@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.chat.couple.loverequest.screen
+package com.srisu.srisu.features.home.connection.coupleconnection.loverequest.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -30,9 +30,9 @@ import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
 import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
-import com.srisu.srisu.features.home.connection.screen.ConnectionItem
-import com.srisu.srisu.features.home.connection.screen.ConnectionShimmerCompo
-import com.srisu.srisu.features.home.connection.screen.NoConnectionsFound
+import com.srisu.srisu.features.home.connection.singleconnection.screen.ConnectionItem
+import com.srisu.srisu.features.home.connection.singleconnection.screen.ConnectionShimmerCompo
+import com.srisu.srisu.features.home.connection.singleconnection.screen.NoConnectionsFound
 import kotlinx.coroutines.flow.StateFlow
 
 

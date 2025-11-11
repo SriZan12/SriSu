@@ -5,17 +5,19 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.features.home.connection.screen.ConnectionScreen
+import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.screen.LoveRequestScreen
+import com.srisu.srisu.features.home.connection.singleconnection.screen.ConnectionScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
 import kotlinx.serialization.Serializable
 
 sealed class ConnectionNav : Route {
-
     @Serializable
     data object Connection : ConnectionNav()
 
     @Serializable
     data class Profile(val userProfileData: String?) : ConnectionNav()
+    @Serializable
+    data object LoveRequestScreen : ChatNav()
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -34,6 +36,14 @@ fun NavGraphBuilder.connectionGraph(
         val userProfileData =
             backStackEntry.toRoute<ConnectionNav.Profile>().userProfileData
         ProfileScreen(userProfileData = userProfileData)
+    }
+
+    composable<ConnectionNav.LoveRequestScreen>() {
+        LoveRequestScreen(
+            onNavigateToProfile = {
+                navController.navigate(ConnectionNav.Profile(userProfileData = it))
+            }
+        )
     }
 
 }

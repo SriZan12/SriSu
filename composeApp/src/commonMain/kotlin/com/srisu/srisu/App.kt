@@ -13,15 +13,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -118,6 +117,7 @@ private fun NavHostController(session: Session?) {
         HomeNavigation.Home::class,
         SuggestionsNav.Suggestions::class,
         ConnectionNav.Connection::class,
+        ConnectionNav.LoveRequestScreen::class,
         ProfileNav.EditProfile::class
     )
 
@@ -143,7 +143,7 @@ private fun NavHostController(session: Session?) {
             )
 
         }
-    ) { innerPadding ->
+    ) { _ ->
         SharedTransitionLayout {
             val navController = navController
             val suggestionViewModel = koinViewModel<SuggestionViewModel>()
@@ -169,8 +169,7 @@ private fun NavHostController(session: Session?) {
             ) {
                 authGraph(navController = navController)
 
-                homeGraph(
-                )
+                homeGraph()
 
                 suggestionsGraph(
                     navController = navController,
@@ -198,7 +197,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> ChatNav.FindPartnerScreen
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> ConnectionNav.LoveRequestScreen
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }
@@ -209,8 +208,9 @@ enum class BottomNavDestination(
     val label: String
 ) {
     HOME(Icons.Filled.Home, "Home"),
-    SUGGESTIONS(Icons.Filled.Favorite, "Suggestions"),
-    CONNECTION(Icons.Filled.Groups, "Matches"),
+    SUGGESTIONS(Icons.Filled.SettingsSuggest, "Explore"),
+    SINGLE_CONNECTION(Icons.Filled.Groups, "Matches"),
+    COUPLE_CONNECTION(Icons.Filled.Favorite, "Love"),
     PROFILE(Icons.Filled.Person, "Profile")
 }
 
@@ -234,7 +234,8 @@ private fun BottomNavigation(
                 val selected = when (destination) {
                     BottomNavDestination.HOME -> currentDestination?.hasRoute<HomeNavigation.Home>() == true
                     BottomNavDestination.SUGGESTIONS -> currentDestination?.hasRoute<SuggestionsNav.Suggestions>() == true
-                    BottomNavDestination.CONNECTION -> currentDestination?.hasRoute<ConnectionNav.Connection>() == true
+                    BottomNavDestination.SINGLE_CONNECTION -> currentDestination?.hasRoute<ConnectionNav.Connection>() == true
+                    BottomNavDestination.COUPLE_CONNECTION -> currentDestination?.hasRoute<ConnectionNav.LoveRequestScreen>() == true
                     BottomNavDestination.PROFILE -> currentDestination?.hasRoute<ProfileNav.EditProfile>() == true
                 }
 
@@ -260,7 +261,15 @@ private fun BottomNavigation(
                                 restoreState = true
                             }
 
-                            BottomNavDestination.CONNECTION -> navController.navigate(ConnectionNav.Connection) {
+                            BottomNavDestination.SINGLE_CONNECTION -> navController.navigate(ConnectionNav.Connection) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+
+                            BottomNavDestination.COUPLE_CONNECTION -> navController.navigate(ConnectionNav.LoveRequestScreen) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }

@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.chat.couple.loverequest.state
+package com.srisu.srisu.features.home.connection.coupleconnection.loverequest.state
 
 import app.cash.paging.PagingData
 import com.srisu.srisu.baseframework.BaseUIState

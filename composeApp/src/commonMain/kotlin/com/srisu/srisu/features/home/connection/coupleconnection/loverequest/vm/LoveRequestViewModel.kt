@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.chat.couple.loverequest.vm
+package com.srisu.srisu.features.home.connection.coupleconnection.loverequest.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,14 +7,18 @@ import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import app.cash.paging.PagingData
 import app.cash.paging.filter
+import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.TabItem
+import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
+import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.response.auth.User
 import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
-import com.srisu.srisu.features.chat.couple.loverequest.state.LoveRequestListState
-import com.srisu.srisu.features.home.connection.state.ConnectionUIState
+import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.state.LoveRequestListState
+import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
+import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +27,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import kotlin.collections.contains
 import kotlin.collections.map
 
@@ -36,9 +42,7 @@ class LoveRequestViewModel(
 
     val loveRequestListState = _loveRequestListState.asStateFlow()
 
-    init {
-        initTabs()
-    }
+
 
     private fun initTabs() {
         _loveRequestListState.value = _loveRequestListState.value.copy(
@@ -100,6 +104,12 @@ class LoveRequestViewModel(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = PagingData.empty()
             )
+
+    init {
+        initTabs()
+        getLoveRequestList()
+        getSentLoveRequestList()
+    }
 
     fun updateCurrentTab(tab: TabItem) {
         _loveRequestListState.value = _loveRequestListState.value.copy(
@@ -179,7 +189,7 @@ class LoveRequestViewModel(
 
         viewModelScope.launch {
             pagerFlow.collectLatest {
-                sentLoveRequestFlow.value = it
+                loveRequestFlow.value = it
             }
         }
     }
@@ -212,8 +222,126 @@ class LoveRequestViewModel(
 
         viewModelScope.launch {
             pagerFlow.collectLatest {
-                loveRequestFlow.value = it
+                sentLoveRequestFlow.value = it
             }
+        }
+    }
+
+    fun updateLoveRequest(
+        loveRequestId: Int?,
+        senderNumber: String?,
+        receiverNumber: String?,
+        connectionStatus: String?
+    ) {
+        val requestId = loveRequestId?.toLong() ?: return
+
+        when (connectionStatus) {
+            ACCEPTED, REJECTED -> markAsAcceptedOrRejected(requestId)
+            else -> markAsCancelled(requestId)
+        }
+
+        viewModelScope.launch {
+            try {
+                connectionRepository.updateLoveRequest(
+                    loveRequestId = loveRequestId,
+                    coupleConnectionDTO = CoupleConnectionDTO(
+                        senderNumber = senderNumber,
+                        receiverNumber = receiverNumber,
+                        connectionStatus = connectionStatus
+                    ),
+                ).onSuccess { _, _ ->
+                    _loveRequestListState.update {
+                        it.copy(baseUIState = BaseUIState.Success("Request updated successfully"))
+                    }
+
+                }.onError { error, errorType ->
+                    rollbackRequests(
+                        connectionStatus = connectionStatus ?: "",
+                        requestId = requestId,
+                        message = error.toString(),
+                        errorType = errorType.toString()
+                    )
+                }
+
+            } catch (e: Exception) {
+                rollbackRequests(
+                    connectionStatus = connectionStatus ?: "",
+                    requestId = requestId,
+                    message = e.message ?: "Unknown error",
+                    errorType = "Exception"
+                )
+            }
+        }
+    }
+
+    fun getUserProfile(userProfile: LoveRequestResponse.Result.Receiver?): String? {
+        return Json.encodeToString(userProfile?.toUser())
+    }
+
+    private fun markAsAcceptedOrRejected(requestId: Long) {
+        val currentIds = _loveRequestListState.value.rejectedIds
+        if (requestId !in currentIds) {
+            _loveRequestListState.update { state ->
+                state.copy(rejectedIds = state.rejectedIds + requestId)
+            }
+        }
+    }
+
+    private fun markAsCancelled(requestId: Long) {
+        val currentIds = _loveRequestListState.value.cancelledRequestIds
+        if (requestId !in currentIds) {
+            _loveRequestListState.update { state ->
+                state.copy(cancelledRequestIds = state.cancelledRequestIds + requestId)
+            }
+        }
+    }
+
+    private fun rollbackRequests(
+        connectionStatus: String,
+        requestId: Long,
+        message: String,
+        errorType: String
+    ) {
+        if (connectionStatus == ACCEPTED || connectionStatus == REJECTED) {
+            rollbackAcceptedRejectedRequest(
+                requestId,
+                message,
+                errorType
+            )
+        } else {
+            rollbackCancelledRequest(requestId, message = message, errorType = errorType)
+        }
+    }
+
+    private fun rollbackCancelledRequest(
+        requestId: Long,
+        message: String,
+        errorType: String
+    ) {
+        _loveRequestListState.update { state ->
+            state.copy(
+                cancelledRequestIds = state.cancelledRequestIds - requestId,
+                baseUIState = BaseUIState.Error(
+                    errorType = errorType,
+                    message = message
+                )
+            )
+        }
+    }
+
+    private fun rollbackAcceptedRejectedRequest(
+        requestId: Long,
+        message: String,
+        errorType: String
+    ) {
+        _loveRequestListState.update { state ->
+            state.copy(
+                rejectedIds = state.rejectedIds - requestId,
+                baseUIState = BaseUIState.Error(
+                    errorType = errorType,
+                    message = message
+                )
+            )
         }
     }
 }

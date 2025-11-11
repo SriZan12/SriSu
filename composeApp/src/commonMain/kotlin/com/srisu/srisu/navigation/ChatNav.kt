@@ -6,20 +6,23 @@ import androidx.navigation.compose.composable
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindYourPartnerScreen
 import kotlinx.serialization.Serializable
 
-sealed class ChatNav: Route {
+sealed class ChatNav : Route {
 
     @Serializable
-    data object FindPartnerScreen: ChatNav()
+    data object FindPartnerScreen : ChatNav()
 
     @Serializable
-    data object ChatScreen: ChatNav()
+    data object ChatScreen : ChatNav()
 
 
 }
+
 fun NavGraphBuilder.chatGraph(
     navController: NavController
-){
-    composable<ChatNav.FindPartnerScreen>(){
+) {
+    composable<ChatNav.FindPartnerScreen>() {
         FindYourPartnerScreen()
     }
+
+
 }

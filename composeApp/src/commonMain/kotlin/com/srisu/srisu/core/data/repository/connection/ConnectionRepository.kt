@@ -38,26 +38,6 @@ class ConnectionRepository(
         )
     }
 
-    suspend fun updateCoupleConnectionRequestStatus(
-        connectionId: Int?,
-        coupleConnectionDTO: CoupleConnectionDTO
-    ): ResultHandler<CoupleConnectionResponse?> {
-        return connectionApiService.updateCoupleConnectionRequestStatus(
-            connectionId = connectionId,
-            coupleConnectionDTO = coupleConnectionDTO
-        )
-    }
-
-    suspend fun updateSingleConnectionRequestStatus(
-        connectionId: Int?,
-        singleConnectionDTO: SingleConnectionDTO
-    ): ResultHandler<SingleConnectionResponse?> {
-        return connectionApiService.updateSingleConnectionRequestStatus(
-            connectionId = connectionId,
-            singleConnectionDTO = singleConnectionDTO
-        )
-    }
-
     suspend fun getSentLoveRequests(
         pageSize: Int,
         page: Int
@@ -107,6 +87,16 @@ class ConnectionRepository(
         return connectionApiService.updateCrushRequest(
             crushRequestId = crushRequestId,
             singleConnectionDTO = singleConnectionDTO
+        )
+    }
+
+    suspend fun updateLoveRequest(
+        loveRequestId: Int?,
+        coupleConnectionDTO: CoupleConnectionDTO
+    ): ResultHandler<CoupleConnectionResponse?> {
+        return connectionApiService.updateCoupleConnectionRequestStatus(
+            connectionId = loveRequestId,
+            coupleConnectionDTO = coupleConnectionDTO
         )
     }
 }

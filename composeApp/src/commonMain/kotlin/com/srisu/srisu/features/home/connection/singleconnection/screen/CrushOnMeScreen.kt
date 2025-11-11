@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.chat.couple.loverequest.screen
+package com.srisu.srisu.features.home.connection.singleconnection.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -31,47 +31,38 @@ import androidx.paging.PagingData
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
-import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
-import com.srisu.srisu.features.home.connection.screen.ConnectionItem
-import com.srisu.srisu.features.home.connection.screen.ConnectionShimmerCompo
-import com.srisu.srisu.features.home.connection.screen.NoConnectionsFound
-import com.srisu.srisu.features.home.connection.screen.receiverNumber
-import com.srisu.srisu.features.home.connection.screen.senderNumber
+import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import kotlinx.coroutines.flow.StateFlow
 
-typealias senderNumber = String?
-typealias receiverNumber = String?
-typealias loveRequestId = Int?
-
 @Composable
-fun LoveRequestListScreen(
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
-    onRejectLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
-    loveRequestList: StateFlow<PagingData<LoveRequestResponse.Result>>
+fun CrushOnMeScreen(
+    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
+    onAcceptCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
+    onRejectCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
+    crushOnMeList: StateFlow<PagingData<SingleConnectionResponse.Result>>,
 ) {
-    LoveRequestListContent(
+    CrushOnMeScreenContent(
         onNavigateToProfile = onNavigateToProfile,
-        onAcceptLoveRequest = onAcceptLoveRequest,
-        onRejectLoveRequest = onRejectLoveRequest,
-        loveRequestList
+        onAcceptCrushRequest = onAcceptCrushRequest,
+        onRejectCrushRequest = onRejectCrushRequest,
+        crushList = crushOnMeList
     )
 }
 
+
 @Composable
-private fun LoveRequestListContent(
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId: Int?, senderNumber, receiverNumber) -> Unit,
-    onRejectLoveRequest: (loveRequestId: Int?, senderNumber, receiverNumber) -> Unit,
-    loveRequestList: StateFlow<PagingData<LoveRequestResponse.Result>>
+fun CrushOnMeScreenContent(
+    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
+    onAcceptCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
+    onRejectCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
+    crushList: StateFlow<PagingData<SingleConnectionResponse.Result>>
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest
-        )
+        modifier = Modifier.fillMaxSize()
+            .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
     ) {
-        val loveRequestPagingItems = loveRequestList.collectAsLazyPagingItems()
-        val loadState = loveRequestPagingItems.loadState
+        val crushOnMeList = crushList.collectAsLazyPagingItems()
+        val loadState = crushOnMeList.loadState
 
         when {
             loadState.refresh is LoadState.Loading -> {
@@ -80,7 +71,7 @@ private fun LoveRequestListContent(
                 )
             }
 
-            loveRequestPagingItems.itemCount == 0 -> {
+            crushOnMeList.itemCount == 0 -> {
                 var isVisible by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
@@ -102,26 +93,26 @@ private fun LoveRequestListContent(
             }
 
             else -> {
-                LoveRequestListCompo(
+                CrushOnMeListCompo(
                     modifier = Modifier,
-                    loveRequestList = loveRequestPagingItems,
+                    myCrushList = crushOnMeList,
                     onNavigateToProfile = onNavigateToProfile,
-                    onAcceptLoveRequest = onAcceptLoveRequest,
-                    onRejectLoveRequest = onRejectLoveRequest
+                    onAcceptCrushRequest = onAcceptCrushRequest,
+                    onRejectCrushRequest = onRejectCrushRequest
+
                 )
             }
         }
-
     }
 }
 
 @Composable
-private fun LoveRequestListCompo(
+private fun CrushOnMeListCompo(
     modifier: Modifier = Modifier,
-    loveRequestList: LazyPagingItems<LoveRequestResponse.Result>,
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId: Int?, senderNumber: String?, receiverNumber: String?) -> Unit,
-    onRejectLoveRequest: (loveRequestId: Int?, senderNumber: String?, receiverNumber: String?) -> Unit,
+    myCrushList: LazyPagingItems<SingleConnectionResponse.Result>,
+    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
+    onAcceptCrushRequest: (crushRequestId: Int?, senderNumber: String?, receiverNumber: String?) -> Unit,
+    onRejectCrushRequest: (crushRequestId: Int?, senderNumber: String?, receiverNumber: String?) -> Unit
 ) {
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
@@ -136,11 +127,11 @@ private fun LoveRequestListCompo(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(
-            count = loveRequestList.itemCount,
-            key = { index -> loveRequestList[index]?.id ?: index },
-            contentType = loveRequestList.itemContentType { "myCrush" }
+            count = myCrushList.itemCount,
+            key = { index -> myCrushList[index]?.id ?: index },
+            contentType = myCrushList.itemContentType { "myCrush" }
         ) { index ->
-            val crush = loveRequestList[index]
+            val crush = myCrushList[index]
 
             var isVisible by remember { mutableStateOf(false) }
 
@@ -169,14 +160,43 @@ private fun LoveRequestListCompo(
                         firstButtonTitle = "Accept",
                         secondButtonTitle = "Reject",
                         onClickFirstButton = {
-                            onAcceptLoveRequest(it.id, it.senderNumber, it.receiverNumber)
+                            onAcceptCrushRequest(it.id, it.senderNumber, it.receiverNumber)
                         },
                         onClickSecondButton = {
-                            onRejectLoveRequest(it.id, it.senderNumber, it.receiverNumber)
+                            onRejectCrushRequest(it.id, it.senderNumber, it.receiverNumber)
                         }
                     )
                 }
             }
         }
+
+        // Optional: append loading/error UI for infinite scroll (uncomment if needed)
+        /*
+        myCrushList.apply {
+            when {
+                loadState.append is LoadState.Loading -> {
+                    item {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .size(28.dp)
+                        )
+                    }
+                }
+
+                loadState.append is LoadState.Error -> {
+                    val e = loadState.append as LoadState.Error
+                    item {
+                        Text(
+                            text = e.error.message ?: "Error loading more",
+                            color = Color.Red,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+            }
+        }
+        */
     }
 }
+
