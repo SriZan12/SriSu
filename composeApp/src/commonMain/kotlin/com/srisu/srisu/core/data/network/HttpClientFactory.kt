@@ -11,12 +11,15 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.accept
 import io.ktor.client.request.bearerAuth
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.seconds
 
 object HttpClientFactory {
 
@@ -31,6 +34,10 @@ object HttpClientFactory {
                         explicitNulls = true
                     }
                 )
+            }
+            install(WebSockets){
+                pingIntervalMillis = 15.seconds.inWholeSeconds
+                contentConverter = KotlinxWebsocketSerializationConverter(Json)
             }
             install(HttpTimeout) {
                 socketTimeoutMillis = 120_000L

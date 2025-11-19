@@ -5,8 +5,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.screen.LoveRequestScreen
-import com.srisu.srisu.features.home.connection.singleconnection.screen.ConnectionScreen
+import com.srisu.srisu.features.home.connection.coupleconnection.screen.CoupleConnectionScreen
+import com.srisu.srisu.features.home.connection.singleconnection.screen.SingleConnectionScreen
 import com.srisu.srisu.features.profile.screen.ProfileScreen
 import kotlinx.serialization.Serializable
 
@@ -26,7 +26,7 @@ fun NavGraphBuilder.connectionGraph(
 ) {
 
     composable<ConnectionNav.Connection> {
-        ConnectionScreen(
+        SingleConnectionScreen(
             onNavigateToProfile = { userProfileData ->
                 navController.navigate(ConnectionNav.Profile(userProfileData = userProfileData))
             }
@@ -39,7 +39,7 @@ fun NavGraphBuilder.connectionGraph(
     }
 
     composable<ConnectionNav.LoveRequestScreen>() {
-        LoveRequestScreen(
+        CoupleConnectionScreen(
             onNavigateToProfile = {
                 navController.navigate(ConnectionNav.Profile(userProfileData = it))
             }

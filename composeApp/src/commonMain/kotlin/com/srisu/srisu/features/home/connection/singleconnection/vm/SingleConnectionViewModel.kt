@@ -8,6 +8,7 @@ import androidx.paging.cachedIn
 import app.cash.paging.PagingData
 import app.cash.paging.filter
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.TabItem
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
@@ -29,7 +30,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
-class ConnectionViewModel(
+class SingleConnectionViewModel(
     private val connectivityObserver: ConnectivityObserver,
     private val connectionRepository: ConnectionRepository
 ) : ViewModel() {
@@ -141,17 +142,17 @@ class ConnectionViewModel(
     private fun initTabs() {
         _connectionUiState.value = _connectionUiState.value.copy(
             connectionTabList = listOf(
-                ConnectionUIState.Tab(
+                TabItem(
                     title = "My Crush"
                 ),
-                ConnectionUIState.Tab(
+                TabItem(
                     title = "Crush on Me"
                 )
             )
         )
     }
 
-    fun updateCurrentTab(tab: ConnectionUIState.Tab) {
+    fun updateCurrentTab(tab: TabItem) {
         _connectionUiState.value = _connectionUiState.value.copy(
             currentTab = tab
         )

@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SettingsSuggest
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -69,6 +72,8 @@ import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
+import srisu.composeapp.generated.resources.Res
+import srisu.composeapp.generated.resources.pisces
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
@@ -134,9 +139,6 @@ private fun NavHostController(session: Session?) {
                 currentDestination?.hasRoute(tabClass) == true
             }
 
-            AppLogger.log("CURRENT ROUTE: ${currentDestination?.route}")
-            AppLogger.log("SHOULD SHOW BOTTOM: $shouldShowBottom")
-
             BottomNavigation(
                 navController = navController,
                 show = shouldShowBottom
@@ -197,7 +199,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> ConnectionNav.LoveRequestScreen
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> ConnectionNav.Connection
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }
@@ -208,11 +210,16 @@ enum class BottomNavDestination(
     val label: String
 ) {
     HOME(Icons.Filled.Home, "Home"),
-    SUGGESTIONS(Icons.Filled.SettingsSuggest, "Explore"),
-    SINGLE_CONNECTION(Icons.Filled.Groups, "Matches"),
-    COUPLE_CONNECTION(Icons.Filled.Favorite, "Love"),
+
+    EXPLORE(Icons.Filled.Search, "Explore"), // For browsing opposite profiles
+
+    CONNECTIONS(Icons.Filled.Favorite, "Crushes"), // Sent/received crush requests
+
+    MATCHES(Icons.Default.FavoriteBorder, "Matches"),
+
     PROFILE(Icons.Filled.Person, "Profile")
 }
+
 
 @Composable
 private fun BottomNavigation(
@@ -233,9 +240,9 @@ private fun BottomNavigation(
                 // Use hasRoute per destination (no toRoute or full sealed deserialization)
                 val selected = when (destination) {
                     BottomNavDestination.HOME -> currentDestination?.hasRoute<HomeNavigation.Home>() == true
-                    BottomNavDestination.SUGGESTIONS -> currentDestination?.hasRoute<SuggestionsNav.Suggestions>() == true
-                    BottomNavDestination.SINGLE_CONNECTION -> currentDestination?.hasRoute<ConnectionNav.Connection>() == true
-                    BottomNavDestination.COUPLE_CONNECTION -> currentDestination?.hasRoute<ConnectionNav.LoveRequestScreen>() == true
+                    BottomNavDestination.EXPLORE -> currentDestination?.hasRoute<SuggestionsNav.Suggestions>() == true
+                    BottomNavDestination.CONNECTIONS -> currentDestination?.hasRoute<ConnectionNav.Connection>() == true
+                    BottomNavDestination.MATCHES -> currentDestination?.hasRoute<ConnectionNav.LoveRequestScreen>() == true
                     BottomNavDestination.PROFILE -> currentDestination?.hasRoute<ProfileNav.EditProfile>() == true
                 }
 
@@ -251,7 +258,7 @@ private fun BottomNavigation(
                                 restoreState = true
                             }
 
-                            BottomNavDestination.SUGGESTIONS -> navController.navigate(
+                            BottomNavDestination.EXPLORE -> navController.navigate(
                                 SuggestionsNav.Suggestions
                             ) {
                                 popUpTo(navController.graph.startDestinationId) {
@@ -261,7 +268,7 @@ private fun BottomNavigation(
                                 restoreState = true
                             }
 
-                            BottomNavDestination.SINGLE_CONNECTION -> navController.navigate(ConnectionNav.Connection) {
+                            BottomNavDestination.CONNECTIONS -> navController.navigate(ConnectionNav.Connection) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }
@@ -269,7 +276,7 @@ private fun BottomNavigation(
                                 restoreState = true
                             }
 
-                            BottomNavDestination.COUPLE_CONNECTION -> navController.navigate(ConnectionNav.LoveRequestScreen) {
+                            BottomNavDestination.MATCHES -> navController.navigate(ConnectionNav.LoveRequestScreen) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true
                                 }

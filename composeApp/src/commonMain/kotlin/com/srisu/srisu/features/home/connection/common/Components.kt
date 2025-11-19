@@ -1,7 +1,6 @@
-package com.srisu.srisu.features.home.connection.singleconnection.screen
+package com.srisu.srisu.features.home.connection.common
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -12,13 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -27,17 +23,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,177 +34,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.shimmerEffect
-import com.srisu.srisu.features.home.connection.singleconnection.state.ConnectionUIState
-import com.srisu.srisu.features.home.connection.singleconnection.vm.ConnectionViewModel
-import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
-import com.srisu.srisu.utils.Constants.ConnectionStatus.NOTHING
-import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.filter_icon
 import srisu.composeapp.generated.resources.no_love
-
-
-@Composable
-fun ConnectionScreen(
-    viewModel: ConnectionViewModel = koinViewModel<ConnectionViewModel>(),
-    onNavigateToProfile: (userProfileData: String?) -> Unit
-) {
-
-    val connectionUiState: ConnectionUIState by viewModel.connectionUiState.collectAsStateWithLifecycle()
-
-    Initialization(connectionViewModel = viewModel)
-
-    ConnectionScreenContent(
-        viewModel = viewModel,
-        connectionUiState =
-            connectionUiState,
-        onNavigateToProfile = onNavigateToProfile
-    )
-}
-
-@Composable
-private fun Initialization(
-    connectionViewModel: ConnectionViewModel
-) {
-//    LaunchedEffect(Unit){
-//        connectionViewModel.getMyCrushList()
-//        connectionViewModel.getCrushOnMeList()
-//    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ConnectionScreenContent(
-    viewModel: ConnectionViewModel,
-    connectionUiState: ConnectionUIState,
-    onNavigateToProfile: (userProfileData: String?) -> Unit
-) {
-    val tabItems = connectionUiState.connectionTabList
-    val pagerState = rememberPagerState { tabItems.size }
-    val coroutineScope = rememberCoroutineScope()
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 64.dp),
-        topBar = {
-            ConnectionToolBar(
-                title = connectionUiState.currentTab?.title ?: "Connection"
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-    ) { innerPadding ->
-
-
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding)
-                .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
-        ) {
-
-            LaunchedEffect(pagerState) {
-                snapshotFlow { pagerState.currentPage }
-                    .collect { page ->
-                        viewModel.updateCurrentTab(tab = tabItems[page])
-                    }
-            }
-
-            TabRow(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                selectedTabIndex = pagerState.currentPage,
-            ) {
-                tabItems.forEachIndexed { index, item ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-
-                            viewModel.updateCurrentTab(
-                                tab = item
-                            )
-                        },
-                        text = {
-
-                            val isSelected = pagerState.currentPage == index
-                            val style = if (isSelected) {
-                                MaterialTheme.typography.titleMedium.copy(
-                                    MaterialTheme.colorScheme.primary
-
-                                )
-                            } else {
-                                MaterialTheme.typography.titleMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-
-                            Text(
-                                text = item.title,
-                                style = style
-
-                            )
-                        }
-                    )
-                }
-            }
-
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxWidth()
-            ) { index ->
-                if (index == 0) {
-
-                    MyCrushScreen(
-                        crushList = viewModel.myCrushList,
-                        onNavigateToProfile = { userProfileData ->
-                            val user = viewModel.getUserProfile(userProfile = userProfileData)
-                            onNavigateToProfile(user)
-                        },
-                        onCancelCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
-                            viewModel.updateCrushRequest(
-                                crushRequestId = crushRequestId,
-                                senderNumber = senderNumber,
-                                receiverNumber = receiverNumber,
-                                connectionStatus = NOTHING
-                            )
-                        }
-                    )
-                } else {
-                    CrushOnMeScreen(
-                        crushOnMeList = viewModel.crushOnMeList,
-                        onAcceptCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
-                            viewModel.updateCrushRequest(
-                                crushRequestId = crushRequestId,
-                                senderNumber = senderNumber,
-                                receiverNumber = receiverNumber,
-                                connectionStatus = ACCEPTED
-                            )
-                        },
-                        onRejectCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
-                            viewModel.updateCrushRequest(
-                                crushRequestId = crushRequestId,
-                                senderNumber = senderNumber,
-                                receiverNumber = receiverNumber,
-                                connectionStatus = REJECTED
-                            )
-                        },
-                        onNavigateToProfile = { userProfileData ->
-                            val user = viewModel.getUserProfile(userProfile = userProfileData)
-                            onNavigateToProfile(user)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -503,29 +330,4 @@ fun ConnectionItemShimmer(
                 .shimmerEffect()
         )
     }
-}
-
-
-@Preview
-@Composable
-fun PreviewShimmerEffect() {
-
-    ConnectionItemShimmer()
-
-}
-
-@Preview
-@Composable
-fun PreviewConnectionItem() {
-    ConnectionItem(
-        modifier = Modifier,
-        userName = "Srisu",
-        userImage = "https://photosmint.com/wp-content/uploads/2025/03/Indian-Beauty-DP.jpeg",
-        dob = "23",
-        zodiacSign = "Leo",
-        firstButtonTitle = "Connect",
-        secondButtonTitle = "Cancel",
-        onClick = {},
-        onClickFirstButton = {}
-    )
 }

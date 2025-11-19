@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.DialogNavigator
 import androidx.navigation.compose.rememberNavController
+import com.srisu.srisu.features.chat.chatroom.ChatScreen
 import com.srisu.srisu.features.home.home.vm.HomeViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -31,12 +32,14 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
 
     ) { innerPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("HOME SCREEN")
-        }
+//        Box(
+//            modifier = Modifier.fillMaxSize().padding(innerPadding),
+//            contentAlignment = Alignment.Center
+//        ) {
+//            Text("HOME SCREEN")
+//        }
+
+        ChatScreen(meId = 97)
     }
 
 }

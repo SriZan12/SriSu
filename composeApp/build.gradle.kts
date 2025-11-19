@@ -83,6 +83,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.koin.compose.viewmodel.navigation)
             implementation(libs.lifecycle.viewmodel)
+            implementation(libs.kotlinx.coroutines.core)
 
 //            KVault
             implementation(libs.kvault)
@@ -109,6 +110,9 @@ kotlin {
 
             //material-icons
             implementation(libs.material.icons.core)
+
+            //websockets
+            implementation(libs.ktor.client.websockets)
 
         }
 

@@ -1,8 +1,9 @@
 package com.srisu.srisu.di
 
+import com.srisu.srisu.features.chat.chatroom.ChatViewModel
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.vm.LoveRequestViewModel
-import com.srisu.srisu.features.home.connection.singleconnection.vm.ConnectionViewModel
+import com.srisu.srisu.features.home.connection.singleconnection.vm.SingleConnectionViewModel
 import com.srisu.srisu.features.home.home.vm.HomeViewModel
 import com.srisu.srisu.features.profile.vm.EditProfileViewModel
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
@@ -42,7 +43,7 @@ val mainModule = module {
     }
 
     viewModel {
-        ConnectionViewModel(
+        SingleConnectionViewModel(
             connectionRepository = get(),
             connectivityObserver = get()
         )
@@ -59,5 +60,9 @@ val mainModule = module {
         LoveRequestViewModel(
              connectionRepository = get()
         )
+    }
+
+    viewModel {
+        ChatViewModel(repository = get())
     }
 }
