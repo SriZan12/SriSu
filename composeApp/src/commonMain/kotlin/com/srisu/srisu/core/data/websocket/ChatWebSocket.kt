@@ -8,6 +8,7 @@ import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
+import io.ktor.websocket.readReason
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.seconds
 
@@ -32,10 +37,13 @@ class ChatWebSocketClient(
 
     val wsUrl = "ws://$host:$port/ws/chat/$roomId/"
     private val json: Json = Json { ignoreUnknownKeys = true }
+
     // Raw incoming JSON strings from server
     private val _incomingMessages = MutableSharedFlow<String>(replay = 0)
     val incomingMessages = _incomingMessages.asSharedFlow()
 
+    private val _parsedMessages = MutableSharedFlow<ChatMessage>(replay = 0)
+    val parsedMessages = _parsedMessages.asSharedFlow()
 
     @Volatile
     private var isRunning = false
@@ -121,10 +129,11 @@ class ChatWebSocketClient(
     private suspend fun DefaultClientWebSocketSession.outgoingLoop() {
         try {
             //pass
-        }catch (exception: Exception){
+        } catch (exception: Exception) {
             AppLogger.log(exception.message.toString())
         }
     }
+
     // Reads incoming frames and emits raw JSON
     private suspend fun DefaultClientWebSocketSession.readLoop() {
         try {
@@ -132,18 +141,69 @@ class ChatWebSocketClient(
                 when (frame) {
                     is Frame.Text -> {
                         val text = frame.readText()
-                        _incomingMessages.emit(text)
+                        AppLogger.log("Raw WS Message: $text")
+
+                        // Parse the action first
+                        try {
+                            val jsonElement = json.parseToJsonElement(text)
+                            val action = jsonElement.jsonObject["action"]?.jsonPrimitive?.content
+
+                            when (action) {
+                                "fetch_messages" -> {
+                                    // Handle message history
+                                    val dataArray = jsonElement.jsonObject["data"]?.jsonArray
+                                    dataArray?.forEach { element ->
+                                        val msg = json.decodeFromJsonElement<ChatMessage>(element)
+                                        // You need a way to expose this to repository
+                                        // Let's assume you have a callback or flow for parsed messages
+                                        _parsedMessages.emit(msg) // You'll add this flow
+                                    }
+                                }
+
+                                "new_message" -> {
+                                    // Handle real-time new message
+                                    val messageJson = jsonElement.jsonObject["message"]?.jsonObject
+                                        ?: jsonElement.jsonObject["data"]?.jsonArray?.firstOrNull()?.jsonObject
+                                    if (messageJson != null) {
+                                        val msg =
+                                            json.decodeFromJsonElement<ChatMessage>(messageJson)
+                                        _parsedMessages.emit(msg)
+                                    }
+                                }
+
+                                "message_sent" -> {
+                                    // Optional: confirmation
+                                    AppLogger.log("Message sent confirmation")
+                                }
+
+                                else -> {
+                                    // Forward raw for debugging or other actions
+                                    _incomingMessages.emit(text)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            AppLogger.log("Failed to parse WS message: ${e.message}")
+                            e.printStackTrace()
+                            _incomingMessages.emit(text) // fallback
+                        }
                     }
+
                     is Frame.Close -> {
-                        break // clean close
+                        val reason = frame.readReason()
+                        AppLogger.log("WebSocket closed: ${reason?.message}")
+                        break
                     }
-                    else -> { /* ignore binary/pings etc */ }
+
+                    else -> { /* ignore */
+                    }
                 }
             }
         } catch (e: Throwable) {
-            // Connection lost or error reading
+            AppLogger.log("WebSocket read error: ${e.message}")
+            e.printStackTrace()
+        } finally {
             if (isRunning) {
-                // Optionally emit error or trigger reconnect
+                // Trigger reconnect
             }
         }
     }

@@ -36,7 +36,7 @@ object HttpClientFactory {
                 )
             }
             install(WebSockets){
-                pingIntervalMillis = 15.seconds.inWholeSeconds
+                pingIntervalMillis = 30_000L
                 contentConverter = KotlinxWebsocketSerializationConverter(Json)
             }
             install(HttpTimeout) {

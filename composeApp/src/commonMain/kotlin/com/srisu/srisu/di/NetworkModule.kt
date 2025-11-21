@@ -36,7 +36,7 @@ val sharedNetworkModule = module {
 
     single { ChatApiService(httpClient = get()) }
     single { ChatWebSocketClient(httpClient = get()) }
-    single { ChatRepository(socketClient = get()) }
+    single { ChatRepository(webSocketClient = get()) }
 
 }
 

@@ -22,75 +22,42 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 
 class ChatRepository(
-    private val socketClient: ChatWebSocketClient
+    private val webSocketClient: ChatWebSocketClient
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val json: Json = Json { ignoreUnknownKeys = true }
-
-    // Expose incoming messages as parsed domain objects
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
 
-    // For one-time events like sent ACKs or errors
-    private val _events = MutableSharedFlow<String>()
-    val events = _events.asSharedFlow()
+    private val messageList = mutableListOf<ChatMessage>()
 
-    fun start() {
-        socketClient.start()
-        scope.launch {
-            socketClient.incomingMessages.collectLatest { raw ->
-                // Server may wrap real msg under {"action": "...","data": {...}} or {"message":"...", "data": {...}}
-                try {
-                    // Try to decode as a map to inspect keys
-                    val jsonElement = json.parseToJsonElement(raw)
-                    val root = jsonElement.jsonObject
+    init {
+        startListening()
+    }
 
-                    // When server sends {"data": serialized_message, "message": "..."} or {"action":"send_message","data":{...}}
-                    if (root["data"] != null) {
-                        val dataElem = root["data"]!!
-                        // data could be list or object
-                        if (dataElem is kotlinx.serialization.json.JsonArray) {
-                            // list of messages
-                            val list = dataElem.map { json.decodeFromJsonElement<ChatMessage>(it) }
-                            _messages.update { old -> (old + list).sortedBy { it.timestamp } }
-                        } else {
-                            val msg = json.decodeFromJsonElement<ChatMessage>(dataElem)
-                            _messages.update { old -> (old + msg).sortedBy { it.timestamp } }
-                        }
-                    } else {
-                        // fallback: try to decode raw to ChatMessage
-                        val maybe = runCatching { json.decodeFromString<ChatMessage>(raw) }.getOrNull()
-                        if (maybe != null) {
-                            _messages.update { old -> (old + maybe).sortedBy { it.timestamp } }
-                        } else {
-                            _events.emit("unhandled_payload")
-                        }
-                    }
-                } catch (e: Exception) {
-                    // ignore or emit error
+    private fun startListening() {
+        CoroutineScope(Dispatchers.IO).launch {
+            webSocketClient.parsedMessages.collect { message ->
+                if (!messageList.any { it.id == message.id }) {
+                    messageList.add(0, message) // newest first? or sort later
+                    _messages.emit(messageList.sortedByDescending { it.timestamp })
                 }
             }
         }
     }
 
-    fun stop() {
-        socketClient.stop()
-        scope.cancel()
-    }
+    fun start() = webSocketClient.start()
+    fun stop() = webSocketClient.stop()
 
-    suspend fun sendMessage(meId: Int,peerId: Int, text: String) {
-        val msg = ChatMessage(
+    suspend fun sendMessage(meId: Int, peerId: Int, text: String) {
+        val chatMessage = ChatMessage(
             id = null,
-            sender= meId,
+            sender = meId,
             receiver = peerId,
             text = text,
-            couple = 0
+            messageType = "TEXT",
+            couple = 8,
+            timestamp = "", // will be set by server
+            // fill others as needed
         )
-
-        // optimistic add locally
-        _messages.update { old -> (old + msg).sortedBy { it.timestamp } }
-
-        // send over socket
-        socketClient.sendChatMessage(msg)
+        webSocketClient.sendChatMessage(chatMessage)
     }
 }
