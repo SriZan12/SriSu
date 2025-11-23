@@ -1,5 +1,8 @@
 package com.srisu.srisu.core.data.response.chat
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ChatMessage(
     val id: Int? = null,
 

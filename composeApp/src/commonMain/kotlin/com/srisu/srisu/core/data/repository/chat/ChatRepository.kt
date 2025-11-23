@@ -1,63 +1,71 @@
 package com.srisu.srisu.core.data.repository.chat
 
-
-// ChatRepository.kt
 import com.srisu.srisu.core.data.response.chat.ChatMessage
+import com.srisu.srisu.core.data.response.chat.ChatResponse
 import com.srisu.srisu.core.data.websocket.ChatWebSocketClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonObject
 
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient
 ) {
-    private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
 
-    private val messageList = mutableListOf<ChatMessage>()
+    private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _messages = MutableStateFlow<List<ChatResponse.Data>>(emptyList())
+    val messages: StateFlow<List<ChatResponse.Data>> = _messages
+
+    private val messageList = mutableListOf<ChatResponse.Data>()
 
     init {
-        startListening()
+        observeWebSocketMessages()
     }
 
-    private fun startListening() {
-        CoroutineScope(Dispatchers.IO).launch {
-            webSocketClient.parsedMessages.collect { message ->
-                if (!messageList.any { it.id == message.id }) {
-                    messageList.add(0, message) // newest first? or sort later
-                    _messages.emit(messageList.sortedByDescending { it.timestamp })
+    /**
+     * Collect parsed messages from WebSocketClient.
+     * Handles both history (list) and real-time messages.
+     */
+    private fun observeWebSocketMessages() {
+        repoScope.launch {
+            webSocketClient.parsedMessages.collectLatest { incomingMsg ->
+                val exists = messageList.any { it.id != null && it.id == incomingMsg?.id }
+
+                if (!exists) {
+                    messageList.add(incomingMsg ?: ChatResponse.Data())
+                    _messages.value = messageList.sortedByDescending { it.timestamp }
                 }
             }
         }
     }
 
+    // ------------------------
+    // Public control functions
+    // ------------------------
+
     fun start() = webSocketClient.start()
+
     fun stop() = webSocketClient.stop()
 
+    /**
+     * Send a chat message via websocket using the refactored sendChatMessage()
+     */
     suspend fun sendMessage(meId: Int, peerId: Int, text: String) {
-        val chatMessage = ChatMessage(
-            id = null,
+        val newMessage = ChatMessage(
+            id = null,                     // server generates
             sender = meId,
             receiver = peerId,
             text = text,
-            messageType = "TEXT",
-            couple = 8,
-            timestamp = "", // will be set by server
-            // fill others as needed
+            timestamp = "",                // server-generated timestamp
+            messageType = "TEXT",          // adjust if your server uses lowercase
+            couple = 0,
         )
-        webSocketClient.sendChatMessage(chatMessage)
+
+//        webSocketClient.fetchMessages(page = 1, pageSize = 20)
     }
 }

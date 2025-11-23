@@ -70,7 +70,7 @@ object HttpClientFactory {
         }
     }
 
-    private fun getBearerToken(session: String?): String? {
+    fun getBearerToken(session: String?): String? {
         if (session != null) {
             val sessionData = Json.decodeFromString<Session>(session)
             AppLogger.log("token is ${sessionData.access}")

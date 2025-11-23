@@ -33,7 +33,7 @@ fun ChatScreen(viewModel: ChatViewModel = koinViewModel(), meId: Int) {
             contentPadding = PaddingValues(8.dp)
         ) {
             items(messages) { msg ->
-                val mine = msg.sender == meId
+                val mine = msg.senderId == meId
                 ChatBubble(text = msg.text.toString(), mine = mine)
                 Spacer(modifier = Modifier.height(6.dp))
             }
