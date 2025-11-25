@@ -7,52 +7,167 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.srisu.srisu.core.data.websocket.ChatWebSocketClient
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(viewModel: ChatViewModel = koinViewModel(), meId: Int) {
+fun ChatScreen(
+    viewModel: ChatViewModel = koinViewModel(), meId: Int
+) {
     val messages by viewModel.messages.collectAsState()
-    val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
+    val connectionState by viewModel.connectionState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val messageInput by viewModel.messageInput.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            coroutineScope.launch { listState.animateScrollToItem(messages.size - 1) }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Chat Room") },
+                actions = {
+                    // Connection status indicator
+                    ConnectionStatusIndicator(connectionState)
+                }
+            )
+        },
+        bottomBar = {
+            ChatInputBar(
+                value = messageInput,
+                onValueChange = { viewModel.onMessageInputChanged(it) },
+                onSend = { viewModel.onSendMessage() },
+                enabled = connectionState is ChatWebSocketClient.ConnectionState.Connected
+            )
         }
-    }
-
-    var input by remember { mutableStateOf("") }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(8.dp)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
         ) {
-            items(messages) { msg ->
-                val mine = msg.senderId == meId
-                ChatBubble(text = msg.text.toString(), mine = mine)
-                Spacer(modifier = Modifier.height(6.dp))
+            // Error banner
+            error?.let { errorMessage ->
+                ErrorBanner(
+                    message = errorMessage,
+                    onDismiss = { viewModel.clearError() },
+                    onRetry = { viewModel.retryConnection() }
+                )
+            }
+
+            // Loading indicator
+            if (isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Messages list
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                reverseLayout = true,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = messages,
+                    key = { (it?.id ?: it?.timestamp ?: "") }
+                ) { message ->
+                    MessageItem(message)
+                }
             }
         }
+    }
+}
 
-        HorizontalDivider()
+@Composable
+private fun ConnectionStatusIndicator(state: ChatWebSocketClient.ConnectionState) {
+    val (text, color) = when (state) {
+        is ChatWebSocketClient.ConnectionState.Connected -> "Connected" to MaterialTheme.colorScheme.primary
+        is ChatWebSocketClient.ConnectionState.Connecting -> "Connecting..." to MaterialTheme.colorScheme.secondary
+        is ChatWebSocketClient.ConnectionState.Disconnected -> "Disconnected" to MaterialTheme.colorScheme.error
+        is ChatWebSocketClient.ConnectionState.Reconnecting -> "Reconnecting..." to MaterialTheme.colorScheme.tertiary
+        is ChatWebSocketClient.ConnectionState.Error -> "Error" to MaterialTheme.colorScheme.error
+    }
 
-        Row(modifier = Modifier.padding(8.dp)) {
-            TextField(
-                value = input,
-                onValueChange = { input = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message...") }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        modifier = Modifier.padding(horizontal = 8.dp)
+    )
+}
+
+@Composable
+private fun ErrorBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = {
-                viewModel.onSend(input)
-                input = ""
-            }) {
+            Row {
+                TextButton(onClick = onRetry) {
+                    Text("Retry")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Dismiss")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatInputBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSend: () -> Unit,
+    enabled: Boolean
+) {
+    Surface(
+        tonalElevation = 3.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Type a message...") },
+                enabled = enabled,
+                singleLine = false,
+                maxLines = 4
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = onSend,
+                enabled = enabled && value.isNotBlank()
+            ) {
                 Text("Send")
             }
         }
@@ -60,18 +175,23 @@ fun ChatScreen(viewModel: ChatViewModel = koinViewModel(), meId: Int) {
 }
 
 @Composable
-fun ChatBubble(text: String, mine: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start
+private fun MessageItem(message: com.srisu.srisu.core.data.dto.chatdto.ChatMessage?) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.padding(4.dp)
+        Column(
+            modifier = Modifier.padding(12.dp)
         ) {
-            Text(text = text, modifier = Modifier.padding(10.dp))
+            Text(
+                text = message?.text.toString(),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = message?.timestamp.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
