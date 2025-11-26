@@ -12,7 +12,7 @@ import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
-import com.srisu.srisu.core.data.websocket.ChatWebSocketClient
+import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 //import io.ktor.client.engine.cio.CIO
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -35,7 +35,7 @@ val sharedNetworkModule = module {
     single { ConnectionRepository(connectionApiService = get()) }
 
     single { ChatApiService(httpClient = get()) }
-    single { ChatWebSocketClient(httpClient = get()) }
+    single { ChatWebSocketClient(httpClient = get(), host = "192.168.1.74", port = 8000) }
     single { ChatRepository(webSocketClient = get()) }
 
 }

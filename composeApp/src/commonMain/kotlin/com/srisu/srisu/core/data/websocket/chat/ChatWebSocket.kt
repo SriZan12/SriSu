@@ -1,4 +1,4 @@
-package com.srisu.srisu.core.data.websocket
+package com.srisu.srisu.core.data.websocket.chat
 
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
@@ -25,21 +25,19 @@ import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.seconds
 
 class ChatWebSocketClient(
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    private val host: String,
+    private val port: Int,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    private val host = "192.168.1.74"
-    private val port = 8000
     private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
     private val wsUrl = "ws://$host:$port/ws/chat/$roomId/"
-
     private val json = Json { ignoreUnknownKeys = true }
 
     // Expose incoming messages as a SharedFlow
-    private val _incomingMessages = MutableSharedFlow<ChatMessage?>()
-    val incomingMessages = _incomingMessages.asSharedFlow()
+    private val _chatMessages = MutableSharedFlow<List<FetchMessageResponse.ChatMessage.Result?>?>()
+    val chatMessages = _chatMessages.asSharedFlow()
 
     // Connection state
     private val _connectionState = MutableSharedFlow<ConnectionState>()
@@ -108,9 +106,9 @@ class ChatWebSocketClient(
         }
     }
 
-    // -----------------------------
+    // --------------------------------
     // Connection Loop with Auto-Reconnect
-    // -----------------------------
+    // ---------------------------------
 
     private suspend fun connectionLoop() {
         var backoff = 1.seconds
@@ -155,8 +153,8 @@ class ChatWebSocketClient(
             for (frame in incoming) {
                 when (frame) {
                     is Frame.Text -> {
-                        val text = frame.readText()
-                        handleIncomingMessage(text)
+                        val webSocketText = frame.readText()
+                        handleIncomingMessage(raw = webSocketText)
                     }
 
                     is Frame.Close -> {
@@ -183,18 +181,11 @@ class ChatWebSocketClient(
 
             when (response.action) {
                 "fetch_messages" -> {
-                    response.chatMessages?.forEach { message ->
-                        _incomingMessages.emit(message)
-                    }
-                    AppLogger.log("Received ${response.chatMessages?.size ?: 0} messages")
+                    val messageList = response.chatMessage?.results
+                    _chatMessages.emit(messageList)
                 }
 
                 "send_message" -> {
-                    // Handle real-time message
-                    response.chatMessages?.firstOrNull()?.let { message ->
-                        _incomingMessages.emit(message)
-                        AppLogger.log("New message received: ${message.text}")
-                    }
                 }
 
                 else -> {
@@ -206,15 +197,4 @@ class ChatWebSocketClient(
         }
     }
 
-    // -----------------------------
-    // Connection State
-    // -----------------------------
-
-    sealed class ConnectionState {
-        object Connecting : ConnectionState()
-        object Connected : ConnectionState()
-        object Disconnected : ConnectionState()
-        object Reconnecting : ConnectionState()
-        data class Error(val message: String) : ConnectionState()
-    }
 }

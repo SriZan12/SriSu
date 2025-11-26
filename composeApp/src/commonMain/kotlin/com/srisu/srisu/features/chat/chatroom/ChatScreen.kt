@@ -4,14 +4,12 @@ package com.srisu.srisu.features.chat.chatroom
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.srisu.srisu.core.data.websocket.ChatWebSocketClient
-import kotlinx.coroutines.launch
+import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

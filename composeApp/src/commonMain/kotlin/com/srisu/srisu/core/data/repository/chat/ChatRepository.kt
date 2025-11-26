@@ -1,7 +1,9 @@
 package com.srisu.srisu.core.data.repository.chat
 
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
-import com.srisu.srisu.core.data.websocket.ChatWebSocketClient
+import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
+import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import com.srisu.srisu.core.logger.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,15 +23,17 @@ class ChatRepository(
     private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Messages state
-    private val _messages = MutableStateFlow<List<ChatMessage?>>(emptyList())
-    val messages: StateFlow<List<ChatMessage?>> = _messages.asStateFlow()
+    private val _messages =
+        MutableStateFlow<List<FetchMessageResponse.ChatMessage.Result?>>(emptyList())
+    val messages: StateFlow<List<FetchMessageResponse.ChatMessage.Result?>> =
+        _messages.asStateFlow()
 
     // Connection state exposed to UI
     val connectionState = webSocketClient.connectionState
         .stateIn(
             scope = repoScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ChatWebSocketClient.ConnectionState.Disconnected
+            initialValue = ConnectionState.Disconnected
         )
 
     // Loading state
@@ -70,29 +74,20 @@ class ChatRepository(
 
     private fun startCollectingMessages() {
         repoScope.launch {
-            webSocketClient.incomingMessages.collect { incomingMessage ->
+            webSocketClient.chatMessages.collect { incomingMessage ->
                 handleIncomingMessage(incomingMessage)
             }
         }
     }
 
-    private fun handleIncomingMessage(message: ChatMessage?) {
+    private fun handleIncomingMessage(message: List<FetchMessageResponse.ChatMessage.Result?>?) {
         val currentMessages = _messages.value.toMutableList()
 
-        // Check for duplicates based on message ID
-        val isDuplicate = message?.id?.let { id ->
-            currentMessages.any { it?.id == id }
-        } ?: false
+        message?.filterNotNull()?.let { currentMessages.addAll(it) }
 
-        if (!isDuplicate) {
-            currentMessages.add(message)
-            // Sort by timestamp (newest first)
-            _messages.value = currentMessages.sortedByDescending { it?.timestamp }
-            AppLogger.log("Message added to repository: ${message?.text}")
-        } else {
-            AppLogger.log("Duplicate message ignored: ${message.id}")
-        }
+        _messages.value = currentMessages
     }
+
 
     // -----------------------------
     // Public Actions
