@@ -5,16 +5,22 @@ import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.utils.DateTimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.collections.filter
 
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient
@@ -22,132 +28,129 @@ class ChatRepository(
 
     private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Messages state
     private val _messages =
-        MutableStateFlow<List<FetchMessageResponse.ChatMessage.Result?>>(emptyList())
-    val messages: StateFlow<List<FetchMessageResponse.ChatMessage.Result?>> =
+        MutableStateFlow<List<ChatMessage?>?>(emptyList())
+
+    val messages: StateFlow<List<ChatMessage?>?> =
         _messages.asStateFlow()
 
-    // Connection state exposed to UI
-    val connectionState = webSocketClient.connectionState
-        .stateIn(
-            scope = repoScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ConnectionState.Disconnected
-        )
+    private var collectJob: Job? = null
 
-    // Loading state
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private var isCollecting = false
-
-    // -----------------------------
-    // Lifecycle Management
-    // -----------------------------
+    //-------------------------
+    // LifeCycle Management
+    //-------------------------
 
     /**
      * Start WebSocket connection and begin collecting messages
-     */
+     * */
+
     fun start() {
-        if (isCollecting) {
-            AppLogger.log("Repository already collecting messages")
+        //prevent double start
+
+        if (collectJob?.isActive == true) {
+            AppLogger.log("Repository already Collectin messages")
             return
         }
 
-        isCollecting = true
         webSocketClient.connect()
-        startCollectingMessages()
-    }
 
-    /**
-     * Stop WebSocket connection and message collection
-     */
-    fun stop() {
-        isCollecting = false
-        webSocketClient.disconnect()
-    }
-
-    // -----------------------------
-    // Message Collection
-    // -----------------------------
-
-    private fun startCollectingMessages() {
-        repoScope.launch {
-            webSocketClient.chatMessages.collect { incomingMessage ->
-                handleIncomingMessage(incomingMessage)
+        collectJob = repoScope.launch {
+            try {
+                webSocketClient.chatMessages.collect { incoming ->
+                    try {
+                        handleIncomingMessages(incoming)
+                    } catch (exception: Exception) {
+                        AppLogger.log("Error collecting messages: ${exception.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.log("Error collecting messages: ${e.message}")
             }
         }
     }
 
-    private fun handleIncomingMessage(message: List<FetchMessageResponse.ChatMessage.Result?>?) {
-        val currentMessages = _messages.value.toMutableList()
+    /**
+     * Stop WebSocket connection and cancel message collection
+     **/
 
-        message?.filterNotNull()?.let { currentMessages.addAll(it) }
+    fun stop() {
+        collectJob?.cancel()
+        collectJob = null
+        webSocketClient.disconnect()
 
-        _messages.value = currentMessages
+        //Cancel repoScope to avoid leaks if repository is disposed
+        repoScope.cancel()
+    }
+
+    //--------------------
+    // Message Handling
+    //--------------------
+
+
+    /**
+     * Appends new messages while deduplicating by id (if available)
+     * */
+
+    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
+        if (messages.isNullOrEmpty()) return
+
+        _messages.update { current ->
+
+            val currentList = current?.toMutableList() ?: mutableListOf()
+
+            // dedupe by ID
+            val existingIds = currentList.mapNotNull { it?.id }.toSet()
+
+            val newMessages = messages.filter { msg ->
+                msg?.id == null || msg.id !in existingIds
+            }
+
+            // Append only — no sorting
+            currentList.apply {
+                addAll(newMessages)
+            }
+        }
     }
 
 
-    // -----------------------------
-    // Public Actions
-    // -----------------------------
 
-    /**
-     * Send a text message through WebSocket
-     */
-    suspend fun sendMessage(senderId: Int, receiverId: Int, text: String) {
-        if (text.isBlank()) {
-            AppLogger.log("Cannot send empty message")
-            return
-        }
+    //---------------
+    // Actions
+    //---------------
 
+
+    @Throws(Exception::class)
+    suspend fun sendMessage(chatMessage: ChatMessage) {
         try {
-            val message = ChatMessage(
-                id = null,  // Server generates ID
-                senderId = senderId,
-                receiverId = receiverId,
-                text = text.trim(),
-                timestamp = "",  // Server generates timestamp
-                messageType = "TEXT",
-                couple = 0
-            )
-
-            webSocketClient.sendMessage(message)
-        } catch (e: Exception) {
-            AppLogger.log("Error sending message: ${e.message}")
-            throw e
+            webSocketClient.sendMessage(chatMessage)
+        } catch (exception: Exception) {
+            AppLogger.log("Error sending message: ${exception.message}")
+            throw exception
         }
     }
 
-    /**
-     * Fetch message history
-     */
-    suspend fun fetchMessages(page: Int = 1, pageSize: Int = 20) {
+    @Throws(Exception::class)
+    suspend fun fetchMessages(page: Int, pageSize: Int) {
         try {
-            _isLoading.value = true
             webSocketClient.fetchMessages(page, pageSize)
-        } catch (e: Exception) {
-            AppLogger.log("Error fetching messages: ${e.message}")
-            throw e
-        } finally {
-            _isLoading.value = false
+        } catch (exception: Exception) {
+            AppLogger.log("Error fetching messages: ${exception.message}")
+            throw exception
+
         }
     }
 
-    /**
-     * Clear local messages (useful for logout/room switch)
-     */
-    fun clearMessages() {
+    fun clearMessages(){
         _messages.value = emptyList()
         AppLogger.log("Messages cleared")
     }
 
-    /**
-     * Reconnect to WebSocket
-     */
-    fun reconnect() {
+    fun reconnect(){
         stop()
+
+        webSocketClient.connect()
         start()
     }
+
+
 }

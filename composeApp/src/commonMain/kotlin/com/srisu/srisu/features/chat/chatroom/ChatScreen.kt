@@ -9,7 +9,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
+import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -18,9 +21,6 @@ fun ChatScreen(
     viewModel: ChatViewModel = koinViewModel(), meId: Int
 ) {
     val messages by viewModel.messages.collectAsState()
-    val connectionState by viewModel.connectionState.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val messageInput by viewModel.messageInput.collectAsState()
     val error by viewModel.error.collectAsState()
 
     Scaffold(
@@ -29,17 +29,10 @@ fun ChatScreen(
                 title = { Text("Chat Room") },
                 actions = {
                     // Connection status indicator
-                    ConnectionStatusIndicator(connectionState)
                 }
             )
         },
         bottomBar = {
-            ChatInputBar(
-                value = messageInput,
-                onValueChange = { viewModel.onMessageInputChanged(it) },
-                onSend = { viewModel.onSendMessage() },
-                enabled = connectionState is ChatWebSocketClient.ConnectionState.Connected
-            )
         }
     ) { padding ->
         Column(
@@ -56,24 +49,17 @@ fun ChatScreen(
                 )
             }
 
-            // Loading indicator
-            if (isLoading) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
             // Messages list
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .weight(1f),
-                reverseLayout = true,
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(
-                    items = messages,
+                    items = messages ?: emptyList(),
                     key = { (it?.id ?: it?.timestamp ?: "") }
                 ) { message ->
                     MessageItem(message)
@@ -81,24 +67,6 @@ fun ChatScreen(
             }
         }
     }
-}
-
-@Composable
-private fun ConnectionStatusIndicator(state: ChatWebSocketClient.ConnectionState) {
-    val (text, color) = when (state) {
-        is ChatWebSocketClient.ConnectionState.Connected -> "Connected" to MaterialTheme.colorScheme.primary
-        is ChatWebSocketClient.ConnectionState.Connecting -> "Connecting..." to MaterialTheme.colorScheme.secondary
-        is ChatWebSocketClient.ConnectionState.Disconnected -> "Disconnected" to MaterialTheme.colorScheme.error
-        is ChatWebSocketClient.ConnectionState.Reconnecting -> "Reconnecting..." to MaterialTheme.colorScheme.tertiary
-        is ChatWebSocketClient.ConnectionState.Error -> "Error" to MaterialTheme.colorScheme.error
-    }
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = color,
-        modifier = Modifier.padding(horizontal = 8.dp)
-    )
 }
 
 @Composable
@@ -173,7 +141,7 @@ private fun ChatInputBar(
 }
 
 @Composable
-private fun MessageItem(message: com.srisu.srisu.core.data.dto.chatdto.ChatMessage?) {
+private fun MessageItem(message: ChatMessage?) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {

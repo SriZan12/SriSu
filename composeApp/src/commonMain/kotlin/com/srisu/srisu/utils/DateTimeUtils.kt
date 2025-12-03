@@ -14,6 +14,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 object DateTimeUtils {
 
@@ -81,6 +82,21 @@ object DateTimeUtils {
         }
 
         content(timeLeft)
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun parseTimestampToMillis(timestamp: String?): Long {
+        if (timestamp.isNullOrBlank()) return Long.MAX_VALUE
+
+        return try {
+            Instant.parse(timestamp).toEpochMilliseconds()
+
+            // If backend uses offset timestamps like "2025-12-03T10:12:45+05:45"
+            // ZonedDateTime.parse(timestamp).toInstant().toEpochMilli()
+
+        } catch (e: Exception) {
+            Long.MAX_VALUE // fallback so invalid timestamps go at bottom
+        }
     }
 
 

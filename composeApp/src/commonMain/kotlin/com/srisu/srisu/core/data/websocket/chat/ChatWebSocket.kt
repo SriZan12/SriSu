@@ -3,6 +3,7 @@ package com.srisu.srisu.core.data.websocket.chat
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.response.chat.SendMessageResponse
 import com.srisu.srisu.core.logger.AppLogger
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
@@ -21,13 +22,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.seconds
 
 class ChatWebSocketClient(
     private val httpClient: HttpClient,
-    private val host: String,
-    private val port: Int,
+    host: String,
+    port: Int,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -36,7 +39,7 @@ class ChatWebSocketClient(
     private val json = Json { ignoreUnknownKeys = true }
 
     // Expose incoming messages as a SharedFlow
-    private val _chatMessages = MutableSharedFlow<List<FetchMessageResponse.ChatMessage.Result?>?>()
+    private val _chatMessages = MutableSharedFlow<List<ChatMessage?>?>()
     val chatMessages = _chatMessages.asSharedFlow()
 
     // Connection state
@@ -124,7 +127,7 @@ class ChatWebSocketClient(
                     AppLogger.log("WebSocket connected")
 
                     // Auto-fetch initial messages on connection
-                    fetchMessages(page = 1, pageSize = 20)
+                    fetchMessages(page = 1, pageSize = 100)
 
                     // Read incoming messages
                     readLoop()
@@ -177,24 +180,37 @@ class ChatWebSocketClient(
 
     private suspend fun handleIncomingMessage(raw: String) {
         try {
-            val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
+            // Parse the action first
+            val action = Json.parseToJsonElement(raw).jsonObject["action"]?.jsonPrimitive?.content
+            AppLogger.log("Action received: $action")
 
-            when (response.action) {
+            when (action) {
                 "fetch_messages" -> {
+                    val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
                     val messageList = response.chatMessage?.results
+                    AppLogger.log("Fetched messages emitted, count: ${messageList?.size ?: 0}")
                     _chatMessages.emit(messageList)
                 }
 
                 "send_message" -> {
+                    val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
+                    response.data?.let { chatMessage ->
+                        AppLogger.log("New message emitted: ${chatMessage.text}")
+
+                        val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
+                        _chatMessages.emit(currentList + listOf(chatMessage)) // append at the end
+
+                    }
                 }
 
                 else -> {
-                    AppLogger.log("Unknown action: ${response.action}")
+                    AppLogger.log("Unknown action received: $action")
                 }
             }
         } catch (e: Exception) {
-            AppLogger.log("Parse error: ${e.message}")
+            AppLogger.log("Parse error in handleIncomingMessage: ${e.message}\nRaw payload: $raw")
         }
     }
+
 
 }

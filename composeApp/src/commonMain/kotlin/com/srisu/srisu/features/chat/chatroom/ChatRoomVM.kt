@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
+import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
+import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,30 +14,17 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val repository: ChatRepository,
-    private val currentUserId: Int = 97,  // Inject this via DI in production
-    private val otherUserId: Int = 95     // Inject this via DI in production
 ) : ViewModel() {
 
-    // Messages from repository
-    val messages: StateFlow<List<ChatMessage?>> = repository.messages
+    val messages: StateFlow<List<ChatMessage?>?> = repository.messages
 
-    // Connection state from repository
-    val connectionState: StateFlow<ChatWebSocketClient.ConnectionState> =
-        repository.connectionState
-
-    // Loading state
-    val isLoading: StateFlow<Boolean> = repository.isLoading
-
-    // UI state for input field
     private val _messageInput = MutableStateFlow("")
     val messageInput: StateFlow<String> = _messageInput.asStateFlow()
 
-    // Error state
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        // Start WebSocket connection when ViewModel is created
         repository.start()
     }
 
@@ -60,9 +49,7 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 repository.sendMessage(
-                    senderId = currentUserId,
-                    receiverId = otherUserId,
-                    text = text
+                    ChatMessage()
                 )
                 _messageInput.value = "" // Clear input on success
                 _error.value = null
