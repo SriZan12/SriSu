@@ -39,7 +39,7 @@ fun HomeScreen(
 //            Text("HOME SCREEN")
 //        }
 
-        ChatScreen(meId = 97)
+        ChatScreen()
     }
 
 }
