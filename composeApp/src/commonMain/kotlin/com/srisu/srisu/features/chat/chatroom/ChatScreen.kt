@@ -1,13 +1,23 @@
 package com.srisu.srisu.features.chat.chatroom
 
 // ChatScreen.kt
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +27,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,19 +39,35 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.VideoCall
+import androidx.compose.material.icons.filled.VideoChat
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,13 +79,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.logger.AppLogger
 import kotlinx.coroutines.delay
@@ -66,6 +101,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
+    navController: NavController,
     viewModel: ChatViewModel = koinViewModel(),
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -75,17 +111,18 @@ fun ChatScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Chat Room") },
-                actions = {
-                    // Connection status indicator
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                )
+            ChatTopBar(
+                title = "Srijan Khadka",
+                subtitle = "Online",
+                avatarUrl = "https://randomuser.me/api/portraits/men/76.jpg",
+                onBack = { },
+                onCall = { },
+                onVideoCall = {}
             )
         },
         bottomBar = {
+
+
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { padding ->
@@ -95,7 +132,6 @@ fun ChatScreen(
         ) {
             Column(
                 modifier = Modifier
-
             ) {
                 // Error banner
                 error?.let { errorMessage ->
@@ -110,10 +146,9 @@ fun ChatScreen(
                 // Messages list
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(all = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     reverseLayout = true // To show latest messages at the bottom
                 ) {
                     items(
@@ -122,8 +157,7 @@ fun ChatScreen(
                     ) { message ->
                         if (message != null) {
                             val isSentByCurrentUser = message.senderId == currentUserId
-                            AppLogger.log("Sender id = ${message.senderId}")
-                            MessageItem(
+                            AnimatedMessageItem(
                                 chatMessage = message,
                                 isSentByCurrentUser = isSentByCurrentUser
                             )
@@ -132,9 +166,101 @@ fun ChatScreen(
                     }
                 }
             }
+
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    .align(Alignment.BottomCenter)
+            ) {
+                var typedMessage by remember { mutableStateOf("") }
+
+                ChatInputBar(
+                    value = typedMessage,
+                    onValueChange = {
+                        typedMessage = it
+                    },
+                    onSend = {
+
+                    },
+                    enabled = true
+                )
+            }
+
 //            FloatingHearts()
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatTopBar(
+    title: String,
+    subtitle: String = "Online",
+    avatarUrl: String,
+    onBack: () -> Unit,
+    onCall: () -> Unit,
+    onVideoCall: () -> Unit
+) {
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                )
+
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        actions = {
+            IconButton(onClick = onCall) {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    contentDescription = "Voice call",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(onClick = onVideoCall) {
+                Icon(
+                    imageVector = Icons.Default.Videocam,
+                    contentDescription = "Video call",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -172,39 +298,115 @@ private fun ErrorBanner(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatInputBar(
+fun ChatInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     enabled: Boolean
 ) {
-    Surface(
-        tonalElevation = 3.dp
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message...") },
-                enabled = enabled,
-                singleLine = false,
-                maxLines = 4
+                .weight(1f)
+                .padding(end = 8.dp),
+            placeholder = { Text("Type a message") },
+            enabled = enabled,
+            maxLines = 4,
+            shape = RoundedCornerShape(24.dp),
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Send
+            ),
+            keyboardActions = KeyboardActions(
+                onSend = { onSend() }
+            ),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceDim,
+                unfocusedIndicatorColor = Color.Transparent,
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = onSend,
-                enabled = enabled && value.isNotBlank()
-            ) {
-                Text("Send")
+
+        )
+
+        AnimatedContent(
+            targetState = value.isNotBlank(),
+            transitionSpec = {
+                fadeIn(tween(150)) + scaleIn() togetherWith
+                        fadeOut(tween(150)) + scaleOut()
+            },
+            label = "SendSwitch"
+        ) { hasText ->
+            if (hasText) {
+                FilledIconButton(
+                    onClick = onSend,
+                    enabled = enabled,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send message",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = onSend,
+                    enabled = enabled
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Voice message",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
+    }
+}
+
+
+@Composable
+fun AnimatedMessageItem(
+    chatMessage: ChatMessage,
+    isSentByCurrentUser: Boolean
+) {
+
+    var showMessageAnimation by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(Unit) {
+        showMessageAnimation = true
+    }
+
+    AnimatedVisibility(
+        visible = showMessageAnimation,
+        enter = fadeIn(
+            animationSpec = tween(220)
+        ) + slideInVertically(
+            animationSpec = tween(220),
+            initialOffsetY = { it / 4 }
+        ) + scaleIn(
+            initialScale = 0.96f,
+            animationSpec = tween(220)
+        ),
+        exit = fadeOut(tween(120))
+    ) {
+        MessageItem(
+            chatMessage = chatMessage,
+            isSentByCurrentUser = isSentByCurrentUser
+        )
+
     }
 }
 
@@ -319,4 +521,10 @@ private fun MessageItemPreview() {
             isSentByCurrentUser = false
         )
     }
+}
+
+@Composable
+@Preview
+private fun ChatInputCompo() {
+    ChatInputBar(value = "", onValueChange = {}, onSend = {}, enabled = true)
 }

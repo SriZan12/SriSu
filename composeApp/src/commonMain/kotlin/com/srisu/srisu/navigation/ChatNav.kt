@@ -3,6 +3,7 @@ package com.srisu.srisu.navigation
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.srisu.srisu.features.chat.chatroom.ChatScreen
 import com.srisu.srisu.features.chat.couple.findpartner.FindYourPartnerScreen
 import kotlinx.serialization.Serializable
 
@@ -20,8 +21,14 @@ sealed class ChatNav : Route {
 fun NavGraphBuilder.chatGraph(
     navController: NavController
 ) {
-    composable<ChatNav.FindPartnerScreen>() {
+    composable<ChatNav.FindPartnerScreen> {
         FindYourPartnerScreen()
+    }
+
+    composable<ChatNav.ChatScreen> {
+        ChatScreen(
+            navController = navController
+        )
     }
 
 

@@ -39,7 +39,10 @@ fun HomeScreen(
 //            Text("HOME SCREEN")
 //        }
 
-        ChatScreen()
+        ChatScreen(
+            navController = rememberNavController(
+            )
+        )
     }
 
 }
