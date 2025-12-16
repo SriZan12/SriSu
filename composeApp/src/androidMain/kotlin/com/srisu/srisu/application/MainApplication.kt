@@ -1,6 +1,8 @@
 package com.srisu.srisu.application
 
 import android.app.Application
+import androidx.compose.runtime.Composer
+import androidx.compose.runtime.ExperimentalComposeRuntimeApi
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -17,6 +19,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
     private lateinit var connectivityObserver: ConnectivityObserver
 
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     override fun onCreate() {
         super.onCreate()
         /*initKoin {
@@ -26,6 +29,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
         initLogger()
         connectivityObserver = ConnectivityObserver()
 
+        Composer.setDiagnosticStackTraceEnabled(true)
 
     }
 

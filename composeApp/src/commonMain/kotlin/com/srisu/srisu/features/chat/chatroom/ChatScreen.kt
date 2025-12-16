@@ -24,18 +24,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,6 +85,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,6 +105,7 @@ import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.logger.AppLogger
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Month
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -106,8 +117,9 @@ fun ChatScreen(
 ) {
     val messages by viewModel.messages.collectAsState()
     val error by viewModel.error.collectAsState()
-    // Replace with the actual current user ID from your ViewModel or auth manager
     val currentUserId = 97
+
+    var typedMessage by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -115,80 +127,72 @@ fun ChatScreen(
                 title = "Srijan Khadka",
                 subtitle = "Online",
                 avatarUrl = "https://randomuser.me/api/portraits/men/76.jpg",
-                onBack = { },
+                onBack = { navController.popBackStack() },
                 onCall = { },
-                onVideoCall = {}
+                onVideoCall = { }
             )
         },
         bottomBar = {
-
-
+            ChatInputBar(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(16.dp),
+                value = typedMessage,
+                onValueChange = { typedMessage = it },
+                onSend = {
+                    if (typedMessage.isNotBlank()) {
+                        // viewModel.sendMessage(typedMessage)
+                        typedMessage = ""
+                    }
+                },
+                enabled = true
+            )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    ) { padding ->
-        Box(
-            modifier = Modifier.fillMaxWidth().fillMaxSize()
-                .padding(padding)
+    ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            Column(
-                modifier = Modifier
-            ) {
-                // Error banner
-                error?.let { errorMessage ->
-                    ErrorBanner(
-                        message = errorMessage,
-                        onDismiss = { viewModel.clearError() },
-                        onRetry = { viewModel.retryConnection() }
-                    )
-                }
 
-
-                // Messages list
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    contentPadding = PaddingValues(all = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    reverseLayout = true // To show latest messages at the bottom
-                ) {
-                    items(
-                        items = messages?.reversed() ?: emptyList(),
-                        key = { (it?.id ?: it?.timestamp ?: "") }
-                    ) { message ->
-                        if (message != null) {
-                            val isSentByCurrentUser = message.senderId == currentUserId
-                            AnimatedMessageItem(
-                                chatMessage = message,
-                                isSentByCurrentUser = isSentByCurrentUser
-                            )
-
-                        }
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                    .align(Alignment.BottomCenter)
-            ) {
-                var typedMessage by remember { mutableStateOf("") }
-
-                ChatInputBar(
-                    value = typedMessage,
-                    onValueChange = {
-                        typedMessage = it
-                    },
-                    onSend = {
-
-                    },
-                    enabled = true
+            error?.let { errorMessage ->
+                ErrorBanner(
+                    message = errorMessage,
+                    onDismiss = { viewModel.clearError() },
+                    onRetry = { viewModel.retryConnection() }
                 )
             }
 
-//            FloatingHearts()
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(all = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                reverseLayout = true
+            ) {
+                items(
+                    items = messages ?: emptyList(),
+                    key = { (it?.id ?: it?.timestamp ?: "") }
+                ) { message ->
+
+                    if (message != null) {
+                        val isSentByCurrentUser = message.senderId == currentUserId
+                        AnimatedMessageItem(
+                            chatMessage = message,
+                            isSentByCurrentUser = isSentByCurrentUser
+                        )
+
+                    }
+                }
+            }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -301,14 +305,14 @@ private fun ErrorBanner(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatInputBar(
+    modifier: Modifier,
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     enabled: Boolean
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
 
@@ -526,5 +530,5 @@ private fun MessageItemPreview() {
 @Composable
 @Preview
 private fun ChatInputCompo() {
-    ChatInputBar(value = "", onValueChange = {}, onSend = {}, enabled = true)
+    ChatInputBar(modifier = Modifier, value = "", onValueChange = {}, onSend = {}, enabled = true)
 }
