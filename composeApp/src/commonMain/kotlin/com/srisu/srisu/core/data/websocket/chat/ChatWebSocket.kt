@@ -20,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -34,13 +35,14 @@ class ChatWebSocketClient(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-//    private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
-    private val roomId = "e579dc98-5dbd-4aab-8a48-10985346d7fa"
+    private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+
+    //    private val roomId = "e579dc98-5dbd-4aab-8a48-10985346d7fa"
     private val wsUrl = "ws://$host:$port/ws/chat/$roomId/"
     private val json = Json { ignoreUnknownKeys = true }
 
     // Expose incoming messages as a SharedFlow
-    private val _chatMessages = MutableSharedFlow<List<ChatMessage?>?>()
+    private var _chatMessages = MutableSharedFlow<List<ChatMessage?>?>()
     val chatMessages = _chatMessages.asSharedFlow()
 
     // Connection state
@@ -88,6 +90,17 @@ class ChatWebSocketClient(
             val payload = json.encodeToString(ChatMessage.serializer(), message)
             currentSession?.outgoing?.send(Frame.Text(payload))
             AppLogger.log("Message sent: ${message.text}")
+        } catch (e: Exception) {
+            AppLogger.log("Error sending message: ${e.message}")
+            throw e
+        }
+    }
+
+    suspend fun editMessage(message: ChatMessage) {
+        try {
+            val payload = json.encodeToString(ChatMessage.serializer(), message)
+            currentSession?.outgoing?.send(Frame.Text(payload))
+            AppLogger.log("Message Edit: ${message.text}")
         } catch (e: Exception) {
             AppLogger.log("Error sending message: ${e.message}")
             throw e
@@ -203,6 +216,33 @@ class ChatWebSocketClient(
 
                     }
                 }
+
+                "edit_message" -> {
+                    val response = json.decodeFromString(
+                        SendMessageResponse.serializer(),
+                        raw
+                    )
+
+                    response.data?.let { editedMessage ->
+                        AppLogger.log("Message edited: $editedMessage")
+
+                        // Get current messages safely
+                        val currentList = _chatMessages.replayCache.last() // Prefer .value if StateFlow
+                        // OR: _chatMessages.replayCache.last() if SharedFlow
+
+                        val updatedList = currentList?.map { message ->
+                            if (message?.id == editedMessage.id) {
+                                editedMessage.copy() // Optional: create new instance if data class
+                            } else {
+                                message
+                            }
+                        }
+
+                        // IMPORTANT: Emit as a new list instance
+                        _chatMessages.emit(updatedList) // or tryEmit / update {} if StateFlow
+                    }
+                }
+
 
                 else -> {
                     AppLogger.log("Unknown action received: $action")

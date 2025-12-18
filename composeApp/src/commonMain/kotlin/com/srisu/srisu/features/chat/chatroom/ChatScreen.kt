@@ -14,65 +14,48 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MultipleStop
-import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.VideoCall
-import androidx.compose.material.icons.filled.VideoChat
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -82,6 +65,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -91,27 +75,26 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
-import com.srisu.srisu.core.logger.AppLogger
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Month
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -123,8 +106,8 @@ fun ChatScreen(
 ) {
     val chatState by viewModel.chatState.collectAsState()
     val error by viewModel.error.collectAsState()
-    val currentUserId = 3
-
+    val currentUserId = 97
+    val inputFocusRequester = remember { FocusRequester() }
 
     Scaffold(
         topBar = {
@@ -144,14 +127,17 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(16.dp),
-                value = chatState.messageInput,
-                onValueChange = { viewModel.onMessageInputChanged(text = it) },
+                value = chatState.messageInput.text,
+                onValueChange = { viewModel.onMessageInputChanged(value = TextFieldValue(it)) },
                 onSend = {
-                    if (chatState.messageInput.isNotBlank()) {
+                    if (chatState.messageInput.text.isNotBlank() && !chatState.isEditMessage) {
                         viewModel.sendMessage()
+                    } else {
+                        viewModel.editMessage(messageId = chatState.longClickedMessage?.id)
                     }
                 },
-                enabled = true
+                enabled = true,
+                focusRequester = inputFocusRequester
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -180,6 +166,9 @@ fun ChatScreen(
                 }
             }
 
+            var showChatActionDialog by remember {
+                mutableStateOf(false)
+            }
 
             LazyColumn(
                 modifier = Modifier
@@ -198,12 +187,47 @@ fun ChatScreen(
                         val isSentByCurrentUser = message.senderId == currentUserId
                         AnimatedMessageItem(
                             chatMessage = message,
-                            isSentByCurrentUser = isSentByCurrentUser
+                            isSentByCurrentUser = isSentByCurrentUser,
+                            onLongClick = {
+                                showChatActionDialog = true
+                                viewModel.updateLongClickedMessage(it)
+                            },
+                            onClick = { }
                         )
 
                     }
                 }
             }
+
+            var triggerFocus by remember { mutableStateOf(false) }
+            val message = chatState.longClickedMessage
+
+
+            if (showChatActionDialog) {
+
+                MessageActionsDialog(
+                    onDismiss = { showChatActionDialog = false },
+                    onReply = { },
+                    onCopy = { },
+                    onEdit = {
+                        message?.let {
+                            viewModel.setMessageInputText(text = message.text.orEmpty())
+                        }
+                        showChatActionDialog = false
+                        triggerFocus = true
+                        viewModel.updateIsEditMessage(true)
+                    },
+                    onDelete = { },
+                )
+            }
+
+            LaunchedEffect(triggerFocus) {
+                if (triggerFocus) {
+                    inputFocusRequester.requestFocus()
+                    triggerFocus = false  // Reset so it can be triggered again later
+                }
+            }
+
         }
     }
 }
@@ -324,7 +348,8 @@ fun ChatInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    focusRequester: FocusRequester
 ) {
     Row(
         modifier = modifier,
@@ -334,7 +359,9 @@ fun ChatInputBar(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.weight(1f).padding(end = 8.dp),
+            modifier = Modifier.weight(1f)
+                .padding(end = 8.dp)
+                .focusRequester(focusRequester),
             placeholder = { Text("Type a message") },
             enabled = enabled,
             maxLines = 4,
@@ -408,7 +435,9 @@ fun ChatInputBar(
 @Composable
 fun AnimatedMessageItem(
     chatMessage: ChatMessage,
-    isSentByCurrentUser: Boolean
+    isSentByCurrentUser: Boolean,
+    onLongClick: (chatMessage: ChatMessage) -> Unit = {},
+    onClick: () -> Unit = {}
 ) {
 
     var showMessageAnimation by remember {
@@ -433,8 +462,11 @@ fun AnimatedMessageItem(
         exit = fadeOut(tween(120))
     ) {
         MessageItem(
+            modifier = Modifier,
             chatMessage = chatMessage,
-            isSentByCurrentUser = isSentByCurrentUser
+            isSentByCurrentUser = isSentByCurrentUser,
+            onLongClick = onLongClick,
+            onClick = onClick
         )
 
     }
@@ -443,10 +475,27 @@ fun AnimatedMessageItem(
 
 @Composable
 fun MessageItem(
+    modifier: Modifier = Modifier,
     chatMessage: ChatMessage,
-    isSentByCurrentUser: Boolean
+    isSentByCurrentUser: Boolean,
+    onLongClick: (chatMessage: ChatMessage) -> Unit,
+    onClick: () -> Unit
 ) {
-    Box {
+    val interactionSource = remember { MutableInteractionSource() }
+    val haptic = LocalHapticFeedback.current
+
+    Box(
+        modifier = modifier
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick(chatMessage)
+                }
+            )
+    ) {
 
         val romanticShape = RoundedCornerShape(
             topStart = 20.dp,
@@ -466,20 +515,126 @@ fun MessageItem(
         else
             MaterialTheme.colorScheme.onSurface
 
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = alignment
+        ) {
             Card(
                 modifier = Modifier.widthIn(max = 300.dp),
                 shape = romanticShape,
                 colors = CardDefaults.cardColors(containerColor = backgroundColor)
             ) {
                 Text(
-                    text = chatMessage.text ?: "",
+                    text = chatMessage.text.orEmpty(),
                     modifier = Modifier.padding(12.dp),
                     style = MaterialTheme.typography.bodyMedium.copy(color = textColor)
                 )
             }
         }
+    }
+}
 
+
+@Composable
+fun MessageActionsDialog(
+    onDismiss: () -> Unit,
+    onReply: () -> Unit,
+    onCopy: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    canEdit: Boolean = true,   // useful for sender-only actions
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            onClick = {
+
+            }
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+
+                ActionItem(
+                    icon = Icons.AutoMirrored.Filled.Reply,
+                    label = "Reply",
+                    onClick = {
+                        onReply()
+                        onDismiss()
+                    }
+                )
+
+                ActionItem(
+                    icon = Icons.Default.ContentCopy,
+                    label = "Copy",
+                    onClick = {
+                        onCopy()
+                        onDismiss()
+                    }
+                )
+
+                if (canEdit) {
+                    ActionItem(
+                        icon = Icons.Default.Edit,
+                        label = "Edit",
+                        onClick = {
+                            onEdit()
+                            onDismiss()
+                        }
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                ActionItem(
+                    icon = Icons.Default.Delete,
+                    label = "Delete",
+                    labelColor = MaterialTheme.colorScheme.error,
+                    iconTint = MaterialTheme.colorScheme.error,
+                    onClick = {
+                        onDelete()
+                        onDismiss()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionItem(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    labelColor: Color = MaterialTheme.colorScheme.onSurface,
+    iconTint: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = iconTint
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = labelColor
+        )
     }
 }
 
@@ -540,15 +695,21 @@ fun FloatingHearts() {
 private fun MessageItemPreview() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)) {
         MessageItem(
+            modifier = Modifier,
             chatMessage = ChatMessage(text = "Hello! How are you?", senderId = 1),
-            isSentByCurrentUser = true
+            isSentByCurrentUser = true,
+            onLongClick = {},
+            onClick = {}
         )
         MessageItem(
             chatMessage = ChatMessage(
                 text = "I'm doing great, thanks for asking! How about you?",
                 senderId = 2
             ),
-            isSentByCurrentUser = false
+            isSentByCurrentUser = false,
+            onLongClick = {},
+            onClick = {},
+            modifier = Modifier
         )
     }
 }
@@ -556,5 +717,27 @@ private fun MessageItemPreview() {
 @Composable
 @Preview
 private fun ChatInputCompo() {
-    ChatInputBar(modifier = Modifier, value = "", onValueChange = {}, onSend = {}, enabled = true)
+    ChatInputBar(
+        modifier = Modifier,
+        value = "",
+        onValueChange = {},
+        onSend = {},
+        enabled = true,
+        focusRequester = FocusRequester()
+    )
+}
+
+@Composable
+@Preview
+private fun MessageActionsDialogPreview() {
+    MaterialTheme {
+        MessageActionsDialog(
+            onDismiss = {},
+            onReply = {},
+            onCopy = {},
+            onEdit = {},
+            onDelete = {},
+            canEdit = true
+        )
+    }
 }

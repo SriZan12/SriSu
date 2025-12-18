@@ -106,12 +106,10 @@ class ChatRepository(
 
             // Add at the beginning
             currentList.apply {
-                addAll(0,newMessages)
+                addAll(0, newMessages)
             }
         }
     }
-
-
 
 
     //---------------
@@ -130,6 +128,16 @@ class ChatRepository(
     }
 
     @Throws(Exception::class)
+    suspend fun editMessage(chatMessage: ChatMessage) {
+        try {
+            webSocketClient.editMessage(chatMessage)
+        } catch (exception: Exception) {
+            AppLogger.log("Error sending message: ${exception.message}")
+            throw exception
+        }
+    }
+
+    @Throws(Exception::class)
     suspend fun fetchMessages(page: Int, pageSize: Int) {
         try {
             webSocketClient.fetchMessages(page, pageSize)
@@ -140,12 +148,12 @@ class ChatRepository(
         }
     }
 
-    fun clearMessages(){
+    fun clearMessages() {
         _messages.value = emptyList()
         AppLogger.log("Messages cleared")
     }
 
-    fun reconnect(){
+    fun reconnect() {
         stop()
 
         webSocketClient.connect()

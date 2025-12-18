@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.chat.chatroom
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
@@ -33,11 +35,21 @@ class ChatViewModel(
     // User Actions
     // -----------------------------
 
-    fun onMessageInputChanged(text: String) {
-        _chatState.update { it ->
-            it.copy(messageInput = text)
+    fun onMessageInputChanged(value: TextFieldValue) {
+        _chatState.update { it.copy(messageInput = value) }
+    }
+
+    fun setMessageInputText(text: String) {
+        _chatState.update {
+            it.copy(
+                messageInput = TextFieldValue(
+                    text = text,
+                    selection = TextRange(text.length) // cursor at end
+                )
+            )
         }
     }
+
 
     fun updateChatMessages() {
         viewModelScope.launch {
@@ -49,11 +61,23 @@ class ChatViewModel(
         }
     }
 
+    fun updateLongClickedMessage(chatMessage: ChatMessage) {
+        _chatState.update {
+            it.copy(longClickedMessage = chatMessage)
+        }
+    }
+
+    fun updateIsEditMessage(isEditMessage: Boolean) {
+        _chatState.update {
+            it.copy(isEditMessage = isEditMessage)
+        }
+    }
+
     /**
      * Send message and clear input
      */
     fun sendMessage() {
-        val text = chatState.value.messageInput.trim()
+        val text = chatState.value.messageInput.text.trim()
         if (text.isBlank()) return
 
         viewModelScope.launch {
@@ -62,17 +86,45 @@ class ChatViewModel(
                     ChatMessage(
                         action = "send_message",
                         text = text,
-                        senderId = 3,
-                        receiverId = 2,
-                        couple = 1,
+                        senderId = 97,
+                        receiverId = 95,
+                        couple = 2,
                         reactions = null,
                         deleteFor = null,
                         messageDeletionDict = null,
-                        chatRoom = "e579dc98-5dbd-4aab-8a48-10985346d7fa",
+                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
                         messageType = "text"
                     )
                 )
-                onMessageInputChanged("")
+                onMessageInputChanged(TextFieldValue())
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Failed to send message: ${e.message}"
+            }
+        }
+    }
+
+    fun editMessage(
+        messageId: Int?
+    ) {
+        val text = chatState.value.messageInput.text.trim()
+        if (text.isBlank()) return
+
+        viewModelScope.launch {
+            try {
+                repository.editMessage(
+                    ChatMessage(
+                        action = "edit_message",
+                        id = messageId,
+                        text = text,
+                        senderId = 97,
+                        receiverId = 95,
+                        couple = 2,
+                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                        messageType = "text"
+                    )
+                )
+                onMessageInputChanged(TextFieldValue())
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Failed to send message: ${e.message}"

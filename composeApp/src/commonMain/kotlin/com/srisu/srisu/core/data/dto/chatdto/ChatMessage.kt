@@ -10,7 +10,7 @@ data class ChatMessage(
     val action: String = "",
 
     @SerialName("id")
-    val id: String? = null,
+    val id: Int? = null,
 
     // Chat info
     @SerialName("chat_room")
