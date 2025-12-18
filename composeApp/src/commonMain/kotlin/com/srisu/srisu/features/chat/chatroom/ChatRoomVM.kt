@@ -10,65 +10,72 @@ import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val repository: ChatRepository,
 ) : ViewModel() {
 
-    val messages: StateFlow<List<ChatMessage?>?> = repository.messages
 
-    private val _messageInput = MutableStateFlow("")
-    val messageInput: StateFlow<String> = _messageInput.asStateFlow()
+    private val _chatState = MutableStateFlow(ChatState())
+    val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
         repository.start()
+        updateChatMessages()
     }
 
     // -----------------------------
     // User Actions
     // -----------------------------
 
-    /**
-     * Update message input text
-     */
     fun onMessageInputChanged(text: String) {
-        _messageInput.value = text
+        _chatState.update { it ->
+            it.copy(messageInput = text)
+        }
     }
 
-    /**
-     * Send message and clear input
-     */
-    fun onSendMessage() {
-        val text = _messageInput.value.trim()
-        if (text.isBlank()) return
-
+    fun updateChatMessages() {
         viewModelScope.launch {
-            try {
-                repository.sendMessage(
-                    ChatMessage()
-                )
-                _messageInput.value = "" // Clear input on success
-                _error.value = null
-            } catch (e: Exception) {
-                _error.value = "Failed to send message: ${e.message}"
+            repository.messages.collect { messages ->
+                _chatState.update {
+                    it.copy(chatMessages = messages)
+                }
             }
         }
     }
 
     /**
-     * Load more messages (for pagination)
+     * Send message and clear input
      */
-    fun loadMoreMessages(page: Int, pageSize: Int = 20) {
+    fun sendMessage() {
+        val text = chatState.value.messageInput.trim()
+        if (text.isBlank()) return
+
         viewModelScope.launch {
             try {
-                repository.fetchMessages(page, pageSize)
+                repository.sendMessage(
+                    ChatMessage(
+                        action = "send_message",
+                        text = text,
+                        senderId = 3,
+                        receiverId = 2,
+                        couple = 1,
+                        reactions = null,
+                        deleteFor = null,
+                        messageDeletionDict = null,
+                        chatRoom = "e579dc98-5dbd-4aab-8a48-10985346d7fa",
+                        messageType = "text"
+                    )
+                )
+                onMessageInputChanged("")
                 _error.value = null
             } catch (e: Exception) {
-                _error.value = "Failed to load messages: ${e.message}"
+                _error.value = "Failed to send message: ${e.message}"
             }
         }
     }

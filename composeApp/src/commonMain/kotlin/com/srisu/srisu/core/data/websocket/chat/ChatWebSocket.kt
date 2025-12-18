@@ -34,7 +34,8 @@ class ChatWebSocketClient(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+//    private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+    private val roomId = "e579dc98-5dbd-4aab-8a48-10985346d7fa"
     private val wsUrl = "ws://$host:$port/ws/chat/$roomId/"
     private val json = Json { ignoreUnknownKeys = true }
 

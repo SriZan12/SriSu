@@ -95,7 +95,6 @@ class ChatRepository(
         if (messages.isNullOrEmpty()) return
 
         _messages.update { current ->
-
             val currentList = current?.toMutableList() ?: mutableListOf()
 
             // dedupe by ID
@@ -105,12 +104,13 @@ class ChatRepository(
                 msg?.id == null || msg.id !in existingIds
             }
 
-            // Append only — no sorting
+            // Add at the beginning
             currentList.apply {
-                addAll(newMessages)
+                addAll(0,newMessages)
             }
         }
     }
+
 
 
 

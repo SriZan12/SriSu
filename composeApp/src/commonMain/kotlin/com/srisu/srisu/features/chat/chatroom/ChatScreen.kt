@@ -54,10 +54,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MultipleStop
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.material.icons.filled.VideoChat
@@ -115,11 +121,10 @@ fun ChatScreen(
     navController: NavController,
     viewModel: ChatViewModel = koinViewModel(),
 ) {
-    val messages by viewModel.messages.collectAsState()
+    val chatState by viewModel.chatState.collectAsState()
     val error by viewModel.error.collectAsState()
-    val currentUserId = 97
+    val currentUserId = 3
 
-    var typedMessage by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -139,12 +144,11 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(16.dp),
-                value = typedMessage,
-                onValueChange = { typedMessage = it },
+                value = chatState.messageInput,
+                onValueChange = { viewModel.onMessageInputChanged(text = it) },
                 onSend = {
-                    if (typedMessage.isNotBlank()) {
-                        // viewModel.sendMessage(typedMessage)
-                        typedMessage = ""
+                    if (chatState.messageInput.isNotBlank()) {
+                        viewModel.sendMessage()
                     }
                 },
                 enabled = true
@@ -167,15 +171,26 @@ fun ChatScreen(
                 )
             }
 
+            val listState = rememberLazyListState()
+            val chatMessages = chatState.chatMessages
+
+            LaunchedEffect(chatMessages?.size) {
+                if (!chatMessages.isNullOrEmpty()) {
+                    listState.animateScrollToItem(0)
+                }
+            }
+
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize(),
                 contentPadding = PaddingValues(all = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                state = listState,
                 reverseLayout = true
             ) {
                 items(
-                    items = messages ?: emptyList(),
+                    items = chatMessages ?: emptyList(),
                     key = { (it?.id ?: it?.timestamp ?: "") }
                 ) { message ->
 
@@ -313,15 +328,13 @@ fun ChatInputBar(
 ) {
     Row(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
 
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 8.dp),
+            modifier = Modifier.weight(1f).padding(end = 8.dp),
             placeholder = { Text("Type a message") },
             enabled = enabled,
             maxLines = 4,
@@ -332,6 +345,18 @@ fun ChatInputBar(
             keyboardActions = KeyboardActions(
                 onSend = { onSend() }
             ),
+            trailingIcon = {
+                IconButton(
+                    onClick = onSend,
+                    enabled = enabled
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Photo,
+                        contentDescription = "Voice message",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceDim,
@@ -348,6 +373,7 @@ fun ChatInputBar(
             },
             label = "SendSwitch"
         ) { hasText ->
+
             if (hasText) {
                 FilledIconButton(
                     onClick = onSend,
