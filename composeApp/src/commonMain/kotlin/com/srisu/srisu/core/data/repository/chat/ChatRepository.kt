@@ -17,10 +17,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.collections.filter
+import kotlin.collections.forEach
 
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient
@@ -86,29 +88,134 @@ class ChatRepository(
     // Message Handling
     //--------------------
 
+    private val _messagesMap = MutableStateFlow<LinkedHashMap<String, ChatMessage>>(LinkedHashMap())
 
     private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
         if (messages.isNullOrEmpty()) return
 
-        _messages.update { current ->
-            val currentMap = current
-                ?.filterNotNull()
-                ?.associateBy { it.id }
-                ?.toMutableMap()
-                ?: mutableMapOf()
+        _messagesMap.update { current ->
+            val updated = LinkedHashMap(current)
 
-            for (msg in messages) {
-                msg?.id?.let {
-                    // INSERT OR REPLACE
-                    currentMap[it] = msg
+            messages.filterNotNull().forEach { msg ->
+                val id = msg.id ?: return@forEach
+
+                when {
+                    msg.isDeleted == true -> updated.remove(id)
+                    else -> updated[id] = msg
                 }
             }
 
-            // Sort if needed (newest first)
-            currentMap.values.sortedByDescending { it.timestamp }
+            updated
         }
     }
 
+    // Convert to list when needed for UI
+    val messagesAsList: StateFlow<List<ChatMessage>> = _messagesMap
+        .map { it.values.toList() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+//    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
+//        if (messages.isNullOrEmpty()) return
+//
+//        _messages.update { current ->
+//            // 1. Use a LinkedHashMap to preserve order and allow O(1) updates
+//            // We initialize it with the current items.
+//            val map = LinkedHashMap<Int, ChatMessage>()
+//            current?.filterNotNull()?.forEach { msg -> msg.id?.let { map[it] = msg } }
+//
+//            messages.filterNotNull().forEach { msg ->
+//                val id = msg.id ?: return@forEach
+//                if (msg.isDeleted == true) {
+//                    map.remove(id)
+//                } else {
+//                    // This replaces if exists, or adds to the end if new
+//                    map[id] = msg
+//                }
+//            }
+//
+//            // 2. Convert back to list and sort once if necessary
+//            // Sorting is O(N log N), which is better than multiple O(N) shifts
+//            map.values.sortedByDescending { it.timestamp }
+//        }
+//    }
+
+//    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
+//        if (messages.isNullOrEmpty()) return
+//
+//        _messages.update { current ->
+//            val currentList = current?.toMutableList() ?: mutableListOf()
+//
+//            // Build a map of existing messages for O(1) lookup
+//            val existingMap = currentList.associateBy { it?.id }
+//            val validMessages = messages.filterNotNull()
+//
+//            // Separate messages by operation type in a single pass
+//            val deletedIds = mutableSetOf<Int>()
+//            val toUpdate = mutableListOf<ChatMessage>()
+//            val toAdd = mutableListOf<ChatMessage>()
+//
+//            validMessages.forEach { msg ->
+//                val id = msg.id
+//                when {
+//                    msg.isDeleted == true && id != null -> deletedIds.add(id)
+//                    !msg.isDeleted!! && id != null -> {
+//                        if (existingMap.containsKey(id)) {
+//                            toUpdate.add(msg)
+//                        } else {
+//                            toAdd.add(msg)
+//                        }
+//                    }
+//                }
+//            }
+//
+//            // Apply operations
+//            // 1. Remove deleted messages (single pass with removeIf)
+//            if (deletedIds.isNotEmpty()) {
+//                currentList.removeAll { it?.id in deletedIds }
+//            }
+//
+//            // 2. Update existing messages (single pass)
+//            if (toUpdate.isNotEmpty()) {
+//                val updateMap = toUpdate.associateBy { it.id }
+//                for (i in currentList.indices) {
+//                    currentList[i]?.id?.let { id ->
+//                        updateMap[id]?.let { updatedMsg ->
+//                            currentList[i] = updatedMsg
+//                        }
+//                    }
+//                }
+//            }
+//
+//            // 3. Add new messages at the beginning
+//            if (toAdd.isNotEmpty()) {
+//                currentList.addAll(0, toAdd)
+//            }
+//
+//            currentList
+//        }
+//    }
+
+//    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
+//        if (messages.isNullOrEmpty()) return
+//
+//        _messages.update { current ->
+//            val currentMap = current
+//                ?.filterNotNull()
+//                ?.associateBy { it.id }
+//                ?.toMutableMap()
+//                ?: mutableMapOf()
+//
+//            for (msg in messages) {
+//                msg?.id?.let {
+//                    // INSERT OR REPLACE
+//                    currentMap[it] = msg
+//                }
+//            }
+//
+//            // Sort if needed (newest first)
+//            currentMap.values.sortedByDescending { it.timestamp }
+//        }
+//    }
 
 
     //---------------
