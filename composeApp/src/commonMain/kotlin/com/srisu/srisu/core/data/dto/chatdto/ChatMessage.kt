@@ -11,6 +11,8 @@ data class ChatMessage(
 
     @SerialName("id")
     val id: Int? = null,
+    @SerialName("user_id")
+    val user_id: Int? = null,
 
     // Chat info
     @SerialName("chat_room")
@@ -85,6 +87,7 @@ data class ChatMessage(
     // Time
     @SerialName("timestamp")
     val timestamp: String? = null,
+
 ) {
     @Serializable
     data class ReplyMessage(

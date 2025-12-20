@@ -42,7 +42,7 @@ class ChatWebSocketClient(
     private val json = Json { ignoreUnknownKeys = true }
 
     // Expose incoming messages as a SharedFlow
-    private var _chatMessages = MutableSharedFlow<List<ChatMessage?>?>()
+    private var _chatMessages = MutableSharedFlow<List<ChatMessage?>?>(1)
     val chatMessages = _chatMessages.asSharedFlow()
 
     // Connection state
@@ -107,6 +107,17 @@ class ChatWebSocketClient(
         }
     }
 
+    suspend fun deleteMessage(message: ChatMessage) {
+        try {
+            val payload = json.encodeToString(ChatMessage.serializer(), message)
+            currentSession?.outgoing?.send(Frame.Text(payload))
+            AppLogger.log("Message Edit: ${message.text}")
+        } catch (e: Exception) {
+            AppLogger.log("Error sending message: ${e.message}")
+            throw e
+        }
+    }
+
     suspend fun fetchMessages(page: Int = 1, pageSize: Int = 20) {
         try {
             val fetchMessage = FetchMessageDTO(
@@ -139,6 +150,7 @@ class ChatWebSocketClient(
 
                     _connectionState.emit(ConnectionState.Connected)
                     AppLogger.log("WebSocket connected")
+
 
                     // Auto-fetch initial messages on connection
                     fetchMessages(page = 1, pageSize = 100)
@@ -212,6 +224,7 @@ class ChatWebSocketClient(
                         AppLogger.log("New message emitted: ${chatMessage.text}")
 
                         val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
+                        AppLogger.log("While sending current list = ${currentList.size}")
                         _chatMessages.emit(currentList + listOf(chatMessage)) // append at the end
 
                     }
@@ -226,20 +239,44 @@ class ChatWebSocketClient(
                     response.data?.let { editedMessage ->
                         AppLogger.log("Message edited: $editedMessage")
 
-                        // Get current messages safely
-                        val currentList = _chatMessages.replayCache.last() // Prefer .value if StateFlow
-                        // OR: _chatMessages.replayCache.last() if SharedFlow
+                        val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
+                        AppLogger.log("While editing current list = ${currentList.size}")
 
-                        val updatedList = currentList?.map { message ->
+                        val updatedList = currentList.map { message ->
                             if (message?.id == editedMessage.id) {
-                                editedMessage.copy() // Optional: create new instance if data class
+                                AppLogger.log("Updating message id=${message?.id}")
+                                editedMessage.copy()
                             } else {
                                 message
                             }
                         }
 
-                        // IMPORTANT: Emit as a new list instance
-                        _chatMessages.emit(updatedList) // or tryEmit / update {} if StateFlow
+                        _chatMessages.emit(updatedList)
+                    }
+                }
+
+                "delete_message" -> {
+                    val response = json.decodeFromString(
+                        SendMessageResponse.serializer(),
+                        raw
+                    )
+
+                    response.data?.let { deletedMessage ->
+                        AppLogger.log("Message deleted: $deletedMessage")
+
+                        val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
+                        AppLogger.log("While deleting current list = ${currentList.size}")
+
+                        val updatedList = currentList.map { message ->
+                            if (message?.id == deletedMessage.id) {
+                                AppLogger.log("Updating message id=${message?.id}")
+                                deletedMessage.copy()
+                            } else {
+                                message
+                            }
+                        }
+
+                        _chatMessages.emit(updatedList)
                     }
                 }
 

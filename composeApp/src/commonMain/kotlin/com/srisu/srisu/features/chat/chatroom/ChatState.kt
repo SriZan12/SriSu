@@ -8,6 +8,7 @@ import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 data class ChatState(
     val messageInput: TextFieldValue = TextFieldValue(),
     val chatMessages: List<ChatMessage?>? = null,
-    val longClickedMessage: ChatMessage? = null,
+    val selectedMessageForAction: ChatMessage? = null,
+    val selectedMessageIdForActions: Int? = null,
     val isEditMessage: Boolean = false
 )

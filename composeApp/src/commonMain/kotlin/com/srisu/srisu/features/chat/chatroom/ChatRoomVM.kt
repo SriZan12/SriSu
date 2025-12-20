@@ -6,9 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
-import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
-import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
-import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +33,9 @@ class ChatViewModel(
     // -----------------------------
 
     fun onMessageInputChanged(value: TextFieldValue) {
-        _chatState.update { it.copy(messageInput = value) }
+        _chatState.update {
+            it.copy(messageInput = value)
+        }
     }
 
     fun setMessageInputText(text: String) {
@@ -44,7 +43,7 @@ class ChatViewModel(
             it.copy(
                 messageInput = TextFieldValue(
                     text = text,
-                    selection = TextRange(text.length) // cursor at end
+                    selection = TextRange(text.length)
                 )
             )
         }
@@ -63,13 +62,28 @@ class ChatViewModel(
 
     fun updateLongClickedMessage(chatMessage: ChatMessage) {
         _chatState.update {
-            it.copy(longClickedMessage = chatMessage)
+            it.copy(selectedMessageForAction = chatMessage)
         }
     }
 
     fun updateIsEditMessage(isEditMessage: Boolean) {
         _chatState.update {
             it.copy(isEditMessage = isEditMessage)
+        }
+    }
+
+    fun showActionsForMessage(messageId: Int?, message: ChatMessage) {
+        _chatState.update {
+            it.copy(
+                selectedMessageIdForActions = messageId,
+                selectedMessageForAction = message
+            )
+        }
+    }
+
+    fun dismissActions() {
+        _chatState.update {
+            it.copy(selectedMessageIdForActions = null)
         }
     }
 
@@ -127,8 +141,32 @@ class ChatViewModel(
                 onMessageInputChanged(TextFieldValue())
                 _error.value = null
             } catch (e: Exception) {
-                _error.value = "Failed to send message: ${e.message}"
+                _error.value = "Failed to edit message: ${e.message}"
             }
+
+            updateIsEditMessage(isEditMessage = false)
+        }
+    }
+
+    fun deleteMessage(
+        messageId: Int?
+    ) {
+
+        viewModelScope.launch {
+            try {
+                repository.deleteMessage(
+                    ChatMessage(
+                        action = "delete_message",
+                        id = messageId,
+                        user_id = 97,
+                        deleteOption = "DELETE_FOR_ME"
+                    )
+                )
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Failed to delete message: ${e.message}"
+            }
+
         }
     }
 

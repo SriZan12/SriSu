@@ -87,29 +87,28 @@ class ChatRepository(
     //--------------------
 
 
-    /**
-     * Appends new messages while deduplicating by id (if available)
-     * */
-
     private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
         if (messages.isNullOrEmpty()) return
 
         _messages.update { current ->
-            val currentList = current?.toMutableList() ?: mutableListOf()
+            val currentMap = current
+                ?.filterNotNull()
+                ?.associateBy { it.id }
+                ?.toMutableMap()
+                ?: mutableMapOf()
 
-            // dedupe by ID
-            val existingIds = currentList.mapNotNull { it?.id }.toSet()
-
-            val newMessages = messages.filter { msg ->
-                msg?.id == null || msg.id !in existingIds
+            for (msg in messages) {
+                msg?.id?.let {
+                    // INSERT OR REPLACE
+                    currentMap[it] = msg
+                }
             }
 
-            // Add at the beginning
-            currentList.apply {
-                addAll(0, newMessages)
-            }
+            // Sort if needed (newest first)
+            currentMap.values.sortedByDescending { it.timestamp }
         }
     }
+
 
 
     //---------------
@@ -136,6 +135,17 @@ class ChatRepository(
             throw exception
         }
     }
+
+    @Throws(Exception::class)
+    suspend fun deleteMessage(chatMessage: ChatMessage) {
+        try {
+            webSocketClient.deleteMessage(chatMessage)
+        } catch (exception: Exception) {
+            AppLogger.log("Error sending message: ${exception.message}")
+            throw exception
+        }
+    }
+
 
     @Throws(Exception::class)
     suspend fun fetchMessages(page: Int, pageSize: Int) {

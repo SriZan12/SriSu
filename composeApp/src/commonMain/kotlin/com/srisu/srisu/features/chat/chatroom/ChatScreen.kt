@@ -15,6 +15,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -53,6 +54,8 @@ import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -65,7 +68,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -86,19 +88,21 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
 @Composable
 fun ChatScreen(
     navController: NavController,
@@ -127,13 +131,15 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(16.dp),
-                value = chatState.messageInput.text,
-                onValueChange = { viewModel.onMessageInputChanged(value = TextFieldValue(it)) },
+                value = chatState.messageInput,
+                onValueChange = {
+                    viewModel.onMessageInputChanged(value = it)
+                },
                 onSend = {
                     if (chatState.messageInput.text.isNotBlank() && !chatState.isEditMessage) {
                         viewModel.sendMessage()
                     } else {
-                        viewModel.editMessage(messageId = chatState.longClickedMessage?.id)
+                        viewModel.editMessage(messageId = chatState.selectedMessageForAction?.id)
                     }
                 },
                 enabled = true,
@@ -166,9 +172,6 @@ fun ChatScreen(
                 }
             }
 
-            var showChatActionDialog by remember {
-                mutableStateOf(false)
-            }
 
             LazyColumn(
                 modifier = Modifier
@@ -180,51 +183,47 @@ fun ChatScreen(
             ) {
                 items(
                     items = chatMessages ?: emptyList(),
-                    key = { (it?.id ?: it?.timestamp ?: "") }
+                    key = { (it?.id ?: it?.timestamp ?: Clock.System.now().epochSeconds) }
                 ) { message ->
 
                     if (message != null) {
                         val isSentByCurrentUser = message.senderId == currentUserId
+                        var triggerFocus by remember { mutableStateOf(false) }
+                        val keyboardController = LocalSoftwareKeyboardController.current
+
                         AnimatedMessageItem(
                             chatMessage = message,
                             isSentByCurrentUser = isSentByCurrentUser,
                             onLongClick = {
-                                showChatActionDialog = true
-                                viewModel.updateLongClickedMessage(it)
+                                viewModel.showActionsForMessage(it.id, it)
                             },
-                            onClick = { }
+                            onClick = { },
+                            onDismiss = {
+                                viewModel.dismissActions()
+                            },
+                            onReply = { },
+                            onCopy = { },
+                            onEdit = {
+                                viewModel.setMessageInputText(text = chatState.selectedMessageForAction?.text.orEmpty())
+                                viewModel.dismissActions()
+                                triggerFocus = true
+                                viewModel.updateIsEditMessage(true)
+                            },
+                            onDelete = {
+                                viewModel.deleteMessage(messageId = message.id)
+                            },
+                            showChatActionDropDown = chatState.selectedMessageIdForActions == message.id
                         )
 
-                    }
-                }
-            }
-
-            var triggerFocus by remember { mutableStateOf(false) }
-            val message = chatState.longClickedMessage
-
-
-            if (showChatActionDialog) {
-
-                MessageActionsDialog(
-                    onDismiss = { showChatActionDialog = false },
-                    onReply = { },
-                    onCopy = { },
-                    onEdit = {
-                        message?.let {
-                            viewModel.setMessageInputText(text = message.text.orEmpty())
+                        LaunchedEffect(triggerFocus) {
+                            if (triggerFocus) {
+                                delay(100) // CRITICAL: let dialog fully dismiss
+                                inputFocusRequester.requestFocus()
+                                keyboardController?.show()
+                                triggerFocus = false
+                            }
                         }
-                        showChatActionDialog = false
-                        triggerFocus = true
-                        viewModel.updateIsEditMessage(true)
-                    },
-                    onDelete = { },
-                )
-            }
-
-            LaunchedEffect(triggerFocus) {
-                if (triggerFocus) {
-                    inputFocusRequester.requestFocus()
-                    triggerFocus = false  // Reset so it can be triggered again later
+                    }
                 }
             }
 
@@ -345,8 +344,8 @@ private fun ErrorBanner(
 @Composable
 fun ChatInputBar(
     modifier: Modifier,
-    value: String,
-    onValueChange: (String) -> Unit,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
     onSend: () -> Unit,
     enabled: Boolean,
     focusRequester: FocusRequester
@@ -393,7 +392,7 @@ fun ChatInputBar(
         )
 
         AnimatedContent(
-            targetState = value.isNotBlank(),
+            targetState = value.text.isNotBlank(),
             transitionSpec = {
                 fadeIn(tween(150)) + scaleIn() togetherWith
                         fadeOut(tween(150)) + scaleOut()
@@ -436,39 +435,76 @@ fun ChatInputBar(
 fun AnimatedMessageItem(
     chatMessage: ChatMessage,
     isSentByCurrentUser: Boolean,
-    onLongClick: (chatMessage: ChatMessage) -> Unit = {},
-    onClick: () -> Unit = {}
+    onLongClick: (ChatMessage) -> Unit,
+    onClick: () -> Unit,
+    onDismiss: () -> Unit,
+    onReply: () -> Unit,
+    onCopy: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    canEdit: Boolean = true,
+    showChatActionDropDown: Boolean,
 ) {
 
-    var showMessageAnimation by remember {
-        mutableStateOf(false)
-    }
+    // Prevent re-playing animation on scroll
+    val hasAnimatedIn = remember(chatMessage.id) { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        showMessageAnimation = true
+    LaunchedEffect(chatMessage.id) {
+        hasAnimatedIn.value = true
     }
 
     AnimatedVisibility(
-        visible = showMessageAnimation,
-        enter = fadeIn(
-            animationSpec = tween(220)
-        ) + slideInVertically(
-            animationSpec = tween(220),
-            initialOffsetY = { it / 4 }
-        ) + scaleIn(
-            initialScale = 0.96f,
-            animationSpec = tween(220)
-        ),
+        visible = hasAnimatedIn.value,
+        enter = fadeIn(tween(220)) +
+                slideInVertically(
+                    animationSpec = tween(220),
+                    initialOffsetY = { it / 6 }
+                ) +
+                scaleIn(
+                    initialScale = 0.96f,
+                    animationSpec = tween(220)
+                ),
         exit = fadeOut(tween(120))
     ) {
-        MessageItem(
-            modifier = Modifier,
-            chatMessage = chatMessage,
-            isSentByCurrentUser = isSentByCurrentUser,
-            onLongClick = onLongClick,
-            onClick = onClick
-        )
 
+        Box {
+
+            MessageItem(
+                modifier = Modifier,
+                chatMessage = chatMessage,
+                isSentByCurrentUser = isSentByCurrentUser,
+                onLongClick = { onLongClick(chatMessage) },
+                onClick = onClick
+            )
+
+            val dropDownAlignment =
+                if (isSentByCurrentUser) Alignment.TopEnd else Alignment.TopStart
+
+            AnimatedVisibility(
+                visible = showChatActionDropDown,
+                enter = fadeIn(tween(120)) +
+                        scaleIn(
+                            initialScale = 0.92f,
+                            animationSpec = tween(120)
+                        ),
+                exit = fadeOut(tween(90)) +
+                        scaleOut(
+                            targetScale = 0.92f,
+                            animationSpec = tween(90)
+                        ),
+                modifier = Modifier.align(dropDownAlignment)
+            ) {
+                MessageActionsDropdown(
+                    expanded = true,
+                    onDismiss = onDismiss,
+                    onReply = onReply,
+                    onCopy = onCopy,
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    canEdit = canEdit
+                )
+            }
+        }
     }
 }
 
@@ -536,76 +572,105 @@ fun MessageItem(
 
 
 @Composable
-fun MessageActionsDialog(
+fun MessageActionsDropdown(
+    expanded: Boolean,
     onDismiss: () -> Unit,
     onReply: () -> Unit,
     onCopy: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    canEdit: Boolean = true,   // useful for sender-only actions
+    canEdit: Boolean = true,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier
+            .width(220.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+
+        DropdownMenuItem(
+            text = { Text("Reply") },
+            leadingIcon = {
+                Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = null)
+            },
             onClick = {
-
+                onReply()
+                onDismiss()
             }
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
+        )
 
-                ActionItem(
-                    icon = Icons.AutoMirrored.Filled.Reply,
-                    label = "Reply",
-                    onClick = {
-                        onReply()
-                        onDismiss()
-                    }
-                )
+        DropdownMenuItem(
+            text = { Text("Copy") },
+            leadingIcon = {
+                Icon(Icons.Default.ContentCopy, contentDescription = null)
+            },
+            onClick = {
+                onCopy()
+                onDismiss()
+            }
+        )
 
-                ActionItem(
-                    icon = Icons.Default.ContentCopy,
-                    label = "Copy",
-                    onClick = {
-                        onCopy()
-                        onDismiss()
-                    }
-                )
-
-                if (canEdit) {
-                    ActionItem(
-                        icon = Icons.Default.Edit,
-                        label = "Edit",
-                        onClick = {
-                            onEdit()
-                            onDismiss()
-                        }
-                    )
+        if (canEdit) {
+            DropdownMenuItem(
+                text = { Text("Edit") },
+                leadingIcon = {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                },
+                onClick = {
+                    onEdit()
+                    onDismiss()
                 }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                ActionItem(
-                    icon = Icons.Default.Delete,
-                    label = "Delete",
-                    labelColor = MaterialTheme.colorScheme.error,
-                    iconTint = MaterialTheme.colorScheme.error,
-                    onClick = {
-                        onDelete()
-                        onDismiss()
-                    }
-                )
-            }
+            )
         }
+
+        HorizontalDivider()
+
+        DropdownMenuItem(
+            text = {
+                Text(
+                    "Delete for me",
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            onClick = {
+                onDelete()
+                onDismiss()
+            }
+        )
+
+        HorizontalDivider()
+
+        DropdownMenuItem(
+            text = {
+                Text(
+                    "Delete for everyone",
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            onClick = {
+                onDelete()
+                onDismiss()
+            }
+        )
     }
 }
+
 
 @Composable
 private fun ActionItem(
@@ -719,7 +784,7 @@ private fun MessageItemPreview() {
 private fun ChatInputCompo() {
     ChatInputBar(
         modifier = Modifier,
-        value = "",
+        value = TextFieldValue(),
         onValueChange = {},
         onSend = {},
         enabled = true,
@@ -731,7 +796,8 @@ private fun ChatInputCompo() {
 @Preview
 private fun MessageActionsDialogPreview() {
     MaterialTheme {
-        MessageActionsDialog(
+        MessageActionsDropdown(
+            expanded = true,
             onDismiss = {},
             onReply = {},
             onCopy = {},
