@@ -13,9 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ChatViewModel(
-    private val repository: ChatRepository,
+    private val repository: ChatRepository
 ) : ViewModel() {
-
 
     private val _chatState = MutableStateFlow(ChatState())
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
@@ -24,7 +23,6 @@ class ChatViewModel(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        repository.start()
         updateChatMessages()
     }
 
@@ -96,7 +94,7 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                repository.sendMessage(
+                repository.sendRequest(
                     ChatMessage(
                         action = "send_message",
                         text = text,
@@ -126,7 +124,7 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                repository.editMessage(
+                repository.sendRequest(
                     ChatMessage(
                         action = "edit_message",
                         id = messageId,
@@ -154,7 +152,7 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                repository.deleteMessage(
+                repository.sendRequest(
                     ChatMessage(
                         action = "delete_message",
                         id = messageId,
@@ -175,7 +173,7 @@ class ChatViewModel(
      */
     fun retryConnection() {
         viewModelScope.launch {
-            repository.reconnect()
+//            repository.reconnect()
             _error.value = null
         }
     }
@@ -193,6 +191,6 @@ class ChatViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        repository.stop()
+//        repository.stop()
     }
 }

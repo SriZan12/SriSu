@@ -1,6 +1,5 @@
 package com.srisu.srisu.core.data.websocket.chat
 
-import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.SendMessageResponse
@@ -17,10 +16,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -28,11 +28,18 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.seconds
 
+
 class ChatWebSocketClient(
     private val httpClient: HttpClient,
     host: String,
     port: Int,
 ) {
+
+    private val _events = MutableSharedFlow<ChatEvent>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val events: SharedFlow<ChatEvent> = _events.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
@@ -41,11 +48,6 @@ class ChatWebSocketClient(
     private val wsUrl = "ws://$host:$port/ws/chat/$roomId/"
     private val json = Json { ignoreUnknownKeys = true }
 
-    // Expose incoming messages as a SharedFlow
-    private var _chatMessages = MutableSharedFlow<List<ChatMessage?>?>(1)
-    val chatMessages = _chatMessages.asSharedFlow()
-
-    // Connection state
     private val _connectionState = MutableSharedFlow<ConnectionState>()
     val connectionState = _connectionState.asSharedFlow()
 
@@ -55,11 +57,7 @@ class ChatWebSocketClient(
     @Volatile
     private var currentSession: DefaultClientWebSocketSession? = null
 
-    // -----------------------------
-    // Lifecycle Management
-    // -----------------------------
-
-    fun connect() {
+    fun connect(roomId: String) {
         if (isRunning) {
             AppLogger.log("WebSocket already running")
             return
@@ -68,77 +66,12 @@ class ChatWebSocketClient(
 
         scope.launch {
             _connectionState.emit(ConnectionState.Connecting)
-            connectionLoop()
+            connectionLoop(roomId = roomId)
         }
+
     }
 
-    fun disconnect() {
-        isRunning = false
-        scope.launch {
-            currentSession?.close(CloseReason(CloseReason.Codes.NORMAL, "Client disconnected"))
-            currentSession = null
-            _connectionState.emit(ConnectionState.Disconnected)
-        }
-    }
-
-    // -----------------------------
-    // Outgoing Messages
-    // -----------------------------
-
-    suspend fun sendMessage(message: ChatMessage) {
-        try {
-            val payload = json.encodeToString(ChatMessage.serializer(), message)
-            currentSession?.outgoing?.send(Frame.Text(payload))
-            AppLogger.log("Message sent: ${message.text}")
-        } catch (e: Exception) {
-            AppLogger.log("Error sending message: ${e.message}")
-            throw e
-        }
-    }
-
-    suspend fun editMessage(message: ChatMessage) {
-        try {
-            val payload = json.encodeToString(ChatMessage.serializer(), message)
-            currentSession?.outgoing?.send(Frame.Text(payload))
-            AppLogger.log("Message Edit: ${message.text}")
-        } catch (e: Exception) {
-            AppLogger.log("Error sending message: ${e.message}")
-            throw e
-        }
-    }
-
-    suspend fun deleteMessage(message: ChatMessage) {
-        try {
-            val payload = json.encodeToString(ChatMessage.serializer(), message)
-            currentSession?.outgoing?.send(Frame.Text(payload))
-            AppLogger.log("Message Edit: ${message.text}")
-        } catch (e: Exception) {
-            AppLogger.log("Error sending message: ${e.message}")
-            throw e
-        }
-    }
-
-    suspend fun fetchMessages(page: Int = 1, pageSize: Int = 20) {
-        try {
-            val fetchMessage = FetchMessageDTO(
-                action = "fetch_messages",
-                page = page,
-                page_size = pageSize
-            )
-            val payload = Json.encodeToString(FetchMessageDTO.serializer(), fetchMessage)
-            currentSession?.outgoing?.send(Frame.Text(payload))
-            AppLogger.log("Fetch messages request sent (page: $page, size: $pageSize)")
-        } catch (e: Exception) {
-            AppLogger.log("Error fetching messages: ${e.message}")
-            throw e
-        }
-    }
-
-    // --------------------------------
-    // Connection Loop with Auto-Reconnect
-    // ---------------------------------
-
-    private suspend fun connectionLoop() {
+    private suspend fun connectionLoop(roomId: String) {
         var backoff = 1.seconds
         val maxBackoff = 30.seconds
 
@@ -149,6 +82,7 @@ class ChatWebSocketClient(
                     backoff = 1.seconds
 
                     _connectionState.emit(ConnectionState.Connected)
+                    _events.emit(ChatEvent.Connected(roomId))
                     AppLogger.log("WebSocket connected")
 
 
@@ -173,17 +107,13 @@ class ChatWebSocketClient(
         }
     }
 
-    // -----------------------------
-    // Incoming Message Handler
-    // -----------------------------
-
     private suspend fun DefaultClientWebSocketSession.readLoop() {
         try {
             for (frame in incoming) {
                 when (frame) {
                     is Frame.Text -> {
                         val webSocketText = frame.readText()
-                        handleIncomingMessage(raw = webSocketText)
+                        onIncoming(raw = webSocketText)
                     }
 
                     is Frame.Close -> {
@@ -204,9 +134,29 @@ class ChatWebSocketClient(
         }
     }
 
-    private suspend fun handleIncomingMessage(raw: String) {
+
+    fun disconnect(reason: String? = null) {
+        isRunning = false
+        scope.launch {
+            currentSession?.close(CloseReason(CloseReason.Codes.NORMAL, "Client disconnected"))
+            currentSession = null
+            _connectionState.emit(ConnectionState.Disconnected)
+            _events.emit(ChatEvent.Disconnected(reason))
+
+        }
+    }
+
+    suspend fun send(rawPayload: String) {
         try {
-            // Parse the action first
+            currentSession?.outgoing?.send(Frame.Text(rawPayload))
+        } catch (e: Exception) {
+            AppLogger.log("Error sending message: ${e.message}")
+            throw e
+        }
+    }
+
+    suspend fun onIncoming(raw: String) {
+        try {
             val action = Json.parseToJsonElement(raw).jsonObject["action"]?.jsonPrimitive?.content
             AppLogger.log("Action received: $action")
 
@@ -215,18 +165,14 @@ class ChatWebSocketClient(
                     val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
                     val messageList = response.chatMessage?.results
                     AppLogger.log("Fetched messages emitted, count: ${messageList?.size ?: 0}")
-                    _chatMessages.emit(messageList)
+                    _events.emit(value = ChatEvent.FetchMessages(messages = messageList))
                 }
 
                 "send_message" -> {
                     val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
                     response.data?.let { chatMessage ->
                         AppLogger.log("New message emitted: ${chatMessage.text}")
-
-                        val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
-                        AppLogger.log("While sending current list = ${currentList.size}")
-                        _chatMessages.emit(currentList + listOf(chatMessage)) // append at the end
-
+                        _events.emit(value = ChatEvent.SendMessage(chatMessage))
                     }
                 }
 
@@ -239,56 +185,43 @@ class ChatWebSocketClient(
                     response.data?.let { editedMessage ->
                         AppLogger.log("Message edited: $editedMessage")
 
-                        val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
-                        AppLogger.log("While editing current list = ${currentList.size}")
-
-                        val updatedList = currentList.map { message ->
-                            if (message?.id == editedMessage.id) {
-                                AppLogger.log("Updating message id=${message?.id}")
-                                editedMessage.copy()
-                            } else {
-                                message
-                            }
-                        }
-
-                        _chatMessages.emit(updatedList)
+                        _events.emit(value = ChatEvent.MessageEdited(editedMessage))
                     }
                 }
 
                 "delete_message" -> {
+
                     val response = json.decodeFromString(
                         SendMessageResponse.serializer(),
                         raw
                     )
 
                     response.data?.let { deletedMessage ->
-                        AppLogger.log("Message deleted: $deletedMessage")
+                        _events.emit(value = ChatEvent.MessageDeleted(messageId = deletedMessage.id))
 
-                        val currentList = _chatMessages.replayCache.lastOrNull() ?: emptyList()
-                        AppLogger.log("While deleting current list = ${currentList.size}")
-
-                        val updatedList = currentList.map { message ->
-                            if (message?.id == deletedMessage.id) {
-                                AppLogger.log("Updating message id=${message?.id}")
-                                deletedMessage.copy()
-                            } else {
-                                message
-                            }
-                        }
-
-                        _chatMessages.emit(updatedList)
                     }
-                }
 
-
-                else -> {
-                    AppLogger.log("Unknown action received: $action")
                 }
             }
+
         } catch (e: Exception) {
-            AppLogger.log("Parse error in handleIncomingMessage: ${e.message}\nRaw payload: $raw")
+            _events.emit(ChatEvent.Error(e))
         }
     }
 
-
+    suspend fun fetchMessages(page: Int = 1, pageSize: Int = 20) {
+        try {
+            val fetchMessage = FetchMessageDTO(
+                action = "fetch_messages",
+                page = page,
+                page_size = pageSize
+            )
+            val payload = Json.encodeToString(FetchMessageDTO.serializer(), fetchMessage)
+            currentSession?.outgoing?.send(Frame.Text(payload))
+            AppLogger.log("Fetch messages request sent (page: $page, size: $pageSize)")
+        } catch (e: Exception) {
+            AppLogger.log("Error fetching messages: ${e.message}")
+            throw e
+        }
+    }
 }
