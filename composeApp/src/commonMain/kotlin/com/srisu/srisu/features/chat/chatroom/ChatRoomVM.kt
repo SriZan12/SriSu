@@ -168,6 +168,10 @@ class ChatViewModel(
         }
     }
 
+    fun fetchOlderMessages() {
+        repository.fetchOlderMessages()
+    }
+
     /**
      * Retry connection
      */

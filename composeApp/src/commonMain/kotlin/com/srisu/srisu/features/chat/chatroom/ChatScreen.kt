@@ -88,7 +88,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,10 +95,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.logger.AppLogger
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
@@ -163,69 +162,56 @@ fun ChatScreen(
                 )
             }
 
-            val listState = rememberLazyListState()
             val chatMessages = chatState.chatMessages
-
-            LaunchedEffect(chatMessages?.size) {
-                if (!chatMessages.isNullOrEmpty()) {
-                    listState.animateScrollToItem(0)
-                }
-            }
-
+            val listState = rememberLazyListState()
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(all = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize(),
+                reverseLayout = true, // newest at bottom
                 state = listState,
-                reverseLayout = true
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(
                     items = chatMessages ?: emptyList(),
-                    key = { (it?.id ?: it?.timestamp ?: Clock.System.now().epochSeconds) }
+                    key = { it -> it?.id!! } // diff-based optimization
                 ) { message ->
-
                     if (message != null) {
-                        val isSentByCurrentUser = message.senderId == currentUserId
-                        var triggerFocus by remember { mutableStateOf(false) }
-                        val keyboardController = LocalSoftwareKeyboardController.current
-
                         AnimatedMessageItem(
                             chatMessage = message,
-                            isSentByCurrentUser = isSentByCurrentUser,
-                            onLongClick = {
-                                viewModel.showActionsForMessage(it.id, it)
-                            },
-                            onClick = { },
-                            onDismiss = {
-                                viewModel.dismissActions()
-                            },
-                            onReply = { },
-                            onCopy = { },
+                            isSentByCurrentUser = message.senderId == currentUserId,
+                            onLongClick = { viewModel.showActionsForMessage(it.id, it) },
+                            onClick = {},
+                            onDismiss = { viewModel.dismissActions() },
+                            onReply = {},
+                            onCopy = {},
                             onEdit = {
-                                viewModel.setMessageInputText(text = chatState.selectedMessageForAction?.text.orEmpty())
-                                viewModel.dismissActions()
-                                triggerFocus = true
+                                viewModel.setMessageInputText(message.text.orEmpty())
                                 viewModel.updateIsEditMessage(true)
                             },
-                            onDelete = {
-                                viewModel.deleteMessage(messageId = message.id)
-                            },
+                            onDelete = { viewModel.deleteMessage(message.id) },
                             showChatActionDropDown = chatState.selectedMessageIdForActions == message.id
                         )
 
-                        LaunchedEffect(triggerFocus) {
-                            if (triggerFocus) {
-                                delay(100) // CRITICAL: let dialog fully dismiss
-                                inputFocusRequester.requestFocus()
-                                keyboardController?.show()
-                                triggerFocus = false
+                        // Pagination trigger: fetch older messages
+                        if (chatMessages?.isNotEmpty() == true) {
+                            LaunchedEffect(listState.firstVisibleItemIndex) {
+                                AppLogger.log("Fetching old messages = ${chatMessages.size}")
+                                AppLogger.log("ChatMessages size = ${chatMessages.size}")
+                                AppLogger.log("First visible item index = ${listState.firstVisibleItemIndex}")
+                                if (listState.firstVisibleItemIndex == chatMessages.size - 10) {
+                                    AppLogger.log("I am at the top")
+                                    viewModel.fetchOlderMessages()
+                                }
                             }
                         }
                     }
+
+
                 }
+
             }
+
 
         }
     }

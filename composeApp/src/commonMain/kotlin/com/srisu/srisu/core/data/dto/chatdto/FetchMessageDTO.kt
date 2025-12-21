@@ -8,7 +8,7 @@ data class FetchMessageDTO(
     @SerialName("action")
     val action: String,
     @SerialName("page")
-    val page: Int,
+    val page: Long?,
     @SerialName("page_size")
-    val page_size: Int
+    val page_size: Int?
 )

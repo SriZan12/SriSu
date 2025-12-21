@@ -87,7 +87,7 @@ class ChatWebSocketClient(
 
 
                     // Auto-fetch initial messages on connection
-                    fetchMessages(page = 1, pageSize = 100)
+                    fetchMessages(page = null, pageSize = 50)
 
                     // Read incoming messages
                     readLoop()
@@ -163,9 +163,7 @@ class ChatWebSocketClient(
             when (action) {
                 "fetch_messages" -> {
                     val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
-                    val messageList = response.chatMessage?.results
-                    AppLogger.log("Fetched messages emitted, count: ${messageList?.size ?: 0}")
-                    _events.emit(value = ChatEvent.FetchMessages(messages = messageList))
+                    _events.emit(value = ChatEvent.FetchMessages(messages = response))
                 }
 
                 "send_message" -> {
@@ -209,11 +207,11 @@ class ChatWebSocketClient(
         }
     }
 
-    suspend fun fetchMessages(page: Int = 1, pageSize: Int = 20) {
+    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50) {
         try {
             val fetchMessage = FetchMessageDTO(
                 action = "fetch_messages",
-                page = page,
+                page = page?.toLong(),
                 page_size = pageSize
             )
             val payload = Json.encodeToString(FetchMessageDTO.serializer(), fetchMessage)

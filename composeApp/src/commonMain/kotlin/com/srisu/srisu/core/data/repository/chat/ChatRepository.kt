@@ -2,6 +2,8 @@ package com.srisu.srisu.core.data.repository.chat
 
 
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
+import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import com.srisu.srisu.core.logger.AppLogger
@@ -15,82 +17,94 @@ import kotlinx.serialization.json.Json
 import kotlin.let
 
 class ChatRepository(
-    private val webSocketClient: ChatWebSocketClient,
+    private val webSocketClient: ChatWebSocketClient
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val messageMap =
-        MutableStateFlow<LinkedHashMap<Int, ChatMessage>>(linkedMapOf())
 
+    private val messageMap = MutableStateFlow<LinkedHashMap<Int, ChatMessage>>(linkedMapOf())
     val messages: StateFlow<List<ChatMessage>> =
-        messageMap
-            .map { it.values.toList() }
-            .stateIn(
-                scope,
-                SharingStarted.WhileSubscribed(5_000),
-                emptyList()
-            )
+        messageMap.map { it.values.toList() }
+            .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    val error: StateFlow<String?> = _error
+
+    private var nextCursor: Long? = null
+    private var hasMore: Boolean = true
 
     init {
-
         webSocketClient.connect(roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4")
-
         scope.launch {
             webSocketClient.events.collect { event ->
                 when (event) {
-                    is ChatEvent.Error ->
-                        _error.value = event.throwable.message
-
-                    else -> applyEvent(event)
+                    is ChatEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
+                    is ChatEvent.SendMessage -> prependMessage(event.message)
+                    is ChatEvent.MessageEdited -> updateMessage(event.message)
+                    is ChatEvent.MessageDeleted -> deleteMessage(event.messageId)
+                    is ChatEvent.Error -> _error.value = event.throwable.message
+                    else -> Unit
                 }
             }
         }
     }
 
-    private fun applyEvent(event: ChatEvent) {
-        messageMap.update { old ->
-            var newMap = LinkedHashMap(old)
-
-            when (event) {
-                is ChatEvent.FetchMessages -> {
-                    newMap.clear()
-                    event.messages?.forEach {
-                        it?.id?.let { id -> newMap[id] = it }
-                    }
-                }
-
-                is ChatEvent.SendMessage -> {
-                    AppLogger.log("New Message sent = ${event.message}")
-                    event.message.id?.let { id ->
-                        newMap = linkedMapOf(id to event.message).apply {
-                            putAll(newMap)
-                        }
-                    }
-                }
-
-
-                is ChatEvent.MessageEdited -> {
-                    AppLogger.log("Message edited = ${event.message}")
-                    event.message.id?.let { newMap[it] = event.message }
-                }
-
-                is ChatEvent.MessageDeleted ->
-                    newMap.remove(event.messageId)
-
-                else -> Unit
+    private fun applyFetchMessages(messages: FetchMessageResponse?) {
+        messages ?: return
+        val messageList = messages.chatMessage?.results
+        messageMap.update { oldMap ->
+            val newMap = LinkedHashMap(oldMap)
+            messageList?.forEach { msg ->
+                msg?.id?.let { newMap[it] = msg }
             }
+            nextCursor = messageList?.lastOrNull()?.id?.toLong()
+            AppLogger.log("Next Cursor = $nextCursor")
+            messageList?.size?.let { hasMore = it >= 20 }
             newMap
         }
     }
 
+    private fun prependMessage(message: ChatMessage) {
+        message.id?.let { id ->
+            messageMap.update { oldMap ->
+                linkedMapOf(id to message).apply { putAll(oldMap) }
+            }
+        }
+    }
+
+    private fun updateMessage(message: ChatMessage) {
+        message.id?.let { id ->
+            messageMap.update { oldMap ->
+                oldMap.apply { put(id, message) }
+            }
+        }
+    }
+
+    private fun deleteMessage(messageId: Int?) {
+        messageId ?: return
+        messageMap.update { oldMap ->
+            oldMap.apply { remove(messageId) }
+        }
+    }
+
+    fun fetchOlderMessages() {
+        if (!hasMore) return
+        scope.launch {
+            val fetchPayload = FetchMessageDTO(
+                action = "fetch_messages",
+                page = nextCursor,
+                page_size = 50
+            )
+            webSocketClient.send(Json.encodeToString(fetchPayload))
+        }
+    }
+
     suspend fun sendRequest(chatMessage: ChatMessage?) {
-        val payload = Json.encodeToString(value = chatMessage)
-        webSocketClient.send(rawPayload = payload)
+        chatMessage ?: return
+        webSocketClient.send(Json.encodeToString(chatMessage))
     }
 
     fun clearError() {
         _error.value = null
     }
 }
+
