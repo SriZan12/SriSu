@@ -90,29 +90,6 @@ class ChatRepository(
 
     private val _messagesMap = MutableStateFlow<LinkedHashMap<String, ChatMessage>>(LinkedHashMap())
 
-    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
-        if (messages.isNullOrEmpty()) return
-
-        _messagesMap.update { current ->
-            val updated = LinkedHashMap(current)
-
-            messages.filterNotNull().forEach { msg ->
-                val id = msg.id ?: return@forEach
-
-                when {
-                    msg.isDeleted == true -> updated.remove(id)
-                    else -> updated[id] = msg
-                }
-            }
-
-            updated
-        }
-    }
-
-    // Convert to list when needed for UI
-    val messagesAsList: StateFlow<List<ChatMessage>> = _messagesMap
-        .map { it.values.toList() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
 //    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
 //        if (messages.isNullOrEmpty()) return
