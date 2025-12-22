@@ -51,7 +51,6 @@ class ChatRepository(
     private fun applyFetchMessages(messages: FetchMessageResponse?) {
         val messageList = messages?.chatMessage?.results ?: return
 
-        // Process metadata
         nextCursor = messageList.lastOrNull()?.id?.toLong()
         hasMore = messageList.size >= 20
         AppLogger.log("Next Cursor = $nextCursor")
@@ -78,17 +77,19 @@ class ChatRepository(
 
 
     private fun updateMessage(message: ChatMessage) {
-        message.id?.let { id ->
-            messageMap.update { oldMap ->
-                oldMap.apply { put(id, message) }
-            }
+        val id = message.id ?: return
+        messageMap.update { oldMap ->
+            AppLogger.log("Updating message with ID: $id")
+            // Returns a NEW map instance
+            (oldMap + (id to message)) as LinkedHashMap<Int, ChatMessage>
         }
     }
-
     private fun deleteMessage(messageId: Int?) {
         messageId ?: return
         messageMap.update { oldMap ->
-            oldMap.apply { remove(key = messageId) }
+            AppLogger.log("Deleting message with ID: $messageId")
+            // This returns a NEW map instance excluding the messageId
+            (oldMap - messageId) as LinkedHashMap<Int, ChatMessage>
         }
     }
 
