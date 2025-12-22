@@ -49,27 +49,33 @@ class ChatRepository(
     }
 
     private fun applyFetchMessages(messages: FetchMessageResponse?) {
-        messages ?: return
-        val messageList = messages.chatMessage?.results
+        val messageList = messages?.chatMessage?.results ?: return
+
+        // Process metadata
+        nextCursor = messageList.lastOrNull()?.id?.toLong()
+        hasMore = messageList.size >= 20
+        AppLogger.log("Next Cursor = $nextCursor")
+
         messageMap.update { oldMap ->
-            val newMap = LinkedHashMap(oldMap)
-            messageList?.forEach { msg ->
-                msg?.id?.let { newMap[it] = msg }
-            }
-            nextCursor = messageList?.lastOrNull()?.id?.toLong()
-            AppLogger.log("Next Cursor = $nextCursor")
-            messageList?.size?.let { hasMore = it >= 20 }
-            newMap
+            // Create updates, ensuring IDs are not null
+            val updates = messageList.filterNotNull()
+                .associateBy { it.id!! } // !! is safe here because of filterNotNull()
+
+            // Merge and explicitly cast to LinkedHashMap
+            (oldMap + updates).toMutableMap() as LinkedHashMap<Int, ChatMessage>
         }
     }
 
+
     private fun prependMessage(message: ChatMessage) {
-        message.id?.let { id ->
-            messageMap.update { oldMap ->
-                linkedMapOf(id to message).apply { putAll(oldMap) }
-            }
+        val id = message.id ?: return
+
+        messageMap.update { oldMap ->
+            // Put the new message first, then the old ones
+            (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Int, ChatMessage>
         }
     }
+
 
     private fun updateMessage(message: ChatMessage) {
         message.id?.let { id ->
@@ -82,7 +88,7 @@ class ChatRepository(
     private fun deleteMessage(messageId: Int?) {
         messageId ?: return
         messageMap.update { oldMap ->
-            oldMap.apply { remove(messageId) }
+            oldMap.apply { remove(key = messageId) }
         }
     }
 
