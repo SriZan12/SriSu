@@ -14,11 +14,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -74,6 +72,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,9 +84,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,22 +94,39 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
+import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import kotlinx.coroutines.delay
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
+    session: Session?,
     navController: NavController,
     viewModel: ChatViewModel = koinViewModel(),
 ) {
     val chatState by viewModel.chatState.collectAsState()
     val error by viewModel.error.collectAsState()
-    val currentUserId = 97
+
+    val listState = rememberLazyListState()
     val inputFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        viewModel.updateSession(session = session)
+    }
+
+    // Auto-scroll to bottom when new messages arrive
+    LaunchedEffect(chatState.chatMessages?.size) {
+        chatState.chatMessages?.let {
+            if (it.isNotEmpty()) {
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -119,176 +135,382 @@ fun ChatScreen(
                 subtitle = "Online",
                 avatarUrl = "https://randomuser.me/api/portraits/men/76.jpg",
                 onBack = { navController.popBackStack() },
-                onCall = { },
-                onVideoCall = { }
+                onCall = { /* TODO */ },
+                onVideoCall = { /* TODO */ }
             )
         },
         bottomBar = {
             ChatInputBar(
+                value = chatState.messageInput,
+                onValueChange = { viewModel.onMessageInputChanged(it) },
+                onSend = {
+                    if (chatState.messageInput.text.isNotBlank()) {
+                        if (chatState.isEditMessage) {
+                            viewModel.editMessage(chatState.selectedMessageForAction?.id)
+                        } else {
+                            viewModel.sendMessage()
+                        }
+                    }
+                },
+                focusRequester = inputFocusRequester,
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(16.dp),
-                value = chatState.messageInput,
-                onValueChange = {
-                    viewModel.onMessageInputChanged(value = it)
-                },
-                onSend = {
-                    if (chatState.messageInput.text.isNotBlank() && !chatState.isEditMessage) {
-                        viewModel.sendMessage()
-                    } else {
-                        viewModel.editMessage(messageId = chatState.selectedMessageForAction?.id)
-                    }
-                },
-                enabled = true,
-                focusRequester = inputFocusRequester
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
+            Column(
+                modifier = Modifier
+            ) {
+                error?.let { message ->
+                    ErrorBanner(
+                        message = message,
+                        onDismiss = viewModel::clearError,
+                        onRetry = viewModel::retryConnection
+                    )
+                }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-
-            error?.let { errorMessage ->
-                ErrorBanner(
-                    message = errorMessage,
-                    onDismiss = { viewModel.clearError() },
-                    onRetry = { viewModel.retryConnection() }
+                ChatMessagesList(
+                    messages = chatState.chatMessages ?: emptyList(),
+                    currentUserId = chatState.session?.id,
+                    listState = listState,
+                    selectedMessageId = chatState.selectedMessageIdForActions,
+                    onMessageLongClick = { id, msg -> viewModel.showActionsForMessage(id, msg) },
+                    onDismissActions = viewModel::dismissActions,
+                    onEdit = { msg ->
+                        viewModel.setMessageInputText(msg.text.orEmpty())
+                        viewModel.updateIsEditMessage(true)
+                        inputFocusRequester.requestFocus()
+                    },
+                    onDelete = { deleteOption, messageId ->
+                        viewModel.deleteMessage(deleteOption = deleteOption, messageId = messageId)
+                    },
+                    onFetchOlder = viewModel::fetchOlderMessages
                 )
             }
 
-            val chatMessages = chatState.chatMessages
-            val listState = rememberLazyListState()
+//            FloatingHearts()
+        }
+    }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                reverseLayout = true, // newest at bottom
-                state = listState,
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(
-                    items = chatMessages ?: emptyList(),
-                    key = { it -> it?.id!! } // diff-based optimization
-                ) { message ->
-                    if (message != null) {
-                        AnimatedMessageItem(
-                            chatMessage = message,
-                            isSentByCurrentUser = message.senderId == currentUserId,
-                            onLongClick = { viewModel.showActionsForMessage(it.id, it) },
-                            onClick = {},
-                            onDismiss = { viewModel.dismissActions() },
-                            onReply = {},
-                            onCopy = {},
-                            onEdit = {
-                                viewModel.setMessageInputText(message.text.orEmpty())
-                                viewModel.updateIsEditMessage(true)
-                            },
-                            onDelete = { viewModel.deleteMessage(message.id) },
-                            showChatActionDropDown = chatState.selectedMessageIdForActions == message.id
+
+}
+
+@OptIn(ExperimentalTime::class)
+@Composable
+private fun ChatMessagesList(
+    messages: List<ChatMessage?>,
+    currentUserId: Int?,
+    listState: LazyListState,
+    selectedMessageId: Long?,
+    onMessageLongClick: (Long?, ChatMessage) -> Unit,
+    onDismissActions: () -> Unit,
+    onEdit: (ChatMessage) -> Unit,
+    onDelete: (String, Long?) -> Unit,
+    onFetchOlder: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    // Trigger pagination when nearing the top (oldest messages)
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val firstVisible = listState.firstVisibleItemIndex
+            val totalItems = messages.size
+            firstVisible >= totalItems - 10 && totalItems > 0
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            onFetchOlder()
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        reverseLayout = true,
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier.fillMaxSize()
+    ) {
+        items(
+            items = messages,
+            key = { it?.id ?: Clock.System.now().epochSeconds }
+        ) { message ->
+            if (message != null) {
+                AnimatedMessageItem(
+                    message = message,
+                    isOwn = message.senderId == currentUserId,
+                    isActionShown = selectedMessageId == message.id,
+                    onLongClick = { onMessageLongClick(message.id, message) },
+                    onDismissActions = onDismissActions,
+                    onEdit = { onEdit(message) },
+                    onDeleteForMe = { onDelete(DELETE_FOR_ME, message.id) },
+                    onDeleteForEveryone = {
+                        onDelete(
+                            DELETE_FOR_EVERYONE,
+                            message.id
                         )
-
-                        // Pagination trigger: fetch older messages
-                        if (chatMessages?.isNotEmpty() == true) {
-                            LaunchedEffect(listState.firstVisibleItemIndex) {
-                                AppLogger.log("Fetching old messages = ${chatMessages.size}")
-                                AppLogger.log("ChatMessages size = ${chatMessages.size}")
-                                AppLogger.log("First visible item index = ${listState.firstVisibleItemIndex}")
-                                if (listState.firstVisibleItemIndex == chatMessages.size - 10) {
-                                    AppLogger.log("I am at the top")
-                                    viewModel.fetchOlderMessages()
-                                }
-                            }
-                        }
                     }
-
-
-                }
-
+                )
             }
-
-
         }
     }
 }
 
+@Composable
+private fun AnimatedMessageItem(
+    message: ChatMessage,
+    isOwn: Boolean,
+    isActionShown: Boolean,
+    onLongClick: () -> Unit,
+    onDismissActions: () -> Unit,
+    onEdit: () -> Unit,
+    onDeleteForMe: () -> Unit,
+    onDeleteForEveryone: () -> Unit
+) {
+    val hasAnimated = remember(message.id) { mutableStateOf(false) }
+
+    LaunchedEffect(message.id) {
+        delay(50) // Stagger animations slightly
+        hasAnimated.value = true
+    }
+
+    AnimatedVisibility(
+        visible = hasAnimated.value,
+        enter = fadeIn(tween(300)) +
+                slideInVertically(tween(300)) { it / 8 } +
+                scaleIn(tween(300), initialScale = 0.94f),
+        exit = fadeOut(tween(150))
+    ) {
+        Box {
+            MessageBubble(
+                message = message,
+                isOwn = isOwn,
+                onLongClick = onLongClick
+            )
+
+            AnimatedVisibility(
+                visible = isActionShown,
+                enter = fadeIn(tween(150)) + scaleIn(tween(150), 0.9f),
+                exit = fadeOut(tween(100)) + scaleOut(tween(100), 0.9f),
+                modifier = Modifier.align(if (isOwn) Alignment.TopEnd else Alignment.TopStart)
+            ) {
+                MessageActionsDropdown(
+                    onDismiss = onDismissActions,
+                    onEdit = { onEdit() },
+                    onDeleteForMe = { onDeleteForMe() },
+                    onDeleteForEveryone = { onDeleteForEveryone() },
+                    canEdit = isOwn
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessageBubble(
+    message: ChatMessage,
+    isOwn: Boolean,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+
+    val deleteEntry = message.deleteFor
+        ?.values
+        ?.flatten()
+        ?.firstOrNull { it.option == DELETE_FOR_EVERYONE }
+
+    val isDeletedForEveryone = deleteEntry != null
+
+    val displayText = deleteEntry?.delete_message ?: message.text.orEmpty()
+
+    val textColor = if (isDeletedForEveryone) {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    } else if (isOwn) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    // Hide long-click action if message is deleted
+    val clickableModifier = if (isDeletedForEveryone) {
+        Modifier
+    } else {
+        Modifier.combinedClickable(
+            onLongClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLongClick()
+            },
+            onClick = { }
+        )
+    }
+
+    val bubbleShape = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomStart = if (isOwn) 20.dp else 4.dp,
+        bottomEnd = if (isOwn) 4.dp else 20.dp
+    )
+
+    val backgroundColor = if (isOwn)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.surfaceContainerHigh
+
+    // Slightly transparent background for deleted messages
+    val finalBackground = if (isDeletedForEveryone) {
+        backgroundColor.copy(alpha = 0.7f)
+    } else {
+        backgroundColor
+    }
+
+    val alignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(clickableModifier),
+        contentAlignment = alignment
+    ) {
+        Card(
+            shape = bubbleShape,
+            colors = CardDefaults.cardColors(containerColor = finalBackground),
+            modifier = Modifier.widthIn(max = 300.dp)
+        ) {
+            Text(
+                text = displayText,
+                modifier = Modifier.padding(14.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatTopBar(
+private fun ChatTopBar(
     title: String,
-    subtitle: String = "Online",
+    subtitle: String,
     avatarUrl: String,
     onBack: () -> Unit,
     onCall: () -> Unit,
     onVideoCall: () -> Unit
 ) {
     TopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        ),
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
                     model = avatarUrl,
-                    contentDescription = "Profile picture",
+                    contentDescription = "Profile",
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                 )
-
+                Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = title,
+                        title,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
                     Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelSmall,
+                        subtitle,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         },
-        actions = {
-            IconButton(onClick = onCall) {
-                Icon(
-                    imageVector = Icons.Default.Call,
-                    contentDescription = "Voice call",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            IconButton(onClick = onVideoCall) {
-                Icon(
-                    imageVector = Icons.Default.Videocam,
-                    contentDescription = "Video call",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
         },
+        actions = {
+            IconButton(onClick = onCall) {
+                Icon(Icons.Default.Call, contentDescription = "Call")
+            }
+            IconButton(onClick = onVideoCall) {
+                Icon(Icons.Default.Videocam, contentDescription = "Video call")
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
     )
+}
+
+@Composable
+private fun ChatInputBar(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    onSend: () -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text("Type a message") },
+            maxLines = 5,
+            shape = RoundedCornerShape(24.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { onSend() }),
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+                .focusRequester(focusRequester),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = MaterialTheme.colorScheme.primary
+            ),
+            trailingIcon = {
+                IconButton(onClick = { /* Attach media */ }) {
+                    Icon(Icons.Default.Photo, contentDescription = "Attach")
+                }
+            }
+        )
+
+        AnimatedContent(
+            targetState = value.text.isNotBlank(),
+            transitionSpec = {
+                (fadeIn(tween(200)) + scaleIn(tween(200))).togetherWith(
+                    fadeOut(tween(150)) + scaleOut(tween(150))
+                )
+            },
+            label = "InputActionButton"
+        ) { hasText ->
+            if (hasText) {
+                FilledIconButton(
+                    onClick = onSend,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                }
+            } else {
+                IconButton(onClick = { /* Voice message */ }) {
+                    Icon(Icons.Default.Mic, contentDescription = "Voice")
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -297,10 +519,7 @@ private fun ErrorBanner(
     onDismiss: () -> Unit,
     onRetry: () -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -310,385 +529,84 @@ private fun ErrorBanner(
         ) {
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f)
             )
             Row {
-                TextButton(onClick = onRetry) {
-                    Text("Retry")
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Dismiss")
-                }
+                TextButton(onClick = onRetry) { Text("Retry") }
+                TextButton(onClick = onDismiss) { Text("Dismiss") }
             }
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ChatInputBar(
-    modifier: Modifier,
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
-    onSend: () -> Unit,
-    enabled: Boolean,
-    focusRequester: FocusRequester
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f)
-                .padding(end = 8.dp)
-                .focusRequester(focusRequester),
-            placeholder = { Text("Type a message") },
-            enabled = enabled,
-            maxLines = 4,
-            shape = RoundedCornerShape(24.dp),
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Send
-            ),
-            keyboardActions = KeyboardActions(
-                onSend = { onSend() }
-            ),
-            trailingIcon = {
-                IconButton(
-                    onClick = onSend,
-                    enabled = enabled
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Photo,
-                        contentDescription = "Voice message",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceDim,
-                unfocusedIndicatorColor = Color.Transparent,
-            )
-
-        )
-
-        AnimatedContent(
-            targetState = value.text.isNotBlank(),
-            transitionSpec = {
-                fadeIn(tween(150)) + scaleIn() togetherWith
-                        fadeOut(tween(150)) + scaleOut()
-            },
-            label = "SendSwitch"
-        ) { hasText ->
-
-            if (hasText) {
-                FilledIconButton(
-                    onClick = onSend,
-                    enabled = enabled,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send message",
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            } else {
-                IconButton(
-                    onClick = onSend,
-                    enabled = enabled
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = "Voice message",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun AnimatedMessageItem(
-    chatMessage: ChatMessage,
-    isSentByCurrentUser: Boolean,
-    onLongClick: (ChatMessage) -> Unit,
-    onClick: () -> Unit,
-    onDismiss: () -> Unit,
-    onReply: () -> Unit,
-    onCopy: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    canEdit: Boolean = true,
-    showChatActionDropDown: Boolean,
-) {
-
-    // Prevent re-playing animation on scroll
-    val hasAnimatedIn = remember(chatMessage.id) { mutableStateOf(false) }
-
-    LaunchedEffect(chatMessage.id) {
-        hasAnimatedIn.value = true
-    }
-
-    AnimatedVisibility(
-        visible = hasAnimatedIn.value,
-        enter = fadeIn(tween(220)) +
-                slideInVertically(
-                    animationSpec = tween(220),
-                    initialOffsetY = { it / 6 }
-                ) +
-                scaleIn(
-                    initialScale = 0.96f,
-                    animationSpec = tween(220)
-                ),
-        exit = fadeOut(tween(120))
-    ) {
-
-        Box {
-
-            MessageItem(
-                modifier = Modifier,
-                chatMessage = chatMessage,
-                isSentByCurrentUser = isSentByCurrentUser,
-                onLongClick = { onLongClick(chatMessage) },
-                onClick = onClick
-            )
-
-            val dropDownAlignment =
-                if (isSentByCurrentUser) Alignment.TopEnd else Alignment.TopStart
-
-            AnimatedVisibility(
-                visible = showChatActionDropDown,
-                enter = fadeIn(tween(120)) +
-                        scaleIn(
-                            initialScale = 0.92f,
-                            animationSpec = tween(120)
-                        ),
-                exit = fadeOut(tween(90)) +
-                        scaleOut(
-                            targetScale = 0.92f,
-                            animationSpec = tween(90)
-                        ),
-                modifier = Modifier.align(dropDownAlignment)
-            ) {
-                MessageActionsDropdown(
-                    expanded = true,
-                    onDismiss = onDismiss,
-                    onReply = onReply,
-                    onCopy = onCopy,
-                    onEdit = onEdit,
-                    onDelete = onDelete,
-                    canEdit = canEdit
-                )
-            }
-        }
-    }
-}
-
-
-@Composable
-fun MessageItem(
-    modifier: Modifier = Modifier,
-    chatMessage: ChatMessage,
-    isSentByCurrentUser: Boolean,
-    onLongClick: (chatMessage: ChatMessage) -> Unit,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val haptic = LocalHapticFeedback.current
-
-    Box(
-        modifier = modifier
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                onClick = onClick,
-                onLongClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onLongClick(chatMessage)
-                }
-            )
-    ) {
-
-        val romanticShape = RoundedCornerShape(
-            topStart = 20.dp,
-            topEnd = 20.dp,
-            bottomStart = if (isSentByCurrentUser) 20.dp else 4.dp,
-            bottomEnd = if (isSentByCurrentUser) 4.dp else 20.dp
-        )
-
-        val alignment = if (isSentByCurrentUser) Alignment.CenterEnd else Alignment.CenterStart
-        val backgroundColor = if (isSentByCurrentUser)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceContainer
-
-        val textColor = if (isSentByCurrentUser)
-            MaterialTheme.colorScheme.onPrimaryContainer
-        else
-            MaterialTheme.colorScheme.onSurface
-
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = alignment
-        ) {
-            Card(
-                modifier = Modifier.widthIn(max = 300.dp),
-                shape = romanticShape,
-                colors = CardDefaults.cardColors(containerColor = backgroundColor)
-            ) {
-                Text(
-                    text = chatMessage.text.orEmpty(),
-                    modifier = Modifier.padding(12.dp),
-                    style = MaterialTheme.typography.bodyMedium.copy(color = textColor)
-                )
-            }
-        }
-    }
-}
-
 
 @Composable
 fun MessageActionsDropdown(
-    expanded: Boolean,
     onDismiss: () -> Unit,
-    onReply: () -> Unit,
-    onCopy: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    canEdit: Boolean = true,
+    onDeleteForMe: () -> Unit,
+    onDeleteForEveryone: () -> Unit,
+    canEdit: Boolean
 ) {
     DropdownMenu(
-        expanded = expanded,
+        expanded = true,
         onDismissRequest = onDismiss,
         modifier = Modifier
             .width(220.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
     ) {
-
         DropdownMenuItem(
             text = { Text("Reply") },
-            leadingIcon = {
-                Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = null)
-            },
-            onClick = {
-                onReply()
-                onDismiss()
-            }
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Reply, null) },
+            onClick = { onDismiss() }
         )
-
         DropdownMenuItem(
             text = { Text("Copy") },
-            leadingIcon = {
-                Icon(Icons.Default.ContentCopy, contentDescription = null)
-            },
-            onClick = {
-                onCopy()
-                onDismiss()
-            }
+            leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
+            onClick = { onDismiss() }
         )
-
         if (canEdit) {
             DropdownMenuItem(
                 text = { Text("Edit") },
-                leadingIcon = {
-                    Icon(Icons.Default.Edit, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Edit, null) },
                 onClick = {
                     onEdit()
                     onDismiss()
                 }
             )
         }
-
         HorizontalDivider()
-
         DropdownMenuItem(
-            text = {
-                Text(
-                    "Delete for me",
-                    color = MaterialTheme.colorScheme.error
-                )
-            },
+            text = { Text("Delete for me", color = MaterialTheme.colorScheme.error) },
             leadingIcon = {
                 Icon(
-                    Icons.Default.Delete,
+                    imageVector = Icons.Default.Delete,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error
                 )
             },
             onClick = {
-                onDelete()
+                onDeleteForMe()
                 onDismiss()
             }
         )
-
-        HorizontalDivider()
-
         DropdownMenuItem(
-            text = {
-                Text(
-                    "Delete for everyone",
-                    color = MaterialTheme.colorScheme.error
-                )
-            },
+            text = { Text("Delete for everyone", color = MaterialTheme.colorScheme.error) },
             leadingIcon = {
                 Icon(
-                    Icons.Default.Delete,
+                    imageVector = Icons.Default.Delete,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error
                 )
             },
             onClick = {
-                onDelete()
+                onDeleteForEveryone()
                 onDismiss()
             }
         )
     }
 }
-
-
-@Composable
-private fun ActionItem(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    labelColor: Color = MaterialTheme.colorScheme.onSurface,
-    iconTint: Color = MaterialTheme.colorScheme.onSurface
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = iconTint
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = labelColor
-        )
-    }
-}
-
 
 data class FloatingHeart(
     val startX: Float,
@@ -741,55 +659,3 @@ fun FloatingHearts() {
 }
 
 
-@Preview
-@Composable
-private fun MessageItemPreview() {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(16.dp)) {
-        MessageItem(
-            modifier = Modifier,
-            chatMessage = ChatMessage(text = "Hello! How are you?", senderId = 1),
-            isSentByCurrentUser = true,
-            onLongClick = {},
-            onClick = {}
-        )
-        MessageItem(
-            chatMessage = ChatMessage(
-                text = "I'm doing great, thanks for asking! How about you?",
-                senderId = 2
-            ),
-            isSentByCurrentUser = false,
-            onLongClick = {},
-            onClick = {},
-            modifier = Modifier
-        )
-    }
-}
-
-@Composable
-@Preview
-private fun ChatInputCompo() {
-    ChatInputBar(
-        modifier = Modifier,
-        value = TextFieldValue(),
-        onValueChange = {},
-        onSend = {},
-        enabled = true,
-        focusRequester = FocusRequester()
-    )
-}
-
-@Composable
-@Preview
-private fun MessageActionsDialogPreview() {
-    MaterialTheme {
-        MessageActionsDropdown(
-            expanded = true,
-            onDismiss = {},
-            onReply = {},
-            onCopy = {},
-            onEdit = {},
-            onDelete = {},
-            canEdit = true
-        )
-    }
-}

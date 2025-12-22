@@ -10,7 +10,7 @@ data class ChatMessage(
     val action: String = "",
 
     @SerialName("id")
-    val id: Int? = null,
+    val id: Long? = null,
     @SerialName("user_id")
     val user_id: Int? = null,
 
@@ -75,7 +75,7 @@ data class ChatMessage(
     val deleteOption: String? = null,
 
     @SerialName("delete_for")
-    val deleteFor: Map<String, List<DeleteInfo>>? = null,
+    val deleteFor: Map<String, List<DeleteMessageAction>>? = null,
 
     @SerialName("message_deletion_dict")
     val messageDeletionDict: Map<String, String>? = null,
@@ -88,7 +88,7 @@ data class ChatMessage(
     @SerialName("timestamp")
     val timestamp: String? = null,
 
-) {
+    ) {
     @Serializable
     data class ReplyMessage(
         @SerialName("id")
@@ -102,11 +102,12 @@ data class ChatMessage(
     )
 
     @Serializable
-    data class DeleteInfo(
+    data class DeleteMessageAction(
+        @SerialName("option")
+        val option: String?,
         @SerialName("user_id")
-        val userId: Int? = null,
-
-        @SerialName("delete_option")
-        val deleteOption: String? = null
+        val user_id: Int?,
+        @SerialName("delete_message")
+        val delete_message: String?
     )
 }

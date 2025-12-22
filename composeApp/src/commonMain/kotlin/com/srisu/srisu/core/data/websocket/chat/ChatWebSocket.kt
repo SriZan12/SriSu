@@ -4,6 +4,10 @@ import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.SendMessageResponse
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.EDIT_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
@@ -161,20 +165,19 @@ class ChatWebSocketClient(
             AppLogger.log("Action received: $action")
 
             when (action) {
-                "fetch_messages" -> {
+                FETCH_MESSAGES -> {
                     val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
                     _events.emit(value = ChatEvent.FetchMessages(messages = response))
                 }
 
-                "send_message" -> {
+                SEND_MESSAGE -> {
                     val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
                     response.data?.let { chatMessage ->
-                        AppLogger.log("New message emitted: ${chatMessage.text}")
                         _events.emit(value = ChatEvent.SendMessage(chatMessage))
                     }
                 }
 
-                "edit_message" -> {
+                EDIT_MESSAGE -> {
                     val response = json.decodeFromString(
                         SendMessageResponse.serializer(),
                         raw
@@ -187,7 +190,7 @@ class ChatWebSocketClient(
                     }
                 }
 
-                "delete_message" -> {
+                DELETE_MESSAGE -> {
 
                     val response = json.decodeFromString(
                         SendMessageResponse.serializer(),
@@ -195,7 +198,7 @@ class ChatWebSocketClient(
                     )
 
                     response.data?.let { deletedMessage ->
-                        _events.emit(value = ChatEvent.MessageDeleted(messageId = deletedMessage.id))
+                        _events.emit(value = ChatEvent.MessageDeleted(message = deletedMessage))
 
                     }
 

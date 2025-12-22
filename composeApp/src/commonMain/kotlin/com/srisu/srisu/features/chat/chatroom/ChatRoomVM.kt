@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
+import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,7 +72,7 @@ class ChatViewModel(
         }
     }
 
-    fun showActionsForMessage(messageId: Int?, message: ChatMessage) {
+    fun showActionsForMessage(messageId: Long?, message: ChatMessage) {
         _chatState.update {
             it.copy(
                 selectedMessageIdForActions = messageId,
@@ -85,6 +87,13 @@ class ChatViewModel(
         }
     }
 
+    fun updateSession(session: Session?) {
+        _chatState.update {
+            it.copy(session = session)
+        }
+    }
+
+
     /**
      * Send message and clear input
      */
@@ -96,9 +105,9 @@ class ChatViewModel(
             try {
                 repository.sendRequest(
                     ChatMessage(
-                        action = "send_message",
+                        action = SEND_MESSAGE,
                         text = text,
-                        senderId = 97,
+                        senderId = chatState.value.session?.id,
                         receiverId = 95,
                         couple = 2,
                         reactions = null,
@@ -117,7 +126,7 @@ class ChatViewModel(
     }
 
     fun editMessage(
-        messageId: Int?
+        messageId: Long?
     ) {
         val text = chatState.value.messageInput.text.trim()
         if (text.isBlank()) return
@@ -129,7 +138,7 @@ class ChatViewModel(
                         action = "edit_message",
                         id = messageId,
                         text = text,
-                        senderId = 97,
+                        senderId = chatState.value.session?.id,
                         receiverId = 95,
                         couple = 2,
                         chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
@@ -147,7 +156,8 @@ class ChatViewModel(
     }
 
     fun deleteMessage(
-        messageId: Int?
+        deleteOption: String,
+        messageId: Long?
     ) {
 
         viewModelScope.launch {
@@ -156,8 +166,8 @@ class ChatViewModel(
                     ChatMessage(
                         action = "delete_message",
                         id = messageId,
-                        user_id = 97,
-                        deleteOption = "DELETE_FOR_ME"
+                        user_id = chatState.value.session?.id,
+                        deleteOption = deleteOption
                     )
                 )
                 _error.value = null

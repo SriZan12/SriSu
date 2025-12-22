@@ -7,6 +7,7 @@ import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -21,7 +22,7 @@ class ChatRepository(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val messageMap = MutableStateFlow<LinkedHashMap<Int, ChatMessage>>(linkedMapOf())
+    private val messageMap = MutableStateFlow<LinkedHashMap<Long, ChatMessage>>(linkedMapOf())
     val messages: StateFlow<List<ChatMessage>> =
         messageMap.map { it.values.toList() }
             .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -40,7 +41,7 @@ class ChatRepository(
                     is ChatEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
                     is ChatEvent.SendMessage -> prependMessage(event.message)
                     is ChatEvent.MessageEdited -> updateMessage(event.message)
-                    is ChatEvent.MessageDeleted -> deleteMessage(event.messageId)
+                    is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
                     is ChatEvent.Error -> _error.value = event.throwable.message
                     else -> Unit
                 }
@@ -53,7 +54,6 @@ class ChatRepository(
 
         nextCursor = messageList.lastOrNull()?.id?.toLong()
         hasMore = messageList.size >= 20
-        AppLogger.log("Next Cursor = $nextCursor")
 
         messageMap.update { oldMap ->
             // Create updates, ensuring IDs are not null
@@ -61,7 +61,7 @@ class ChatRepository(
                 .associateBy { it.id!! } // !! is safe here because of filterNotNull()
 
             // Merge and explicitly cast to LinkedHashMap
-            (oldMap + updates).toMutableMap() as LinkedHashMap<Int, ChatMessage>
+            (oldMap + updates).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
     }
 
@@ -71,7 +71,7 @@ class ChatRepository(
 
         messageMap.update { oldMap ->
             // Put the new message first, then the old ones
-            (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Int, ChatMessage>
+            (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
     }
 
@@ -79,18 +79,34 @@ class ChatRepository(
     private fun updateMessage(message: ChatMessage) {
         val id = message.id ?: return
         messageMap.update { oldMap ->
-            AppLogger.log("Updating message with ID: $id")
             // Returns a NEW map instance
-            (oldMap + (id to message)) as LinkedHashMap<Int, ChatMessage>
+            (oldMap + (id to message)) as LinkedHashMap<Long, ChatMessage>
         }
     }
-    private fun deleteMessage(messageId: Int?) {
-        messageId ?: return
-        messageMap.update { oldMap ->
-            AppLogger.log("Deleting message with ID: $messageId")
-            // This returns a NEW map instance excluding the messageId
-            (oldMap - messageId) as LinkedHashMap<Int, ChatMessage>
+
+    private fun deleteMessage(message: ChatMessage?) {
+        message ?: return
+
+        val messageId = message.id ?: return
+
+        val deleteForMap = message.deleteFor
+        if (deleteForMap != null) {
+            // If "me" (or current user) is already in the delete_for list → fully remove from local map
+            val currentUserId = 97 // TODO: Replace with actual current user from auth / viewModel
+
+            val hasBeenDeletedForMe = deleteForMap.values
+                .flatten()
+                .any { action -> action.option == DELETE_FOR_ME && action.user_id == currentUserId }
+
+            if (hasBeenDeletedForMe) {
+                messageMap.update { oldMap ->
+                    (oldMap - messageId) as LinkedHashMap<Long, ChatMessage>
+                }
+            } else {
+                updateMessage(message = message)
+            }
         }
+
     }
 
     fun fetchOlderMessages() {

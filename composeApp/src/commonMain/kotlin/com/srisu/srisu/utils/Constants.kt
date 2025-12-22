@@ -30,9 +30,20 @@ object Constants {
         const val ANIMATION_DURATION = 300
     }
 
-    object ConnectionStatus{
+    object ConnectionStatus {
         const val NOTHING = "NOTHING"
         const val ACCEPTED = "ACCEPTED"
         const val REJECTED = "REJECTED"
+    }
+
+    object ChatConstants {
+
+        const val FETCH_MESSAGES = "fetch_messages"
+        const val SEND_MESSAGE = "send_message"
+        const val EDIT_MESSAGE = "edit_message"
+        const val DELETE_MESSAGE = "delete_message"
+
+        const val DELETE_FOR_ME = "DELETE_FOR_ME"
+        const val DELETE_FOR_EVERYONE = "DELETE_FOR_EVERYONE"
     }
 }

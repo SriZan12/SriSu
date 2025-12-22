@@ -40,8 +40,8 @@ fun HomeScreen(
 //        }
 
         ChatScreen(
-            navController = rememberNavController(
-            )
+            session = null,
+            navController = rememberNavController()
         )
     }
 

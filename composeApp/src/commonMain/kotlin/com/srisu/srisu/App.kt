@@ -18,12 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SettingsSuggest
-import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -72,8 +69,6 @@ import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
-import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.pisces
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
@@ -188,6 +183,7 @@ private fun NavHostController(session: Session?) {
                 )
 
                 chatGraph(
+                    session = session,
                     navController = navController
                 )
             }

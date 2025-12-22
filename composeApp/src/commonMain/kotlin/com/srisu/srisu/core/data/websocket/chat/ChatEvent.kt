@@ -10,7 +10,7 @@ sealed interface ChatEvent {
     data class FetchMessages(val messages: FetchMessageResponse?) : ChatEvent
     data class SendMessage(val message: ChatMessage) : ChatEvent
     data class MessageEdited(val message: ChatMessage) : ChatEvent
-    data class MessageDeleted(val messageId: Int?) : ChatEvent
+    data class MessageDeleted(val message: ChatMessage?) : ChatEvent
 
     data class Error(val throwable: Throwable) : ChatEvent
 }

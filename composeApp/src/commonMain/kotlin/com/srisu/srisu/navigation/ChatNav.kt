@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.srisu.srisu.features.chat.chatroom.ChatScreen
 import com.srisu.srisu.features.chat.couple.findpartner.FindYourPartnerScreen
+import com.srisu.srisu.session.Session
 import kotlinx.serialization.Serializable
 
 sealed class ChatNav : Route {
@@ -19,7 +20,8 @@ sealed class ChatNav : Route {
 }
 
 fun NavGraphBuilder.chatGraph(
-    navController: NavController
+    navController: NavController,
+    session: Session?
 ) {
     composable<ChatNav.FindPartnerScreen> {
         FindYourPartnerScreen()
@@ -27,6 +29,7 @@ fun NavGraphBuilder.chatGraph(
 
     composable<ChatNav.ChatScreen> {
         ChatScreen(
+            session = session,
             navController = navController
         )
     }
