@@ -244,6 +244,7 @@ private fun ChatMessagesList(
             if (message != null) {
                 AnimatedMessageItem(
                     message = message,
+                    currentUserId = currentUserId,
                     isOwn = message.senderId == currentUserId,
                     isActionShown = selectedMessageId == message.id,
                     onLongClick = { onMessageLongClick(message.id, message) },
@@ -265,6 +266,7 @@ private fun ChatMessagesList(
 @Composable
 private fun AnimatedMessageItem(
     message: ChatMessage,
+    currentUserId: Int?,
     isOwn: Boolean,
     isActionShown: Boolean,
     onLongClick: () -> Unit,
@@ -290,6 +292,7 @@ private fun AnimatedMessageItem(
         Box {
             MessageBubble(
                 message = message,
+                currentUserId = currentUserId,
                 isOwn = isOwn,
                 onLongClick = onLongClick
             )
@@ -315,6 +318,7 @@ private fun AnimatedMessageItem(
 @Composable
 private fun MessageBubble(
     message: ChatMessage,
+    currentUserId: Int?,
     isOwn: Boolean,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -328,7 +332,15 @@ private fun MessageBubble(
 
     val isDeletedForEveryone = deleteEntry != null
 
-    val displayText = deleteEntry?.delete_message ?: message.text.orEmpty()
+    val displayText = if (isDeletedForEveryone) {
+        if (deleteEntry.user_id == currentUserId) {
+            "You deleted this message"
+        } else {
+            "This message was deleted"
+        }
+    } else {
+        message.text.orEmpty()
+    }
 
     val textColor = if (isDeletedForEveryone) {
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)

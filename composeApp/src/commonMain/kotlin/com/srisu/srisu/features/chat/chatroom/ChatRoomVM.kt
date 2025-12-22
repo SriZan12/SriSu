@@ -108,7 +108,7 @@ class ChatViewModel(
                         action = SEND_MESSAGE,
                         text = text,
                         senderId = chatState.value.session?.id,
-                        receiverId = 95,
+                        receiverId = 97,
                         couple = 2,
                         reactions = null,
                         deleteFor = null,
@@ -139,7 +139,7 @@ class ChatViewModel(
                         id = messageId,
                         text = text,
                         senderId = chatState.value.session?.id,
-                        receiverId = 95,
+                        receiverId = 97,
                         couple = 2,
                         chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
                         messageType = "text"

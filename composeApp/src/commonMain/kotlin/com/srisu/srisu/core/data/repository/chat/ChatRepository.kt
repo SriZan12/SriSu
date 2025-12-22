@@ -92,11 +92,10 @@ class ChatRepository(
         val deleteForMap = message.deleteFor
         if (deleteForMap != null) {
             // If "me" (or current user) is already in the delete_for list → fully remove from local map
-            val currentUserId = 97 // TODO: Replace with actual current user from auth / viewModel
 
             val hasBeenDeletedForMe = deleteForMap.values
                 .flatten()
-                .any { action -> action.option == DELETE_FOR_ME && action.user_id == currentUserId }
+                .any { action -> action.option == DELETE_FOR_ME }
 
             if (hasBeenDeletedForMe) {
                 messageMap.update { oldMap ->
