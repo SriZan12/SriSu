@@ -7,7 +7,9 @@ import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
+import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -52,17 +54,26 @@ class ChatRepository(
     private fun applyFetchMessages(messages: FetchMessageResponse?) {
         val messageList = messages?.chatMessage?.results ?: return
 
-        nextCursor = messageList.lastOrNull()?.id?.toLong()
+        nextCursor = messageList.lastOrNull()?.id
         hasMore = messageList.size >= 20
 
-        messageMap.update { oldMap ->
-            // Create updates, ensuring IDs are not null
-            val updates = messageList.filterNotNull()
-                .associateBy { it.id!! } // !! is safe here because of filterNotNull()
+        AppLogger.log("Apply Fetch Messages = ${messageList.size}")
 
-            // Merge and explicitly cast to LinkedHashMap
-            (oldMap + updates).toMutableMap() as LinkedHashMap<Long, ChatMessage>
+        try {
+            messageMap.update { oldMap ->
+                // Create updates, ensuring IDs are not null
+                val updates = messageList.filterNotNull()
+                    .associateBy { it.id!! } // !! is safe here because of filterNotNull()
+
+                // Merge and explicitly cast to LinkedHashMap
+                (oldMap + updates).toMutableMap() as LinkedHashMap<Long, ChatMessage>
+            }
+
+            AppLogger.log("Inside applyFetchMessages")
+        } catch (exception: Exception) {
+            AppLogger.log("Exception: ${exception.message}")
         }
+
     }
 
 
@@ -92,10 +103,10 @@ class ChatRepository(
         val deleteForMap = message.deleteFor
         if (deleteForMap != null) {
             // If "me" (or current user) is already in the delete_for list → fully remove from local map
-
+            val currentUserId = SessionUtils().getCurrentUserId()
             val hasBeenDeletedForMe = deleteForMap.values
                 .flatten()
-                .any { action -> action.option == DELETE_FOR_ME }
+                .any { action -> action.option == DELETE_FOR_ME && action.user_id == currentUserId }
 
             if (hasBeenDeletedForMe) {
                 messageMap.update { oldMap ->
@@ -112,7 +123,7 @@ class ChatRepository(
         if (!hasMore) return
         scope.launch {
             val fetchPayload = FetchMessageDTO(
-                action = "fetch_messages",
+                action = FETCH_MESSAGES,
                 page = nextCursor,
                 page_size = 50
             )

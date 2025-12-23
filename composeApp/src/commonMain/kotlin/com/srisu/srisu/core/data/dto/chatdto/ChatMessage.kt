@@ -103,11 +103,11 @@ data class ChatMessage(
 
     @Serializable
     data class DeleteMessageAction(
-        @SerialName("option")
-        val option: String?,
+        @SerialName("delete_option")
+        val option: String? = null,
         @SerialName("user_id")
-        val user_id: Int?,
+        val user_id: Int? = null,
         @SerialName("delete_message")
-        val delete_message: String?
+        val delete_message: String? = null
     )
 }

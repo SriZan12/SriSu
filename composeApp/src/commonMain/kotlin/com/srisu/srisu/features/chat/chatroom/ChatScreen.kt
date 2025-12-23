@@ -77,6 +77,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,10 +95,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -215,20 +218,26 @@ private fun ChatMessagesList(
     modifier: Modifier = Modifier
 ) {
 
-    // Trigger pagination when nearing the top (oldest messages)
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val firstVisible = listState.firstVisibleItemIndex
-            val totalItems = messages.size
-            firstVisible >= totalItems - 10 && totalItems > 0
-        }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layoutInfo ->
+                val totalItems = layoutInfo.totalItemsCount
+                val visibleItems = layoutInfo.visibleItemsInfo
+
+                if (visibleItems.isNotEmpty()) {
+                    val lastVisibleIndex = visibleItems.last().index
+
+                    // OLD messages reached (top of chat)
+                    if (lastVisibleIndex >= totalItems - 1) {
+                        AppLogger.log("Reached top, fetching older messages")
+                        onFetchOlder()
+                    }
+                }
+            }
     }
 
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            onFetchOlder()
-        }
-    }
+
+    AppLogger.log("Messages in CHAT UI = ${messages.size}")
 
     LazyColumn(
         state = listState,
@@ -393,11 +402,11 @@ private fun MessageBubble(
         Card(
             shape = bubbleShape,
             colors = CardDefaults.cardColors(containerColor = finalBackground),
-            modifier = Modifier.widthIn(max = 300.dp)
+            modifier = Modifier.widthIn(max = 240.dp)
         ) {
             Text(
                 text = displayText,
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(all = 12.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = textColor,
                 fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal

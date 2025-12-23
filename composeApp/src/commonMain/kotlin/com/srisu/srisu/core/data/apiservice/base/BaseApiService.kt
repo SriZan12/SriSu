@@ -12,7 +12,7 @@ import io.ktor.http.contentType
 class BaseApiService(private val httpClient: HttpClient) {
 
     companion object {
-//        const val BASE_URL = "http://192.168.1.114:8000/" // office
+//        const val BASE_URL = "http://192.168.2.25:8000/" // office
         const val BASE_URL = "http://192.168.1.74:8000/" // home
     }
 
