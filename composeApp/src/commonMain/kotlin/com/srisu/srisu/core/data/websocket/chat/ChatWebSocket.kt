@@ -51,7 +51,7 @@ class ChatWebSocketClient(
     private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
 
     //    private val roomId = "e579dc98-5dbd-4aab-8a48-10985346d7fa"
-    private val wsUrl = "ws://$host:$port/ws/chat/$roomId/"
+    private val wsUrl = "ws://$host:$port/ws/chat/$roomId/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoyMDczODI2MDg3LCJpYXQiOjE3NTg0NjYwODcsImp0aSI6IjQ5MTVmOWUxMzI3OTQ0NTJhMWU5MWRmYjFiNzhjZjhjIiwidXNlcl9pZCI6OTd9.Ja2EA1CgeDoM76PwHmYdhB6HGGM1m4sJ0k_d6mbLk7w"
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _connectionState = MutableSharedFlow<ConnectionState>()
@@ -163,38 +163,45 @@ class ChatWebSocketClient(
 
     suspend fun onIncoming(raw: String) {
         try {
-            val jsonElement = Json.parseToJsonElement(raw).jsonObject
-            val action = jsonElement["action"]?.jsonPrimitive?.content
+            val action = Json.parseToJsonElement(raw).jsonObject["action"]?.jsonPrimitive?.content
             AppLogger.log("Action received: $action")
 
             when (action) {
 
                 FETCH_MESSAGES -> {
                     val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
-                    _events.emit(ChatEvent.FetchMessages(messages = response))
+                    _events.emit(value = ChatEvent.FetchMessages(messages = response))
                 }
 
                 SEND_MESSAGE -> {
                     val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
                     response.data?.let { chatMessage ->
-                        _events.emit(ChatEvent.SendMessage(chatMessage))
+                        _events.emit(value = ChatEvent.SendMessage(chatMessage))
                     }
                 }
 
                 EDIT_MESSAGE -> {
-                    val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
+                    val response = json.decodeFromString(
+                        SendMessageResponse.serializer(),
+                        raw
+                    )
+
                     response.data?.let { editedMessage ->
                         AppLogger.log("Message edited: $editedMessage")
-                        _events.emit(ChatEvent.MessageEdited(editedMessage))
+
+                        _events.emit(value = ChatEvent.MessageEdited(editedMessage))
                     }
                 }
 
                 DELETE_MESSAGE -> {
-                    val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
+
+                    val response = json.decodeFromString(
+                        SendMessageResponse.serializer(),
+                        raw
+                    )
+
                     response.data?.let { deletedMessage ->
-                        _events.emit(ChatEvent.MessageDeleted(deletedMessage))
-                    }
-                }
+                        _events.emit(value = ChatEvent.MessageDeleted(message = deletedMessage))
 
                 TYPING -> {
                     val typingResponse = json.decodeFromString(TypingResponse.serializer(), raw)
@@ -209,16 +216,15 @@ class ChatWebSocketClient(
             }
 
         } catch (e: Exception) {
-            AppLogger.log("Error parsing incoming event: ${e.message}")
+            AppLogger.log("Error handling incoming message: ${e.message}")
             _events.emit(ChatEvent.Error(e))
         }
     }
 
-
     suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50) {
         try {
             val fetchMessage = FetchMessageDTO(
-                action = "fetch_messages",
+                action = FETCH_MESSAGES,
                 page = page?.toLong(),
                 page_size = pageSize
             )

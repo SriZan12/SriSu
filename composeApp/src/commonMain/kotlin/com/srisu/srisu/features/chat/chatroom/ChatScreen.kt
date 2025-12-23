@@ -16,6 +16,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -72,11 +74,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,10 +96,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -152,6 +156,13 @@ fun ChatScreen(
                         }
                     }
                 },
+                onCancelEdit = {
+                    viewModel.updateIsEditMessage(isEditMessage = false)
+                    inputFocusRequester.freeFocus()
+                    viewModel.onMessageInputChanged(value = TextFieldValue())
+                },
+
+                isEditing = chatState.isEditMessage,
                 focusRequester = inputFocusRequester,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -179,7 +190,12 @@ fun ChatScreen(
                     currentUserId = chatState.session?.id,
                     listState = listState,
                     selectedMessageId = chatState.selectedMessageIdForActions,
-                    onMessageLongClick = { id, msg -> viewModel.showActionsForMessage(id, msg) },
+                    onMessageLongClick = { id, msg ->
+                        viewModel.showActionsForMessage(
+                            messageId = id,
+                            message = msg
+                        )
+                    },
                     onDismissActions = viewModel::dismissActions,
                     onEdit = { msg ->
                         viewModel.setMessageInputText(msg.text.orEmpty())
@@ -215,20 +231,26 @@ private fun ChatMessagesList(
     modifier: Modifier = Modifier
 ) {
 
-    // Trigger pagination when nearing the top (oldest messages)
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val firstVisible = listState.firstVisibleItemIndex
-            val totalItems = messages.size
-            firstVisible >= totalItems - 10 && totalItems > 0
-        }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layoutInfo ->
+                val totalItems = layoutInfo.totalItemsCount
+                val visibleItems = layoutInfo.visibleItemsInfo
+
+                if (visibleItems.isNotEmpty()) {
+                    val lastVisibleIndex = visibleItems.last().index
+
+                    // OLD messages reached (top of chat)
+                    if (lastVisibleIndex >= totalItems - 1) {
+                        AppLogger.log("Reached top, fetching older messages")
+                        onFetchOlder()
+                    }
+                }
+            }
     }
 
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            onFetchOlder()
-        }
-    }
+
+    AppLogger.log("Messages in CHAT UI = ${messages.size}")
 
     LazyColumn(
         state = listState,
@@ -304,6 +326,7 @@ private fun AnimatedMessageItem(
                 modifier = Modifier.align(if (isOwn) Alignment.TopEnd else Alignment.TopStart)
             ) {
                 MessageActionsDropdown(
+                    isOwn = isOwn,
                     onDismiss = onDismissActions,
                     onEdit = { onEdit() },
                     onDeleteForMe = { onDeleteForMe() },
@@ -355,12 +378,15 @@ private fun MessageBubble(
         Modifier
     } else {
         Modifier.combinedClickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
             onLongClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onLongClick()
             },
             onClick = { }
         )
+
     }
 
     val bubbleShape = RoundedCornerShape(
@@ -393,11 +419,11 @@ private fun MessageBubble(
         Card(
             shape = bubbleShape,
             colors = CardDefaults.cardColors(containerColor = finalBackground),
-            modifier = Modifier.widthIn(max = 300.dp)
+            modifier = Modifier.widthIn(max = 240.dp)
         ) {
             Text(
                 text = displayText,
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(all = 12.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = textColor,
                 fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
@@ -466,59 +492,90 @@ private fun ChatInputBar(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     onSend: () -> Unit,
+    onCancelEdit: () -> Unit,
+    isEditing: Boolean = false,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text("Type a message") },
-            maxLines = 5,
-            shape = RoundedCornerShape(24.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { onSend() }),
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 8.dp)
-                .focusRequester(focusRequester),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.primary
-            ),
-            trailingIcon = {
-                IconButton(onClick = { /* Attach media */ }) {
-                    Icon(Icons.Default.Photo, contentDescription = "Attach")
+    Column(modifier = modifier) {
+
+        if (isEditing) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Edit message",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                IconButton(
+                    onClick = {
+                        onCancelEdit()
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cancel",
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
-        )
+        }
 
-        AnimatedContent(
-            targetState = value.text.isNotBlank(),
-            transitionSpec = {
-                (fadeIn(tween(200)) + scaleIn(tween(200))).togetherWith(
-                    fadeOut(tween(150)) + scaleOut(tween(150))
-                )
-            },
-            label = "InputActionButton"
-        ) { hasText ->
-            if (hasText) {
-                FilledIconButton(
-                    onClick = onSend,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+        Row(
+            modifier = Modifier,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                placeholder = { Text("Type a message") },
+                maxLines = 5,
+                shape = RoundedCornerShape(24.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { onSend() }),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
+                    .focusRequester(focusRequester),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.primary
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { /* Attach media */ }) {
+                        Icon(Icons.Default.Photo, contentDescription = "Attach")
+                    }
                 }
-            } else {
-                IconButton(onClick = { /* Voice message */ }) {
-                    Icon(Icons.Default.Mic, contentDescription = "Voice")
+            )
+
+            AnimatedContent(
+                targetState = value.text.isNotBlank(),
+                transitionSpec = {
+                    (fadeIn(tween(200)) + scaleIn(tween(200))).togetherWith(
+                        fadeOut(tween(150)) + scaleOut(tween(150))
+                    )
+                },
+                label = "InputActionButton"
+            ) { hasText ->
+                if (hasText) {
+                    FilledIconButton(
+                        onClick = onSend,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                    }
+                } else {
+                    IconButton(onClick = { /* Voice message */ }) {
+                        Icon(Icons.Default.Mic, contentDescription = "Voice")
+                    }
                 }
             }
         }
@@ -555,6 +612,7 @@ private fun ErrorBanner(
 
 @Composable
 fun MessageActionsDropdown(
+    isOwn: Boolean,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
     onDeleteForMe: () -> Unit,
@@ -603,20 +661,23 @@ fun MessageActionsDropdown(
                 onDismiss()
             }
         )
-        DropdownMenuItem(
-            text = { Text("Delete for everyone", color = MaterialTheme.colorScheme.error) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-            onClick = {
-                onDeleteForEveryone()
-                onDismiss()
-            }
-        )
+
+        if (isOwn) {
+            DropdownMenuItem(
+                text = { Text("Delete for everyone", color = MaterialTheme.colorScheme.error) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    onDeleteForEveryone()
+                    onDismiss()
+                }
+            )
+        }
     }
 }
 
@@ -670,4 +731,26 @@ fun FloatingHearts() {
     }
 }
 
+@Composable
+@Preview
+fun ChatScreenPreview() {
+    ChatInputBar(
+        value = TextFieldValue(),
+        onValueChange = { },
+        onSend = {
+
+        },
+        focusRequester = FocusRequester(),
+        onCancelEdit = {
+
+        },
+
+        isEditing = false,
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+}
 
