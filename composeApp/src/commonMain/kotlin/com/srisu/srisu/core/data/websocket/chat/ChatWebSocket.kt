@@ -202,6 +202,8 @@ class ChatWebSocketClient(
 
                     response.data?.let { deletedMessage ->
                         _events.emit(value = ChatEvent.MessageDeleted(message = deletedMessage))
+                    }
+                }
 
                 TYPING -> {
                     val typingResponse = json.decodeFromString(TypingResponse.serializer(), raw)
