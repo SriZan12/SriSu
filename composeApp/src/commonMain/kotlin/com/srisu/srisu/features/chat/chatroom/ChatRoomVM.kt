@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
+import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,10 +34,11 @@ class ChatViewModel(
     // -----------------------------
 
     fun onMessageInputChanged(value: TextFieldValue) {
-        _chatState.update {
-            it.copy(messageInput = value)
-        }
+        // Update local message input state
+        _chatState.update { it.copy(messageInput = value) }
+        sendTypingRequest(value = value)
     }
+
 
     fun setMessageInputText(text: String) {
         _chatState.update {
@@ -59,6 +61,26 @@ class ChatViewModel(
             }
         }
     }
+
+    fun updateTyping() {
+        viewModelScope.launch {
+            repository.chatRoom.collect { room ->
+                val userId = chatState.value.session?.id
+                val typingUsers = room?.isTyping?.filter { it.value }?.keys?.toList() ?: emptyList()
+
+                val typingResponse = TypingResponse(
+                    typing_users = typingUsers,
+                    user_id = userId
+                )
+
+                _chatState.update { currentState ->
+                    currentState.copy(typingResponse = typingResponse)
+                }
+            }
+        }
+    }
+
+
 
     fun updateLongClickedMessage(chatMessage: ChatMessage) {
         _chatState.update {
@@ -181,6 +203,13 @@ class ChatViewModel(
     fun fetchOlderMessages() {
         repository.fetchOlderMessages()
     }
+
+    fun sendTypingRequest(value: TextFieldValue) {
+        viewModelScope.launch {
+            repository.sendTypingRequest(value = value)
+        }
+    }
+
 
     /**
      * Retry connection

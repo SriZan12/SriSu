@@ -2,6 +2,7 @@ package com.srisu.srisu.core.data.websocket.chat
 
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.response.chat.TypingResponse
 
 sealed interface ChatEvent {
     data class Connected(val roomId: String) : ChatEvent
@@ -11,6 +12,7 @@ sealed interface ChatEvent {
     data class SendMessage(val message: ChatMessage) : ChatEvent
     data class MessageEdited(val message: ChatMessage) : ChatEvent
     data class MessageDeleted(val message: ChatMessage?) : ChatEvent
+    data class MessageTyping(val typingResponse: TypingResponse): ChatEvent
 
     data class Error(val throwable: Throwable) : ChatEvent
 }

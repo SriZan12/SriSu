@@ -3,11 +3,13 @@ package com.srisu.srisu.core.data.websocket.chat
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.SendMessageResponse
+import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.EDIT_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
@@ -161,54 +163,57 @@ class ChatWebSocketClient(
 
     suspend fun onIncoming(raw: String) {
         try {
-            val action = Json.parseToJsonElement(raw).jsonObject["action"]?.jsonPrimitive?.content
+            val jsonElement = Json.parseToJsonElement(raw).jsonObject
+            val action = jsonElement["action"]?.jsonPrimitive?.content
             AppLogger.log("Action received: $action")
 
             when (action) {
+
                 FETCH_MESSAGES -> {
                     val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
-                    _events.emit(value = ChatEvent.FetchMessages(messages = response))
+                    _events.emit(ChatEvent.FetchMessages(messages = response))
                 }
 
                 SEND_MESSAGE -> {
                     val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
                     response.data?.let { chatMessage ->
-                        _events.emit(value = ChatEvent.SendMessage(chatMessage))
+                        _events.emit(ChatEvent.SendMessage(chatMessage))
                     }
                 }
 
                 EDIT_MESSAGE -> {
-                    val response = json.decodeFromString(
-                        SendMessageResponse.serializer(),
-                        raw
-                    )
-
+                    val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
                     response.data?.let { editedMessage ->
                         AppLogger.log("Message edited: $editedMessage")
-
-                        _events.emit(value = ChatEvent.MessageEdited(editedMessage))
+                        _events.emit(ChatEvent.MessageEdited(editedMessage))
                     }
                 }
 
                 DELETE_MESSAGE -> {
-
-                    val response = json.decodeFromString(
-                        SendMessageResponse.serializer(),
-                        raw
-                    )
-
+                    val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
                     response.data?.let { deletedMessage ->
-                        _events.emit(value = ChatEvent.MessageDeleted(message = deletedMessage))
-
+                        _events.emit(ChatEvent.MessageDeleted(deletedMessage))
                     }
+                }
 
+                TYPING -> {
+                    val typingResponse = json.decodeFromString(TypingResponse.serializer(), raw)
+                    typingResponse?.let { response ->
+                        _events.emit(ChatEvent.MessageTyping(typingResponse = response))
+                    }
+                }
+
+                else -> {
+                    AppLogger.log("Unknown action: $action")
                 }
             }
 
         } catch (e: Exception) {
+            AppLogger.log("Error parsing incoming event: ${e.message}")
             _events.emit(ChatEvent.Error(e))
         }
     }
+
 
     suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50) {
         try {

@@ -1,9 +1,12 @@
 package com.srisu.srisu.core.data.repository.chat
 
 
+import androidx.compose.ui.text.input.TextFieldValue
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import com.srisu.srisu.core.logger.AppLogger
@@ -14,8 +17,11 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import kotlin.let
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient
@@ -26,6 +32,9 @@ class ChatRepository(
     val messages: StateFlow<List<ChatMessage>> =
         messageMap.map { it.values.toList() }
             .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _chatRoom = MutableStateFlow<ChatRoom?>(null)
+    val chatRoom = _chatRoom.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -42,6 +51,7 @@ class ChatRepository(
                     is ChatEvent.SendMessage -> prependMessage(event.message)
                     is ChatEvent.MessageEdited -> updateMessage(event.message)
                     is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
+                    is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
                     is ChatEvent.Error -> _error.value = event.throwable.message
                     else -> Unit
                 }
@@ -108,6 +118,17 @@ class ChatRepository(
 
     }
 
+    private fun updateTyping(typingResponse: TypingResponse) {
+        val typingUsers = typingResponse.typing_users
+
+        _chatRoom.update { currentRoom ->
+            currentRoom?.copy(
+                isTyping = typingUsers.associateWith { true } // All users typing -> true
+            )
+        }
+    }
+
+
     fun fetchOlderMessages() {
         if (!hasMore) return
         scope.launch {
@@ -124,6 +145,26 @@ class ChatRepository(
         chatMessage ?: return
         webSocketClient.send(Json.encodeToString(chatMessage))
     }
+
+    suspend fun sendTypingRequest(value: TextFieldValue) {
+        try {
+            val payload = hashMapOf(
+                "action" to "typing",
+                "is_typing" to (value.text.isNotEmpty()) // true if user is typing
+            )
+
+            val jsonString = Json.encodeToString(
+                serializer = MapSerializer(String.serializer(), JsonElement.serializer()),
+                value = payload.mapValues { Json.encodeToJsonElement(it.value) }
+            )
+
+            // Send via WebSocket
+            webSocketClient.send(rawPayload = jsonString)
+        } catch (e: Exception) {
+            AppLogger.log("Failed to send typing request = ${e.message}")
+        }
+    }
+
 
     fun clearError() {
         _error.value = null
