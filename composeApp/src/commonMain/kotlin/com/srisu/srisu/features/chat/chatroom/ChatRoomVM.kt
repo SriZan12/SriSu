@@ -9,11 +9,14 @@ import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 class ChatViewModel(
     private val repository: ChatRepository
@@ -24,9 +27,11 @@ class ChatViewModel(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+    private var typingJob: Job? = null
 
     init {
         updateChatMessages()
+        updateTyping()
     }
 
     // -----------------------------
@@ -36,7 +41,44 @@ class ChatViewModel(
     fun onMessageInputChanged(value: TextFieldValue) {
         // Update local message input state
         _chatState.update { it.copy(messageInput = value) }
-        sendTypingRequest(value = value)
+
+        // Cancel previous typing job
+        typingJob?.cancel()
+
+        // Determine if user is typing
+        val isTyping = value.text.isNotEmpty()
+
+        // Send typing immediately if starting
+        viewModelScope.launch {
+            if (isTyping) {
+                sendTypingRequest(isTyping = isTyping)
+            }
+
+            typingJob
+            delay(2000L) // 2 seconds
+            if (_chatState.value.messageInput.text.isEmpty()) {
+                sendTypingRequest(isTyping = false)
+            }
+
+        }
+
+
+    }
+
+    fun sendTypingRequest(isTyping: Boolean) {
+        val userId = chatState.value.session?.id ?: return
+
+        val payload = hashMapOf(
+            "action" to "typing",
+            "is_typing" to isTyping,
+            "user_id" to userId
+        )
+
+        val encodedPayload = Json.encodeToString(payload)
+
+        viewModelScope.launch {
+            repository.sendTypingRequest(payload = encodedPayload)
+        }
     }
 
 
@@ -65,16 +107,15 @@ class ChatViewModel(
     fun updateTyping() {
         viewModelScope.launch {
             repository.chatRoom.collect { room ->
-                val userId = chatState.value.session?.id
-                val typingUsers = room?.isTyping?.filter { it.value }?.keys?.toList() ?: emptyList()
+                val currentUserId = chatState.value.session?.id ?: return@collect
 
                 val typingResponse = TypingResponse(
-                    typing_users = typingUsers,
-                    user_id = userId
+                    typingMap = room?.isTyping ?: emptyMap(),
+                    currentUserId = currentUserId
                 )
 
-                _chatState.update { currentState ->
-                    currentState.copy(typingResponse = typingResponse)
+                _chatState.update { state ->
+                    state.copy(typingResponse = typingResponse)
                 }
             }
         }
@@ -202,12 +243,6 @@ class ChatViewModel(
 
     fun fetchOlderMessages() {
         repository.fetchOlderMessages()
-    }
-
-    fun sendTypingRequest(value: TextFieldValue) {
-        viewModelScope.launch {
-            repository.sendTypingRequest(value = value)
-        }
     }
 
 

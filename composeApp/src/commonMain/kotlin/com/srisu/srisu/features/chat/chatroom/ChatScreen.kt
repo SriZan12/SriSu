@@ -132,11 +132,21 @@ fun ChatScreen(
         }
     }
 
+    val typingResponse = chatState.typingResponse
+    val isTyping = typingResponse?.isAnyoneTyping() == true
+    var chatTopBarSubTitle by remember { mutableStateOf("Online") }
+
+    chatTopBarSubTitle = if (isTyping) {
+        "Typing..."
+    } else {
+        "Online"
+    }
+
     Scaffold(
         topBar = {
             ChatTopBar(
                 title = "Srijan Khadka",
-                subtitle = "Online",
+                subtitle = chatTopBarSubTitle,
                 avatarUrl = "https://randomuser.me/api/portraits/men/76.jpg",
                 onBack = { navController.popBackStack() },
                 onCall = { /* TODO */ },

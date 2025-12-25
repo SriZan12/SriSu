@@ -19,6 +19,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -134,7 +135,7 @@ class ChatRepository(
 
         _chatRoom.update { currentRoom ->
             currentRoom?.copy(
-                isTyping = typingUsers.associateWith { true } // All users typing -> true
+                isTyping = typingUsers?.associateWith { true } // All users typing -> true
             )
         }
     }
@@ -157,23 +158,8 @@ class ChatRepository(
         webSocketClient.send(Json.encodeToString(chatMessage))
     }
 
-    suspend fun sendTypingRequest(value: TextFieldValue) {
-        try {
-            val payload = hashMapOf(
-                "action" to "typing",
-                "is_typing" to (value.text.isNotEmpty()) // true if user is typing
-            )
-
-            val jsonString = Json.encodeToString(
-                serializer = MapSerializer(String.serializer(), JsonElement.serializer()),
-                value = payload.mapValues { Json.encodeToJsonElement(it.value) }
-            )
-
-            // Send via WebSocket
-            webSocketClient.send(rawPayload = jsonString)
-        } catch (e: Exception) {
-            AppLogger.log("Failed to send typing request = ${e.message}")
-        }
+    suspend fun sendTypingRequest(payload: String) {
+        webSocketClient.send(payload)
     }
 
 

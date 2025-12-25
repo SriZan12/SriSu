@@ -31,7 +31,7 @@ data class ChatRoom(
 
     // Typing status
     @SerialName("is_typing")
-    val isTyping: Map<String, Boolean> = emptyMap(),
+    val isTyping: Map<String, Boolean>? = emptyMap(),
 
     // Pinned messages
     @SerialName("pinned_messages")
