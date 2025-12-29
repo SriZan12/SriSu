@@ -36,7 +36,7 @@ class ChatRepository(
         messageMap.map { it.values.toList() }
             .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _chatRoom = MutableStateFlow<ChatRoom?>(null)
+    private val _chatRoom = MutableStateFlow<ChatRoom?>(ChatRoom())
     val chatRoom = _chatRoom.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
@@ -131,15 +131,14 @@ class ChatRepository(
     }
 
     private fun updateTyping(typingResponse: TypingResponse) {
-        val typingUsers = typingResponse.typing_users
-
+        AppLogger.log("Inside repo updateTyping: $typingResponse")
         _chatRoom.update { currentRoom ->
+            AppLogger.log("Current room before update: $currentRoom")
             currentRoom?.copy(
-                isTyping = typingUsers?.associateWith { true } // All users typing -> true
-            )
+                isTyping = typingResponse
+            ).also { AppLogger.log("Room after update: $it") }
         }
     }
-
 
     fun fetchOlderMessages() {
         if (!hasMore) return
@@ -159,6 +158,7 @@ class ChatRepository(
     }
 
     suspend fun sendTypingRequest(payload: String) {
+        AppLogger.log("Sending Typing Request....")
         webSocketClient.send(payload)
     }
 

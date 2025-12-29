@@ -5,22 +5,18 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TypingResponse(
-    @SerialName("typing_map")
-    val typingMap: Map<String, Boolean> = emptyMap(),
+    @SerialName("action")
+    val action: String = "typing",
+    @SerialName("message")
+    val message: String? = null,
+    @SerialName("data")
+    val typingData: TypingData? = null
 
-    @SerialName("current_user_id")
-    val currentUserId: Int?
 ) {
-    /** Users typing except myself */
-    fun otherUsersTyping(): List<String> =
-        typingMap
-            .filter { (userId, isTyping) ->
-                isTyping && userId != currentUserId?.toString()
-            }
-            .keys
-            .toList()
-
-    fun isAnyoneTyping(): Boolean =
-        otherUsersTyping().isNotEmpty()
+    @Serializable
+    data class TypingData(
+        @SerialName("typing_users")
+        val typingUsers: Map<String, Boolean>,
+    )
 }
 

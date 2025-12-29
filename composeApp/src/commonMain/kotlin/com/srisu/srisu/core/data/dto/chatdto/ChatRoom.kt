@@ -1,5 +1,6 @@
 package com.srisu.srisu.core.data.dto.chatdto
 
+import com.srisu.srisu.core.data.response.chat.TypingResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -31,7 +32,7 @@ data class ChatRoom(
 
     // Typing status
     @SerialName("is_typing")
-    val isTyping: Map<String, Boolean>? = emptyMap(),
+    val isTyping: TypingResponse? = null,
 
     // Pinned messages
     @SerialName("pinned_messages")

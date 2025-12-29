@@ -132,20 +132,22 @@ fun ChatScreen(
         }
     }
 
-    val typingResponse = chatState.typingResponse
-    val isTyping = typingResponse?.isAnyoneTyping() == true
     var chatTopBarSubTitle by remember { mutableStateOf("Online") }
 
-    chatTopBarSubTitle = if (isTyping) {
-        "Typing..."
-    } else {
-        "Online"
+    LaunchedEffect(key1 = chatState.isTyping) {
+        AppLogger.log("Inside launched Effect for typing")
+        chatTopBarSubTitle = if (chatState.isTyping) {
+            "Typing..."
+        } else {
+            "Online"
+        }
     }
+
 
     Scaffold(
         topBar = {
             ChatTopBar(
-                title = "Srijan Khadka",
+                title = "Srijan Khadka", // fetch from chatRoom
                 subtitle = chatTopBarSubTitle,
                 avatarUrl = "https://randomuser.me/api/portraits/men/76.jpg",
                 onBack = { navController.popBackStack() },
@@ -465,13 +467,13 @@ private fun ChatTopBar(
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        title,
+                        text = title,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        subtitle,
+                        text = subtitle,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

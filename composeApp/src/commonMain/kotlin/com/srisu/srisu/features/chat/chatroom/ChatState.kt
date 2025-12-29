@@ -16,5 +16,6 @@ data class ChatState(
     val isEditMessage: Boolean = false,
     var lastAnimatedMessageId: Long? = null,
     var lastSentMessageId: Long? = null,
-    val typingResponse: TypingResponse? = null
+    val typingResponse: TypingResponse? = null,
+    val isTyping: Boolean = false
 )

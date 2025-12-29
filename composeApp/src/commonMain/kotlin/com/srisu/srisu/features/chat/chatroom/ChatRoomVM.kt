@@ -5,10 +5,13 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.response.chat.TypingResponse
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,50 +31,68 @@ class ChatViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
     private var typingJob: Job? = null
+    private val TYPING_TIMEOUT = 1200L // ms
+    private var isCurrentlyTyping = false
+
+
 
     init {
+        observeChatRoom()
         updateChatMessages()
-        updateTyping()
     }
+
 
     // -----------------------------
     // User Actions
     // -----------------------------
 
     fun onMessageInputChanged(value: TextFieldValue) {
-        // Update local message input state
         _chatState.update { it.copy(messageInput = value) }
 
-        // Cancel previous typing job
-        typingJob?.cancel()
-
-        // Determine if user is typing
-        val isTyping = value.text.isNotEmpty()
-
-        // Send typing immediately if starting
-        viewModelScope.launch {
-            if (isTyping) {
-                sendTypingRequest(isTyping = isTyping)
-            }
-
-            typingJob
-            delay(2000L) // 2 seconds
-            if (_chatState.value.messageInput.text.isEmpty()) {
-                sendTypingRequest(isTyping = false)
-            }
-
+        if (value.text.isBlank()) {
+            stopTyping()
+            return
         }
 
+        startTyping()
+        scheduleStopTyping()
+    }
 
+    private fun startTyping() {
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true
+            sendTypingRequest(isTyping = true)
+        }
+    }
+
+    private fun scheduleStopTyping() {
+        typingJob?.cancel()
+        typingJob = viewModelScope.launch {
+            delay(TYPING_TIMEOUT)
+            stopTyping()
+        }
+    }
+
+    private fun stopTyping() {
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false
+            sendTypingRequest(false)
+        }
+        typingJob?.cancel()
+        typingJob = null
+    }
+
+    fun onMessageSentOrEditCancelled() {
+        stopTyping()
     }
 
     fun sendTypingRequest(isTyping: Boolean) {
         val userId = chatState.value.session?.id ?: return
 
-        val payload = hashMapOf(
-            "action" to "typing",
-            "is_typing" to isTyping,
-            "user_id" to userId
+        val payload = TypingRequest(
+            action = TYPING,
+            isTyping = isTyping,
+            userId = userId
         )
 
         val encodedPayload = Json.encodeToString(payload)
@@ -104,23 +125,37 @@ class ChatViewModel(
         }
     }
 
-    fun updateTyping() {
+
+    private fun observeChatRoom() {
         viewModelScope.launch {
             repository.chatRoom.collect { room ->
-                val currentUserId = chatState.value.session?.id ?: return@collect
+                AppLogger.log("Collecting chatRoom: $room")
 
-                val typingResponse = TypingResponse(
-                    typingMap = room?.isTyping ?: emptyMap(),
-                    currentUserId = currentUserId
-                )
+                val myUserId = chatState.value.session?.id ?: return@collect
+
+                val typingUsers = room
+                    ?.isTyping
+                    ?.typingData
+                    ?.typingUsers
+                    .orEmpty()
+
+                AppLogger.log("Typing users = $typingUsers")
+
+                val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
+                    userId != myUserId.toString() && isTyping
+                }
+
+                AppLogger.log("Is someone else typing = $isSomeoneElseTyping")
 
                 _chatState.update { state ->
-                    state.copy(typingResponse = typingResponse)
+                    state.copy(
+                        typingResponse = room?.isTyping,
+                        isTyping = isSomeoneElseTyping
+                    )
                 }
             }
         }
     }
-
 
 
     fun updateLongClickedMessage(chatMessage: ChatMessage) {
