@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Mic
@@ -398,7 +399,6 @@ private fun MessageBubble(
             },
             onClick = { }
         )
-
     }
 
     val bubbleShape = RoundedCornerShape(
@@ -431,19 +431,59 @@ private fun MessageBubble(
         Card(
             shape = bubbleShape,
             colors = CardDefaults.cardColors(containerColor = finalBackground),
-            modifier = Modifier.widthIn(max = 240.dp)
+            modifier = Modifier.widthIn(max = 240.dp) // Slightly increased max width for better fitting
         ) {
-            Text(
-                text = displayText,
-                modifier = Modifier.padding(all = 12.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = textColor,
-                fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
-            )
+            Column(
+                modifier = Modifier.padding(all = 12.dp)
+            ) {
+                Text(
+                    text = displayText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = textColor,
+                    fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
+                )
+
+                // Footer row with time and read status (only for own messages and not deleted)
+                if (!isDeletedForEveryone) {
+                    Row(
+                        modifier = Modifier.align(Alignment.End),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Message time (you need to pass/format it from message.timestamp or similar)
+                        // Example placeholder - replace with actual time string
+                        Text(
+                            text = "4:59 AM", // Replace with formatted message.time
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (isOwn) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            ),
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+
+                        // Tick status (only show for own messages)
+                        if (isOwn && message.isRead == true) {
+                            val tickColor = if (message.isRead == true) {
+                                Color(0xFF00BCD4) // Blue for read (like WhatsApp)
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            }
+
+                            // Simple double tick icon (you can use Icon from material3 or custom drawable)
+                            // For single/double: adjust based on delivery status
+                            Icon(
+                                imageVector = Icons.Default.DoneAll, // Double tick
+                                contentDescription = "Read",
+                                tint = tickColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatTopBar(
@@ -763,6 +803,18 @@ fun ChatScreenPreview() {
             .navigationBarsPadding()
             .imePadding()
             .padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+}
+@Preview
+@Composable
+fun PreviewMessageBubble(){
+    MessageBubble(
+        message = ChatMessage(
+            text = "Hello"
+        ),
+        currentUserId = 97,
+        isOwn = true,
+        onLongClick = {}
     )
 }
 
