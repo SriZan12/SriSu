@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
@@ -73,6 +74,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -101,6 +103,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
+import com.srisu.srisu.utils.DateTimeUtils.formatTimeInHourAndMinute
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -129,10 +132,11 @@ fun ChatScreen(
         chatState.chatMessages?.let {
             if (it.isNotEmpty()) {
                 listState.animateScrollToItem(0)
+                viewModel.sendMessageDeliveredRequest()
+                viewModel.sendMessageReadRequest()
             }
         }
     }
-
     var chatTopBarSubTitle by remember { mutableStateOf("Online") }
 
     LaunchedEffect(key1 = chatState.isTyping) {
@@ -431,7 +435,7 @@ private fun MessageBubble(
         Card(
             shape = bubbleShape,
             colors = CardDefaults.cardColors(containerColor = finalBackground),
-            modifier = Modifier.widthIn(max = 240.dp) // Slightly increased max width for better fitting
+            modifier = Modifier.widthIn(max = 240.dp)
         ) {
             Column(
                 modifier = Modifier.padding(all = 12.dp)
@@ -443,40 +447,55 @@ private fun MessageBubble(
                     fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
                 )
 
-                // Footer row with time and read status (only for own messages and not deleted)
                 if (!isDeletedForEveryone) {
                     Row(
                         modifier = Modifier.align(Alignment.End),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Message time (you need to pass/format it from message.timestamp or similar)
-                        // Example placeholder - replace with actual time string
-                        Text(
-                            text = "4:59 AM", // Replace with formatted message.time
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = if (isOwn) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            ),
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
 
-                        // Tick status (only show for own messages)
-                        if (isOwn && message.isRead == true) {
-                            val tickColor = if (message.isRead == true) {
-                                Color(0xFF00BCD4) // Blue for read (like WhatsApp)
-                            } else {
-                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            }
+                        val formattedTime = formatTimeInHourAndMinute(isoTime = message.timestamp)
 
-                            // Simple double tick icon (you can use Icon from material3 or custom drawable)
-                            // For single/double: adjust based on delivery status
-                            Icon(
-                                imageVector = Icons.Default.DoneAll, // Double tick
-                                contentDescription = "Read",
-                                tint = tickColor,
-                                modifier = Modifier.size(16.dp)
+                        if (formattedTime.isNotEmpty()) {
+                            Text(
+                                text = formattedTime, // Replace with formatted message.time
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (isOwn) MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                        alpha = 0.7f
+                                    )
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                ),
+                                modifier = Modifier.padding(end = 4.dp)
                             )
+                        }
+
+                        if (isOwn) {
+
+
+//                            if (message.isRead == true) {
+//                                Icon(
+//                                    imageVector = Icons.Default.DoneAll,
+//                                    contentDescription = "Read",
+//                                    tint = MaterialTheme.colorScheme.primary,
+//                                    modifier = Modifier.size(16.dp)
+//                                )
+//                            } else
+                            if (message.isDelivered == true) {
+                                Icon(
+                                    imageVector = Icons.Default.DoneAll,
+                                    contentDescription = "Delivered",
+                                    tint = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    modifier = Modifier.size(16.dp)
+
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Done,
+                                    contentDescription = "Sent",
+                                    tint = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -484,6 +503,7 @@ private fun MessageBubble(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatTopBar(
@@ -805,9 +825,10 @@ fun ChatScreenPreview() {
             .padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }
+
 @Preview
 @Composable
-fun PreviewMessageBubble(){
+fun PreviewMessageBubble() {
     MessageBubble(
         message = ChatMessage(
             text = "Hello"

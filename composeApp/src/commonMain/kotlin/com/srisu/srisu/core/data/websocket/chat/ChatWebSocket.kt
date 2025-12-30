@@ -2,12 +2,16 @@ package com.srisu.srisu.core.data.websocket.chat
 
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
+import com.srisu.srisu.core.data.response.chat.MessageReadResponse
 import com.srisu.srisu.core.data.response.chat.SendMessageResponse
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.EDIT_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_DELIVERED
+import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import io.ktor.client.HttpClient
@@ -51,7 +55,8 @@ class ChatWebSocketClient(
     private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
 
     //    private val roomId = "e579dc98-5dbd-4aab-8a48-10985346d7fa"
-    private val wsUrl = "ws://$host:$port/ws/chat/$roomId/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoyMDczODI2MDg3LCJpYXQiOjE3NTg0NjYwODcsImp0aSI6IjQ5MTVmOWUxMzI3OTQ0NTJhMWU5MWRmYjFiNzhjZjhjIiwidXNlcl9pZCI6OTd9.Ja2EA1CgeDoM76PwHmYdhB6HGGM1m4sJ0k_d6mbLk7w"
+    private val wsUrl =
+        "ws://$host:$port/ws/chat/$roomId/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoyMDczODI2MDg3LCJpYXQiOjE3NTg0NjYwODcsImp0aSI6IjQ5MTVmOWUxMzI3OTQ0NTJhMWU5MWRmYjFiNzhjZjhjIiwidXNlcl9pZCI6OTd9.Ja2EA1CgeDoM76PwHmYdhB6HGGM1m4sJ0k_d6mbLk7w"
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _connectionState = MutableSharedFlow<ConnectionState>()
@@ -207,9 +212,19 @@ class ChatWebSocketClient(
 
                 TYPING -> {
                     val typingResponse = json.decodeFromString(TypingResponse.serializer(), raw)
-                    typingResponse?.let { response ->
-                        _events.emit(ChatEvent.MessageTyping(typingResponse = response))
-                    }
+                    _events.emit(ChatEvent.MessageTyping(typingResponse = typingResponse))
+                }
+
+                MESSAGE_READ -> {
+                    val messageReadResponse =
+                        json.decodeFromString(MessageReadResponse.serializer(), raw)
+                    _events.emit(ChatEvent.MessageRead(messageReadResponse = messageReadResponse))
+                }
+
+                MESSAGE_DELIVERED -> {
+                    val messageDeliveredResponse =
+                        json.decodeFromString(MessageDeliveredResponse.serializer(), raw)
+                    _events.emit(ChatEvent.MessageDelivered(messageDeliveredResponse = messageDeliveredResponse))
                 }
 
                 else -> {

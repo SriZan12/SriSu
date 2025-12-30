@@ -1,11 +1,15 @@
 package com.srisu.srisu.core.data.repository.chat
 
 
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.toMutableStateMap
 import androidx.compose.ui.text.input.TextFieldValue
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
+import com.srisu.srisu.core.data.response.chat.MessageReadResponse
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.data.websocket.chat.ChatEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
@@ -25,6 +29,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlin.let
 
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient
@@ -55,6 +60,8 @@ class ChatRepository(
                     is ChatEvent.MessageEdited -> updateMessage(event.message)
                     is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
                     is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
+                    is ChatEvent.MessageRead -> updateMessageRead(messageReadResponse = event.messageReadResponse)
+                    is ChatEvent.MessageDelivered -> updateMessageDelivered(messageDeliveredResponse = event.messageDeliveredResponse)
                     is ChatEvent.Error -> _error.value = event.throwable.message
                     else -> Unit
                 }
@@ -136,9 +143,54 @@ class ChatRepository(
             AppLogger.log("Current room before update: $currentRoom")
             currentRoom?.copy(
                 isTyping = typingResponse
-            ).also { AppLogger.log("Room after update: $it") }
+            )
         }
     }
+
+    private fun updateMessageRead(messageReadResponse: MessageReadResponse?) {
+        messageReadResponse?.let { response ->
+            val messageReadIds = response.data?.messageIds ?: return
+
+            messageMap.update { oldMap ->
+                val updates: Map<Long, ChatMessage> =
+                    messageReadIds.mapNotNull { id ->
+                        id?.let { nonNullId ->
+                            oldMap[nonNullId]?.let { message ->
+                                nonNullId to message.copy(isRead = true)
+                            }
+                        }
+                    }.toMap()
+
+                LinkedHashMap<Long, ChatMessage>().apply {
+                    putAll(oldMap)
+                    putAll(updates) // overwrite only read messages
+                }
+            }
+        }
+    }
+
+    private fun updateMessageDelivered(messageDeliveredResponse: MessageDeliveredResponse?) {
+        messageDeliveredResponse?.let { response ->
+            val messageDeliveredIds = response.data?.messageIds ?: return
+
+            messageMap.update { oldMap ->
+                val updates: Map<Long, ChatMessage> =
+                    messageDeliveredIds.mapNotNull { id ->
+                        id?.let { nonNullId ->
+                            oldMap[nonNullId]?.let { message ->
+                                nonNullId to message.copy(isDelivered = true)
+                            }
+                        }
+                    }.toMap()
+
+                LinkedHashMap<Long, ChatMessage>().apply {
+                    putAll(oldMap)
+                    putAll(updates) // overwrite only read messages
+                }
+            }
+        }
+    }
+
 
     fun fetchOlderMessages() {
         if (!hasMore) return

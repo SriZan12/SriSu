@@ -64,6 +64,9 @@ data class ChatMessage(
     @SerialName("is_delivered")
     val isDelivered: Boolean? = null,
 
+    @SerialName("is_sent")
+    val isSent: Boolean? = null,
+
     @SerialName("is_edited")
     val isEdited: Boolean? = null,
 

@@ -10,6 +10,7 @@ import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import kotlinx.coroutines.Job
@@ -20,6 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class ChatViewModel(
     private val repository: ChatRepository
@@ -33,7 +36,6 @@ class ChatViewModel(
     private var typingJob: Job? = null
     private val TYPING_TIMEOUT = 1200L // ms
     private var isCurrentlyTyping = false
-
 
 
     init {
@@ -128,6 +130,7 @@ class ChatViewModel(
 
     private fun observeChatRoom() {
         viewModelScope.launch {
+
             repository.chatRoom.collect { room ->
                 AppLogger.log("Collecting chatRoom: $room")
 
@@ -154,6 +157,8 @@ class ChatViewModel(
                     )
                 }
             }
+
+
         }
     }
 
@@ -195,6 +200,7 @@ class ChatViewModel(
     /**
      * Send message and clear input
      */
+    @OptIn(ExperimentalTime::class)
     fun sendMessage() {
         val text = chatState.value.messageInput.text.trim()
         if (text.isBlank()) return
@@ -206,7 +212,7 @@ class ChatViewModel(
                         action = SEND_MESSAGE,
                         text = text,
                         senderId = chatState.value.session?.id,
-                        receiverId = 97,
+                        receiverId = 95,
                         couple = 2,
                         reactions = null,
                         deleteFor = null,
@@ -271,6 +277,42 @@ class ChatViewModel(
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Failed to delete message: ${e.message}"
+            }
+
+        }
+    }
+
+    fun sendMessageReadRequest() {
+
+        viewModelScope.launch {
+            try {
+                repository.sendRequest(
+                    chatMessage = ChatMessage(
+                        action = MESSAGE_READ,
+                        user_id = chatState.value.session?.id,
+                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    )
+                )
+            } catch (exception: Exception) {
+                _error.value = "Failed to send read request: ${exception.message}"
+            }
+        }
+
+    }
+
+    fun sendMessageDeliveredRequest() {
+        viewModelScope.launch {
+            try {
+                repository.sendRequest(
+                    chatMessage = ChatMessage(
+                        action = "message_delivered",
+                        user_id = chatState.value.session?.id,
+                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+                    )
+                )
+
+            } catch (exception: Exception) {
+                _error.value = "Failed to send delivered request: ${exception.message}"
             }
 
         }

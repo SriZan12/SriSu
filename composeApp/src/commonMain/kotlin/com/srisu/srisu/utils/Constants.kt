@@ -42,8 +42,9 @@ object Constants {
         const val SEND_MESSAGE = "send_message"
         const val EDIT_MESSAGE = "edit_message"
         const val DELETE_MESSAGE = "delete_message"
-
         const val TYPING = "typing"
+        const val MESSAGE_READ = "message_read"
+        const val MESSAGE_DELIVERED = "message_delivered"
 
         const val DELETE_FOR_ME = "DELETE_FOR_ME"
         const val DELETE_FOR_EVERYONE = "DELETE_FOR_EVERYONE"
