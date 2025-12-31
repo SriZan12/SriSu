@@ -5,11 +5,13 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.dto.chatdto.ReactToMessageDTO
 import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -100,7 +103,7 @@ class ChatViewModel(
         val encodedPayload = Json.encodeToString(payload)
 
         viewModelScope.launch {
-            repository.sendTypingRequest(payload = encodedPayload)
+            repository.sendRequest(payload = encodedPayload)
         }
     }
 
@@ -184,6 +187,7 @@ class ChatViewModel(
         }
     }
 
+
     fun dismissActions() {
         _chatState.update {
             it.copy(selectedMessageIdForActions = null)
@@ -207,19 +211,21 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
+                val sendMessagePayload = ChatMessage(
+                    action = SEND_MESSAGE,
+                    text = text,
+                    senderId = chatState.value.session?.id,
+                    receiverId = 95,
+                    couple = 2,
+                    reactions = null,
+                    deleteFor = null,
+                    messageDeletionDict = null,
+                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    messageType = "text"
+                )
+
                 repository.sendRequest(
-                    ChatMessage(
-                        action = SEND_MESSAGE,
-                        text = text,
-                        senderId = chatState.value.session?.id,
-                        receiverId = 95,
-                        couple = 2,
-                        reactions = null,
-                        deleteFor = null,
-                        messageDeletionDict = null,
-                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
-                        messageType = "text"
-                    )
+                    payload = Json.encodeToString(sendMessagePayload)
                 )
                 onMessageInputChanged(TextFieldValue())
                 _error.value = null
@@ -237,17 +243,18 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
+                val editMessagePayload = ChatMessage(
+                    action = "edit_message",
+                    id = messageId,
+                    text = text,
+                    senderId = chatState.value.session?.id,
+                    receiverId = 97,
+                    couple = 2,
+                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    messageType = "text"
+                )
                 repository.sendRequest(
-                    ChatMessage(
-                        action = "edit_message",
-                        id = messageId,
-                        text = text,
-                        senderId = chatState.value.session?.id,
-                        receiverId = 97,
-                        couple = 2,
-                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
-                        messageType = "text"
-                    )
+                    payload = Json.encodeToString(editMessagePayload)
                 )
                 onMessageInputChanged(TextFieldValue())
                 _error.value = null
@@ -266,13 +273,15 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
+                val deleteMessagePayload = ChatMessage(
+                    action = DELETE_MESSAGE,
+                    id = messageId,
+                    user_id = chatState.value.session?.id,
+                    deleteOption = deleteOption
+                )
+
                 repository.sendRequest(
-                    ChatMessage(
-                        action = "delete_message",
-                        id = messageId,
-                        user_id = chatState.value.session?.id,
-                        deleteOption = deleteOption
-                    )
+                    payload = Json.encodeToString(deleteMessagePayload)
                 )
                 _error.value = null
             } catch (e: Exception) {
@@ -286,12 +295,13 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
+                val readMessagePayload = ChatMessage(
+                    action = MESSAGE_READ,
+                    user_id = chatState.value.session?.id,
+                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                )
                 repository.sendRequest(
-                    chatMessage = ChatMessage(
-                        action = MESSAGE_READ,
-                        user_id = chatState.value.session?.id,
-                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
-                    )
+                    payload = Json.encodeToString(readMessagePayload)
                 )
             } catch (exception: Exception) {
                 _error.value = "Failed to send read request: ${exception.message}"
@@ -303,18 +313,39 @@ class ChatViewModel(
     fun sendMessageDeliveredRequest() {
         viewModelScope.launch {
             try {
+                val deliveredMessagePayload = ChatMessage(
+                    action = "message_delivered",
+                    user_id = chatState.value.session?.id,
+                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+                )
                 repository.sendRequest(
-                    chatMessage = ChatMessage(
-                        action = "message_delivered",
-                        user_id = chatState.value.session?.id,
-                        chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
-                    )
+                    payload = Json.encodeToString(deliveredMessagePayload)
                 )
 
             } catch (exception: Exception) {
                 _error.value = "Failed to send delivered request: ${exception.message}"
             }
 
+        }
+    }
+
+    fun reactToMessage(messageId: Long?, reaction: String) {
+        viewModelScope.launch {
+            try {
+                val reactToMessagePayload = ReactToMessageDTO(
+                    action = "react_to_message",
+                    messageId = messageId,
+                    userId = chatState.value.session?.id?.toLong(),
+                    reaction = reaction
+                )
+
+                repository.sendRequest(
+                    payload = Json.encodeToString(reactToMessagePayload)
+
+                )
+            } catch (exception: Exception) {
+                _error.value = "Failed to react to message: ${exception.message}"
+            }
         }
     }
 

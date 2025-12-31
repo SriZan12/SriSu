@@ -17,6 +17,7 @@ sealed interface ChatEvent {
     data class MessageTyping(val typingResponse: TypingResponse) : ChatEvent
     data class MessageRead(val messageReadResponse: MessageReadResponse?) : ChatEvent
     data class MessageDelivered(val messageDeliveredResponse: MessageDeliveredResponse?) : ChatEvent
+    data class ReactToMessage(val reactToMessage: ChatMessage?) : ChatEvent
 
     data class Error(val throwable: Throwable) : ChatEvent
 }

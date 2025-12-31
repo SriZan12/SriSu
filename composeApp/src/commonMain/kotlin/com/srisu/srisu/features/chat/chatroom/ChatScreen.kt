@@ -3,18 +3,25 @@ package com.srisu.srisu.features.chat.chatroom
 // ChatScreen.kt
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,6 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -54,6 +63,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -85,17 +95,22 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
@@ -222,7 +237,13 @@ fun ChatScreen(
                     onDelete = { deleteOption, messageId ->
                         viewModel.deleteMessage(deleteOption = deleteOption, messageId = messageId)
                     },
-                    onFetchOlder = viewModel::fetchOlderMessages
+                    onFetchOlder = viewModel::fetchOlderMessages,
+                    onReactionSelected = { reaction, messageId ->
+                        viewModel.reactToMessage(
+                            reaction = reaction,
+                            messageId = messageId
+                        )
+                    }
                 )
             }
 
@@ -232,6 +253,9 @@ fun ChatScreen(
 
 
 }
+
+typealias reaction = String
+typealias messageId = Long?
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -245,6 +269,7 @@ private fun ChatMessagesList(
     onEdit: (ChatMessage) -> Unit,
     onDelete: (String, Long?) -> Unit,
     onFetchOlder: () -> Unit,
+    onReactionSelected: (reaction, messageId) -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -295,12 +320,16 @@ private fun ChatMessagesList(
                             DELETE_FOR_EVERYONE,
                             message.id
                         )
+                    },
+                    onReactionSelected = { reaction ->
+                        onReactionSelected(reaction, message.id)
                     }
                 )
             }
         }
     }
 }
+
 
 @Composable
 private fun AnimatedMessageItem(
@@ -312,9 +341,11 @@ private fun AnimatedMessageItem(
     onDismissActions: () -> Unit,
     onEdit: () -> Unit,
     onDeleteForMe: () -> Unit,
-    onDeleteForEveryone: () -> Unit
+    onDeleteForEveryone: () -> Unit,
+    onReactionSelected: (String) -> Unit
 ) {
     val hasAnimated = remember(message.id) { mutableStateOf(false) }
+    var showReactions by remember { mutableStateOf(false) }
 
     LaunchedEffect(message.id) {
         delay(50) // Stagger animations slightly
@@ -333,7 +364,8 @@ private fun AnimatedMessageItem(
                 message = message,
                 currentUserId = currentUserId,
                 isOwn = isOwn,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onReactionClick = { showReactions = true }
             )
 
             AnimatedVisibility(
@@ -351,6 +383,20 @@ private fun AnimatedMessageItem(
                     canEdit = isOwn
                 )
             }
+
+            AnimatedVisibility(
+                modifier = Modifier.align(Alignment.TopStart),
+                visible = showReactions,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 }
+            ) {
+                ReactionPickerOverlay(
+                    onReactionSelected = onReactionSelected,
+                    onDismiss = { showReactions = false },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                )
+            }
         }
     }
 }
@@ -361,9 +407,13 @@ private fun MessageBubble(
     currentUserId: Int?,
     isOwn: Boolean,
     onLongClick: () -> Unit,
+    onReactionClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+
+    var bubbleWidthPx by remember { mutableStateOf(0) }
 
     val deleteEntry = message.deleteFor
         ?.values
@@ -435,7 +485,11 @@ private fun MessageBubble(
         Card(
             shape = bubbleShape,
             colors = CardDefaults.cardColors(containerColor = finalBackground),
-            modifier = Modifier.widthIn(max = 240.dp)
+            modifier = Modifier
+                .widthIn(max = 240.dp)
+                .onSizeChanged {
+                    bubbleWidthPx = it.width
+                }
         ) {
             Column(
                 modifier = Modifier.padding(all = 12.dp)
@@ -454,7 +508,8 @@ private fun MessageBubble(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        val formattedTime = formatTimeInHourAndMinute(isoTime = message.timestamp)
+                        val formattedTime =
+                            formatTimeInHourAndMinute(isoTime = message.timestamp)
 
                         if (formattedTime.isNotEmpty()) {
                             Text(
@@ -472,37 +527,172 @@ private fun MessageBubble(
                         if (isOwn) {
 
 
-//                            if (message.isRead == true) {
-//                                Icon(
-//                                    imageVector = Icons.Default.DoneAll,
-//                                    contentDescription = "Read",
-//                                    tint = MaterialTheme.colorScheme.primary,
-//                                    modifier = Modifier.size(16.dp)
-//                                )
-//                            } else
-                            if (message.isDelivered == true) {
+                            if (message.isRead == true) {
                                 Icon(
                                     imageVector = Icons.Default.DoneAll,
-                                    contentDescription = "Delivered",
-                                    tint = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    contentDescription = "Read",
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
+                                )
+                            } else
+                                if (message.isDelivered == true) {
+                                    Icon(
+                                        imageVector = Icons.Default.DoneAll,
+                                        contentDescription = "Delivered",
+                                        tint = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        modifier = Modifier.size(16.dp)
 
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Done,
-                                    contentDescription = "Sent",
-                                    tint = MaterialTheme.colorScheme.surfaceContainerLowest,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Done,
+                                        contentDescription = "Sent",
+                                        tint = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                         }
                     }
                 }
             }
+
+
+        }
+
+        val reaction = message.reactions
+
+        if (!isOwn && bubbleWidthPx > 0) {
+            val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
+
+            ReactionBubble(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(
+                        x = bubbleWidthDp + 6.dp   // small spacing from bubble edge
+                    ),
+                onClick = onReactionClick,
+                reaction = reaction?.reaction
+            )
+        }
+
+    }
+
+}
+
+@Composable
+@Preview
+private fun ReactionBubble(
+    modifier: Modifier = Modifier,
+    reaction: String?,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.size(28.dp),
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        onClick = onClick
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+
+            if (reaction != null) {
+                Text(
+                    text = reaction,
+                    fontSize = 14.sp,           // tuned for 28dp bubble
+                    lineHeight = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.FavoriteBorder,
+                    contentDescription = "Reaction",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
+
+@Composable
+@Preview
+fun ReactionPickerOverlay(
+    onReactionSelected: (String) -> Unit,
+    onDismiss: (reaction?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val reactions = listOf("💜", "😂", "😮", "😢", "😡", "👍")
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            reactions.forEach { emoji ->
+                AnimatedEmojiItem(
+                    emoji = emoji,
+                    onClick = {
+                        onReactionSelected(emoji)
+                        onDismiss(emoji)
+                    }
+                )
+            }
+
+            // Plus button
+            IconButton(onClick = { onDismiss(null) }) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "More reactions"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedEmojiItem(
+    emoji: String,
+    onClick: () -> Unit
+) {
+    val scale = remember { Animatable(0.6f) }
+
+    LaunchedEffect(emoji) {
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        )
+    }
+
+    Text(
+        text = emoji,
+        fontSize = 24.sp,
+        modifier = Modifier
+            .scale(scale.value)
+            .clickable { onClick() }
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -834,8 +1024,9 @@ fun PreviewMessageBubble() {
             text = "Hello"
         ),
         currentUserId = 97,
-        isOwn = true,
-        onLongClick = {}
+        isOwn = false,
+        onLongClick = {},
+        onReactionClick = {}
     )
 }
 

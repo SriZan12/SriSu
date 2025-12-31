@@ -17,5 +17,12 @@ data class ChatState(
     var lastAnimatedMessageId: Long? = null,
     var lastSentMessageId: Long? = null,
     val typingResponse: TypingResponse? = null,
-    val isTyping: Boolean = false
-)
+    val isTyping: Boolean = false,
+    val reactionEmojiList: List<Reactions> = emptyList(),
+    val selectedEmoji: Reactions? = null
+) {
+    data class Reactions(
+        val reactionEmoji: String,
+        val contentDescription: String
+    )
+}

@@ -1,5 +1,6 @@
 package com.srisu.srisu.core.data.websocket.chat
 
+import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
@@ -12,6 +13,7 @@ import com.srisu.srisu.utils.Constants.ChatConstants.EDIT_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_DELIVERED
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
+import com.srisu.srisu.utils.Constants.ChatConstants.REACT_TO_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import io.ktor.client.HttpClient
@@ -225,6 +227,14 @@ class ChatWebSocketClient(
                     val messageDeliveredResponse =
                         json.decodeFromString(MessageDeliveredResponse.serializer(), raw)
                     _events.emit(ChatEvent.MessageDelivered(messageDeliveredResponse = messageDeliveredResponse))
+                }
+
+                REACT_TO_MESSAGE -> {
+                    val reactToMessageResponse = json.decodeFromString(
+                        ChatMessage.serializer(),
+                        raw
+                    )
+                    _events.emit(ChatEvent.ReactToMessage(reactToMessage = reactToMessageResponse))
                 }
 
                 else -> {

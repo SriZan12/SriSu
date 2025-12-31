@@ -85,7 +85,7 @@ data class ChatMessage(
 
     // Reactions
     @SerialName("reactions")
-    val reactions: Map<String, String>? = null,
+    val reactions: Reaction? = null,
 
     // Time
     @SerialName("timestamp")
@@ -113,4 +113,11 @@ data class ChatMessage(
         @SerialName("delete_message")
         val delete_message: String? = null
     )
+
+    @Serializable
+    data class Reaction(
+        @SerialName("reaction")
+        val reaction: String? = null,
+
+        )
 }

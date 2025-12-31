@@ -62,6 +62,7 @@ class ChatRepository(
                     is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
                     is ChatEvent.MessageRead -> updateMessageRead(messageReadResponse = event.messageReadResponse)
                     is ChatEvent.MessageDelivered -> updateMessageDelivered(messageDeliveredResponse = event.messageDeliveredResponse)
+                    is ChatEvent.ReactToMessage -> updateMessage(event.reactToMessage)
                     is ChatEvent.Error -> _error.value = event.throwable.message
                     else -> Unit
                 }
@@ -105,8 +106,8 @@ class ChatRepository(
     }
 
 
-    private fun updateMessage(message: ChatMessage) {
-        val id = message.id ?: return
+    private fun updateMessage(message: ChatMessage?) {
+        val id = message?.id ?: return
         messageMap.update { oldMap ->
             // Returns a NEW map instance
             (oldMap + (id to message)) as LinkedHashMap<Long, ChatMessage>
@@ -204,13 +205,8 @@ class ChatRepository(
         }
     }
 
-    suspend fun sendRequest(chatMessage: ChatMessage?) {
-        chatMessage ?: return
-        webSocketClient.send(Json.encodeToString(chatMessage))
-    }
-
-    suspend fun sendTypingRequest(payload: String) {
-        AppLogger.log("Sending Typing Request....")
+    suspend fun sendRequest(payload: String?) {
+        payload ?: return
         webSocketClient.send(payload)
     }
 
