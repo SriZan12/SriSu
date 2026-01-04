@@ -108,6 +108,7 @@ class ChatRepository(
 
     private fun updateMessage(message: ChatMessage?) {
         val id = message?.id ?: return
+        AppLogger.log("Updating message = ${message}")
         messageMap.update { oldMap ->
             // Returns a NEW map instance
             (oldMap + (id to message)) as LinkedHashMap<Long, ChatMessage>

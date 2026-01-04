@@ -6,7 +6,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SendMessageResponse(
+data class MessageResponse(
     @SerialName("action")
     val action: String? = null,
     @SerialName("data")

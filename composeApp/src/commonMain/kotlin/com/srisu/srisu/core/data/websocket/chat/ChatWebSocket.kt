@@ -1,11 +1,10 @@
 package com.srisu.srisu.core.data.websocket.chat
 
-import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
 import com.srisu.srisu.core.data.response.chat.MessageReadResponse
-import com.srisu.srisu.core.data.response.chat.SendMessageResponse
+import com.srisu.srisu.core.data.response.chat.MessageResponse
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
@@ -181,7 +180,7 @@ class ChatWebSocketClient(
                 }
 
                 SEND_MESSAGE -> {
-                    val response = json.decodeFromString(SendMessageResponse.serializer(), raw)
+                    val response = json.decodeFromString(MessageResponse.serializer(), raw)
                     response.data?.let { chatMessage ->
                         _events.emit(value = ChatEvent.SendMessage(chatMessage))
                     }
@@ -189,7 +188,7 @@ class ChatWebSocketClient(
 
                 EDIT_MESSAGE -> {
                     val response = json.decodeFromString(
-                        SendMessageResponse.serializer(),
+                        MessageResponse.serializer(),
                         raw
                     )
 
@@ -203,7 +202,7 @@ class ChatWebSocketClient(
                 DELETE_MESSAGE -> {
 
                     val response = json.decodeFromString(
-                        SendMessageResponse.serializer(),
+                        MessageResponse.serializer(),
                         raw
                     )
 
@@ -231,10 +230,11 @@ class ChatWebSocketClient(
 
                 REACT_TO_MESSAGE -> {
                     val reactToMessageResponse = json.decodeFromString(
-                        ChatMessage.serializer(),
+                        MessageResponse.serializer(),
                         raw
                     )
-                    _events.emit(ChatEvent.ReactToMessage(reactToMessage = reactToMessageResponse))
+
+                    _events.emit(ChatEvent.ReactToMessage(reactToMessage = reactToMessageResponse.data))
                 }
 
                 else -> {
@@ -257,7 +257,6 @@ class ChatWebSocketClient(
             )
             val payload = Json.encodeToString(FetchMessageDTO.serializer(), fetchMessage)
             currentSession?.outgoing?.send(Frame.Text(payload))
-            AppLogger.log("Fetch messages request sent (page: $page, size: $pageSize)")
         } catch (e: Exception) {
             AppLogger.log("Error fetching messages: ${e.message}")
             throw e

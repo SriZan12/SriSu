@@ -384,18 +384,21 @@ private fun AnimatedMessageItem(
                 )
             }
 
-            AnimatedVisibility(
-                modifier = Modifier.align(Alignment.TopStart),
-                visible = showReactions,
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 }
-            ) {
-                ReactionPickerOverlay(
-                    onReactionSelected = onReactionSelected,
-                    onDismiss = { showReactions = false },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                )
+            if (!isOwn) {
+
+                AnimatedVisibility(
+                    modifier = Modifier.align(Alignment.TopStart),
+                    visible = showReactions,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 }
+                ) {
+                    ReactionPickerOverlay(
+                        onReactionSelected = onReactionSelected,
+                        onDismiss = { showReactions = false },
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                    )
+                }
             }
         }
     }
@@ -560,20 +563,33 @@ private fun MessageBubble(
         }
 
         val reaction = message.reactions
+        val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
 
-        if (!isOwn && bubbleWidthPx > 0) {
-            val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
+        if (!isOwn && bubbleWidthPx > 0 && message.deleteFor == null) {
 
             ReactionBubble(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .offset(
-                        x = bubbleWidthDp + 6.dp   // small spacing from bubble edge
-                    ),
+                        x = bubbleWidthDp + 6.dp
+                    ),  // move right from start-aligned bubble,
+                isOwn = isOwn,
                 onClick = onReactionClick,
                 reaction = reaction?.reaction
             )
+        } else if (reaction != null && isOwn && bubbleWidthPx > 0) {
+            ReactionBubble(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(
+                        x = -(bubbleWidthDp + 6.dp)
+                    ),
+                isOwn = isOwn,
+                onClick = onReactionClick,
+                reaction = reaction.reaction
+            )
         }
+
 
     }
 
@@ -583,6 +599,7 @@ private fun MessageBubble(
 @Preview
 private fun ReactionBubble(
     modifier: Modifier = Modifier,
+    isOwn: Boolean,
     reaction: String?,
     onClick: () -> Unit
 ) {
