@@ -118,6 +118,5 @@ data class ChatMessage(
     data class Reaction(
         @SerialName("reaction")
         val reaction: String? = null,
-
         )
 }

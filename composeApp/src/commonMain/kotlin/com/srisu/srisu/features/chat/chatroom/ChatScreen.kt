@@ -20,7 +20,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,8 +29,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -51,7 +52,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -84,7 +84,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -105,6 +104,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -354,10 +354,10 @@ private fun AnimatedMessageItem(
 
     AnimatedVisibility(
         visible = hasAnimated.value,
-        enter = fadeIn(tween(300)) +
-                slideInVertically(tween(300)) { it / 8 } +
-                scaleIn(tween(300), initialScale = 0.94f),
-        exit = fadeOut(tween(150))
+        enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
+                slideInVertically(animationSpec = tween(durationMillis = 300)) { it / 8 } +
+                scaleIn(animationSpec = tween(durationMillis = 300), initialScale = 0.94f),
+        exit = fadeOut(animationSpec = tween(durationMillis = 150))
     ) {
         Box {
             MessageBubble(
@@ -370,8 +370,16 @@ private fun AnimatedMessageItem(
 
             AnimatedVisibility(
                 visible = isActionShown,
-                enter = fadeIn(tween(150)) + scaleIn(tween(150), 0.9f),
-                exit = fadeOut(tween(100)) + scaleOut(tween(100), 0.9f),
+                enter = fadeIn(animationSpec = tween(durationMillis = 150)) + scaleIn(
+                    animationSpec = tween(
+                        durationMillis = 150
+                    ), initialScale = 0.9f
+                ),
+                exit = fadeOut(animationSpec = tween(durationMillis = 100)) + scaleOut(
+                    animationSpec = tween(
+                        durationMillis = 100
+                    ), targetScale = 0.9f
+                ),
                 modifier = Modifier.align(if (isOwn) Alignment.TopEnd else Alignment.TopStart)
             ) {
                 MessageActionsDropdown(
@@ -497,6 +505,14 @@ private fun MessageBubble(
             Column(
                 modifier = Modifier.padding(all = 12.dp)
             ) {
+
+                message.replyTo?.let {
+                    ReplyPreview(
+                        reply = message.replyTo,
+                        isOwn = isOwn
+                    )
+                }
+
                 Text(
                     text = displayText,
                     style = MaterialTheme.typography.bodyMedium,
@@ -573,7 +589,6 @@ private fun MessageBubble(
                     .offset(
                         x = bubbleWidthDp + 6.dp
                     ),  // move right from start-aligned bubble,
-                isOwn = isOwn,
                 onClick = onReactionClick,
                 reaction = reaction?.reaction
             )
@@ -584,7 +599,6 @@ private fun MessageBubble(
                     .offset(
                         x = -(bubbleWidthDp + 6.dp)
                     ),
-                isOwn = isOwn,
                 onClick = onReactionClick,
                 reaction = reaction.reaction
             )
@@ -596,10 +610,69 @@ private fun MessageBubble(
 }
 
 @Composable
+private fun ReplyPreview(
+    reply: ChatMessage.ReplyMessage,
+    isOwn: Boolean
+) {
+    val indicatorColor =
+        if (isOwn) MaterialTheme.colorScheme.secondary
+        else MaterialTheme.colorScheme.secondary
+
+    val cardColor = if (isOwn) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    else MaterialTheme.colorScheme.surfaceVariant.copy(
+        alpha = 0.5f
+    )
+
+
+    Card(
+        modifier = Modifier.padding(bottom = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = cardColor
+        ),
+        shape = RoundedCornerShape(size = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(all = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Vertical indicator bar
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(40.dp)
+                    .background(
+                        color = indicatorColor,
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Supriya Parajuli",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(
+                    text = reply.text.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
 @Preview
 private fun ReactionBubble(
     modifier: Modifier = Modifier,
-    isOwn: Boolean,
     reaction: String?,
     onClick: () -> Unit
 ) {
@@ -1044,6 +1117,18 @@ fun PreviewMessageBubble() {
         isOwn = false,
         onLongClick = {},
         onReactionClick = {}
+    )
+}
+
+@Preview
+@Composable
+fun PreviewReply() {
+    ReplyPreview(
+        reply = ChatMessage.ReplyMessage(
+            text = "Hello",
+            id = 1232,
+        ),
+        isOwn = true
     )
 }
 

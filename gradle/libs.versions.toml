@@ -35,7 +35,7 @@ kmpDateTimePicker = "1.1.1"
 accompanistPlaceholderMaterial3 = "0.36.0"
 accompanistPermissions = "0.37.3"
 materialIconsCore = "1.7.3"
-
+swipeableKmp = "1.0.3"
 
 
 [libraries]
@@ -96,6 +96,8 @@ androidx-foundation-android = { group = "androidx.compose.foundation", name = "f
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 paging-common = { module = "app.cash.paging:paging-common", version.ref = "pagingComposeCommon" }
 paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "pagingComposeCommon" }
+
+swipeable-kmp = { module = "com.stevdza-san:swipeable-kmp", version.ref = "swipeableKmp" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

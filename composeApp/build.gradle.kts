@@ -88,11 +88,6 @@ kotlin {
 //            KVault
             implementation(libs.kvault)
 
-//            mokko
-//            api(libs.moko.permissions.compose)
-//            api(libs.moko.permissions)
-//            implementation(libs.lifecycle.viewmodel.compose)
-
             //DataStore
             implementation(libs.datastore.preferences)
             implementation(libs.atomicfu)
@@ -103,7 +98,6 @@ kotlin {
             // ui-backhandler
             implementation(libs.ui.backhandler)
 
-
             //paging
             implementation(libs.paging.compose.common)
             implementation(libs.paging.common)
@@ -113,6 +107,10 @@ kotlin {
 
             //websockets
             implementation(libs.ktor.client.websockets)
+
+            //swipeable compo
+            implementation(libs.swipeable.kmp)
+
 
         }
 
