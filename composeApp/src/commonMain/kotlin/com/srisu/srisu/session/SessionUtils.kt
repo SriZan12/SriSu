@@ -34,4 +34,9 @@ class SessionUtils : KoinComponent {
 
     }
 
+    fun getCurrentUserId(): Int? {
+        val session = getSession()
+        return session?.id
+    }
+
 }

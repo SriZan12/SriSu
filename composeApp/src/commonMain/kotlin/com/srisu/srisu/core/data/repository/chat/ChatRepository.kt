@@ -1,258 +1,219 @@
 package com.srisu.srisu.core.data.repository.chat
 
+
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.toMutableStateMap
+import androidx.compose.ui.text.input.TextFieldValue
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
+import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
+import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
+import com.srisu.srisu.core.data.response.chat.MessageReadResponse
+import com.srisu.srisu.core.data.response.chat.TypingResponse
+import com.srisu.srisu.core.data.websocket.chat.ChatEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
-import com.srisu.srisu.core.data.websocket.chat.ConnectionState
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.utils.DateTimeUtils
+import com.srisu.srisu.session.SessionUtils
+import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
+import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlin.collections.filter
-import kotlin.collections.forEach
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlin.let
 
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val messageMap = MutableStateFlow<LinkedHashMap<Long, ChatMessage>>(linkedMapOf())
+    val messages: StateFlow<List<ChatMessage>> =
+        messageMap.map { it.values.toList() }
+            .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _messages =
-        MutableStateFlow<List<ChatMessage?>?>(emptyList())
+    private val _chatRoom = MutableStateFlow<ChatRoom?>(ChatRoom())
+    val chatRoom = _chatRoom.asStateFlow()
 
-    val messages: StateFlow<List<ChatMessage?>?> =
-        _messages.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
 
-    private var collectJob: Job? = null
+    private var nextCursor: Long? = null
+    private var hasMore: Boolean = true
 
-    //-------------------------
-    // LifeCycle Management
-    //-------------------------
-
-    /**
-     * Start WebSocket connection and begin collecting messages
-     * */
-
-    fun start() {
-        //prevent double start
-
-        if (collectJob?.isActive == true) {
-            AppLogger.log("Repository already Collectin messages")
-            return
-        }
-
-        webSocketClient.connect()
-
-        collectJob = repoScope.launch {
-            try {
-                webSocketClient.chatMessages.collect { incoming ->
-                    try {
-                        handleIncomingMessages(incoming)
-                    } catch (exception: Exception) {
-                        AppLogger.log("Error collecting messages: ${exception.message}")
-                    }
+    init {
+        webSocketClient.connect(roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4")
+        scope.launch {
+            webSocketClient.events.collect { event ->
+                when (event) {
+                    is ChatEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
+                    is ChatEvent.SendMessage -> prependMessage(event.message)
+                    is ChatEvent.MessageEdited -> updateMessage(event.message)
+                    is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
+                    is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
+                    is ChatEvent.MessageRead -> updateMessageRead(messageReadResponse = event.messageReadResponse)
+                    is ChatEvent.MessageDelivered -> updateMessageDelivered(messageDeliveredResponse = event.messageDeliveredResponse)
+                    is ChatEvent.ReactToMessage -> updateMessage(event.reactToMessage)
+                    is ChatEvent.Error -> _error.value = event.throwable.message
+                    else -> Unit
                 }
-            } catch (e: Exception) {
-                AppLogger.log("Error collecting messages: ${e.message}")
             }
         }
     }
 
-    /**
-     * Stop WebSocket connection and cancel message collection
-     **/
+    private fun applyFetchMessages(messages: FetchMessageResponse?) {
+        val messageList = messages?.chatMessage?.results ?: return
 
-    fun stop() {
-        collectJob?.cancel()
-        collectJob = null
-        webSocketClient.disconnect()
+        nextCursor = messageList.lastOrNull()?.id
+        hasMore = messageList.size >= 20
 
-        //Cancel repoScope to avoid leaks if repository is disposed
-        repoScope.cancel()
-    }
+        AppLogger.log("Apply Fetch Messages = ${messageList.size}")
 
-    //--------------------
-    // Message Handling
-    //--------------------
-
-    private val _messagesMap = MutableStateFlow<LinkedHashMap<String, ChatMessage>>(LinkedHashMap())
-
-
-//    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
-//        if (messages.isNullOrEmpty()) return
-//
-//        _messages.update { current ->
-//            // 1. Use a LinkedHashMap to preserve order and allow O(1) updates
-//            // We initialize it with the current items.
-//            val map = LinkedHashMap<Int, ChatMessage>()
-//            current?.filterNotNull()?.forEach { msg -> msg.id?.let { map[it] = msg } }
-//
-//            messages.filterNotNull().forEach { msg ->
-//                val id = msg.id ?: return@forEach
-//                if (msg.isDeleted == true) {
-//                    map.remove(id)
-//                } else {
-//                    // This replaces if exists, or adds to the end if new
-//                    map[id] = msg
-//                }
-//            }
-//
-//            // 2. Convert back to list and sort once if necessary
-//            // Sorting is O(N log N), which is better than multiple O(N) shifts
-//            map.values.sortedByDescending { it.timestamp }
-//        }
-//    }
-
-//    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
-//        if (messages.isNullOrEmpty()) return
-//
-//        _messages.update { current ->
-//            val currentList = current?.toMutableList() ?: mutableListOf()
-//
-//            // Build a map of existing messages for O(1) lookup
-//            val existingMap = currentList.associateBy { it?.id }
-//            val validMessages = messages.filterNotNull()
-//
-//            // Separate messages by operation type in a single pass
-//            val deletedIds = mutableSetOf<Int>()
-//            val toUpdate = mutableListOf<ChatMessage>()
-//            val toAdd = mutableListOf<ChatMessage>()
-//
-//            validMessages.forEach { msg ->
-//                val id = msg.id
-//                when {
-//                    msg.isDeleted == true && id != null -> deletedIds.add(id)
-//                    !msg.isDeleted!! && id != null -> {
-//                        if (existingMap.containsKey(id)) {
-//                            toUpdate.add(msg)
-//                        } else {
-//                            toAdd.add(msg)
-//                        }
-//                    }
-//                }
-//            }
-//
-//            // Apply operations
-//            // 1. Remove deleted messages (single pass with removeIf)
-//            if (deletedIds.isNotEmpty()) {
-//                currentList.removeAll { it?.id in deletedIds }
-//            }
-//
-//            // 2. Update existing messages (single pass)
-//            if (toUpdate.isNotEmpty()) {
-//                val updateMap = toUpdate.associateBy { it.id }
-//                for (i in currentList.indices) {
-//                    currentList[i]?.id?.let { id ->
-//                        updateMap[id]?.let { updatedMsg ->
-//                            currentList[i] = updatedMsg
-//                        }
-//                    }
-//                }
-//            }
-//
-//            // 3. Add new messages at the beginning
-//            if (toAdd.isNotEmpty()) {
-//                currentList.addAll(0, toAdd)
-//            }
-//
-//            currentList
-//        }
-//    }
-
-//    private fun handleIncomingMessages(messages: List<ChatMessage?>?) {
-//        if (messages.isNullOrEmpty()) return
-//
-//        _messages.update { current ->
-//            val currentMap = current
-//                ?.filterNotNull()
-//                ?.associateBy { it.id }
-//                ?.toMutableMap()
-//                ?: mutableMapOf()
-//
-//            for (msg in messages) {
-//                msg?.id?.let {
-//                    // INSERT OR REPLACE
-//                    currentMap[it] = msg
-//                }
-//            }
-//
-//            // Sort if needed (newest first)
-//            currentMap.values.sortedByDescending { it.timestamp }
-//        }
-//    }
-
-
-    //---------------
-    // Actions
-    //---------------
-
-
-    @Throws(Exception::class)
-    suspend fun sendMessage(chatMessage: ChatMessage) {
         try {
-            webSocketClient.sendMessage(chatMessage)
+            messageMap.update { oldMap ->
+                // Create updates, ensuring IDs are not null
+                val updates = messageList.filterNotNull()
+                    .associateBy { it.id!! } // !! is safe here because of filterNotNull()
+
+                // Merge and explicitly cast to LinkedHashMap
+                (oldMap + updates).toMutableMap() as LinkedHashMap<Long, ChatMessage>
+            }
+
+            AppLogger.log("Inside applyFetchMessages")
         } catch (exception: Exception) {
-            AppLogger.log("Error sending message: ${exception.message}")
-            throw exception
+            AppLogger.log("Exception: ${exception.message}")
         }
+
     }
 
-    @Throws(Exception::class)
-    suspend fun editMessage(chatMessage: ChatMessage) {
-        try {
-            webSocketClient.editMessage(chatMessage)
-        } catch (exception: Exception) {
-            AppLogger.log("Error sending message: ${exception.message}")
-            throw exception
-        }
-    }
 
-    @Throws(Exception::class)
-    suspend fun deleteMessage(chatMessage: ChatMessage) {
-        try {
-            webSocketClient.deleteMessage(chatMessage)
-        } catch (exception: Exception) {
-            AppLogger.log("Error sending message: ${exception.message}")
-            throw exception
+    private fun prependMessage(message: ChatMessage) {
+        val id = message.id ?: return
+
+        messageMap.update { oldMap ->
+            // Put the new message first, then the old ones
+            (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
     }
 
 
-    @Throws(Exception::class)
-    suspend fun fetchMessages(page: Int, pageSize: Int) {
-        try {
-            webSocketClient.fetchMessages(page, pageSize)
-        } catch (exception: Exception) {
-            AppLogger.log("Error fetching messages: ${exception.message}")
-            throw exception
-
+    private fun updateMessage(message: ChatMessage?) {
+        val id = message?.id ?: return
+        AppLogger.log("Updating message = ${message}")
+        messageMap.update { oldMap ->
+            // Returns a NEW map instance
+            (oldMap + (id to message)) as LinkedHashMap<Long, ChatMessage>
         }
     }
 
-    fun clearMessages() {
-        _messages.value = emptyList()
-        AppLogger.log("Messages cleared")
+    private fun deleteMessage(message: ChatMessage?) {
+        message ?: return
+
+        val messageId = message.id ?: return
+
+        val deleteForMap = message.deleteFor
+        if (deleteForMap != null) {
+            // If "me" (or current user) is already in the delete_for list → fully remove from local map
+            val currentUserId = SessionUtils().getCurrentUserId()
+            val hasBeenDeletedForMe = deleteForMap.values
+                .flatten()
+                .any { action -> action.option == DELETE_FOR_ME && action.user_id == currentUserId }
+
+            if (hasBeenDeletedForMe) {
+                messageMap.update { oldMap ->
+                    (oldMap - messageId) as LinkedHashMap<Long, ChatMessage>
+                }
+            } else {
+                updateMessage(message = message)
+            }
+        }
+
     }
 
-    fun reconnect() {
-        stop()
+    private fun updateTyping(typingResponse: TypingResponse) {
+        AppLogger.log("Inside repo updateTyping: $typingResponse")
+        _chatRoom.update { currentRoom ->
+            AppLogger.log("Current room before update: $currentRoom")
+            currentRoom?.copy(
+                isTyping = typingResponse
+            )
+        }
+    }
 
-        webSocketClient.connect()
-        start()
+    private fun updateMessageRead(messageReadResponse: MessageReadResponse?) {
+        messageReadResponse?.let { response ->
+            val messageReadIds = response.data?.messageIds ?: return
+
+            messageMap.update { oldMap ->
+                val updates: Map<Long, ChatMessage> =
+                    messageReadIds.mapNotNull { id ->
+                        id?.let { nonNullId ->
+                            oldMap[nonNullId]?.let { message ->
+                                nonNullId to message.copy(isRead = true)
+                            }
+                        }
+                    }.toMap()
+
+                LinkedHashMap<Long, ChatMessage>().apply {
+                    putAll(oldMap)
+                    putAll(updates) // overwrite only read messages
+                }
+            }
+        }
+    }
+
+    private fun updateMessageDelivered(messageDeliveredResponse: MessageDeliveredResponse?) {
+        messageDeliveredResponse?.let { response ->
+            val messageDeliveredIds = response.data?.messageIds ?: return
+
+            messageMap.update { oldMap ->
+                val updates: Map<Long, ChatMessage> =
+                    messageDeliveredIds.mapNotNull { id ->
+                        id?.let { nonNullId ->
+                            oldMap[nonNullId]?.let { message ->
+                                nonNullId to message.copy(isDelivered = true)
+                            }
+                        }
+                    }.toMap()
+
+                LinkedHashMap<Long, ChatMessage>().apply {
+                    putAll(oldMap)
+                    putAll(updates) // overwrite only read messages
+                }
+            }
+        }
     }
 
 
+    fun fetchOlderMessages() {
+        if (!hasMore) return
+        scope.launch {
+            val fetchPayload = FetchMessageDTO(
+                action = FETCH_MESSAGES,
+                page = nextCursor,
+                page_size = 50
+            )
+            webSocketClient.send(Json.encodeToString(fetchPayload))
+        }
+    }
+
+    suspend fun sendRequest(payload: String?) {
+        payload ?: return
+        webSocketClient.send(payload)
+    }
+
+
+    fun clearError() {
+        _error.value = null
+    }
 }
+

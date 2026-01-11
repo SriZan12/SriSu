@@ -4,11 +4,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FetchMessageDTO(
+data class ReactToMessageDTO(
     @SerialName("action")
     val action: String,
-    @SerialName("page")
-    val page: Long?,
-    @SerialName("page_size")
-    val page_size: Int?
+    @SerialName("message_id")
+    val messageId: Long?,
+    @SerialName("reaction")
+    val reaction: String,
+    @SerialName("user_id")
+    val userId: Long?
 )

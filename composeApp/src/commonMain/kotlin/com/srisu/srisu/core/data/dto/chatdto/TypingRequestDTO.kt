@@ -4,11 +4,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FetchMessageDTO(
+data class TypingRequest(
     @SerialName("action")
     val action: String,
-    @SerialName("page")
-    val page: Long?,
-    @SerialName("page_size")
-    val page_size: Int?
+    @SerialName("is_typing")
+    val isTyping: Boolean,
+    @SerialName("user_id")
+    val userId: Int
 )

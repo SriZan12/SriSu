@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -22,6 +21,32 @@ object DateTimeUtils {
         return "${date.year}-${
             date.month.number.toString().padStart(2, '0')
         }-${date.day.toString().padStart(2, '0')}"
+    }
+
+
+    @OptIn(ExperimentalTime::class)
+    fun formatTimeInHourAndMinute(isoTime: String?): String {
+        if (!isoTime.isNullOrEmpty()) {
+            val instant = Instant.parse(isoTime)
+            val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+
+            val hour24 = localDateTime.hour
+            val minute = localDateTime.minute
+
+            val isAm = hour24 < 12
+            val hour12 = when {
+                hour24 == 0 -> 12
+                hour24 > 12 -> hour24 - 12
+                else -> hour24
+            }
+
+            val minuteStr = minute.toString().padStart(2, '0')
+            val amPm = if (isAm) "AM" else "PM"
+
+            return "$hour12:$minuteStr $amPm"
+        } else {
+            return ""
+        }
     }
 
     fun getDayAndMonthIndividually(dateString: String): Pair<Int, Int> {

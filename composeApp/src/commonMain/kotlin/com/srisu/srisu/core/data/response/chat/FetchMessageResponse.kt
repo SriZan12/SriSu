@@ -11,17 +11,15 @@ data class FetchMessageResponse(
     @SerialName("data")
     val chatMessage: Message? = null,
     @SerialName("message")
-    val message: String? = null
+    val message: String? = null,
+    @SerialName("has_more")
+    val hasMore: Boolean? = null,
+    @SerialName("next_cursor")
+    val nextCursor: Long? = null
 ) {
     @Serializable
     data class Message(
-        @SerialName("count")
-        val count: Int? = null,
-        @SerialName("next")
-        val next: Int? = null,
-        @SerialName("previous")
-        val previous: Int? = null,
-        @SerialName("results")
+        @SerialName("messages")
         val results: List<ChatMessage?>? = null
     )
 }
