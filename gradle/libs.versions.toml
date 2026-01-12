@@ -97,7 +97,7 @@ navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-co
 paging-common = { module = "app.cash.paging:paging-common", version.ref = "pagingComposeCommon" }
 paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "pagingComposeCommon" }
 
-swipeable-kmp = { module = "com.stevdza-san:swipeable-kmp", version.ref = "swipeableKmp" }
+#swipeable-kmp = { module = "com.stevdza-san:swipeable-kmp", version.ref = "swipeableKmp" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

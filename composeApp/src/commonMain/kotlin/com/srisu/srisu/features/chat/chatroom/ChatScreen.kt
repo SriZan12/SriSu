@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -78,11 +77,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -99,6 +101,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -125,6 +128,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
+typealias reaction = String
+typealias messageId = Long?
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -132,18 +138,43 @@ fun ChatScreen(
     navController: NavController,
     viewModel: ChatViewModel = koinViewModel(),
 ) {
+
     val chatState by viewModel.chatState.collectAsState()
-    val error by viewModel.error.collectAsState()
 
-    val listState = rememberLazyListState()
-    val inputFocusRequester = remember { FocusRequester() }
+    ChatInitialization(
+        session = session,
+        viewModel = viewModel
+    )
 
+    ChatScaffold(
+        chatState = chatState,
+        viewModel = viewModel,
+        onNavBack = {}
+    )
+}
+
+@Composable
+private fun ChatInitialization(
+    session: Session?,
+    viewModel: ChatViewModel
+) {
     LaunchedEffect(Unit) {
         viewModel.updateSession(session = session)
     }
+}
+
+@Composable
+private fun ChatScaffold(
+    chatState: ChatState,
+    viewModel: ChatViewModel,
+    onNavBack: () -> Unit
+) {
+    val error by viewModel.error.collectAsState()
+    val listState = rememberLazyListState()
+    val inputFocusRequester = remember { FocusRequester() }
 
     // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(chatState.chatMessages?.size) {
+    LaunchedEffect(key1 = chatState.chatMessages?.size) {
         chatState.chatMessages?.let {
             if (it.isNotEmpty()) {
                 listState.animateScrollToItem(0)
@@ -152,27 +183,14 @@ fun ChatScreen(
             }
         }
     }
-    var chatTopBarSubTitle by remember { mutableStateOf("Online") }
-
-    LaunchedEffect(key1 = chatState.isTyping) {
-        AppLogger.log("Inside launched Effect for typing")
-        chatTopBarSubTitle = if (chatState.isTyping) {
-            "Typing..."
-        } else {
-            "Online"
-        }
-    }
-
 
     Scaffold(
         topBar = {
             ChatTopBar(
-                title = "Srijan Khadka", // fetch from chatRoom
-                subtitle = chatTopBarSubTitle,
-                avatarUrl = "https://randomuser.me/api/portraits/men/76.jpg",
-                onBack = { navController.popBackStack() },
-                onCall = { /* TODO */ },
-                onVideoCall = { /* TODO */ }
+                chatState = chatState,
+                onBack = { onNavBack() },
+                onCall = { },
+                onVideoCall = { }
             )
         },
         bottomBar = {
@@ -190,12 +208,14 @@ fun ChatScreen(
                 },
                 onCancelEdit = {
                     viewModel.updateIsEditMessage(isEditMessage = false)
+                    viewModel.setReplyMessage(chatMessage = null, isOn = false)
                     inputFocusRequester.freeFocus()
                     viewModel.onMessageInputChanged(value = TextFieldValue())
                 },
 
                 isEditing = chatState.isEditMessage,
                 focusRequester = inputFocusRequester,
+                isReplying = chatState.replyMessage,
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
@@ -243,6 +263,10 @@ fun ChatScreen(
                             reaction = reaction,
                             messageId = messageId
                         )
+                    },
+                    onReplyMessage = { chatMessage ->
+                        viewModel.setReplyMessage(chatMessage = chatMessage, isOn = true)
+                        inputFocusRequester.requestFocus()
                     }
                 )
             }
@@ -250,12 +274,7 @@ fun ChatScreen(
 //            FloatingHearts()
         }
     }
-
-
 }
-
-typealias reaction = String
-typealias messageId = Long?
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -270,6 +289,7 @@ private fun ChatMessagesList(
     onDelete: (String, Long?) -> Unit,
     onFetchOlder: () -> Unit,
     onReactionSelected: (reaction, messageId) -> Unit,
+    onReplyMessage: (ChatMessage) -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -323,7 +343,8 @@ private fun ChatMessagesList(
                     },
                     onReactionSelected = { reaction ->
                         onReactionSelected(reaction, message.id)
-                    }
+                    },
+                    onReplyMessage = onReplyMessage
                 )
             }
         }
@@ -342,7 +363,8 @@ private fun AnimatedMessageItem(
     onEdit: () -> Unit,
     onDeleteForMe: () -> Unit,
     onDeleteForEveryone: () -> Unit,
-    onReactionSelected: (String) -> Unit
+    onReactionSelected: (String) -> Unit,
+    onReplyMessage: (ChatMessage) -> Unit
 ) {
     val hasAnimated = remember(message.id) { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
@@ -360,56 +382,81 @@ private fun AnimatedMessageItem(
         exit = fadeOut(animationSpec = tween(durationMillis = 150))
     ) {
         Box {
+
+            SwipeableMessageCompo(
+                message = message,
+                currentUserId = currentUserId,
+                isOwn = isOwn,
+                onLongClick = onLongClick,
+                onReplyMessage = onReplyMessage,
+                onReactionClick = { showReactions = true }
+            )
+
+            AnimatedMessageDropDownCompo(
+                modifier = Modifier.align(alignment = if (isOwn) Alignment.TopEnd else Alignment.TopStart),
+                isOwn = isOwn,
+                isActionShown = isActionShown,
+                onDismissActions = onDismissActions,
+                onEdit = onEdit,
+                onDeleteForMe = onDeleteForMe,
+                onDeleteForEveryone = onDeleteForEveryone
+            )
+
+            AnimatedReactionPickerOverlay(
+                modifier = Modifier.align(Alignment.TopEnd),
+                isOwn = isOwn,
+                showReactions = showReactions,
+                onReactionSelected = onReactionSelected,
+                onDismiss = { showReactions = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SwipeableMessageCompo(
+    message: ChatMessage,
+    currentUserId: Int?,
+    isOwn: Boolean,
+    onLongClick: () -> Unit,
+    onReplyMessage: (ChatMessage) -> Unit,
+    onReactionClick: () -> Unit
+) {
+
+    val swipeToReplyBoxState = rememberSwipeToDismissBoxState(
+        initialValue = SwipeToDismissBoxValue.Settled,
+        confirmValueChange = { newValue ->
+            when (newValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onReplyMessage(message)
+                    false // snap back, do NOT dismiss
+                }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    false // explicitly ignore
+                }
+
+                SwipeToDismissBoxValue.Settled -> true
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = swipeToReplyBoxState,
+        modifier = Modifier,
+        content = {
             MessageBubble(
                 message = message,
                 currentUserId = currentUserId,
                 isOwn = isOwn,
                 onLongClick = onLongClick,
-                onReactionClick = { showReactions = true }
+                onReactionClick = { onReactionClick() }
             )
+        },
+        backgroundContent = {
+        },
 
-            AnimatedVisibility(
-                visible = isActionShown,
-                enter = fadeIn(animationSpec = tween(durationMillis = 150)) + scaleIn(
-                    animationSpec = tween(
-                        durationMillis = 150
-                    ), initialScale = 0.9f
-                ),
-                exit = fadeOut(animationSpec = tween(durationMillis = 100)) + scaleOut(
-                    animationSpec = tween(
-                        durationMillis = 100
-                    ), targetScale = 0.9f
-                ),
-                modifier = Modifier.align(if (isOwn) Alignment.TopEnd else Alignment.TopStart)
-            ) {
-                MessageActionsDropdown(
-                    isOwn = isOwn,
-                    onDismiss = onDismissActions,
-                    onEdit = { onEdit() },
-                    onDeleteForMe = { onDeleteForMe() },
-                    onDeleteForEveryone = { onDeleteForEveryone() },
-                    canEdit = isOwn
-                )
-            }
-
-            if (!isOwn) {
-
-                AnimatedVisibility(
-                    modifier = Modifier.align(Alignment.TopStart),
-                    visible = showReactions,
-                    enter = fadeIn() + slideInVertically { it / 2 },
-                    exit = fadeOut() + slideOutVertically { it / 2 }
-                ) {
-                    ReactionPickerOverlay(
-                        onReactionSelected = onReactionSelected,
-                        onDismiss = { showReactions = false },
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                    )
-                }
-            }
-        }
-    }
+        )
 }
 
 @Composable
@@ -433,56 +480,12 @@ private fun MessageBubble(
 
     val isDeletedForEveryone = deleteEntry != null
 
-    val displayText = if (isDeletedForEveryone) {
-        if (deleteEntry.user_id == currentUserId) {
-            "You deleted this message"
-        } else {
-            "This message was deleted"
-        }
-    } else {
-        message.text.orEmpty()
-    }
-
-    val textColor = if (isDeletedForEveryone) {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    } else if (isOwn) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
-    // Hide long-click action if message is deleted
-    val clickableModifier = if (isDeletedForEveryone) {
-        Modifier
-    } else {
-        Modifier.combinedClickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onLongClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onLongClick()
-            },
-            onClick = { }
-        )
-    }
-
-    val bubbleShape = RoundedCornerShape(
-        topStart = 20.dp,
-        topEnd = 20.dp,
-        bottomStart = if (isOwn) 20.dp else 4.dp,
-        bottomEnd = if (isOwn) 4.dp else 20.dp
-    )
-
-    val backgroundColor = if (isOwn)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.surfaceContainerHigh
 
     // Slightly transparent background for deleted messages
     val finalBackground = if (isDeletedForEveryone) {
-        backgroundColor.copy(alpha = 0.7f)
+        backgroundColor(isOwn = isOwn).copy(alpha = 0.7f)
     } else {
-        backgroundColor
+        backgroundColor(isOwn = isOwn)
     }
 
     val alignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
@@ -490,11 +493,17 @@ private fun MessageBubble(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .then(clickableModifier),
+            .then(
+                clickableModifier(
+                    isDeletedForEveryone = isDeletedForEveryone,
+                    haptic = haptic,
+                    onLongClick = onLongClick
+                )
+            ),
         contentAlignment = alignment
     ) {
         Card(
-            shape = bubbleShape,
+            shape = bubbleShape(isOwn = isOwn),
             colors = CardDefaults.cardColors(containerColor = finalBackground),
             modifier = Modifier
                 .widthIn(max = 240.dp)
@@ -506,17 +515,27 @@ private fun MessageBubble(
                 modifier = Modifier.padding(all = 12.dp)
             ) {
 
-                message.replyTo?.let {
-                    ReplyPreview(
-                        reply = message.replyTo,
-                        isOwn = isOwn
-                    )
+                if (!isDeletedForEveryone) {
+                    message.replyTo?.let {
+                        ReplyPreview(
+                            reply = message.replyTo,
+                            isOwn = isOwn
+                        )
+                    }
                 }
 
                 Text(
-                    text = displayText,
+                    text = messageDisplayText(
+                        deleteEntry = deleteEntry,
+                        isDeletedForEveryone = isDeletedForEveryone,
+                        messageText = message.text,
+                        currentUserId = currentUserId
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = textColor,
+                    color = messageTextColor(
+                        isOwn = isOwn,
+                        isDeletedForEveryone = isDeletedForEveryone
+                    ),
                     fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
                 )
 
@@ -581,7 +600,7 @@ private fun MessageBubble(
         val reaction = message.reactions
         val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
 
-        if (!isOwn && bubbleWidthPx > 0 && message.deleteFor == null) {
+        if (!isOwn && bubbleWidthPx > 0 && message.deleteFor == null && !isDeletedForEveryone) {
 
             ReactionBubble(
                 modifier = Modifier
@@ -592,7 +611,7 @@ private fun MessageBubble(
                 onClick = onReactionClick,
                 reaction = reaction?.reaction
             )
-        } else if (reaction != null && isOwn && bubbleWidthPx > 0) {
+        } else if (reaction != null && isOwn && bubbleWidthPx > 0 && !isDeletedForEveryone) {
             ReactionBubble(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -608,6 +627,65 @@ private fun MessageBubble(
     }
 
 }
+
+@Composable
+private fun backgroundColor(isOwn: Boolean) = if (isOwn)
+    MaterialTheme.colorScheme.primaryContainer
+else
+    MaterialTheme.colorScheme.surfaceContainerHigh
+
+@Composable
+private fun bubbleShape(isOwn: Boolean) = RoundedCornerShape(
+    topStart = 20.dp,
+    topEnd = 20.dp,
+    bottomStart = if (isOwn) 20.dp else 4.dp,
+    bottomEnd = if (isOwn) 4.dp else 20.dp
+)
+
+@Composable
+private fun clickableModifier(
+    isDeletedForEveryone: Boolean,
+    haptic: HapticFeedback,
+    onLongClick: () -> Unit
+) = if (isDeletedForEveryone) {
+    Modifier
+} else {
+    Modifier.combinedClickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onLongClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onLongClick()
+        },
+        onClick = { }
+    )
+}
+
+@Composable
+private fun messageDisplayText(
+    deleteEntry: ChatMessage.DeleteMessageAction??,
+    isDeletedForEveryone: Boolean,
+    messageText: String?,
+    currentUserId: Int?
+) = if (isDeletedForEveryone) {
+    if (deleteEntry?.user_id == currentUserId) {
+        "You deleted this message"
+    } else {
+        "This message was deleted"
+    }
+} else {
+    messageText.orEmpty()
+}
+
+@Composable
+private fun messageTextColor(isOwn: Boolean, isDeletedForEveryone: Boolean): Color =
+    if (isDeletedForEveryone) {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    } else if (isOwn) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
 
 @Composable
 private fun ReplyPreview(
@@ -714,8 +792,34 @@ private fun ReactionBubble(
 }
 
 @Composable
+private fun AnimatedReactionPickerOverlay(
+    modifier: Modifier,
+    isOwn: Boolean,
+    showReactions: Boolean,
+    onReactionSelected: (String) -> Unit,
+    onDismiss: (reaction?) -> Unit
+) {
+    if (!isOwn) {
+
+        AnimatedVisibility(
+            modifier = modifier,
+            visible = showReactions,
+            enter = fadeIn() + slideInVertically { it / 2 },
+            exit = fadeOut() + slideOutVertically { it / 2 }
+        ) {
+            ReactionPickerOverlay(
+                onReactionSelected = onReactionSelected,
+                onDismiss = onDismiss,
+                modifier = modifier
+            )
+        }
+    }
+}
+
+
+@Composable
 @Preview
-fun ReactionPickerOverlay(
+private fun ReactionPickerOverlay(
     onReactionSelected: (String) -> Unit,
     onDismiss: (reaction?) -> Unit,
     modifier: Modifier = Modifier
@@ -787,13 +891,25 @@ fun AnimatedEmojiItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatTopBar(
-    title: String,
-    subtitle: String,
-    avatarUrl: String,
+    chatState: ChatState,
     onBack: () -> Unit,
     onCall: () -> Unit,
     onVideoCall: () -> Unit
 ) {
+
+    var chatTopBarSubTitle by remember { mutableStateOf("Online") }
+    val avatarUrl = "https://randomuser.me/api/portraits/men/80.jpg"
+    val isTyping = chatState.isTyping
+
+    LaunchedEffect(key1 = isTyping) {
+        AppLogger.log("Inside launched Effect for typing")
+        chatTopBarSubTitle = if (isTyping) {
+            "Typing..."
+        } else {
+            "Online"
+        }
+    }
+
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -807,13 +923,13 @@ private fun ChatTopBar(
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = title,
+                        text = "Srijan Khadka",
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = subtitle,
+                        text = chatTopBarSubTitle,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -846,6 +962,7 @@ private fun ChatInputBar(
     onSend: () -> Unit,
     onCancelEdit: () -> Unit,
     isEditing: Boolean = false,
+    isReplying: ChatState.ReplyMessage,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
@@ -861,6 +978,29 @@ private fun ChatInputBar(
                     text = "Edit message",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
+                )
+
+                IconButton(
+                    onClick = {
+                        onCancelEdit()
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cancel",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        } else if (isReplying.isOn) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = isReplying.message?.text.orEmpty(),
+                    style = MaterialTheme.typography.titleSmall,
                 )
 
                 IconButton(
@@ -963,7 +1103,42 @@ private fun ErrorBanner(
 }
 
 @Composable
-fun MessageActionsDropdown(
+private fun AnimatedMessageDropDownCompo(
+    modifier: Modifier,
+    isActionShown: Boolean,
+    isOwn: Boolean,
+    onDismissActions: () -> Unit,
+    onEdit: () -> Unit,
+    onDeleteForMe: () -> Unit,
+    onDeleteForEveryone: () -> Unit,
+) {
+    AnimatedVisibility(
+        visible = isActionShown,
+        enter = fadeIn(animationSpec = tween(durationMillis = 150)) + scaleIn(
+            animationSpec = tween(
+                durationMillis = 150
+            ), initialScale = 0.9f
+        ),
+        exit = fadeOut(animationSpec = tween(durationMillis = 100)) + scaleOut(
+            animationSpec = tween(
+                durationMillis = 100
+            ), targetScale = 0.9f
+        ),
+        modifier = modifier
+    ) {
+        MessageActionsDropdown(
+            isOwn = isOwn,
+            onDismiss = onDismissActions,
+            onEdit = { onEdit() },
+            onDeleteForMe = { onDeleteForMe() },
+            onDeleteForEveryone = { onDeleteForEveryone() },
+            canEdit = isOwn
+        )
+    }
+}
+
+@Composable
+private fun MessageActionsDropdown(
     isOwn: Boolean,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
@@ -1096,7 +1271,7 @@ fun ChatScreenPreview() {
         onCancelEdit = {
 
         },
-
+        isReplying = ChatState.ReplyMessage(),
         isEditing = false,
         modifier = Modifier
             .fillMaxWidth()

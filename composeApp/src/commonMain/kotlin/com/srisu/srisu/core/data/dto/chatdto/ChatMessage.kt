@@ -95,7 +95,7 @@ data class ChatMessage(
     @Serializable
     data class ReplyMessage(
         @SerialName("id")
-        val id: Int? = null,
+        val id: Long? = null,
 
         @SerialName("text")
         val text: String? = null,
@@ -118,5 +118,5 @@ data class ChatMessage(
     data class Reaction(
         @SerialName("reaction")
         val reaction: String? = null,
-        )
+    )
 }

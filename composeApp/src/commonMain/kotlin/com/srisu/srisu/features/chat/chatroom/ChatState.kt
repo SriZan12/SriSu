@@ -19,10 +19,16 @@ data class ChatState(
     val typingResponse: TypingResponse? = null,
     val isTyping: Boolean = false,
     val reactionEmojiList: List<Reactions> = emptyList(),
-    val selectedEmoji: Reactions? = null
+    val selectedEmoji: Reactions? = null,
+    val replyMessage: ReplyMessage = ReplyMessage()
 ) {
     data class Reactions(
         val reactionEmoji: String,
         val contentDescription: String
+    )
+
+    data class ReplyMessage(
+        val isOn: Boolean = false,
+        val message: ChatMessage? = null
     )
 }

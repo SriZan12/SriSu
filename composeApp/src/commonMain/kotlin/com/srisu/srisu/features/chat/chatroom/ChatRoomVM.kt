@@ -130,6 +130,17 @@ class ChatViewModel(
         }
     }
 
+    fun setReplyMessage(chatMessage: ChatMessage?, isOn: Boolean) {
+        _chatState.update {
+            it.copy(
+                replyMessage = ChatState.ReplyMessage(
+                    isOn = isOn,
+                    message = chatMessage
+                )
+            )
+        }
+    }
+
 
     private fun observeChatRoom() {
         viewModelScope.launch {
@@ -211,6 +222,17 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
+
+                val replyTo = if (chatState.value.replyMessage.isOn) {
+                    ChatMessage.ReplyMessage(
+                        id = chatState.value.replyMessage.message?.id,
+                        text = chatState.value.replyMessage.message?.text,
+                        senderId = chatState.value.replyMessage.message?.senderId
+                    )
+                } else {
+                    null
+                }
+
                 val sendMessagePayload = ChatMessage(
                     action = SEND_MESSAGE,
                     text = text,
@@ -221,13 +243,15 @@ class ChatViewModel(
                     deleteFor = null,
                     messageDeletionDict = null,
                     chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
-                    messageType = "text"
+                    messageType = "text",
+                    replyTo = replyTo
                 )
 
                 repository.sendRequest(
-                    payload = Json.encodeToString(sendMessagePayload)
+                    payload = Json.encodeToString(value = sendMessagePayload)
                 )
                 onMessageInputChanged(TextFieldValue())
+                setReplyMessage(chatMessage = null, isOn = false)
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Failed to send message: ${e.message}"
