@@ -19,45 +19,72 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
     }
 }
 
+
 @Composable
 actual fun rememberGalleryManager(
-    onResult: (List<String?>?) -> Unit, mediaType: MediaType?
+    onResult: (List<String?>?) -> Unit,
+    mediaType: MediaType?,
+    isMultiple: Boolean
 ): GalleryManager {
 
-    var pickVisualMediaRequest =
-        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-
-    mediaType?.let {
-        pickVisualMediaRequest = when (mediaType) {
-            MediaType.IMAGE_ONLY -> PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-            MediaType.VIDEO_ONLY -> PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
-            MediaType.IMAGE_AND_VIDEO -> PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-            MediaType.MIME_TYPE -> PickVisualMediaRequest(
-                ActivityResultContracts.PickVisualMedia.SingleMimeType(
-                    ""
-                )
-            ) // TODO need to add mime type as well.
-            MediaType.NOTHING ->
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-        }
+    // Determine MIME type for multiple selection
+    val mimeType = when (mediaType) {
+        MediaType.IMAGE_ONLY -> "image/*"
+        MediaType.VIDEO_ONLY -> "video/*"
+        MediaType.IMAGE_AND_VIDEO -> "*/*"
+        MediaType.MIME_TYPE -> "*/*" // TODO: handle custom MIME type
+        MediaType.NOTHING, null -> "image/*"
     }
 
-    val pickMedia =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) {
-                onResult(listOf(uri.toString()))
-            } else {
-                onResult(null)
+    return if (!isMultiple) {
+        // Single selection
+        val pickMedia =
+            rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+                if (uri != null) {
+                    onResult(listOf(uri.toString()))
+                } else {
+                    onResult(null)
+                }
             }
+
+        remember {
+            GalleryManager(onLaunch = {
+                val pickVisualMediaRequest =
+                    PickVisualMediaRequest(
+                        when (mediaType) {
+                            MediaType.IMAGE_ONLY -> ActivityResultContracts.PickVisualMedia.ImageOnly
+                            MediaType.VIDEO_ONLY -> ActivityResultContracts.PickVisualMedia.VideoOnly
+                            MediaType.IMAGE_AND_VIDEO -> ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                            MediaType.MIME_TYPE -> ActivityResultContracts.PickVisualMedia.SingleMimeType(
+                                ""
+                            )
+
+                            else -> ActivityResultContracts.PickVisualMedia.ImageOnly
+                        }
+                    )
+                pickMedia.launch(pickVisualMediaRequest)
+            })
         }
 
-    return remember {
-        GalleryManager(onLaunch = {
-            pickMedia.launch(pickVisualMediaRequest)
-        })
-    }
+    } else {
+        // Multiple selection
+        val pickMultipleMedia =
+            rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+                if (uris.isNotEmpty()) {
+                    onResult(uris.take(5).map { it.toString() }) // Limit to 5
+                } else {
+                    onResult(null)
+                }
+            }
 
+        remember {
+            GalleryManager(onLaunch = {
+                pickMultipleMedia.launch(mimeType) // Pass MIME type as string
+            })
+        }
+    }
 }
+
 
 actual class FileManager {
 

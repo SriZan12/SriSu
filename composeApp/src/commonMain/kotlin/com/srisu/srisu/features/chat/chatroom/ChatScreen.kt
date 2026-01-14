@@ -19,6 +19,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -63,6 +64,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -103,6 +105,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -115,16 +118,28 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil3.Uri
 import coil3.compose.AsyncImage
+import coil3.toUri
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.profile.screen.ProfilePictureCompo
+import com.srisu.srisu.features.profile.state.EditProfileUIState
+import com.srisu.srisu.features.profile.vm.EditProfileViewModel
+import com.srisu.srisu.permissionmanager.PermissionCallback
+import com.srisu.srisu.permissionmanager.PermissionState
+import com.srisu.srisu.permissionmanager.PermissionType
+import com.srisu.srisu.permissionmanager.createPermissionsManager
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import com.srisu.srisu.utils.DateTimeUtils.formatTimeInHourAndMinute
+import com.srisu.srisu.utils.MediaType
+import com.srisu.srisu.utils.rememberGalleryManager
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.collections.emptyList
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -172,6 +187,8 @@ private fun ChatScaffold(
     val error by viewModel.error.collectAsState()
     val listState = rememberLazyListState()
     val inputFocusRequester = remember { FocusRequester() }
+    var openGallery by remember { mutableStateOf(false) }
+
 
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(key1 = chatState.chatMessages?.size) {
@@ -211,6 +228,12 @@ private fun ChatScaffold(
                     viewModel.setReplyMessage(chatMessage = null, isOn = false)
                     inputFocusRequester.freeFocus()
                     viewModel.onMessageInputChanged(value = TextFieldValue())
+                },
+
+                onClickedMedia = {
+                    if (!openGallery) {
+                        openGallery = true
+                    }
                 },
 
                 isEditing = chatState.isEditMessage,
@@ -272,6 +295,27 @@ private fun ChatScaffold(
             }
 
 //            FloatingHearts()
+
+            if (openGallery) {
+                MediaCompo(
+                    onResult = { uris ->
+
+                        viewModel.updateSelectedPhotos(
+                            photos = uris
+                        )
+
+                        viewModel.uploadMedias()
+
+                        openGallery = false
+                    },
+                    onDismiss = {
+                        viewModel.updateSelectedPhotos(null)
+                        openGallery = false
+                    }
+                )
+            }
+
+
         }
     }
 }
@@ -348,6 +392,7 @@ private fun ChatMessagesList(
                 )
             }
         }
+
     }
 }
 
@@ -748,7 +793,6 @@ private fun ReplyPreview(
 
 
 @Composable
-@Preview
 private fun ReactionBubble(
     modifier: Modifier = Modifier,
     reaction: String?,
@@ -818,7 +862,6 @@ private fun AnimatedReactionPickerOverlay(
 
 
 @Composable
-@Preview
 private fun ReactionPickerOverlay(
     onReactionSelected: (String) -> Unit,
     onDismiss: (reaction?) -> Unit,
@@ -964,6 +1007,7 @@ private fun ChatInputBar(
     isEditing: Boolean = false,
     isReplying: ChatState.ReplyMessage,
     focusRequester: FocusRequester,
+    onClickedMedia: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -1040,8 +1084,10 @@ private fun ChatInputBar(
                     cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 trailingIcon = {
-                    IconButton(onClick = { /* Attach media */ }) {
-                        Icon(Icons.Default.Photo, contentDescription = "Attach")
+                    IconButton(onClick = {
+                        onClickedMedia()
+                    }) {
+                        Icon(imageVector = Icons.Default.Photo, contentDescription = "Attach")
                     }
                 }
             )
@@ -1208,6 +1254,34 @@ private fun MessageActionsDropdown(
     }
 }
 
+@Composable
+private fun MediaCompo(
+    onResult: (List<Uri>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val galleryManager = rememberGalleryManager(
+        onResult = { uris ->
+            val parsedUris = uris
+                ?.filterNotNull()
+                ?.map { it.toUri() }
+                ?: emptyList()
+
+            if (parsedUris.isNotEmpty()) {
+                onResult(parsedUris)
+            }
+
+            onDismiss()
+        },
+        mediaType = MediaType.IMAGE_ONLY,
+        isMultiple = true
+    )
+
+    LaunchedEffect(Unit) {
+        galleryManager.launch()
+    }
+}
+
+
 data class FloatingHeart(
     val startX: Float,
     val size: Float,
@@ -1258,52 +1332,4 @@ fun FloatingHearts() {
     }
 }
 
-@Composable
-@Preview
-fun ChatScreenPreview() {
-    ChatInputBar(
-        value = TextFieldValue(),
-        onValueChange = { },
-        onSend = {
-
-        },
-        focusRequester = FocusRequester(),
-        onCancelEdit = {
-
-        },
-        isReplying = ChatState.ReplyMessage(),
-        isEditing = false,
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    )
-}
-
-@Preview
-@Composable
-fun PreviewMessageBubble() {
-    MessageBubble(
-        message = ChatMessage(
-            text = "Hello"
-        ),
-        currentUserId = 97,
-        isOwn = false,
-        onLongClick = {},
-        onReactionClick = {}
-    )
-}
-
-@Preview
-@Composable
-fun PreviewReply() {
-    ReplyPreview(
-        reply = ChatMessage.ReplyMessage(
-            text = "Hello",
-            id = 1232,
-        ),
-        isOwn = true
-    )
-}
 

@@ -1,12 +1,11 @@
 package com.srisu.srisu.core.data.repository.chat
 
-
-import androidx.compose.runtime.toMutableStateList
-import androidx.compose.runtime.toMutableStateMap
-import androidx.compose.ui.text.input.TextFieldValue
+import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
+import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.response.chat.ChatMediaResponse
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
 import com.srisu.srisu.core.data.response.chat.MessageReadResponse
@@ -17,22 +16,19 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.MediaFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.let
 
 class ChatRepository(
-    private val webSocketClient: ChatWebSocketClient
+    private val webSocketClient: ChatWebSocketClient,
+    private val chatApiService: ChatApiService
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -209,6 +205,14 @@ class ChatRepository(
     suspend fun sendRequest(payload: String?) {
         payload ?: return
         webSocketClient.send(payload)
+    }
+
+    suspend fun uploadMedias(
+        medias: List<MediaFile?>?
+    ): ResultHandler<ChatMediaResponse?> {
+        return chatApiService.uploadMedias(
+            medias = medias
+        )
     }
 
 

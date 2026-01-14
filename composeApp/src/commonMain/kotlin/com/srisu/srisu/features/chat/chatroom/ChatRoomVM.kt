@@ -4,9 +4,11 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil3.Uri
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ReactToMessageDTO
 import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
+import com.srisu.srisu.core.data.network.NetworkAPIResult
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
@@ -15,6 +17,8 @@ import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
+import com.srisu.srisu.utils.MediaFile
+import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -138,6 +142,12 @@ class ChatViewModel(
                     message = chatMessage
                 )
             )
+        }
+    }
+
+    fun updateSelectedPhotos(photos: List<Uri?>?) {
+        _chatState.update {
+            it.copy(selectedPhotos = photos)
         }
     }
 
@@ -375,6 +385,34 @@ class ChatViewModel(
 
     fun fetchOlderMessages() {
         repository.fetchOlderMessages()
+    }
+
+    fun uploadMedias() {
+        viewModelScope.launch {
+            try {
+                val mediaFile = getMediaFile()
+                repository.uploadMedias(medias = mediaFile)
+                    .onSuccess { mediaUploadResponse, message ->
+                        AppLogger.log("Media upload response: ${message}")
+                    }.onError { error, errorType ->
+                        _error.value = error
+                        AppLogger.log("ON ERROR UPLOADING PHOTOS = $error")
+                    }
+                _error.value = null
+            } catch (exception: Exception) {
+                _error.value = "Failed to upload media: ${exception.message}"
+            }
+        }
+    }
+
+    private suspend fun getMediaFile(): ArrayList<MediaFile?> {
+        val mediaFile = arrayListOf<MediaFile?>()
+        _chatState.value.selectedPhotos?.forEach {
+            AppLogger.log("While building media file, URI = ${it}")
+            mediaFile.add(getMediaFileFromUri(uri = it, id = null, removed = null))
+        }
+
+        return mediaFile
     }
 
 

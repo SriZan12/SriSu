@@ -193,7 +193,8 @@ private fun ProfilePictureCompo(
                 authViewModel.idleScreen()
             }
         },
-        mediaType = MediaType.IMAGE_ONLY
+        mediaType = MediaType.IMAGE_ONLY,
+        isMultiple = false
     )
 
 

@@ -36,7 +36,7 @@ val sharedNetworkModule = module {
 
     single { ChatApiService(httpClient = get()) }
     single { ChatWebSocketClient(httpClient = get(), host = "192.168.1.74", port = 8000) }
-    single { ChatRepository(webSocketClient = get()) }
+    single { ChatRepository(webSocketClient = get(), chatApiService = get()) }
 
 }
 

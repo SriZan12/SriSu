@@ -118,6 +118,8 @@ inline fun <reified T> handleException(
 suspend inline fun <reified T> handleErrorResponse(response: HttpResponse): ResultHandler<T?> {
     val rawBody = response.bodyAsText() // Always succeeds (unless network stream breaks)
 
+    AppLogger.log("Error Response = ${response}")
+
     val errorType: NetworkAPIResult.ErrorType
     val errorMessage: String
 

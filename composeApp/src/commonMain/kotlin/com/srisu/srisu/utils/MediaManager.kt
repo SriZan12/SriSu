@@ -2,14 +2,8 @@ package com.srisu.srisu.utils
 
 import androidx.compose.runtime.Composable
 import coil3.Uri
-import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.utils.io.toByteArray
 import kotlinx.serialization.Required
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 enum class MediaType {
     IMAGE_ONLY,
@@ -58,8 +52,10 @@ data class MediaFile(
 @Composable
 expect fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
-    mediaType: MediaType?
+    mediaType: MediaType?,
+    isMultiple: Boolean
 ): GalleryManager
+
 
 expect class GalleryManager(
     onLaunch: () -> Unit

@@ -6,8 +6,6 @@ import com.srisu.srisu.core.logger.AppLogger
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
 import platform.UIKit.UIImagePickerController
@@ -18,6 +16,16 @@ import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 import platform.Foundation.*
+import platform.PhotosUI.PHPickerConfiguration
+import platform.PhotosUI.PHPickerFilter
+import platform.PhotosUI.PHPickerResult
+import platform.PhotosUI.PHPickerViewController
+import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
+import platform.darwin.dispatch_get_main_queue
+import platform.darwin.dispatch_group_create
+import platform.darwin.dispatch_group_enter
+import platform.darwin.dispatch_group_leave
+import platform.darwin.dispatch_group_notify
 import platform.posix.memcpy
 
 actual class GalleryManager actual constructor(private val onLaunch: () -> Unit) {
@@ -29,69 +37,127 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 @Composable
 actual fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
-    mediaType: MediaType?
+    mediaType: MediaType?,
+    isMultiple: Boolean
 ): GalleryManager {
+
     val viewController = rememberUIViewController()
 
-    val pickerDelegate = remember {
-        PickerDelegate { selectedUris ->
-            onResult(selectedUris.map { it })
+    val multiPickerDelegate = remember {
+        MultiPickerDelegate { uris ->
+            onResult(uris)
         }
     }
 
-    val picker = UIImagePickerController().apply {
-        delegate = pickerDelegate
-        sourceType = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
-
-        mediaTypes = when (mediaType) {
-            MediaType.IMAGE_ONLY -> listOf("public.image")
-            MediaType.VIDEO_ONLY -> listOf("public.movie")
-            MediaType.IMAGE_AND_VIDEO -> listOf("public.image", "public.movie")
-            MediaType.MIME_TYPE, null -> listOf("public.image", "public.movie") // default both
-            MediaType.NOTHING -> listOf("public.image")
+    val singlePickerDelegate = remember {
+        PickerDelegate { uris ->
+            onResult(uris)
         }
     }
 
     return remember {
         GalleryManager(onLaunch = {
-            viewController.presentViewController(picker, animated = true, completion = null)
+
+            if (isMultiple) {
+                val config = PHPickerConfiguration().apply {
+                    selectionLimit = 5
+                    filter = when (mediaType) {
+                        MediaType.IMAGE_ONLY -> PHPickerFilter.imagesFilter()
+                        MediaType.VIDEO_ONLY -> PHPickerFilter.videosFilter()
+                        MediaType.IMAGE_AND_VIDEO,
+                        MediaType.MIME_TYPE,
+                        null -> null
+                        MediaType.NOTHING -> PHPickerFilter.imagesFilter()
+                    }
+                }
+
+                val picker = PHPickerViewController(config).apply {
+                    delegate = multiPickerDelegate
+                }
+
+                viewController.presentViewController(
+                    picker,
+                    animated = true,
+                    completion = null
+                )
+
+            } else {
+                val picker = UIImagePickerController().apply {
+                    delegate = singlePickerDelegate
+                    sourceType =
+                        UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
+
+                    mediaTypes = when (mediaType) {
+                        MediaType.IMAGE_ONLY -> listOf("public.image")
+                        MediaType.VIDEO_ONLY -> listOf("public.movie")
+                        MediaType.IMAGE_AND_VIDEO,
+                        MediaType.MIME_TYPE,
+                        null -> listOf("public.image", "public.movie")
+                        MediaType.NOTHING -> listOf("public.image")
+                    }
+                }
+
+                viewController.presentViewController(
+                    picker,
+                    animated = true,
+                    completion = null
+                )
+            }
         })
     }
 }
 
-//class PickerDelegate(
-//    private val onResult: (List<NSURL>) -> Unit
-//) : NSObject(), UIImagePickerControllerDelegateProtocol,
-//    UINavigationControllerDelegateProtocol {
-//
-//    override fun imagePickerController(
-//        picker: UIImagePickerController,
-//        didFinishPickingImage: UIImage,
-//        editingInfo: Map<Any?, *>?
-//    ) {
-//
-//        AppLogger.log("image converted ${didFinishPickingImage.toImageBitmap()} $editingInfo")
-//
-//        val uri = editingInfo?.get(UIImagePickerControllerImageURL) as? NSURL
-//        picker.dismissViewControllerAnimated(true, completion = null)
-//
-//        if (uri != null) {
-//            onResult(listOf(uri))
-//        } else {
-//            onResult(emptyList())
-//        }
-//    }
-//
-//    override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
-//        picker.dismissViewControllerAnimated(true, completion = null)
-//        onResult(emptyList())
-//    }
-//}
+
+class MultiPickerDelegate(
+    private val onResult: (List<String>) -> Unit
+) : NSObject(), PHPickerViewControllerDelegateProtocol {
+
+    override fun picker(
+        picker: PHPickerViewController,
+        didFinishPicking: List<*>
+    ) {
+
+        val didFinishPickingPHPickerResult = didFinishPicking.filterIsInstance<PHPickerResult>()
+        picker.dismissViewControllerAnimated(true, completion = null)
+
+
+        if (didFinishPicking.isEmpty()) {
+            onResult(emptyList())
+            return
+        }
+
+        val uris = mutableListOf<String>()
+        val group = dispatch_group_create()
+
+        didFinishPickingPHPickerResult.forEach { result ->
+            val provider = result.itemProvider
+
+            if (provider.hasItemConformingToTypeIdentifier("public.image")) {
+                dispatch_group_enter(group)
+
+                provider.loadFileRepresentationForTypeIdentifier("public.image") { url, _ ->
+                    url?.absoluteString?.let { uris.add(it) }
+                    dispatch_group_leave(group)
+                }
+            }
+        }
+
+        dispatch_group_notify(group, dispatch_get_main_queue()) {
+            picker.dismissViewControllerAnimated(flag = true, completion = null)
+            onResult(uris)
+        }
+    }
+
+
+
+}
 
 
 class PickerDelegate(
     private val onResult: (List<String>) -> Unit
-) : NSObject(), UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
+) : NSObject(),
+    UIImagePickerControllerDelegateProtocol,
+    UINavigationControllerDelegateProtocol {
 
     override fun imagePickerController(
         picker: UIImagePickerController,
@@ -99,21 +165,20 @@ class PickerDelegate(
     ) {
         picker.dismissViewControllerAnimated(true, completion = null)
 
-        val uri = didFinishPickingMediaWithInfo[UIImagePickerControllerImageURL] as? NSURL
+        val uri =
+            didFinishPickingMediaWithInfo[UIImagePickerControllerImageURL] as? NSURL
 
         if (uri != null) {
-            val uriString = uri.absoluteString ?: ""
-            AppLogger.log("Image picked with URI: $uriString")
-            onResult(listOf(uriString))
+            onResult(listOf(uri.absoluteString ?: ""))
         } else {
-            AppLogger.log("No image URL found in picker result")
             onResult(emptyList())
         }
     }
 
-    override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
+    override fun imagePickerControllerDidCancel(
+        picker: UIImagePickerController
+    ) {
         picker.dismissViewControllerAnimated(true, completion = null)
-        AppLogger.log("Image picker cancelled")
         onResult(emptyList())
     }
 }
@@ -129,34 +194,6 @@ fun rememberUIViewController(): UIViewController {
 
 
 actual class FileManager {
-
-    /*actual suspend fun createMediaFileFromPath(path: String): MediaFile? {
-        val fileUrl = NSURL.fileURLWithPath(path)
-
-        AppLogger.log("FILE URL = $fileUrl")
-
-        val fileName = fileUrl.lastPathComponent ?: return null
-        val mimeType = getMimeType(fileUrl)
-        val fileType = determineFileType(mimeType)
-
-        val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return null
-        val fileBytes = fileData.toByteArray()
-        val fileSize = fileBytes.size.toLong()
-
-
-        val mediaFile =  MediaFile(
-            fileName = fileName,
-            mimeType = mimeType,
-            fileSize = fileSize,
-            fileBytes = fileBytes,
-            fileType = fileType
-        )
-
-        AppLogger.log("MEDIA FILE ios = ${Json.encodeToString(mediaFile)}")
-
-
-        return mediaFile
-    }*/
 
     actual suspend fun createMediaFileFromPath(
         path: String?,
@@ -179,12 +216,18 @@ actual class FileManager {
                 AppLogger.log("FILE URL = $fileUrl")
 
                 val fileName = fileUrl?.lastPathComponent ?: return defaultMediaFile
+                AppLogger.log("File name = ${fileName}")
                 val mimeType = getMimeType(fileUrl)
+                AppLogger.log("MIME TYPE = ${mimeType}")
                 val fileType = determineFileType(mimeType)
+                AppLogger.log("FILE TYPE = ${fileType}")
 
-                val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return defaultMediaFile
-                val fileBytes = fileData.toByteArray()
-                val fileSize = fileBytes.size.toLong()
+
+                val fileData = NSData.dataWithContentsOfURL(fileUrl)
+                AppLogger.log("FILE DATA = ${fileData}")
+                val fileBytes = fileData?.toByteArray()
+                AppLogger.log("FILE BYTES = ${fileBytes}")
+                val fileSize = fileBytes?.size?.toLong()
 
                 val mediaFile = MediaFile(
                     id = id,
@@ -200,7 +243,6 @@ actual class FileManager {
             }
         } catch (exception: Exception) {
             AppLogger.log("INSIDE EXCEPTION = Error creating media file from path: ${exception.message}")
-            defaultMediaFile
         }
 
         return defaultMediaFile
@@ -216,7 +258,9 @@ actual class FileManager {
 
 
     private fun getMimeType(url: NSURL): String {
-        val pathExtension = url.pathExtension ?: return "application/octet-stream"
+        AppLogger.log("Path extension = ${url.pathExtension}")
+        AppLogger.log("Path extension() = ${url.pathExtension()}")
+        val pathExtension = url.pathExtension ?: url.pathExtension() ?: return "application/octet-stream"
         return when (pathExtension.lowercase()) {
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"

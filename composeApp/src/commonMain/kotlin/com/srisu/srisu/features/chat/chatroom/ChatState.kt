@@ -2,6 +2,7 @@ package com.srisu.srisu.features.chat.chatroom
 
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.input.TextFieldValue
+import coil3.Uri
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.session.Session
@@ -20,7 +21,8 @@ data class ChatState(
     val isTyping: Boolean = false,
     val reactionEmojiList: List<Reactions> = emptyList(),
     val selectedEmoji: Reactions? = null,
-    val replyMessage: ReplyMessage = ReplyMessage()
+    val replyMessage: ReplyMessage = ReplyMessage(),
+    val selectedPhotos: List<Uri?>? = null
 ) {
     data class Reactions(
         val reactionEmoji: String,
