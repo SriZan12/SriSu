@@ -1,7 +1,15 @@
 package com.srisu.srisu.core.data.dto.chatdto
 
+import coil3.Uri
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+
+enum class UploadState {
+    UPLOADING,
+    UPLOADED,
+    FAILED
+}
+
 
 @Serializable
 data class ChatMessage(
@@ -48,7 +56,11 @@ data class ChatMessage(
     val stickerUrl: String? = null,
 
     @SerialName("medias")
-    val medias: List<String> = emptyList(),
+    val medias: List<Media?>? = emptyList(),
+    // for local only
+    val uploadingPhotos: List<UploadingPhoto>? = null,
+    val isLocalOnly: Boolean = false,
+
 
     // Reply to message (nested)
     @SerialName("reply_to")
@@ -119,4 +131,22 @@ data class ChatMessage(
         @SerialName("reaction")
         val reaction: String? = null,
     )
+
+    @Serializable
+    data class Media(
+        @SerialName("id")
+        val id: Long? = null,
+        @SerialName("media_url")
+        val mediaUrl: String? = null,
+        @SerialName("uploaded_at")
+        val uploadedAt: String? = null,
+    )
+
+    @Serializable
+    data class UploadingPhoto(
+        val localUri: String,
+        val progress: Float,   // 0f → 1f
+        val state: UploadState
+    )
+
 }

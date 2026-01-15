@@ -67,6 +67,7 @@ actual fun rememberGalleryManager(
                         MediaType.IMAGE_AND_VIDEO,
                         MediaType.MIME_TYPE,
                         null -> null
+
                         MediaType.NOTHING -> PHPickerFilter.imagesFilter()
                     }
                 }
@@ -93,6 +94,7 @@ actual fun rememberGalleryManager(
                         MediaType.IMAGE_AND_VIDEO,
                         MediaType.MIME_TYPE,
                         null -> listOf("public.image", "public.movie")
+
                         MediaType.NOTHING -> listOf("public.image")
                     }
                 }
@@ -132,13 +134,19 @@ class MultiPickerDelegate(
         didFinishPickingPHPickerResult.forEach { result ->
             val provider = result.itemProvider
 
-            if (provider.hasItemConformingToTypeIdentifier("public.image")) {
+            if (provider.hasItemConformingToTypeIdentifier(typeIdentifier = "public.image")) {
                 dispatch_group_enter(group)
 
-                provider.loadFileRepresentationForTypeIdentifier("public.image") { url, _ ->
-                    url?.absoluteString?.let { uris.add(it) }
+                provider.loadFileRepresentationForTypeIdentifier(typeIdentifier = "public.image") { url, _ ->
+                    url?.let {
+                        val copiedPath = FileManager().copyToAppCache(url = it)
+                        copiedPath?.let { safePath ->
+                            uris.add(safePath)
+                        }
+                    }
                     dispatch_group_leave(group)
                 }
+
             }
         }
 
@@ -147,7 +155,6 @@ class MultiPickerDelegate(
             onResult(uris)
         }
     }
-
 
 
 }
@@ -195,6 +202,7 @@ fun rememberUIViewController(): UIViewController {
 
 actual class FileManager {
 
+    @OptIn(ExperimentalForeignApi::class)
     actual suspend fun createMediaFileFromPath(
         path: String?,
         id: Int?,
@@ -206,28 +214,17 @@ actual class FileManager {
         try {
 
             path?.let {
-                AppLogger.log("FILE PATH = $path")
-
-
                 // Ensure the path is a valid file URL
                 val fixedPath = if (path.startsWith("file://")) path else "file://$path"
                 val fileUrl = NSURL.URLWithString(fixedPath)
 
-                AppLogger.log("FILE URL = $fileUrl")
-
                 val fileName = fileUrl?.lastPathComponent ?: return defaultMediaFile
-                AppLogger.log("File name = ${fileName}")
                 val mimeType = getMimeType(fileUrl)
-                AppLogger.log("MIME TYPE = ${mimeType}")
                 val fileType = determineFileType(mimeType)
-                AppLogger.log("FILE TYPE = ${fileType}")
 
-
-                val fileData = NSData.dataWithContentsOfURL(fileUrl)
-                AppLogger.log("FILE DATA = ${fileData}")
-                val fileBytes = fileData?.toByteArray()
-                AppLogger.log("FILE BYTES = ${fileBytes}")
-                val fileSize = fileBytes?.size?.toLong()
+                val fileData = NSData.dataWithContentsOfURL(fileUrl) ?: return defaultMediaFile
+                val fileBytes = fileData.toByteArray()
+                val fileSize = fileBytes.size.toLong()
 
                 val mediaFile = MediaFile(
                     id = id,
@@ -260,7 +257,8 @@ actual class FileManager {
     private fun getMimeType(url: NSURL): String {
         AppLogger.log("Path extension = ${url.pathExtension}")
         AppLogger.log("Path extension() = ${url.pathExtension()}")
-        val pathExtension = url.pathExtension ?: url.pathExtension() ?: return "application/octet-stream"
+        val pathExtension =
+            url.pathExtension ?: url.pathExtension() ?: return "application/octet-stream"
         return when (pathExtension.lowercase()) {
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"
@@ -289,6 +287,32 @@ actual class FileManager {
             }
         }
     }
+
+
+    @OptIn(ExperimentalForeignApi::class)
+    fun copyToAppCache(url: NSURL): String? {
+        val fileManager = NSFileManager.defaultManager
+        val cacheDir =
+            fileManager.URLsForDirectory(NSCachesDirectory, NSUserDomainMask)
+                .firstOrNull() as? NSURL ?: return null
+
+        val destination =
+            cacheDir.URLByAppendingPathComponent(url.lastPathComponent ?: return null)
+
+        try {
+            destination?.let {
+                fileManager.removeItemAtURL(destination, null) // overwrite safety
+                fileManager.copyItemAtURL(url, destination, null)
+                return destination.absoluteString
+            }
+        } catch (e: Exception) {
+            AppLogger.log("File copy failed: ${e.message}")
+            return null
+        }
+
+        return null
+    }
+
 }
 
 //actual fun saveImageToCache(bytes: ByteArray): File {

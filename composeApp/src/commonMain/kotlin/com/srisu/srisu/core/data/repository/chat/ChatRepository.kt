@@ -16,6 +16,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.MediaFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +53,14 @@ class ChatRepository(
             webSocketClient.events.collect { event ->
                 when (event) {
                     is ChatEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
-                    is ChatEvent.SendMessage -> prependMessage(event.message)
+                    is ChatEvent.SendMessage -> {
+                        if (event.message.messageType == IMAGE) {
+                            replaceLocalMediaMessage(event.message)
+                        } else {
+                            prependMessage(event.message)
+                        }
+                    }
+
                     is ChatEvent.MessageEdited -> updateMessage(event.message)
                     is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
                     is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
@@ -92,23 +100,41 @@ class ChatRepository(
     }
 
 
-    private fun prependMessage(message: ChatMessage) {
+    fun prependMessage(message: ChatMessage) {
         val id = message.id ?: return
 
         messageMap.update { oldMap ->
             // Put the new message first, then the old ones
             (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
+
     }
 
 
     private fun updateMessage(message: ChatMessage?) {
         val id = message?.id ?: return
-        AppLogger.log("Updating message = ${message}")
         messageMap.update { oldMap ->
             // Returns a NEW map instance
             (oldMap + (id to message)) as LinkedHashMap<Long, ChatMessage>
         }
+    }
+
+
+    private fun replaceLocalMediaMessage(message: ChatMessage) {
+        val id = message.id ?: return
+        messageMap.update { oldMap ->
+            // Find and remove the local photo message
+            val localPhotoMessage = oldMap.values.find { it.isLocalOnly }
+            val mutableMap = LinkedHashMap(oldMap)
+
+            if (localPhotoMessage != null) {
+                mutableMap.remove(localPhotoMessage.id)
+            }
+
+            mutableMap
+        }
+
+        prependMessage(message)
     }
 
     private fun deleteMessage(message: ChatMessage?) {

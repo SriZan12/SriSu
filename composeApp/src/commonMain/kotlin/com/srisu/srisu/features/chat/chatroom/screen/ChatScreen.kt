@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.chat.chatroom
+package com.srisu.srisu.features.chat.chatroom.screen
 
 // ChatScreen.kt
 import androidx.compose.animation.AnimatedContent
@@ -7,8 +7,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -19,20 +20,22 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -42,6 +45,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -64,9 +70,9 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,6 +103,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
@@ -121,25 +128,23 @@ import androidx.navigation.NavController
 import coil3.Uri
 import coil3.compose.AsyncImage
 import coil3.toUri
+import com.srisu.srisu.components.ImageViewerScreen
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.profile.screen.ProfilePictureCompo
-import com.srisu.srisu.features.profile.state.EditProfileUIState
-import com.srisu.srisu.features.profile.vm.EditProfileViewModel
-import com.srisu.srisu.permissionmanager.PermissionCallback
-import com.srisu.srisu.permissionmanager.PermissionState
-import com.srisu.srisu.permissionmanager.PermissionType
-import com.srisu.srisu.permissionmanager.createPermissionsManager
+import com.srisu.srisu.features.chat.chatroom.ChatState
+import com.srisu.srisu.features.chat.chatroom.ChatViewModel
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
+import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.TEXT
 import com.srisu.srisu.utils.DateTimeUtils.formatTimeInHourAndMinute
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.rememberGalleryManager
 import kotlinx.coroutines.delay
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.collections.emptyList
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -166,6 +171,8 @@ fun ChatScreen(
         viewModel = viewModel,
         onNavBack = {}
     )
+
+
 }
 
 @Composable
@@ -184,138 +191,163 @@ private fun ChatScaffold(
     viewModel: ChatViewModel,
     onNavBack: () -> Unit
 ) {
-    val error by viewModel.error.collectAsState()
-    val listState = rememberLazyListState()
-    val inputFocusRequester = remember { FocusRequester() }
-    var openGallery by remember { mutableStateOf(false) }
+    val showImageScreen = chatState.showImageScreen
+
+    if (showImageScreen.show && !showImageScreen.images.isNullOrEmpty()) {
+        ImageViewerScreen(
+            images = showImageScreen.images,
+            startIndex = 0,
+            onDismiss = {
+                viewModel.updateShowImageScreen(show = false, images = emptyList())
+            }
+        )
+    } else {
+        val error by viewModel.error.collectAsState()
+        val listState = rememberLazyListState()
+        val inputFocusRequester = remember { FocusRequester() }
+        var openGallery by remember { mutableStateOf(false) }
 
 
-    // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(key1 = chatState.chatMessages?.size) {
-        chatState.chatMessages?.let {
-            if (it.isNotEmpty()) {
-                listState.animateScrollToItem(0)
-                viewModel.sendMessageDeliveredRequest()
-                viewModel.sendMessageReadRequest()
+        // Auto-scroll to bottom when new messages arrive
+        LaunchedEffect(key1 = chatState.chatMessages?.size) {
+            chatState.chatMessages?.let {
+                if (it.isNotEmpty()) {
+                    listState.animateScrollToItem(0)
+                    viewModel.sendMessageDeliveredRequest()
+                    viewModel.sendMessageReadRequest()
+                }
             }
         }
-    }
 
-    Scaffold(
-        topBar = {
-            ChatTopBar(
-                chatState = chatState,
-                onBack = { onNavBack() },
-                onCall = { },
-                onVideoCall = { }
-            )
-        },
-        bottomBar = {
-            ChatInputBar(
-                value = chatState.messageInput,
-                onValueChange = { viewModel.onMessageInputChanged(it) },
-                onSend = {
-                    if (chatState.messageInput.text.isNotBlank()) {
-                        if (chatState.isEditMessage) {
-                            viewModel.editMessage(chatState.selectedMessageForAction?.id)
-                        } else {
-                            viewModel.sendMessage()
-                        }
-                    }
-                },
-                onCancelEdit = {
-                    viewModel.updateIsEditMessage(isEditMessage = false)
-                    viewModel.setReplyMessage(chatMessage = null, isOn = false)
-                    inputFocusRequester.freeFocus()
-                    viewModel.onMessageInputChanged(value = TextFieldValue())
-                },
-
-                onClickedMedia = {
-                    if (!openGallery) {
-                        openGallery = true
-                    }
-                },
-
-                isEditing = chatState.isEditMessage,
-                focusRequester = inputFocusRequester,
-                isReplying = chatState.replyMessage,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
-            Column(
-                modifier = Modifier
-            ) {
-                error?.let { message ->
-                    ErrorBanner(
-                        message = message,
-                        onDismiss = viewModel::clearError,
-                        onRetry = viewModel::retryConnection
-                    )
-                }
-
-                ChatMessagesList(
-                    messages = chatState.chatMessages ?: emptyList(),
-                    currentUserId = chatState.session?.id,
-                    listState = listState,
-                    selectedMessageId = chatState.selectedMessageIdForActions,
-                    onMessageLongClick = { id, msg ->
-                        viewModel.showActionsForMessage(
-                            messageId = id,
-                            message = msg
-                        )
-                    },
-                    onDismissActions = viewModel::dismissActions,
-                    onEdit = { msg ->
-                        viewModel.setMessageInputText(msg.text.orEmpty())
-                        viewModel.updateIsEditMessage(true)
-                        inputFocusRequester.requestFocus()
-                    },
-                    onDelete = { deleteOption, messageId ->
-                        viewModel.deleteMessage(deleteOption = deleteOption, messageId = messageId)
-                    },
-                    onFetchOlder = viewModel::fetchOlderMessages,
-                    onReactionSelected = { reaction, messageId ->
-                        viewModel.reactToMessage(
-                            reaction = reaction,
-                            messageId = messageId
-                        )
-                    },
-                    onReplyMessage = { chatMessage ->
-                        viewModel.setReplyMessage(chatMessage = chatMessage, isOn = true)
-                        inputFocusRequester.requestFocus()
-                    }
+        Scaffold(
+            topBar = {
+                ChatTopBar(
+                    chatState = chatState,
+                    onBack = { onNavBack() },
+                    onCall = { },
+                    onVideoCall = { }
                 )
-            }
+            },
+            bottomBar = {
+                ChatInputBar(
+                    value = chatState.messageInput,
+                    onValueChange = { viewModel.onMessageInputChanged(it) },
+                    onSend = {
+                        if (chatState.messageInput.text.isNotBlank()) {
+                            if (chatState.isEditMessage) {
+                                viewModel.editMessage(messageId = chatState.selectedMessageForAction?.id)
+                            } else {
+                                viewModel.sendTextMessage()
+                            }
+                        }
+                    },
+                    onCancelEdit = {
+                        viewModel.updateIsEditMessage(isEditMessage = false)
+                        viewModel.setReplyMessage(chatMessage = null, isOn = false)
+                        inputFocusRequester.freeFocus()
+                        viewModel.onMessageInputChanged(value = TextFieldValue())
+                    },
+
+                    onClickedMedia = {
+                        if (!openGallery) {
+                            openGallery = true
+                        }
+                    },
+
+                    isEditing = chatState.isEditMessage,
+                    focusRequester = inputFocusRequester,
+                    isReplying = chatState.replyMessage,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
 
 //            FloatingHearts()
 
-            if (openGallery) {
-                MediaCompo(
-                    onResult = { uris ->
 
-                        viewModel.updateSelectedPhotos(
-                            photos = uris
+                Column(
+                    modifier = Modifier
+                ) {
+                    error?.let { message ->
+                        ErrorBanner(
+                            message = message,
+                            onDismiss = viewModel::clearError,
+                            onRetry = viewModel::retryConnection
                         )
-
-                        viewModel.uploadMedias()
-
-                        openGallery = false
-                    },
-                    onDismiss = {
-                        viewModel.updateSelectedPhotos(null)
-                        openGallery = false
                     }
-                )
+
+                    ChatMessagesList(
+                        messages = chatState.chatMessages ?: emptyList(),
+                        currentUserId = chatState.session?.id,
+                        listState = listState,
+                        selectedMessageId = chatState.selectedMessageIdForActions,
+                        onMessageLongClick = { id, msg ->
+                            viewModel.showActionsForMessage(
+                                messageId = id,
+                                message = msg
+                            )
+                        },
+                        onDismissActions = viewModel::dismissActions,
+                        onEdit = { msg ->
+                            viewModel.setMessageInputText(msg.text.orEmpty())
+                            viewModel.updateIsEditMessage(true)
+                            inputFocusRequester.requestFocus()
+                        },
+                        onDelete = { deleteOption, messageId ->
+                            viewModel.deleteMessage(
+                                deleteOption = deleteOption,
+                                messageId = messageId
+                            )
+                        },
+                        onFetchOlder = viewModel::fetchOlderMessages,
+                        onReactionSelected = { reaction, messageId ->
+                            viewModel.reactToMessage(
+                                reaction = reaction,
+                                messageId = messageId
+                            )
+                        },
+                        onReplyMessage = { chatMessage ->
+                            viewModel.setReplyMessage(chatMessage = chatMessage, isOn = true)
+                            inputFocusRequester.requestFocus()
+                        },
+                        onPhotoClick = {
+                            viewModel.updateShowImageScreen(
+                                show = true,
+                                images = it
+                            )
+                        }
+                    )
+                }
+
+
+
+                if (openGallery) {
+                    MediaCompo(
+                        onResult = { uris ->
+
+                            viewModel.updateSelectedPhotos(
+                                photos = uris
+                            )
+
+                            viewModel.uploadMedias()
+
+                            openGallery = false
+                        },
+                        onDismiss = {
+                            viewModel.updateSelectedPhotos(null)
+                            openGallery = false
+                        }
+                    )
+                }
+
+
             }
-
-
         }
     }
 }
@@ -334,6 +366,7 @@ private fun ChatMessagesList(
     onFetchOlder: () -> Unit,
     onReactionSelected: (reaction, messageId) -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>) -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -388,7 +421,8 @@ private fun ChatMessagesList(
                     onReactionSelected = { reaction ->
                         onReactionSelected(reaction, message.id)
                     },
-                    onReplyMessage = onReplyMessage
+                    onReplyMessage = onReplyMessage,
+                    onPhotoClick = onPhotoClick
                 )
             }
         }
@@ -409,7 +443,8 @@ private fun AnimatedMessageItem(
     onDeleteForMe: () -> Unit,
     onDeleteForEveryone: () -> Unit,
     onReactionSelected: (String) -> Unit,
-    onReplyMessage: (ChatMessage) -> Unit
+    onReplyMessage: (ChatMessage) -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>) -> Unit
 ) {
     val hasAnimated = remember(message.id) { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
@@ -434,7 +469,10 @@ private fun AnimatedMessageItem(
                 isOwn = isOwn,
                 onLongClick = onLongClick,
                 onReplyMessage = onReplyMessage,
-                onReactionClick = { showReactions = true }
+                onReactionClick = {
+                    showReactions = true
+                },
+                onPhotoClick = onPhotoClick
             )
 
             AnimatedMessageDropDownCompo(
@@ -465,7 +503,8 @@ private fun SwipeableMessageCompo(
     isOwn: Boolean,
     onLongClick: () -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
-    onReactionClick: () -> Unit
+    onReactionClick: () -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>) -> Unit,
 ) {
 
     val swipeToReplyBoxState = rememberSwipeToDismissBoxState(
@@ -490,13 +529,26 @@ private fun SwipeableMessageCompo(
         state = swipeToReplyBoxState,
         modifier = Modifier,
         content = {
-            MessageBubble(
-                message = message,
-                currentUserId = currentUserId,
-                isOwn = isOwn,
-                onLongClick = onLongClick,
-                onReactionClick = { onReactionClick() }
-            )
+            if (message.messageType == TEXT) {
+                MessageBubble(
+                    message = message,
+                    currentUserId = currentUserId,
+                    isOwn = isOwn,
+                    onLongClick = onLongClick,
+                    onReactionClick = onReactionClick
+                )
+            } else if (message.messageType == IMAGE) {
+                PhotoMessageBubble(
+                    message = message,
+                    currentUserId = currentUserId,
+                    isOwn = isOwn,
+                    onLongClick = onLongClick,
+                    onReactionClick = onReactionClick,
+                    onPhotoClick = onPhotoClick,
+                    modifier = Modifier
+                )
+            }
+
         },
         backgroundContent = {
         },
@@ -672,6 +724,298 @@ private fun MessageBubble(
     }
 
 }
+
+@Composable
+fun PhotoMessageBubble(
+    message: ChatMessage,
+    currentUserId: Int?,
+    isOwn: Boolean,
+    onLongClick: () -> Unit,
+    onReactionClick: () -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+
+    var bubbleWidthPx by remember { mutableStateOf(0) }
+
+    val deleteEntry = message.deleteFor
+        ?.values
+        ?.flatten()
+        ?.firstOrNull { it.option == DELETE_FOR_EVERYONE }
+
+    val isDeletedForEveryone = deleteEntry != null
+
+    val alignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                clickableModifier(
+                    isDeletedForEveryone = isDeletedForEveryone,
+                    haptic = haptic,
+                    onLongClick = onLongClick
+                )
+            ),
+        contentAlignment = alignment
+    ) {
+        Card(
+            shape = bubbleShape(isOwn),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            modifier = Modifier
+                .widthIn(max = 260.dp)
+                .onSizeChanged { bubbleWidthPx = it.width }
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+
+                if (message.isLocalOnly && message.uploadingPhotos != null) {
+                    UploadingPhotoGrid(
+                        message.uploadingPhotos,
+                    )
+                } else {
+
+                    if (!isDeletedForEveryone) {
+                        message.medias?.let {
+                            PhotoGrid(
+                                photos = message.medias,
+                                onPhotoClick = { onPhotoClick(message.medias) }
+                            )
+                        }
+
+                    } else {
+                        Text(
+                            text = messageDisplayText(
+                                deleteEntry = deleteEntry,
+                                isDeletedForEveryone = true,
+                                messageText = "",
+                                currentUserId = currentUserId
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = FontStyle.Italic,
+                            color = messageTextColor(isOwn, true)
+                        )
+                    }
+
+                    if (!isDeletedForEveryone) {
+                        Spacer(Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.align(Alignment.End),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val formattedTime =
+                                formatTimeInHourAndMinute(message.timestamp)
+
+                            Text(
+                                text = formattedTime,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+
+                            if (isOwn) {
+                                when {
+                                    message.isRead == true -> {
+                                        Icon(
+                                            Icons.Default.DoneAll,
+                                            contentDescription = "Read",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    message.isDelivered == true -> {
+                                        Icon(
+                                            Icons.Default.DoneAll,
+                                            contentDescription = "Delivered",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    else -> {
+                                        Icon(
+                                            Icons.Default.Done,
+                                            contentDescription = "Sent",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val reaction = message.reactions
+        val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
+
+        if (!isOwn && bubbleWidthPx > 0 && message.deleteFor == null && !isDeletedForEveryone) {
+
+            ReactionBubble(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(
+                        x = bubbleWidthDp + 6.dp
+                    ),  // move right from start-aligned bubble,
+                onClick = onReactionClick,
+                reaction = reaction?.reaction
+            )
+        } else if (reaction != null && isOwn && bubbleWidthPx > 0 && !isDeletedForEveryone) {
+            ReactionBubble(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(
+                        x = -(bubbleWidthDp + 6.dp)
+                    ),
+                onClick = onReactionClick,
+                reaction = reaction.reaction
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun PhotoGrid(
+    photos: List<ChatMessage.Media?>,
+    modifier: Modifier = Modifier,
+    onPhotoClick: (Int) -> Unit
+) {
+    when (photos.size) {
+        1 -> {
+            AppLogger.log("PHOTO URL = ${photos.first()?.mediaUrl}")
+            AsyncImage(
+                model = photos.first()?.mediaUrl,
+                contentDescription = "Photo",
+                contentScale = ContentScale.Crop,
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onPhotoClick(0) }
+            )
+        }
+
+        else -> {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = modifier
+                    .heightIn(max = 260.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                userScrollEnabled = false
+            ) {
+                itemsIndexed(photos.take(4)) { index, photo ->
+                    Box {
+                        if (photo != null) {
+                            AsyncImage(
+                                model = photo.mediaUrl,
+                                contentDescription = "Photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { onPhotoClick(index) }
+                            )
+
+                            if (index == 3 && photos.size > 4) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color.Black.copy(alpha = 0.45f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "+${photos.size - 4}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UploadingPhotoGrid(
+    photos: List<ChatMessage.UploadingPhoto?>,
+) {
+    when (photos.size) {
+        1 -> {
+            UploadingPhotoItem(
+                photo = photos.first()
+            )
+
+        }
+
+        else -> {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .heightIn(max = 260.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                userScrollEnabled = false
+            ) {
+                itemsIndexed(photos.take(4)) { index, photo ->
+                    Box {
+                        if (photo != null) {
+                            UploadingPhotoItem(
+                                photo = photo
+                            )
+
+                            if (index == 3 && photos.size > 4) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color.Black.copy(alpha = 0.45f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "+${photos.size - 4}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun UploadingPhotoItem(
+    photo: ChatMessage.UploadingPhoto?
+) {
+    Box {
+        AsyncImage(
+            model = photo?.localUri,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .aspectRatio(1f)
+                .alpha(0.6f)
+        )
+
+        CircularProgressIndicator(
+            progress = { 2f },
+            modifier = Modifier.align(Alignment.Center),
+            strokeWidth = 2.dp
+        )
+    }
+}
+
 
 @Composable
 private fun backgroundColor(isOwn: Boolean) = if (isOwn)
@@ -941,7 +1285,7 @@ private fun ChatTopBar(
 ) {
 
     var chatTopBarSubTitle by remember { mutableStateOf("Online") }
-    val avatarUrl = "https://randomuser.me/api/portraits/men/80.jpg"
+    val avatarUrl = "https://randomuser.me/api/portraits/men/81.jpg"
     val isTyping = chatState.isTyping
 
     LaunchedEffect(key1 = isTyping) {
@@ -981,15 +1325,18 @@ private fun ChatTopBar(
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
+                )
             }
         },
         actions = {
             IconButton(onClick = onCall) {
-                Icon(Icons.Default.Call, contentDescription = "Call")
+                Icon(imageVector = Icons.Default.Call, contentDescription = "Call")
             }
             IconButton(onClick = onVideoCall) {
-                Icon(Icons.Default.Videocam, contentDescription = "Video call")
+                Icon(imageVector = Icons.Default.Videocam, contentDescription = "Video call")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -1281,55 +1628,117 @@ private fun MediaCompo(
     }
 }
 
-
 data class FloatingHeart(
-    val startX: Float,
+    val startX: Float,           // starting horizontal position
     val size: Float,
-    val delay: Int
+    val delay: Int,
+    val duration: Int,           // different hearts can have slightly different speeds
+    val drift: Float             // small horizontal movement
 )
 
 @Composable
-fun FloatingHearts() {
-    val hearts = remember {
-        List(6) {
-            FloatingHeart(
-                startX = (30..300).random().toFloat(),
-                size = (8..20).random().toFloat(),
-                delay = (0..800).random()
-            )
-        }
-    }
+fun FloatingHearts(
+    count: Int = 16,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize()
+    ) {
+        val density = LocalDensity.current
+        val screenHeightPx = with(density) { maxHeight.toPx() }
+        val screenWidthPx = with(density) { maxWidth.toPx() }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        hearts.forEach { heart ->
-            var offsetY by remember { mutableStateOf(80f) }
+        val centerX = screenWidthPx / 2f
+        val spread = screenWidthPx * 0.4f
 
-            LaunchedEffect(Unit) {
-                delay(heart.delay.toLong())
-                animate(
-                    initialValue = 80f,
-                    targetValue = -40f,
-                    animationSpec = infiniteRepeatable(
-                        tween(2000, easing = LinearEasing),
-                        RepeatMode.Restart
-                    )
-                ) { value, _ -> offsetY = value }
+        val hearts = remember(screenWidthPx) {
+            List(count) {
+                FloatingHeart(
+                    startX = centerX + Random.nextFloat() * spread - spread / 2f,
+                    size = Random.nextInt(16, 32).toFloat(),
+                    delay = Random.nextInt(0, 4000),
+                    duration = Random.nextInt(2800, 4800),
+                    drift = Random.nextFloat() * 120f - 60f
+                )
             }
+        }
 
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .size(heart.size.dp)
-                    .graphicsLayer {
-                        translationX = heart.startX
-                        translationY = offsetY
-                        alpha = 0.9f
-                    }
+        hearts.forEach { heart ->
+            FloatingHeartItem(
+                heart = heart,
+                screenHeightPx = screenHeightPx
             )
         }
     }
 }
+
+
+@Composable
+private fun FloatingHeartItem(
+    heart: FloatingHeart,
+    screenHeightPx: Float
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "floatingHeart")
+
+    val offsetY by infiniteTransition.animateFloat(
+        initialValue = screenHeightPx + 100f,           // start below screen
+        targetValue = -heart.size * 2,           // go well above screen
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = heart.duration,
+                delayMillis = heart.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "offsetY"
+    )
+
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = heart.duration,
+                delayMillis = heart.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "alpha"
+    )
+
+    val offsetX by infiniteTransition.animateFloat(
+        initialValue = heart.startX,
+        targetValue = heart.startX + heart.drift,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = heart.duration * 2,  // slower drift
+                delayMillis = heart.delay,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse          // go left → right → left...
+        ),
+        label = "offsetX"
+    )
+
+    Icon(
+        imageVector = Icons.Default.Favorite,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+        modifier = Modifier
+            .size(heart.size.dp)
+            .graphicsLayer {
+                translationX = offsetX
+                translationY = offsetY
+                this.alpha = alpha.coerceIn(0f, 0.8f)
+                rotationZ = (offsetY / screenHeightPx) * 15f - 7.5f
+            }
+    )
+}
+
+
+
+
 
 

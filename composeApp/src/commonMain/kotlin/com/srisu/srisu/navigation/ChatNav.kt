@@ -3,7 +3,7 @@ package com.srisu.srisu.navigation
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.srisu.srisu.features.chat.chatroom.ChatScreen
+import com.srisu.srisu.features.chat.chatroom.screen.ChatScreen
 import com.srisu.srisu.features.chat.couple.findpartner.FindYourPartnerScreen
 import com.srisu.srisu.session.Session
 import kotlinx.serialization.Serializable

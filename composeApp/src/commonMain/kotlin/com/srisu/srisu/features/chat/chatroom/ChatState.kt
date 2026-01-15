@@ -22,7 +22,9 @@ data class ChatState(
     val reactionEmojiList: List<Reactions> = emptyList(),
     val selectedEmoji: Reactions? = null,
     val replyMessage: ReplyMessage = ReplyMessage(),
-    val selectedPhotos: List<Uri?>? = null
+    val selectedPhotos: List<Uri?>? = null,
+    val isUploadingPhoto: Boolean = false,
+    val showImageScreen: ShowImageScreen = ShowImageScreen()
 ) {
     data class Reactions(
         val reactionEmoji: String,
@@ -32,5 +34,10 @@ data class ChatState(
     data class ReplyMessage(
         val isOn: Boolean = false,
         val message: ChatMessage? = null
+    )
+
+    data class ShowImageScreen(
+        val show: Boolean = false,
+        val images: List<String?>? = null
     )
 }

@@ -7,7 +7,6 @@ import com.srisu.srisu.core.data.response.chat.ChatMediaResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.MediaFile
 import io.ktor.client.HttpClient
-import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.setBody
@@ -22,8 +21,6 @@ class ChatApiService(private val httpClient: HttpClient) {
         medias: List<MediaFile?>?
     ): ResultHandler<ChatMediaResponse?> {
 
-        AppLogger.log("MEDIAS = ${medias}")
-
         return httpClient.safeRequest {
 
             url(urlString = "${BASE_URL}api/chat/media-upload/")
@@ -32,12 +29,10 @@ class ChatApiService(private val httpClient: HttpClient) {
             setBody(
                 MultiPartFormDataContent(
                     parts = formData {
-//                        medias
-//                            ?.filterNotNull()
-//                            ?.forEach { mediaFile ->
-                        val mediaFile = medias?.first()
-                                mediaFile?.fileBytes?.let { fileBytes ->
-                                    AppLogger.log("Preparing the files")
+                        medias
+                            ?.filterNotNull()
+                            ?.forEach { mediaFile ->
+                                mediaFile.fileBytes?.let { fileBytes ->
                                     append(
                                         key = "file",
                                         value = fileBytes,
@@ -54,7 +49,7 @@ class ChatApiService(private val httpClient: HttpClient) {
                                     )
                                 }
 
-//                            }
+                            }
                     }
                 )
             )

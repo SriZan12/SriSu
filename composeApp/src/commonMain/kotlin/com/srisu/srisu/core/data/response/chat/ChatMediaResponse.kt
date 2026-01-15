@@ -6,17 +6,17 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ChatMediaResponse(
-    @SerialName("data")
-    val `data`: List<Data?>? = null,
+    @SerialName("media")
+    val media: List<Media?>? = null,
     @SerialName("message")
     val message: String? = null
 ) {
     @Serializable
-    data class Data(
+    data class Media(
         @SerialName("file")
         val `file`: String? = null,
         @SerialName("id")
-        val id: Int? = null,
+        val id: Long? = null,
         @SerialName("uploaded_at")
         val uploadedAt: String? = null
     )

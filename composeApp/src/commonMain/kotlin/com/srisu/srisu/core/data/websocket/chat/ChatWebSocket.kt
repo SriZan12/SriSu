@@ -44,6 +44,7 @@ class ChatWebSocketClient(
     private val httpClient: HttpClient,
     host: String,
     port: Int,
+    userToken: String?
 ) {
 
     private val _events = MutableSharedFlow<ChatEvent>(
@@ -55,9 +56,8 @@ class ChatWebSocketClient(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
 
-    //    private val roomId = "e579dc98-5dbd-4aab-8a48-10985346d7fa"
     private val wsUrl =
-        "ws://$host:$port/ws/chat/$roomId/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoyMDczODI2MDg3LCJpYXQiOjE3NTg0NjYwODcsImp0aSI6IjQ5MTVmOWUxMzI3OTQ0NTJhMWU5MWRmYjFiNzhjZjhjIiwidXNlcl9pZCI6OTd9.Ja2EA1CgeDoM76PwHmYdhB6HGGM1m4sJ0k_d6mbLk7w"
+        "ws://$host:$port/ws/chat/$roomId/?token=$userToken"
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _connectionState = MutableSharedFlow<ConnectionState>()
@@ -68,6 +68,7 @@ class ChatWebSocketClient(
 
     @Volatile
     private var currentSession: DefaultClientWebSocketSession? = null
+
 
     fun connect(roomId: String) {
         if (isRunning) {

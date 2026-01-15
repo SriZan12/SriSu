@@ -8,14 +8,15 @@ import coil3.Uri
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ReactToMessageDTO
 import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
-import com.srisu.srisu.core.data.network.NetworkAPIResult
+import com.srisu.srisu.core.data.dto.chatdto.UploadState
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
-import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.TEXT
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
@@ -26,10 +27,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class ChatViewModel(
     private val repository: ChatRepository
@@ -91,10 +93,6 @@ class ChatViewModel(
         typingJob = null
     }
 
-    fun onMessageSentOrEditCancelled() {
-        stopTyping()
-    }
-
     fun sendTypingRequest(isTyping: Boolean) {
         val userId = chatState.value.session?.id ?: return
 
@@ -145,9 +143,59 @@ class ChatViewModel(
         }
     }
 
+    fun updateIsUploadingPhoto(isUploading: Boolean) {
+        _chatState.update {
+            it.copy(isUploadingPhoto = isUploading)
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
     fun updateSelectedPhotos(photos: List<Uri?>?) {
         _chatState.update {
             it.copy(selectedPhotos = photos)
+        }
+
+        val listOfMedia = _chatState.value.selectedPhotos
+
+
+        val mediaMessage = ChatMessage(
+            id = Clock.System.now().epochSeconds,
+            action = SEND_MESSAGE,
+            text = "",
+            senderId = chatState.value.session?.id,
+            receiverId = 97,
+            couple = 2,
+            reactions = null,
+            deleteFor = null,
+            messageDeletionDict = null,
+            chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+            messageType = IMAGE,
+            uploadingPhotos = listOfMedia?.map {
+                ChatMessage.UploadingPhoto(
+                    localUri = it.toString(),
+                    progress = 0f,
+                    state = UploadState.UPLOADING
+                )
+            },
+            isLocalOnly = true,
+            timestamp = Clock.System.now().toString()
+        )
+
+        repository.prependMessage(message = mediaMessage)
+    }
+
+    fun updateShowImageScreen(show: Boolean, images: List<ChatMessage.Media?>) {
+
+        val imageList = images.map { it?.mediaUrl }
+
+        _chatState.update {
+            it.copy(
+                showImageScreen = ChatState.ShowImageScreen(
+                    show = show,
+                    images = imageList
+                )
+            )
+
         }
     }
 
@@ -226,7 +274,7 @@ class ChatViewModel(
      * Send message and clear input
      */
     @OptIn(ExperimentalTime::class)
-    fun sendMessage() {
+    fun sendTextMessage() {
         val text = chatState.value.messageInput.text.trim()
         if (text.isBlank()) return
 
@@ -247,13 +295,13 @@ class ChatViewModel(
                     action = SEND_MESSAGE,
                     text = text,
                     senderId = chatState.value.session?.id,
-                    receiverId = 95,
+                    receiverId = 97,
                     couple = 2,
                     reactions = null,
                     deleteFor = null,
                     messageDeletionDict = null,
                     chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
-                    messageType = "text",
+                    messageType = TEXT,
                     replyTo = replyTo
                 )
 
@@ -262,6 +310,52 @@ class ChatViewModel(
                 )
                 onMessageInputChanged(TextFieldValue())
                 setReplyMessage(chatMessage = null, isOn = false)
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Failed to send message: ${e.message}"
+            }
+        }
+    }
+
+    fun sendMediaMessage(
+        listOfMedia: List<ChatMessage.Media?>?
+    ) {
+
+        viewModelScope.launch {
+            try {
+
+                val replyTo = if (chatState.value.replyMessage.isOn) {
+                    ChatMessage.ReplyMessage(
+                        id = chatState.value.replyMessage.message?.id,
+                        text = chatState.value.replyMessage.message?.text,
+                        senderId = chatState.value.replyMessage.message?.senderId
+                    )
+                } else {
+                    null
+                }
+
+                val sendMessagePayload = ChatMessage(
+                    action = SEND_MESSAGE,
+                    text = "",
+                    senderId = chatState.value.session?.id,
+                    receiverId = 97,
+                    couple = 2,
+                    reactions = null,
+                    deleteFor = null,
+                    messageDeletionDict = null,
+                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    messageType = IMAGE,
+                    medias = listOfMedia,
+                    replyTo = replyTo
+                )
+
+                repository.sendRequest(
+                    payload = Json.encodeToString(value = sendMessagePayload)
+                )
+
+                onMessageInputChanged(TextFieldValue())
+                setReplyMessage(chatMessage = null, isOn = false)
+                updateIsUploadingPhoto(isUploading = false)
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Failed to send message: ${e.message}"
@@ -390,16 +484,32 @@ class ChatViewModel(
     fun uploadMedias() {
         viewModelScope.launch {
             try {
+                updateIsUploadingPhoto(isUploading = true)
                 val mediaFile = getMediaFile()
                 repository.uploadMedias(medias = mediaFile)
                     .onSuccess { mediaUploadResponse, message ->
-                        AppLogger.log("Media upload response: ${message}")
+                        AppLogger.log("Media upload response: $message")
+                        val medias = arrayListOf<ChatMessage.Media>()
+                        mediaUploadResponse?.media?.forEach { media ->
+                            medias.add(
+                                ChatMessage.Media(
+                                    id = media?.id,
+                                    mediaUrl = media?.file,
+                                    uploadedAt = media?.uploadedAt
+                                )
+                            )
+                        }
+                        sendMediaMessage(
+                            listOfMedia = medias
+                        )
                     }.onError { error, errorType ->
                         _error.value = error
+                        updateIsUploadingPhoto(isUploading = false)
                         AppLogger.log("ON ERROR UPLOADING PHOTOS = $error")
                     }
                 _error.value = null
             } catch (exception: Exception) {
+                updateIsUploadingPhoto(isUploading = false)
                 _error.value = "Failed to upload media: ${exception.message}"
             }
         }

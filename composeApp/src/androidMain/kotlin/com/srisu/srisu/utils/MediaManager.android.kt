@@ -11,6 +11,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import java.io.File
 import java.net.URLConnection
 import androidx.core.net.toUri
+import kotlin.contracts.contract
 
 actual class GalleryManager actual constructor(private val onLaunch: () -> Unit) {
 
@@ -27,59 +28,69 @@ actual fun rememberGalleryManager(
     isMultiple: Boolean
 ): GalleryManager {
 
-    // Determine MIME type for multiple selection
-    val mimeType = when (mediaType) {
-        MediaType.IMAGE_ONLY -> "image/*"
-        MediaType.VIDEO_ONLY -> "video/*"
-        MediaType.IMAGE_AND_VIDEO -> "*/*"
-        MediaType.MIME_TYPE -> "*/*" // TODO: handle custom MIME type
-        MediaType.NOTHING, null -> "image/*"
-    }
-
-    return if (!isMultiple) {
-        // Single selection
+    if (!isMultiple) {
         val pickMedia =
-            rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-                if (uri != null) {
-                    onResult(listOf(uri.toString()))
-                } else {
-                    onResult(null)
-                }
+            rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                onResult(uri?.let { listOf(it.toString()) })
             }
 
-        remember {
+        return remember {
             GalleryManager(onLaunch = {
-                val pickVisualMediaRequest =
-                    PickVisualMediaRequest(
-                        when (mediaType) {
-                            MediaType.IMAGE_ONLY -> ActivityResultContracts.PickVisualMedia.ImageOnly
-                            MediaType.VIDEO_ONLY -> ActivityResultContracts.PickVisualMedia.VideoOnly
-                            MediaType.IMAGE_AND_VIDEO -> ActivityResultContracts.PickVisualMedia.ImageAndVideo
-                            MediaType.MIME_TYPE -> ActivityResultContracts.PickVisualMedia.SingleMimeType(
-                                ""
-                            )
+                val request = PickVisualMediaRequest(
+                    mediaType = when (mediaType) {
+                        MediaType.IMAGE_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
 
-                            else -> ActivityResultContracts.PickVisualMedia.ImageOnly
-                        }
-                    )
-                pickMedia.launch(pickVisualMediaRequest)
+                        MediaType.VIDEO_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.VideoOnly
+
+                        MediaType.IMAGE_AND_VIDEO,
+                        MediaType.MIME_TYPE,
+                        null ->
+                            ActivityResultContracts.PickVisualMedia.ImageAndVideo
+
+                        MediaType.NOTHING ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                    }
+                )
+                pickMedia.launch(request)
             })
         }
 
     } else {
-        // Multiple selection
         val pickMultipleMedia =
-            rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-                if (uris.isNotEmpty()) {
-                    onResult(uris.take(5).map { it.toString() }) // Limit to 5
-                } else {
-                    onResult(null)
-                }
+            rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.PickMultipleVisualMedia(
+                    maxItems = 5
+                )
+            ) { uris ->
+                onResult(
+                    uris.takeIf { it.isNotEmpty() }?.map { it.toString() }
+                )
             }
 
-        remember {
+        return remember {
             GalleryManager(onLaunch = {
-                pickMultipleMedia.launch(mimeType) // Pass MIME type as string
+                val request = PickVisualMediaRequest(
+                    mediaType = when (mediaType) {
+                        MediaType.IMAGE_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+
+                        MediaType.VIDEO_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.VideoOnly
+
+                        MediaType.IMAGE_AND_VIDEO,
+                        MediaType.MIME_TYPE,
+                        null ->
+                            ActivityResultContracts.PickVisualMedia.ImageAndVideo
+
+                        MediaType.NOTHING ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                    }
+                )
+                pickMultipleMedia.launch(request)
             })
         }
     }
