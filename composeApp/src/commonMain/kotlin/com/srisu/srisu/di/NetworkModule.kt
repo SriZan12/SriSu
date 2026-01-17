@@ -39,7 +39,7 @@ val sharedNetworkModule = module {
     single {
         ChatWebSocketClient(
             httpClient = get(),
-            host = "192.168.1.74",
+            host = "192.168.1.65",
             port = 8000,
             userToken = SessionUtils().getSession()?.access
         )

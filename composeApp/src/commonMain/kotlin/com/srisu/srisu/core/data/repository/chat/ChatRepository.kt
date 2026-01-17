@@ -1,5 +1,6 @@
 package com.srisu.srisu.core.data.repository.chat
 
+import androidx.compose.runtime.key
 import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
@@ -121,14 +122,14 @@ class ChatRepository(
 
 
     private fun replaceLocalMediaMessage(message: ChatMessage) {
-        val id = message.id ?: return
+        message.id ?: return
         messageMap.update { oldMap ->
             // Find and remove the local photo message
             val localPhotoMessage = oldMap.values.find { it.isLocalOnly }
-            val mutableMap = LinkedHashMap(oldMap)
+            val mutableMap = LinkedHashMap(original = oldMap)
 
             if (localPhotoMessage != null) {
-                mutableMap.remove(localPhotoMessage.id)
+                mutableMap.remove(key = localPhotoMessage.id)
             }
 
             mutableMap

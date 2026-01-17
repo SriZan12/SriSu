@@ -163,7 +163,7 @@ class ChatViewModel(
             action = SEND_MESSAGE,
             text = "",
             senderId = chatState.value.session?.id,
-            receiverId = 97,
+            receiverId = 95,
             couple = 2,
             reactions = null,
             deleteFor = null,
@@ -184,7 +184,7 @@ class ChatViewModel(
         repository.prependMessage(message = mediaMessage)
     }
 
-    fun updateShowImageScreen(show: Boolean, images: List<ChatMessage.Media?>) {
+    fun updateShowImageScreen(show: Boolean, startingIndex: Int, images: List<ChatMessage.Media?>) {
 
         val imageList = images.map { it?.mediaUrl }
 
@@ -192,7 +192,8 @@ class ChatViewModel(
             it.copy(
                 showImageScreen = ChatState.ShowImageScreen(
                     show = show,
-                    images = imageList
+                    images = imageList,
+                    startingIndex = startingIndex
                 )
             )
 

@@ -38,6 +38,7 @@ data class ChatState(
 
     data class ShowImageScreen(
         val show: Boolean = false,
-        val images: List<String?>? = null
+        val images: List<String?>? = null,
+        val startingIndex: Int = 0
     )
 }

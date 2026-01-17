@@ -198,7 +198,11 @@ private fun ChatScaffold(
             images = showImageScreen.images,
             startIndex = 0,
             onDismiss = {
-                viewModel.updateShowImageScreen(show = false, images = emptyList())
+                viewModel.updateShowImageScreen(
+                    show = false,
+                    images = emptyList(),
+                    startingIndex = showImageScreen.startingIndex
+                )
             }
         )
     } else {
@@ -316,10 +320,11 @@ private fun ChatScaffold(
                             viewModel.setReplyMessage(chatMessage = chatMessage, isOn = true)
                             inputFocusRequester.requestFocus()
                         },
-                        onPhotoClick = {
+                        onPhotoClick = { images, startingIndex ->
                             viewModel.updateShowImageScreen(
                                 show = true,
-                                images = it
+                                images = images,
+                                startingIndex = startingIndex
                             )
                         }
                     )
@@ -366,7 +371,7 @@ private fun ChatMessagesList(
     onFetchOlder: () -> Unit,
     onReactionSelected: (reaction, messageId) -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>) -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -444,7 +449,7 @@ private fun AnimatedMessageItem(
     onDeleteForEveryone: () -> Unit,
     onReactionSelected: (String) -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>) -> Unit
+    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit
 ) {
     val hasAnimated = remember(message.id) { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
@@ -504,7 +509,7 @@ private fun SwipeableMessageCompo(
     onLongClick: () -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
     onReactionClick: () -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>) -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit,
 ) {
 
     val swipeToReplyBoxState = rememberSwipeToDismissBoxState(
@@ -732,7 +737,7 @@ fun PhotoMessageBubble(
     isOwn: Boolean,
     onLongClick: () -> Unit,
     onReactionClick: () -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>) -> Unit,
+    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -778,9 +783,10 @@ fun PhotoMessageBubble(
 
                     if (!isDeletedForEveryone) {
                         message.medias?.let {
+
                             PhotoGrid(
                                 photos = message.medias,
-                                onPhotoClick = { onPhotoClick(message.medias) }
+                                onPhotoClick = { onPhotoClick(message.medias, it) }
                             )
                         }
 
@@ -893,22 +899,22 @@ private fun PhotoGrid(
                 contentScale = ContentScale.Crop,
                 modifier = modifier
                     .fillMaxWidth()
-                    .height(220.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .height(height = 220.dp)
+                    .clip(shape = RoundedCornerShape(12.dp))
                     .clickable { onPhotoClick(0) }
             )
         }
 
         else -> {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Fixed(count = 2),
                 modifier = modifier
                     .heightIn(max = 260.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(space = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(space = 4.dp),
                 userScrollEnabled = false
             ) {
-                itemsIndexed(photos.take(4)) { index, photo ->
+                itemsIndexed(items = photos.take(4)) { index, photo ->
                     Box {
                         if (photo != null) {
                             AsyncImage(
@@ -916,8 +922,8 @@ private fun PhotoGrid(
                                 contentDescription = "Photo",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .aspectRatio(ratio = 1f)
+                                    .clip(shape = RoundedCornerShape(size = 10.dp))
                                     .clickable { onPhotoClick(index) }
                             )
 
@@ -964,7 +970,7 @@ private fun UploadingPhotoGrid(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 userScrollEnabled = false
             ) {
-                itemsIndexed(photos.take(4)) { index, photo ->
+                itemsIndexed(items = photos.take(4)) { index, photo ->
                     Box {
                         if (photo != null) {
                             UploadingPhotoItem(
@@ -1004,12 +1010,11 @@ private fun UploadingPhotoItem(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .aspectRatio(1f)
-                .alpha(0.6f)
+                .aspectRatio(ratio = 1f)
+                .alpha(alpha = 0.6f)
         )
 
         CircularProgressIndicator(
-            progress = { 2f },
             modifier = Modifier.align(Alignment.Center),
             strokeWidth = 2.dp
         )
