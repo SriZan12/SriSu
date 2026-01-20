@@ -108,12 +108,13 @@ data class ChatMessage(
     data class ReplyMessage(
         @SerialName("id")
         val id: Long? = null,
-
         @SerialName("text")
         val text: String? = null,
-
         @SerialName("sender_id")
-        val senderId: Int? = null
+        val senderId: Int? = null,
+        @SerialName("message_type")
+        val messageType: String? = null
+
     )
 
     @Serializable

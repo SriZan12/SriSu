@@ -81,7 +81,6 @@ class ChatRepository(
         nextCursor = messageList.lastOrNull()?.id
         hasMore = messageList.size >= 20
 
-        AppLogger.log("Apply Fetch Messages = ${messageList.size}")
 
         try {
             messageMap.update { oldMap ->
@@ -126,7 +125,7 @@ class ChatRepository(
         messageMap.update { oldMap ->
             // Find and remove the local photo message
             val localPhotoMessage = oldMap.values.find { it.isLocalOnly }
-            val mutableMap = LinkedHashMap(original = oldMap)
+            val mutableMap = LinkedHashMap(oldMap)
 
             if (localPhotoMessage != null) {
                 mutableMap.remove(key = localPhotoMessage.id)

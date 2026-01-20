@@ -3,6 +3,7 @@ package com.srisu.srisu.features.chat.chatroom
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.text.input.TextFieldValue
 import coil3.Uri
+import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.session.Session
@@ -15,8 +16,6 @@ data class ChatState(
     val selectedMessageForAction: ChatMessage? = null,
     val selectedMessageIdForActions: Long? = null,
     val isEditMessage: Boolean = false,
-    var lastAnimatedMessageId: Long? = null,
-    var lastSentMessageId: Long? = null,
     val typingResponse: TypingResponse? = null,
     val isTyping: Boolean = false,
     val reactionEmojiList: List<Reactions> = emptyList(),
@@ -24,7 +23,9 @@ data class ChatState(
     val replyMessage: ReplyMessage = ReplyMessage(),
     val selectedPhotos: List<Uri?>? = null,
     val isUploadingPhoto: Boolean = false,
-    val showImageScreen: ShowImageScreen = ShowImageScreen()
+    val showImageScreen: ShowImageScreen = ShowImageScreen(),
+    val baseUIState: BaseUIState = BaseUIState.Idle
+
 ) {
     data class Reactions(
         val reactionEmoji: String,
