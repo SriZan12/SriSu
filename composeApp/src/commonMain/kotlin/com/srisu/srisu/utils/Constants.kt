@@ -49,5 +49,11 @@ object Constants {
 
         const val DELETE_FOR_ME = "DELETE_FOR_ME"
         const val DELETE_FOR_EVERYONE = "DELETE_FOR_EVERYONE"
+
+        const val TEXT = "TEXT"
+        const val IMAGE = "IMAGE"
+        const val VIDEO = "VIDEO"
+        const val AUDIO = "AUDIO"
+
     }
 }

@@ -58,7 +58,6 @@ import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.components.TextIfNotEmpty
 import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
-import com.srisu.srisu.features.chat.chatroom.ChatScreen
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerState
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerViewModel
 import com.srisu.srisu.utils.DateTimeUtils

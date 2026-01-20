@@ -1,12 +1,12 @@
 package com.srisu.srisu.core.data.repository.chat
 
-
-import androidx.compose.runtime.toMutableStateList
-import androidx.compose.runtime.toMutableStateMap
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.runtime.key
+import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
+import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.response.chat.ChatMediaResponse
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
 import com.srisu.srisu.core.data.response.chat.MessageReadResponse
@@ -17,22 +17,20 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
+import com.srisu.srisu.utils.MediaFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.let
 
 class ChatRepository(
-    private val webSocketClient: ChatWebSocketClient
+    private val webSocketClient: ChatWebSocketClient,
+    private val chatApiService: ChatApiService
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -56,7 +54,14 @@ class ChatRepository(
             webSocketClient.events.collect { event ->
                 when (event) {
                     is ChatEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
-                    is ChatEvent.SendMessage -> prependMessage(event.message)
+                    is ChatEvent.SendMessage -> {
+                        if (event.message.messageType == IMAGE) {
+                            replaceLocalMediaMessage(event.message)
+                        } else {
+                            prependMessage(event.message)
+                        }
+                    }
+
                     is ChatEvent.MessageEdited -> updateMessage(event.message)
                     is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
                     is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
@@ -76,7 +81,6 @@ class ChatRepository(
         nextCursor = messageList.lastOrNull()?.id
         hasMore = messageList.size >= 20
 
-        AppLogger.log("Apply Fetch Messages = ${messageList.size}")
 
         try {
             messageMap.update { oldMap ->
@@ -96,23 +100,41 @@ class ChatRepository(
     }
 
 
-    private fun prependMessage(message: ChatMessage) {
+    fun prependMessage(message: ChatMessage) {
         val id = message.id ?: return
 
         messageMap.update { oldMap ->
             // Put the new message first, then the old ones
             (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
+
     }
 
 
     private fun updateMessage(message: ChatMessage?) {
         val id = message?.id ?: return
-        AppLogger.log("Updating message = ${message}")
         messageMap.update { oldMap ->
             // Returns a NEW map instance
             (oldMap + (id to message)) as LinkedHashMap<Long, ChatMessage>
         }
+    }
+
+
+    private fun replaceLocalMediaMessage(message: ChatMessage) {
+        message.id ?: return
+        messageMap.update { oldMap ->
+            // Find and remove the local photo message
+            val localPhotoMessage = oldMap.values.find { it.isLocalOnly }
+            val mutableMap = LinkedHashMap(oldMap)
+
+            if (localPhotoMessage != null) {
+                mutableMap.remove(key = localPhotoMessage.id)
+            }
+
+            mutableMap
+        }
+
+        prependMessage(message)
     }
 
     private fun deleteMessage(message: ChatMessage?) {
@@ -209,6 +231,14 @@ class ChatRepository(
     suspend fun sendRequest(payload: String?) {
         payload ?: return
         webSocketClient.send(payload)
+    }
+
+    suspend fun uploadMedias(
+        medias: List<MediaFile?>?
+    ): ResultHandler<ChatMediaResponse?> {
+        return chatApiService.uploadMedias(
+            medias = medias
+        )
     }
 
 

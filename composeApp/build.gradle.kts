@@ -109,7 +109,7 @@ kotlin {
             implementation(libs.ktor.client.websockets)
 
             //swipeable compo
-            implementation(libs.swipeable.kmp)
+//            implementation(libs.swipeable.kmp)
 
 
         }

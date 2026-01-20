@@ -135,7 +135,6 @@ fun Initialization(
 ) {
     LaunchedEffect(Unit) {
         if (editedInterest != null) {
-            AppLogger.log("INSIDE INITIALIZATION = ${Json.encodeToString(editedInterest)}")
             editProfileViewModel.updateCurrentInterests(interests = editedInterest)
         }
     }
@@ -401,7 +400,8 @@ private fun ProfilePictureCompo(
                 editProfileViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
             }
         },
-        mediaType = MediaType.IMAGE_ONLY
+        mediaType = MediaType.IMAGE_ONLY,
+        isMultiple = false
     )
 
     Box(
@@ -840,7 +840,8 @@ private fun OpenGallery(
 
             }
         },
-        mediaType = MediaType.IMAGE_ONLY
+        mediaType = MediaType.IMAGE_ONLY,
+        isMultiple = false
     )
 
     LaunchedEffect(Unit) {

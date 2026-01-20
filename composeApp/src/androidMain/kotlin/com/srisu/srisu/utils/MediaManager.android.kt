@@ -11,6 +11,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import java.io.File
 import java.net.URLConnection
 import androidx.core.net.toUri
+import kotlin.contracts.contract
 
 actual class GalleryManager actual constructor(private val onLaunch: () -> Unit) {
 
@@ -19,45 +20,82 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
     }
 }
 
+
 @Composable
 actual fun rememberGalleryManager(
-    onResult: (List<String?>?) -> Unit, mediaType: MediaType?
+    onResult: (List<String?>?) -> Unit,
+    mediaType: MediaType?,
+    isMultiple: Boolean
 ): GalleryManager {
 
-    var pickVisualMediaRequest =
-        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-
-    mediaType?.let {
-        pickVisualMediaRequest = when (mediaType) {
-            MediaType.IMAGE_ONLY -> PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-            MediaType.VIDEO_ONLY -> PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
-            MediaType.IMAGE_AND_VIDEO -> PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-            MediaType.MIME_TYPE -> PickVisualMediaRequest(
-                ActivityResultContracts.PickVisualMedia.SingleMimeType(
-                    ""
-                )
-            ) // TODO need to add mime type as well.
-            MediaType.NOTHING ->
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-        }
-    }
-
-    val pickMedia =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null) {
-                onResult(listOf(uri.toString()))
-            } else {
-                onResult(null)
+    if (!isMultiple) {
+        val pickMedia =
+            rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                onResult(uri?.let { listOf(it.toString()) })
             }
+
+        return remember {
+            GalleryManager(onLaunch = {
+                val request = PickVisualMediaRequest(
+                    mediaType = when (mediaType) {
+                        MediaType.IMAGE_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+
+                        MediaType.VIDEO_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.VideoOnly
+
+                        MediaType.IMAGE_AND_VIDEO,
+                        MediaType.MIME_TYPE,
+                        null ->
+                            ActivityResultContracts.PickVisualMedia.ImageAndVideo
+
+                        MediaType.NOTHING ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                    }
+                )
+                pickMedia.launch(request)
+            })
         }
 
-    return remember {
-        GalleryManager(onLaunch = {
-            pickMedia.launch(pickVisualMediaRequest)
-        })
-    }
+    } else {
+        val pickMultipleMedia =
+            rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.PickMultipleVisualMedia(
+                    maxItems = 5
+                )
+            ) { uris ->
+                onResult(
+                    uris.takeIf { it.isNotEmpty() }?.map { it.toString() }
+                )
+            }
 
+        return remember {
+            GalleryManager(onLaunch = {
+                val request = PickVisualMediaRequest(
+                    mediaType = when (mediaType) {
+                        MediaType.IMAGE_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+
+                        MediaType.VIDEO_ONLY ->
+                            ActivityResultContracts.PickVisualMedia.VideoOnly
+
+                        MediaType.IMAGE_AND_VIDEO,
+                        MediaType.MIME_TYPE,
+                        null ->
+                            ActivityResultContracts.PickVisualMedia.ImageAndVideo
+
+                        MediaType.NOTHING ->
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                    }
+                )
+                pickMultipleMedia.launch(request)
+            })
+        }
+    }
 }
+
 
 actual class FileManager {
 
