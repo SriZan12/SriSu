@@ -14,6 +14,7 @@ import com.srisu.srisu.core.data.repository.chat.ChatRepository
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
+import com.srisu.srisu.utils.Constants.ChatConstants.GET_CHAT_ROOMS
 import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
@@ -51,6 +52,7 @@ class ChatViewModel(
 
 
     init {
+        getChatRooms()
         observeChatRoom()
         updateChatMessages()
     }
@@ -302,7 +304,6 @@ class ChatViewModel(
         viewModelScope.launch {
 
             repository.chatRoom.collect { room ->
-                AppLogger.log("Collecting chatRoom: $room")
 
                 val myUserId = chatState.value.session?.id ?: return@collect
 
@@ -312,13 +313,10 @@ class ChatViewModel(
                     ?.typingUsers
                     .orEmpty()
 
-                AppLogger.log("Typing users = $typingUsers")
 
                 val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
                     userId != myUserId.toString() && isTyping
                 }
-
-                AppLogger.log("Is someone else typing = $isSomeoneElseTyping")
 
                 _chatState.update { state ->
                     state.copy(
@@ -583,6 +581,21 @@ class ChatViewModel(
         }
 
         return mediaFile
+    }
+
+    private fun getChatRooms(lastUpdatedAt: String? = null) {
+        try {
+            viewModelScope.launch {
+                val getRoomRequest = HashMap<String, String?>()
+                getRoomRequest["action"] = GET_CHAT_ROOMS
+                getRoomRequest["last_updated"] = lastUpdatedAt
+                repository.sendRequest(payload = Json.encodeToString(value = getRoomRequest))
+            }
+        } catch (_: Exception) {
+            showErrorMessage(errorType = "Error", message = "Something went wrong")
+        }
+
+
     }
 
 }

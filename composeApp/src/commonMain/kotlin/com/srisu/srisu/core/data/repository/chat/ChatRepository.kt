@@ -1,17 +1,17 @@
 package com.srisu.srisu.core.data.repository.chat
 
-import androidx.compose.runtime.key
 import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.response.chat.ChatMediaResponse
+import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
 import com.srisu.srisu.core.data.response.chat.MessageReadResponse
 import com.srisu.srisu.core.data.response.chat.TypingResponse
-import com.srisu.srisu.core.data.websocket.chat.ChatEvent
+import com.srisu.srisu.core.data.websocket.chat.ChatRoomEvent
 import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.SessionUtils
@@ -42,6 +42,10 @@ class ChatRepository(
     private val _chatRoom = MutableStateFlow<ChatRoom?>(ChatRoom())
     val chatRoom = _chatRoom.asStateFlow()
 
+    private val _chatRoomsList =
+        MutableStateFlow<List<ChatRoomResponse.Data.ChatRoom?>?>(emptyList())
+    val chatRoomsList = _chatRoomsList.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
@@ -53,8 +57,8 @@ class ChatRepository(
         scope.launch {
             webSocketClient.events.collect { event ->
                 when (event) {
-                    is ChatEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
-                    is ChatEvent.SendMessage -> {
+                    is ChatRoomEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
+                    is ChatRoomEvent.SendMessage -> {
                         if (event.message.messageType == IMAGE) {
                             replaceLocalMediaMessage(event.message)
                         } else {
@@ -62,13 +66,17 @@ class ChatRepository(
                         }
                     }
 
-                    is ChatEvent.MessageEdited -> updateMessage(event.message)
-                    is ChatEvent.MessageDeleted -> deleteMessage(message = event.message)
-                    is ChatEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
-                    is ChatEvent.MessageRead -> updateMessageRead(messageReadResponse = event.messageReadResponse)
-                    is ChatEvent.MessageDelivered -> updateMessageDelivered(messageDeliveredResponse = event.messageDeliveredResponse)
-                    is ChatEvent.ReactToMessage -> updateMessage(event.reactToMessage)
-                    is ChatEvent.Error -> _error.value = event.throwable.message
+                    is ChatRoomEvent.MessageEdited -> updateMessage(event.message)
+                    is ChatRoomEvent.MessageDeleted -> deleteMessage(message = event.message)
+                    is ChatRoomEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
+                    is ChatRoomEvent.MessageRead -> updateMessageRead(messageReadResponse = event.messageReadResponse)
+                    is ChatRoomEvent.MessageDelivered -> updateMessageDelivered(
+                        messageDeliveredResponse = event.messageDeliveredResponse
+                    )
+
+                    is ChatRoomEvent.ReactToMessage -> updateMessage(event.reactToMessage)
+                    is ChatRoomEvent.Error -> _error.value = event.throwable.message
+                    is ChatRoomEvent.GetChatRooms -> updateChatRooms(chatRoomResponse = event.chatRoomResponse)
                     else -> Unit
                 }
             }
@@ -226,6 +234,11 @@ class ChatRepository(
             )
             webSocketClient.send(Json.encodeToString(fetchPayload))
         }
+    }
+
+    fun updateChatRooms(chatRoomResponse: ChatRoomResponse?) {
+        chatRoomResponse ?: return
+        _chatRoomsList.value = chatRoomResponse.data?.chatRooms
     }
 
     suspend fun sendRequest(payload: String?) {
