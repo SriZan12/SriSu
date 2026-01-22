@@ -1,5 +1,7 @@
 package com.srisu.srisu.core.data.websocket.chat
 
+import androidx.lifecycle.viewModelScope
+import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
@@ -102,8 +104,8 @@ class ChatWebSocketClient(
 
 
                     // Auto-fetch initial messages on connection
-                    fetchMessages(page = null, pageSize = 50)
-
+//                    fetchMessages(page = null, pageSize = 50)
+                    getChatRooms()
                     // Read incoming messages
                     readLoop()
                 }
@@ -274,5 +276,22 @@ class ChatWebSocketClient(
             AppLogger.log("Error fetching messages: ${e.message}")
             throw e
         }
+    }
+
+    private suspend fun getChatRooms(lastUpdatedAt: String? = null) {
+        try {
+            val chatRoomDTO = ChatRoomDTO(
+                action = GET_CHAT_ROOMS,
+                limit = 10,
+                lastUpdated = lastUpdatedAt ?: ""
+            )
+            send(
+                rawPayload = Json.encodeToString(value = chatRoomDTO),
+            )
+        } catch (exception: Exception) {
+            AppLogger.log("Something went wrong = ${exception.message}")
+        }
+
+
     }
 }

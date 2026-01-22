@@ -3,6 +3,7 @@ package com.srisu.srisu.core.data.repository.chat
 import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
+import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.response.chat.ChatMediaResponse
@@ -17,6 +18,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.Constants.ChatConstants.GET_CHAT_ROOMS
 import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.MediaFile
 import kotlinx.coroutines.CoroutineScope
@@ -42,15 +44,19 @@ class ChatRepository(
     private val _chatRoom = MutableStateFlow<ChatRoom?>(ChatRoom())
     val chatRoom = _chatRoom.asStateFlow()
 
-    private val _chatRoomsList =
-        MutableStateFlow<List<ChatRoomResponse.Data.ChatRoom?>?>(emptyList())
-    val chatRoomsList = _chatRoomsList.asStateFlow()
+    private val _chatRooms = MutableStateFlow<List<ChatRoomResponse.Data.ChatRoom?>?>(emptyList())
+    val chatRoomsList = _chatRooms.asStateFlow()
+    private var hasMoreChatRooms: Boolean = true
+
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
     private var nextCursor: Long? = null
     private var hasMore: Boolean = true
+    private var chatRoomLastUpdateAt: String? = null
+    private var chatRoomLastCursor: String? = null
+
 
     init {
         webSocketClient.connect(roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4")
@@ -80,6 +86,32 @@ class ChatRepository(
                     else -> Unit
                 }
             }
+        }
+    }
+
+    private fun applyChatRoomsList(chatRooms: List<ChatRoomResponse.Data.ChatRoom>) {
+        _chatRooms.value = chatRooms
+        hasMoreChatRooms = chatRooms.size >= 10
+    }
+
+    /** Append new chat rooms to existing list */
+    private fun appendChatRoomsList(chatRooms: List<ChatRoomResponse.Data.ChatRoom>) {
+        _chatRooms.update { oldList ->
+            (oldList?.plus(chatRooms))?.distinctBy { it?.chatRoom?.id } // avoid duplicates
+        }
+        hasMoreChatRooms = chatRooms.size >= 10
+    }
+
+    /** Smart handler — decides whether to apply or append */
+    private fun applyOrAppendChatRooms(chatRoomResponse: ChatRoomResponse?) {
+        chatRoomResponse ?: return
+        val newRooms = chatRoomResponse.data?.chatRooms?.filterNotNull() ?: return
+        chatRoomLastCursor = chatRoomResponse.data.nextCursor
+
+        if (_chatRooms.value.isNullOrEmpty()) {
+            applyChatRoomsList(newRooms)
+        } else {
+            appendChatRoomsList(newRooms)
         }
     }
 
@@ -130,6 +162,7 @@ class ChatRepository(
 
     private fun replaceLocalMediaMessage(message: ChatMessage) {
         message.id ?: return
+        var isLocalRemoved = false
         messageMap.update { oldMap ->
             // Find and remove the local photo message
             val localPhotoMessage = oldMap.values.find { it.isLocalOnly }
@@ -137,12 +170,15 @@ class ChatRepository(
 
             if (localPhotoMessage != null) {
                 mutableMap.remove(key = localPhotoMessage.id)
+                isLocalRemoved = true
             }
 
             mutableMap
         }
 
-        prependMessage(message)
+        if (isLocalRemoved) {
+            prependMessage(message)
+        }
     }
 
     private fun deleteMessage(message: ChatMessage?) {
@@ -236,14 +272,27 @@ class ChatRepository(
         }
     }
 
+    fun fetchNewChatRooms() {
+        scope.launch {
+            val chatRoomDTO = ChatRoomDTO(
+                action = GET_CHAT_ROOMS,
+                limit = 10,
+                lastUpdated = chatRoomLastUpdateAt ?: ""
+            )
+            webSocketClient.send(rawPayload = Json.encodeToString(chatRoomDTO))
+        }
+    }
+
     fun updateChatRooms(chatRoomResponse: ChatRoomResponse?) {
         chatRoomResponse ?: return
-        _chatRoomsList.value = chatRoomResponse.data?.chatRooms
+
+        chatRoomLastUpdateAt = chatRoomResponse.data?.nextCursor
+        _chatRooms.value = chatRoomResponse.data?.chatRooms
     }
 
     suspend fun sendRequest(payload: String?) {
         payload ?: return
-        webSocketClient.send(payload)
+        webSocketClient.send(rawPayload = payload)
     }
 
     suspend fun uploadMedias(

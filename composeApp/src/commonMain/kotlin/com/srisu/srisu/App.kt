@@ -195,7 +195,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.Home
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> ChatNav.ChatRoomScreen
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }

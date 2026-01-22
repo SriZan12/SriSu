@@ -149,6 +149,7 @@ import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.collections.emptyList
 import kotlin.random.Random
@@ -457,37 +458,37 @@ private fun ChatMessagesList(
     onMessageRepliedClicked: (messageId) -> Unit,
     modifier: Modifier = Modifier
 ) {
-//
-//    var targetMessageId by remember { mutableStateOf<Long?>(null) }
-//    var scrollItem by remember { mutableStateOf(false) }
-//    val messageIndexMap by remember(messages) {
-//        mutableStateOf(
-//            messages.mapIndexedNotNull { index, msg ->
-//                msg?.id?.let { it to index }
-//            }.toMap()
-//        )
-//    }
 
+    // Prevent multiple triggers
+    var isFetchingOlder by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = listState) {
-        snapshotFlow { listState.layoutInfo }
-            .collect { layoutInfo ->
-                val totalItems = layoutInfo.totalItemsCount
-                val visibleItems = layoutInfo.visibleItemsInfo
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val firstVisibleIndex = layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: 0
+            val totalItemsCount = layoutInfo.totalItemsCount
+            firstVisibleIndex to totalItemsCount
+        }
+            .distinctUntilChanged()
+            .collect { (firstVisibleIndex, totalItems) ->
 
-                if (visibleItems.isNotEmpty()) {
-                    val lastVisibleIndex = visibleItems.last().index
+                // We are in reverseLayout, so oldest messages are at the top (index = last in normal list)
+                val shouldFetchOlder = firstVisibleIndex <= 2 && // small threshold
+                        totalItems > 0 &&
+                        !isFetchingOlder
 
-                    // OLD messages reached (top of chat)
-                    if (lastVisibleIndex >= totalItems - 1) {
-                        AppLogger.log("Reached top, fetching older messages")
-                        onFetchOlder()
-                    }
+                if (shouldFetchOlder) {
+                    isFetchingOlder = true
+                    AppLogger.log("Reached top, fetching older messages")
+                    onFetchOlder()
                 }
             }
     }
 
-
+    // Reset flag when new messages arrive
+    LaunchedEffect(messages.size) {
+        isFetchingOlder = false
+    }
 
     LazyColumn(
         state = listState,
@@ -500,41 +501,25 @@ private fun ChatMessagesList(
             items = messages,
             key = { it?.id ?: Clock.System.now().epochSeconds }
         ) { message ->
-            if (message != null) {
+            message?.let {
                 AnimatedMessageItem(
-                    message = message,
+                    message = it,
                     currentUserId = currentUserId,
-                    isOwn = message.senderId == currentUserId,
-                    isActionShown = selectedMessageId == message.id,
-                    onLongClick = { onMessageLongClick(message.id, message) },
+                    isOwn = it.senderId == currentUserId,
+                    isActionShown = selectedMessageId == it.id,
+                    onLongClick = { onMessageLongClick(it.id, it) },
                     onDismissActions = onDismissActions,
-                    onEdit = { onEdit(message) },
-                    onDeleteForMe = { onDelete(DELETE_FOR_ME, message.id) },
-                    onDeleteForEveryone = {
-                        onDelete(
-                            DELETE_FOR_EVERYONE,
-                            message.id
-                        )
-                    },
-                    onReactionSelected = { reaction ->
-                        onReactionSelected(reaction, message.id)
-                    },
+                    onEdit = { onEdit(it) },
+                    onDeleteForMe = { onDelete(DELETE_FOR_ME, it.id) },
+                    onDeleteForEveryone = { onDelete(DELETE_FOR_EVERYONE, it.id) },
+                    onReactionSelected = { reaction -> onReactionSelected(reaction, it.id) },
                     onReplyMessage = onReplyMessage,
                     onPhotoClick = onPhotoClick,
-                    onClickMessageReplied = {
-//                        onMessageRepliedClicked(it)
-//                        scrollItem = true
-//                        targetMessageId = it
-                    }
+                    onClickMessageReplied = { /* Optional: scroll to message logic */ }
                 )
             }
-
-
         }
-
-
     }
-
 }
 
 
@@ -869,15 +854,7 @@ fun PhotoMessageBubble(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .then(
-                other = clickableModifier(
-                    isDeletedForEveryone = isDeletedForEveryone,
-                    haptic = haptic,
-                    onLongClick = onLongClick,
-                    onClick = {}
-                )
-            ),
+            .fillMaxWidth(),
         contentAlignment = alignment
     ) {
         Card(
@@ -1017,13 +994,12 @@ private fun PhotoGrid(
                     .fillMaxWidth()
                     .height(height = 220.dp)
                     .clip(shape = RoundedCornerShape(12.dp))
-                    .clickable { onPhotoClick(0) }
                     .then(
                         other = clickableModifier(
                             isDeletedForEveryone = false,
                             haptic = LocalHapticFeedback.current,
                             onLongClick = onLongClickPhoto,
-                            onClick = {}
+                            onClick = { onPhotoClick(0) }
                         )
                     )
             )
@@ -1048,13 +1024,12 @@ private fun PhotoGrid(
                                 modifier = Modifier
                                     .aspectRatio(ratio = 1f)
                                     .clip(shape = RoundedCornerShape(size = 10.dp))
-                                    .clickable { onPhotoClick(index) }
                                     .then(
                                         other = clickableModifier(
                                             isDeletedForEveryone = false,
                                             haptic = LocalHapticFeedback.current,
                                             onLongClick = onLongClickPhoto,
-                                            onClick = {}
+                                            onClick = { onPhotoClick(index) }
                                         )
                                     )
                             )
@@ -1698,7 +1673,7 @@ private fun MessageActionsDropdown(
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
     ) {
 
-        if (canCopy){
+        if (canCopy) {
             DropdownMenuItem(
                 text = { Text("Copy") },
                 leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
@@ -1715,9 +1690,11 @@ private fun MessageActionsDropdown(
                     onDismiss()
                 }
             )
+
+            HorizontalDivider()
+
         }
 
-        HorizontalDivider()
 
         DropdownMenuItem(
             text = { Text("Delete for me", color = MaterialTheme.colorScheme.error) },

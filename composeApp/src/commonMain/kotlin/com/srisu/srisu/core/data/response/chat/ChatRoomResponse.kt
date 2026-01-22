@@ -51,8 +51,8 @@ data class ChatRoomResponse(
 //                val settings: Settings? = null,
                 @SerialName("singles")
                 val singles: Int? = null,
-//                @SerialName("unread_count")s
-//                val unreadCount: UnreadCount? = null,
+                @SerialName("unread_count")
+                val unreadCount: Map<String, Int>? = null,
                 @SerialName("updated_at")
                 val updatedAt: String? = null,
                 @SerialName("user_one")
@@ -65,9 +65,6 @@ data class ChatRoomResponse(
 //
 //                @Serializable
 //                class Settings
-//
-//                @Serializable
-//                class UnreadCount
             }
 
         }

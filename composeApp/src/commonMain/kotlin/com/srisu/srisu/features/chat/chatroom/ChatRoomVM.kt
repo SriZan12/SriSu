@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.ReactToMessageDTO
 import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
 import com.srisu.srisu.core.data.dto.chatdto.UploadState
@@ -52,9 +53,9 @@ class ChatViewModel(
 
 
     init {
-        getChatRooms()
-        observeChatRoom()
-        updateChatMessages()
+        updateChatRooms()
+//        observeChatRoom()
+//        updateChatMessages()
     }
 
 
@@ -299,6 +300,16 @@ class ChatViewModel(
             this._chatState.value.copy(baseUIState = BaseUIState.Idle)
     }
 
+    private fun updateChatRooms() {
+        viewModelScope.launch {
+            repository.chatRoomsList.collect { chatRoomList ->
+                _chatState.update {
+                    it.copy(chatRoomList = chatRoomList ?: emptyList())
+                }
+            }
+        }
+    }
+
 
     private fun observeChatRoom() {
         viewModelScope.launch {
@@ -540,6 +551,10 @@ class ChatViewModel(
         repository.fetchOlderMessages()
     }
 
+    fun fetchNewChatRooms() {
+        repository.fetchNewChatRooms()
+    }
+
     fun uploadMedias() {
         viewModelScope.launch {
             try {
@@ -586,10 +601,12 @@ class ChatViewModel(
     private fun getChatRooms(lastUpdatedAt: String? = null) {
         try {
             viewModelScope.launch {
-                val getRoomRequest = HashMap<String, String?>()
-                getRoomRequest["action"] = GET_CHAT_ROOMS
-                getRoomRequest["last_updated"] = lastUpdatedAt
-                repository.sendRequest(payload = Json.encodeToString(value = getRoomRequest))
+                val chatRoomDTO = ChatRoomDTO(
+                    action = GET_CHAT_ROOMS,
+                    limit = 10,
+                    lastUpdated = lastUpdatedAt ?: ""
+                )
+                repository.sendRequest(payload = Json.encodeToString(value = chatRoomDTO))
             }
         } catch (_: Exception) {
             showErrorMessage(errorType = "Error", message = "Something went wrong")
