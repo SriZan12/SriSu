@@ -82,7 +82,7 @@ class ChatRepository(
 
                     is ChatRoomEvent.ReactToMessage -> updateMessage(event.reactToMessage)
                     is ChatRoomEvent.Error -> _error.value = event.throwable.message
-                    is ChatRoomEvent.GetChatRooms -> updateChatRooms(chatRoomResponse = event.chatRoomResponse)
+                    is ChatRoomEvent.GetChatRooms -> applyOrAppendChatRooms(event.chatRoomResponse)
                     else -> Unit
                 }
             }
