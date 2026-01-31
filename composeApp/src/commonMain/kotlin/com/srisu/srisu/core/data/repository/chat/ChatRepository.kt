@@ -28,6 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlin.collections.plus
 import kotlin.let
 
 class ChatRepository(
@@ -65,10 +66,10 @@ class ChatRepository(
                 when (event) {
                     is ChatRoomEvent.FetchMessages -> applyFetchMessages(messages = event.messages)
                     is ChatRoomEvent.SendMessage -> {
-                        if (event.message.messageType == IMAGE) {
-                            replaceLocalMediaMessage(event.message)
+                        if (event.message?.messageType == IMAGE) {
+                            replaceLocalMediaMessage(event.message, event.updatedChatRoom)
                         } else {
-                            prependMessage(event.message)
+                            prependMessage(event.message, event.updatedChatRoom)
                         }
                     }
 
@@ -94,7 +95,6 @@ class ChatRepository(
         hasMoreChatRooms = chatRooms.size >= 10
     }
 
-    /** Append new chat rooms to existing list */
     private fun appendChatRoomsList(chatRooms: List<ChatRoomResponse.Data.ChatRoom>) {
         _chatRooms.update { oldList ->
             (oldList?.plus(chatRooms))?.distinctBy { it?.chatRoom?.id } // avoid duplicates
@@ -102,7 +102,6 @@ class ChatRepository(
         hasMoreChatRooms = chatRooms.size >= 10
     }
 
-    /** Smart handler — decides whether to apply or append */
     private fun applyOrAppendChatRooms(chatRoomResponse: ChatRoomResponse?) {
         chatRoomResponse ?: return
         val newRooms = chatRoomResponse.data?.chatRooms?.filterNotNull() ?: return
@@ -112,6 +111,33 @@ class ChatRepository(
             applyChatRoomsList(newRooms)
         } else {
             appendChatRoomsList(newRooms)
+        }
+    }
+
+    private fun updateChatRoomOnMessage(
+        updatedChatRoom: ChatRoomResponse.Data.ChatRoom?
+    ) {
+        _chatRooms.update { oldList ->
+            if (oldList.isNullOrEmpty()) {
+                listOf(updatedChatRoom)
+            } else {
+                AppLogger.log("Updating ChatRoom.")
+                val mutableList = oldList.toMutableList()
+
+                // Remove existing instance if present
+                val index = mutableList.indexOfFirst {
+                    it?.chatRoom?.id == updatedChatRoom?.chatRoom?.id
+                }
+
+                if (index != -1) {
+                    mutableList.removeAt(index)
+                }
+
+                // Insert at top
+                mutableList.add(0, updatedChatRoom)
+
+                mutableList
+            }
         }
     }
 
@@ -140,13 +166,14 @@ class ChatRepository(
     }
 
 
-    fun prependMessage(message: ChatMessage) {
-        val id = message.id ?: return
+    fun prependMessage(message: ChatMessage?, updatedChatRoom: ChatRoomResponse.Data.ChatRoom?) {
+        val id = message?.id ?: return
 
         messageMap.update { oldMap ->
             // Put the new message first, then the old ones
             (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
+        updateChatRoomOnMessage(updatedChatRoom = updatedChatRoom)
 
     }
 
@@ -160,24 +187,26 @@ class ChatRepository(
     }
 
 
-    private fun replaceLocalMediaMessage(message: ChatMessage) {
+    private fun replaceLocalMediaMessage(
+        message: ChatMessage,
+        updatedChatRoom: ChatRoomResponse.Data.ChatRoom?
+    ) {
         message.id ?: return
-        var isLocalRemoved = false
-        messageMap.update { oldMap ->
-            // Find and remove the local photo message
-            val localPhotoMessage = oldMap.values.find { it.isLocalOnly }
+
+        val wasRemoved = messageMap.updateAndGet { oldMap ->
             val mutableMap = LinkedHashMap(oldMap)
 
-            if (localPhotoMessage != null) {
-                mutableMap.remove(key = localPhotoMessage.id)
-                isLocalRemoved = true
+            val localMessage = oldMap.values.firstOrNull { it.isLocalOnly }
+
+            if (localMessage != null) {
+                mutableMap.remove(localMessage.id)
             }
 
             mutableMap
-        }
+        }.isNotEmpty()
 
-        if (isLocalRemoved) {
-            prependMessage(message)
+        if (wasRemoved) {
+            prependMessage(message, updatedChatRoom)
         }
     }
 

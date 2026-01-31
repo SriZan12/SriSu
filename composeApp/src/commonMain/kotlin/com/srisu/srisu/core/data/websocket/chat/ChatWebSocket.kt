@@ -104,8 +104,9 @@ class ChatWebSocketClient(
 
 
                     // Auto-fetch initial messages on connection
-//                    fetchMessages(page = null, pageSize = 50)
                     getChatRooms()
+                    fetchMessages(page = null, pageSize = 50)
+
                     // Read incoming messages
                     readLoop()
                 }
@@ -186,8 +187,13 @@ class ChatWebSocketClient(
 
                 SEND_MESSAGE -> {
                     val response = json.decodeFromString(MessageResponse.serializer(), raw)
-                    response.data?.let { chatMessage ->
-                        _events.emit(value = ChatRoomEvent.SendMessage(chatMessage))
+                    response.let { chatMessage ->
+                        _events.emit(
+                            value = ChatRoomEvent.SendMessage(
+                                message = chatMessage.data,
+                                updatedChatRoom = chatMessage.updatedChatRoom
+                            )
+                        )
                     }
                 }
 

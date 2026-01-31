@@ -1,6 +1,7 @@
 package com.srisu.srisu.core.data.dto.chatdto
 
 import coil3.Uri
+import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -103,7 +104,7 @@ data class ChatMessage(
     @SerialName("timestamp")
     val timestamp: String? = null,
 
-    ) {
+) {
     @Serializable
     data class ReplyMessage(
         @SerialName("id")

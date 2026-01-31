@@ -11,6 +11,8 @@ data class MessageResponse(
     val action: String? = null,
     @SerialName("data")
     val `data`: ChatMessage? = null,
+    @SerialName("updated_chat_room")
+    val updatedChatRoom: ChatRoomResponse.Data.ChatRoom? = null,
     @SerialName("message")
     val message: String? = null
 )

@@ -25,10 +25,8 @@ import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.take
@@ -38,7 +36,6 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 class ChatViewModel(
     private val repository: ChatRepository
@@ -53,9 +50,10 @@ class ChatViewModel(
 
 
     init {
+        observeChatRoom()
+        updateChatMessages()
         updateChatRooms()
-//        observeChatRoom()
-//        updateChatMessages()
+
     }
 
 
@@ -129,31 +127,14 @@ class ChatViewModel(
 
 
     fun updateChatMessages() {
-
         viewModelScope.launch {
-
-            AppLogger.log("Showing loading")
-
-            repository.messages
-                .take(1)
-                .collect { messages ->
-                    _chatState.update {
-                        it.copy(chatMessages = messages)
-                    }
-                    idleScreen()
+            repository.messages.collect { messages ->
+                _chatState.update {
+                    it.copy(chatMessages = messages)
                 }
-
-            // keep collecting updates without loading
-            repository.messages
-                .drop(1)
-                .collect { messages ->
-                    _chatState.update {
-                        it.copy(chatMessages = messages)
-                    }
-                }
+            }
         }
     }
-
 
     fun setReplyMessage(chatMessage: ChatMessage?, isOn: Boolean) {
         _chatState.update {
@@ -204,7 +185,10 @@ class ChatViewModel(
             timestamp = Clock.System.now().toString()
         )
 
-        repository.prependMessage(message = mediaMessage)
+        repository.prependMessage(
+            message = mediaMessage,
+            updatedChatRoom = null
+        )
     }
 
     fun updateShowImageScreen(show: Boolean, startingIndex: Int, images: List<ChatMessage.Media?>) {
@@ -304,9 +288,13 @@ class ChatViewModel(
         viewModelScope.launch {
             repository.chatRoomsList.collect { chatRoomList ->
                 _chatState.update {
+                    AppLogger.log("Updating chatRoomList")
                     it.copy(chatRoomList = chatRoomList ?: emptyList())
                 }
+
+//                AppLogger.log("After updating chatRoom = ${chatState.value.chatRoomList.first()}")
             }
+
         }
     }
 
@@ -368,7 +356,7 @@ class ChatViewModel(
                     action = SEND_MESSAGE,
                     text = text,
                     senderId = chatState.value.session?.id,
-                    receiverId = 97,
+                    receiverId = 95,
                     couple = 2,
                     reactions = null,
                     deleteFor = null,
