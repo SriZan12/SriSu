@@ -12,7 +12,7 @@ data class MessageResponse(
     @SerialName("data")
     val `data`: ChatMessage? = null,
     @SerialName("updated_chat_room")
-    val updatedChatRoom: ChatRoomResponse.Data.ChatRoom? = null,
+    val updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom? = null,
     @SerialName("message")
     val message: String? = null
 )

@@ -58,7 +58,7 @@ class ChatWebSocketClient(
     val events: SharedFlow<ChatRoomEvent> = _events.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+    private val roomId = "bba87218-0780-4df9-aa8d-a69485b9f5c5"
 
     private val wsUrl =
         "ws://$host:$port/ws/chat/$roomId/?token=$userToken"

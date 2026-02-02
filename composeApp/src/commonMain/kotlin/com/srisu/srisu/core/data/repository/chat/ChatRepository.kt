@@ -45,8 +45,11 @@ class ChatRepository(
     private val _chatRoom = MutableStateFlow<ChatRoom?>(ChatRoom())
     val chatRoom = _chatRoom.asStateFlow()
 
-    private val _chatRooms = MutableStateFlow<List<ChatRoomResponse.Data.ChatRoom?>?>(emptyList())
+    private val _chatRooms =
+        MutableStateFlow<List<ChatRoomResponse.Data.ChatRoom>>(emptyList())
+
     val chatRoomsList = _chatRooms.asStateFlow()
+
     private var hasMoreChatRooms: Boolean = true
 
 
@@ -60,7 +63,7 @@ class ChatRepository(
 
 
     init {
-        webSocketClient.connect(roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4")
+        webSocketClient.connect(roomId = "bba87218-0780-4df9-aa8d-a69485b9f5c5")
         scope.launch {
             webSocketClient.events.collect { event ->
                 when (event) {
@@ -97,7 +100,7 @@ class ChatRepository(
 
     private fun appendChatRoomsList(chatRooms: List<ChatRoomResponse.Data.ChatRoom>) {
         _chatRooms.update { oldList ->
-            (oldList?.plus(chatRooms))?.distinctBy { it?.chatRoom?.id } // avoid duplicates
+            (oldList.plus(chatRooms)).distinctBy { it.chatRoom?.id }
         }
         hasMoreChatRooms = chatRooms.size >= 10
     }
@@ -107,7 +110,7 @@ class ChatRepository(
         val newRooms = chatRoomResponse.data?.chatRooms?.filterNotNull() ?: return
         chatRoomLastCursor = chatRoomResponse.data.nextCursor
 
-        if (_chatRooms.value.isNullOrEmpty()) {
+        if (_chatRooms.value.isEmpty()) {
             applyChatRoomsList(newRooms)
         } else {
             appendChatRoomsList(newRooms)
@@ -115,31 +118,33 @@ class ChatRepository(
     }
 
     private fun updateChatRoomOnMessage(
-        updatedChatRoom: ChatRoomResponse.Data.ChatRoom?
+        updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?
     ) {
+        updatedChatRoom ?: return
         _chatRooms.update { oldList ->
-            if (oldList.isNullOrEmpty()) {
-                listOf(updatedChatRoom)
-            } else {
-                AppLogger.log("Updating ChatRoom.")
-                val mutableList = oldList.toMutableList()
+            val otherUser = oldList.find { chatRoom ->
+                chatRoom.chatRoom?.id == updatedChatRoom.id
+            }?.otherUser
 
-                // Remove existing instance if present
-                val index = mutableList.indexOfFirst {
-                    it?.chatRoom?.id == updatedChatRoom?.chatRoom?.id
+            buildList(oldList.size + 1) {
+                // Add updated chat room at top
+                add(
+                    ChatRoomResponse.Data.ChatRoom(
+                        chatRoom = updatedChatRoom,
+                        otherUser = otherUser
+                    )
+                )
+
+                // Add rest, excluding old version
+                for (chatRoom in oldList) {
+                    if (chatRoom.chatRoom?.id != updatedChatRoom.id) {
+                        add(chatRoom)
+                    }
                 }
-
-                if (index != -1) {
-                    mutableList.removeAt(index)
-                }
-
-                // Insert at top
-                mutableList.add(0, updatedChatRoom)
-
-                mutableList
             }
         }
     }
+
 
     private fun applyFetchMessages(messages: FetchMessageResponse?) {
         val messageList = messages?.chatMessage?.results ?: return
@@ -166,13 +171,18 @@ class ChatRepository(
     }
 
 
-    fun prependMessage(message: ChatMessage?, updatedChatRoom: ChatRoomResponse.Data.ChatRoom?) {
+    fun prependMessage(
+        message: ChatMessage?,
+        updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?
+    ) {
         val id = message?.id ?: return
 
         messageMap.update { oldMap ->
             // Put the new message first, then the old ones
             (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
+
+        AppLogger.log("Message send/receive event.. updating chatRoom now.")
         updateChatRoomOnMessage(updatedChatRoom = updatedChatRoom)
 
     }
@@ -189,7 +199,7 @@ class ChatRepository(
 
     private fun replaceLocalMediaMessage(
         message: ChatMessage,
-        updatedChatRoom: ChatRoomResponse.Data.ChatRoom?
+        updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?
     ) {
         message.id ?: return
 
@@ -312,12 +322,6 @@ class ChatRepository(
         }
     }
 
-    fun updateChatRooms(chatRoomResponse: ChatRoomResponse?) {
-        chatRoomResponse ?: return
-
-        chatRoomLastUpdateAt = chatRoomResponse.data?.nextCursor
-        _chatRooms.value = chatRoomResponse.data?.chatRooms
-    }
 
     suspend fun sendRequest(payload: String?) {
         payload ?: return

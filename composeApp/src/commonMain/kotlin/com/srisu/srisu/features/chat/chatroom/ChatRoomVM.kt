@@ -167,12 +167,12 @@ class ChatViewModel(
             action = SEND_MESSAGE,
             text = "",
             senderId = chatState.value.session?.id,
-            receiverId = 95,
+            receiverId = 97,
             couple = 2,
             reactions = null,
             deleteFor = null,
             messageDeletionDict = null,
-            chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+            chatRoom = "bba87218-0780-4df9-aa8d-a69485b9f5c5",
             messageType = IMAGE,
             uploadingPhotos = listOfMedia?.map {
                 ChatMessage.UploadingPhoto(
@@ -356,8 +356,8 @@ class ChatViewModel(
                     action = SEND_MESSAGE,
                     text = text,
                     senderId = chatState.value.session?.id,
-                    receiverId = 95,
-                    couple = 2,
+                    receiverId = 97,
+                    singles = 54,
                     reactions = null,
                     deleteFor = null,
                     messageDeletionDict = null,
@@ -400,7 +400,7 @@ class ChatViewModel(
                     text = "",
                     senderId = chatState.value.session?.id,
                     receiverId = 97,
-                    couple = 2,
+                    singles = 54,
                     reactions = null,
                     deleteFor = null,
                     messageDeletionDict = null,
@@ -437,7 +437,7 @@ class ChatViewModel(
                     text = text,
                     senderId = chatState.value.session?.id,
                     receiverId = 97,
-                    couple = 2,
+                    singles = 54,
                     chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
                     messageType = "text"
                 )
@@ -586,21 +586,5 @@ class ChatViewModel(
         return mediaFile
     }
 
-    private fun getChatRooms(lastUpdatedAt: String? = null) {
-        try {
-            viewModelScope.launch {
-                val chatRoomDTO = ChatRoomDTO(
-                    action = GET_CHAT_ROOMS,
-                    limit = 10,
-                    lastUpdated = lastUpdatedAt ?: ""
-                )
-                repository.sendRequest(payload = Json.encodeToString(value = chatRoomDTO))
-            }
-        } catch (_: Exception) {
-            showErrorMessage(errorType = "Error", message = "Something went wrong")
-        }
-
-
-    }
 
 }
