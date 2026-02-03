@@ -12,6 +12,7 @@ import com.srisu.srisu.session.Session
 @Stable
 data class ChatState(
     val session: Session? = null,
+    val chatRoomData: ChatRoomResponse.Data.ChatRoom? = null,
     val messageInput: TextFieldValue = TextFieldValue(),
     val chatMessages: List<ChatMessage?>? = null,
     val selectedMessageForAction: ChatMessage? = null,

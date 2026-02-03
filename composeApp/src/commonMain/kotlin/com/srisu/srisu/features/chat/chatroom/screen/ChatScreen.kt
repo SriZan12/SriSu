@@ -163,15 +163,16 @@ typealias messageId = Long?
 @Composable
 fun ChatScreen(
     session: Session?,
-    navController: NavController,
     viewModel: ChatViewModel = koinViewModel(),
+    chatRoomData: String?
 ) {
 
     val chatState by viewModel.chatState.collectAsState()
 
     ChatInitialization(
         session = session,
-        viewModel = viewModel
+        viewModel = viewModel,
+        chatRoomData = chatRoomData
     )
 
     HandleUiStates(
@@ -191,10 +192,12 @@ fun ChatScreen(
 @Composable
 private fun ChatInitialization(
     session: Session?,
-    viewModel: ChatViewModel
+    viewModel: ChatViewModel,
+    chatRoomData: String? = null
 ) {
     LaunchedEffect(Unit) {
         viewModel.updateSession(session = session)
+        viewModel.setChatRoomData(chatRoomData = chatRoomData)
     }
 }
 

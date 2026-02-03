@@ -79,7 +79,11 @@ class ChatRepository(
                     is ChatRoomEvent.MessageEdited -> updateMessage(event.message)
                     is ChatRoomEvent.MessageDeleted -> deleteMessage(message = event.message)
                     is ChatRoomEvent.MessageTyping -> updateTyping(typingResponse = event.typingResponse)
-                    is ChatRoomEvent.MessageRead -> updateMessageRead(messageReadResponse = event.messageReadResponse)
+                    is ChatRoomEvent.MessageRead -> {
+                        updateMessageRead(messageReadResponse = event.messageReadResponse)
+                        updateMessageReadInChatRoom(messageReadResponse = event.messageReadResponse)
+                    }
+
                     is ChatRoomEvent.MessageDelivered -> updateMessageDelivered(
                         messageDeliveredResponse = event.messageDeliveredResponse
                     )
@@ -135,12 +139,41 @@ class ChatRepository(
                     )
                 )
 
-                // Add rest, excluding old version
+//                // Add rest, excluding old version
                 for (chatRoom in oldList) {
                     if (chatRoom.chatRoom?.id != updatedChatRoom.id) {
                         add(chatRoom)
                     }
                 }
+            }
+        }
+    }
+
+    private fun updateMessageReadInChatRoom(
+        messageReadResponse: MessageReadResponse?
+    ) {
+        messageReadResponse ?: return
+
+        val chatRoomId = messageReadResponse.data?.chatRoomId ?: return
+        val currentUserId = SessionUtils().getCurrentUserId()?.toString() ?: return
+
+        _chatRooms.update { chatRooms ->
+            chatRooms.map { item ->
+
+                val chatRoom = item.chatRoom
+
+                if (chatRoom?.id != chatRoomId) {
+                    return@map item
+                }
+
+                val updatedUnreadCount = chatRoom.unreadCount
+                    ?.toMutableMap()
+                    ?.apply { this[currentUserId] = 0 }
+                    ?: mapOf(currentUserId to 0)
+
+                item.copy(
+                    chatRoom = chatRoom.copy(unreadCount = updatedUnreadCount)
+                )
             }
         }
     }
@@ -276,6 +309,7 @@ class ChatRepository(
         }
     }
 
+
     private fun updateMessageDelivered(messageDeliveredResponse: MessageDeliveredResponse?) {
         messageDeliveredResponse?.let { response ->
             val messageDeliveredIds = response.data?.messageIds ?: return
@@ -296,6 +330,10 @@ class ChatRepository(
                 }
             }
         }
+    }
+
+    suspend fun fetchInitialMessages() {
+        webSocketClient.fetchMessages()
     }
 
 

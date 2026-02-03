@@ -3,11 +3,13 @@ package com.srisu.srisu.navigation
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.srisu.srisu.features.chat.chatroom.screen.ChatRoomScreen
 import com.srisu.srisu.features.chat.chatroom.screen.ChatScreen
 import com.srisu.srisu.features.chat.couple.findpartner.FindYourPartnerScreen
 import com.srisu.srisu.session.Session
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 sealed class ChatNav : Route {
 
@@ -15,7 +17,7 @@ sealed class ChatNav : Route {
     data object FindPartnerScreen : ChatNav()
 
     @Serializable
-    data object ChatScreen : ChatNav()
+    data class ChatScreen(val chatRoomData: String?) : ChatNav()
 
     @Serializable
     data object ChatRoomScreen : ChatNav()
@@ -31,18 +33,23 @@ fun NavGraphBuilder.chatGraph(
         FindYourPartnerScreen()
     }
 
-    composable<ChatNav.ChatScreen> {
+    composable<ChatNav.ChatScreen> { backStackEntry ->
+        val chatRoomData = backStackEntry.toRoute<ChatNav.ChatScreen>().chatRoomData
+
         ChatScreen(
             session = session,
-            navController = navController
+            chatRoomData = chatRoomData
         )
     }
 
     composable<ChatNav.ChatRoomScreen> {
         ChatRoomScreen(
             session = session,
-        )
+        ) { chatRoom ->
+            val chatRoomData = Json.encodeToString(chatRoom)
+            navController.navigate(ChatNav.ChatScreen(chatRoomData))
+        }
+
     }
-
-
 }
+

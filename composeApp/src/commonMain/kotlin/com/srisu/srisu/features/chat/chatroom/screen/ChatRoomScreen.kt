@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -44,13 +43,15 @@ import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.SuccessDialog
-import com.srisu.srisu.core.data.apiservice.base.BaseApiService.Companion.BASE_URL
-import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.chatroom.ChatState
 import com.srisu.srisu.features.chat.chatroom.ChatViewModel
 import com.srisu.srisu.session.Session
+import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
+import com.srisu.srisu.utils.DateTimeUtils.getChatTimestamp
+import com.srisu.srisu.utils.DateTimeUtils.getDate
+import com.srisu.srisu.utils.DateTimeUtils.getReadableDate
 import com.srisu.srisu.utils.isInternetAvailable
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -59,7 +60,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun ChatRoomScreen(
     session: Session?,
-    viewModel: ChatViewModel = koinViewModel()
+    viewModel: ChatViewModel = koinViewModel(),
+    onNavigateToChatScreen: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
     val chatState by viewModel.chatState.collectAsState()
 
@@ -76,7 +78,9 @@ fun ChatRoomScreen(
     ChatRoomContent(
         chatState = chatState,
         viewModel = viewModel
-    )
+    ) { chatRoom ->
+        onNavigateToChatScreen(chatRoom)
+    }
 
 }
 
@@ -156,7 +160,8 @@ private fun HandleUiStates(
 @Composable
 private fun ChatRoomContent(
     chatState: ChatState,
-    viewModel: ChatViewModel
+    viewModel: ChatViewModel,
+    onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -174,7 +179,8 @@ private fun ChatRoomContent(
                 me = chatState.session?.id,
                 onFetchChatRoom = {
                     viewModel.fetchNewChatRooms()
-                }
+                },
+                onClickChatRoom = onClickChatRoom
             )
         }
     }
@@ -185,7 +191,8 @@ private fun ChatRoomContent(
 private fun ChatRoomListCompo(
     chatRoomList: List<ChatRoomResponse.Data.ChatRoom?>,
     onFetchChatRoom: () -> Unit,
-    me: Int?
+    me: Int?,
+    onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
     val myId = me?.toString()
     val listState = rememberLazyListState()
@@ -225,7 +232,7 @@ private fun ChatRoomListCompo(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        state = listState
+        state = listState,
     ) {
         items(
             items = chatRoomList,
@@ -235,20 +242,26 @@ private fun ChatRoomListCompo(
             val otherUser = chatRoom?.otherUser
             val room = chatRoom?.chatRoom
 
+            AppLogger.log("UNREAD COUNT = ${room?.unreadCount}")
+
             val unreadCount = myId
                 ?.let { room?.unreadCount?.get(it) }
                 ?.takeIf { it > 0 }
                 ?.toString()
                 .orEmpty()
 
+            val lastMessage =
+                if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
+            val time = getChatTimestamp(room?.lastMessage?.timestamp)
+
             ChatRoomItem(
                 avatarUrl = otherUser?.profilePhoto.orEmpty(),
                 name = otherUser?.fullName.orEmpty(),
-                lastMessage = room?.lastMessage?.text.orEmpty(),
-                time = "Friday",
+                lastMessage = lastMessage,
+                time = time,
                 unreadCount = unreadCount,
                 modifier = Modifier,
-                onClick = {}
+                onClick = { onClickChatRoom(chatRoom) }
             )
 
             HorizontalDivider()
@@ -262,7 +275,7 @@ fun ChatRoomItem(
     avatarUrl: String?,
     name: String?,
     lastMessage: String,
-    time: String,
+    time: String?,
     unreadCount: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
@@ -320,11 +333,13 @@ fun ChatRoomItem(
         Column(
             horizontalAlignment = Alignment.End
         ) {
-            Text(
-                text = time,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
+            if (!time.isNullOrEmpty()) {
+                Text(
+                    text = time,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
 
             if (unreadCount.isNotEmpty()) {
                 AppLogger.log("UnRead count = $unreadCount")

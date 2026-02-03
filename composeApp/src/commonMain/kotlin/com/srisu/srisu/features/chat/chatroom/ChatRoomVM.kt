@@ -12,6 +12,7 @@ import com.srisu.srisu.core.data.dto.chatdto.ReactToMessageDTO
 import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
 import com.srisu.srisu.core.data.dto.chatdto.UploadState
 import com.srisu.srisu.core.data.repository.chat.ChatRepository
+import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -51,7 +53,6 @@ class ChatViewModel(
 
     init {
         observeChatRoom()
-        updateChatMessages()
         updateChatRooms()
 
     }
@@ -126,14 +127,13 @@ class ChatViewModel(
     }
 
 
-    fun updateChatMessages() {
-        viewModelScope.launch {
-            repository.messages.collect { messages ->
-                _chatState.update {
-                    it.copy(chatMessages = messages)
-                }
+    suspend fun updateChatMessages() {
+        repository.messages.collect { messages ->
+            _chatState.update {
+                it.copy(chatMessages = messages)
             }
         }
+
     }
 
     fun setReplyMessage(chatMessage: ChatMessage?, isOn: Boolean) {
@@ -167,8 +167,8 @@ class ChatViewModel(
             action = SEND_MESSAGE,
             text = "",
             senderId = chatState.value.session?.id,
-            receiverId = 97,
-            couple = 2,
+            receiverId = 95,
+            singles = 54,
             reactions = null,
             deleteFor = null,
             messageDeletionDict = null,
@@ -243,6 +243,22 @@ class ChatViewModel(
         }
     }
 
+    fun setChatRoomData(chatRoomData: String?) {
+        chatRoomData?.let {
+            val chatRoom = Json.decodeFromString<ChatRoomResponse.Data.ChatRoom>(chatRoomData)
+            _chatState.update {
+                it.copy(chatRoomData = chatRoom)
+            }
+        }
+        viewModelScope.launch {
+            repository.fetchInitialMessages()
+            updateChatMessages()
+
+        }
+
+
+    }
+
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
         this._chatState.value =
             this._chatState.value.copy(
@@ -289,7 +305,7 @@ class ChatViewModel(
             repository.chatRoomsList.collect { chatRoomList ->
                 _chatState.update {
                     AppLogger.log("Updating chatRoomList")
-                    it.copy(chatRoomList = chatRoomList ?: emptyList())
+                    it.copy(chatRoomList = chatRoomList)
                 }
 
 //                AppLogger.log("After updating chatRoom = ${chatState.value.chatRoomList.first()}")
@@ -356,12 +372,12 @@ class ChatViewModel(
                     action = SEND_MESSAGE,
                     text = text,
                     senderId = chatState.value.session?.id,
-                    receiverId = 97,
-                    singles = 54,
+                    receiverId = chatState.value.chatRoomData?.otherUser?.id,
+                    singles = chatState.value.chatRoomData?.chatRoom?.singles,
                     reactions = null,
                     deleteFor = null,
                     messageDeletionDict = null,
-                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
                     messageType = TEXT,
                     replyTo = replyTo
                 )
@@ -399,12 +415,12 @@ class ChatViewModel(
                     action = SEND_MESSAGE,
                     text = "",
                     senderId = chatState.value.session?.id,
-                    receiverId = 97,
-                    singles = 54,
+                    receiverId = chatState.value.chatRoomData?.otherUser?.id,
+                    singles = chatState.value.chatRoomData?.chatRoom?.singles,
                     reactions = null,
                     deleteFor = null,
                     messageDeletionDict = null,
-                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
                     messageType = IMAGE,
                     medias = listOfMedia,
                     replyTo = replyTo
@@ -436,9 +452,9 @@ class ChatViewModel(
                     id = messageId,
                     text = text,
                     senderId = chatState.value.session?.id,
-                    receiverId = 97,
-                    singles = 54,
-                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    receiverId = chatState.value.chatRoomData?.otherUser?.id,
+                    singles = chatState.value.chatRoomData?.chatRoom?.singles,
+                    chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
                     messageType = "text"
                 )
                 repository.sendRequest(
@@ -481,10 +497,11 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
+                AppLogger.log("Sending message read request = ${chatState.value.chatRoomData?.chatRoom?.id}")
                 val readMessagePayload = ChatMessage(
                     action = MESSAGE_READ,
                     user_id = chatState.value.session?.id,
-                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4",
+                    chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
                 )
                 repository.sendRequest(
                     payload = Json.encodeToString(readMessagePayload)
@@ -502,7 +519,7 @@ class ChatViewModel(
                 val deliveredMessagePayload = ChatMessage(
                     action = "message_delivered",
                     user_id = chatState.value.session?.id,
-                    chatRoom = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
+                    chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
                 )
                 repository.sendRequest(
                     payload = Json.encodeToString(deliveredMessagePayload)
