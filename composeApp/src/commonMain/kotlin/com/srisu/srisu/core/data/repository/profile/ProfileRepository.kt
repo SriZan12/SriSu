@@ -38,7 +38,7 @@ class ProfileRepository(
 
     @Throws(Exception::class)
     suspend fun sendUpdateProfileRequest(
-        userId: Int?,
+        userId: Long?,
         profileUpdateDTO: ProfileUpdateDTO,
         profilePhoto: MediaFile?,
         gallery: List<MediaFile?>?

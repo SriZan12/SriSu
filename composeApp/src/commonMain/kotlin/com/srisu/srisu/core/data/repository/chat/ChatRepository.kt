@@ -167,13 +167,27 @@ class ChatRepository(
                 }
 
                 val updatedUnreadCount = chatRoom.unreadCount
-                    ?.toMutableMap()
-                    ?.apply { this[currentUserId] = 0 }
-                    ?: mapOf(currentUserId to 0)
+                    .toMutableMap()
+                    .apply { this[currentUserId] = 0 }
 
                 item.copy(
                     chatRoom = chatRoom.copy(unreadCount = updatedUnreadCount)
                 )
+            }
+        }
+    }
+
+    fun updateTyping(typingResponse: TypingResponse) {
+        val chatRoomId = typingResponse.typingData?.chatRoomId ?: return
+
+        _chatRooms.update { chatRooms ->
+            chatRooms.map { item ->
+                val room = item.chatRoom
+
+                if (room?.id == chatRoomId) {
+                    AppLogger.log("Room id while typing = ${chatRoomId}")
+                    item.copy(chatRoom = room.copy(isTyping = typingResponse))
+                } else item
             }
         }
     }
@@ -277,15 +291,6 @@ class ChatRepository(
 
     }
 
-    private fun updateTyping(typingResponse: TypingResponse) {
-        AppLogger.log("Inside repo updateTyping: $typingResponse")
-        _chatRoom.update { currentRoom ->
-            AppLogger.log("Current room before update: $currentRoom")
-            currentRoom?.copy(
-                isTyping = typingResponse
-            )
-        }
-    }
 
     private fun updateMessageRead(messageReadResponse: MessageReadResponse?) {
         messageReadResponse?.let { response ->
@@ -332,20 +337,21 @@ class ChatRepository(
         }
     }
 
-    suspend fun fetchInitialMessages() {
-        webSocketClient.fetchMessages()
+    suspend fun fetchInitialMessages(chatRoomId: String?) {
+        webSocketClient.fetchMessages(chatRoomId = chatRoomId)
     }
 
 
-    fun fetchOlderMessages() {
+    fun fetchOlderMessages(chatRoomId: String?) {
         if (!hasMore) return
         scope.launch {
             val fetchPayload = FetchMessageDTO(
                 action = FETCH_MESSAGES,
                 page = nextCursor,
-                page_size = 50
+                page_size = 50,
+                chatRoomId = chatRoomId
             )
-            webSocketClient.send(Json.encodeToString(fetchPayload))
+            webSocketClient.send(rawPayload = Json.encodeToString(fetchPayload))
         }
     }
 

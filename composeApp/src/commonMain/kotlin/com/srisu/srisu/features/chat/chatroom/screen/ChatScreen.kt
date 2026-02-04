@@ -56,7 +56,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
@@ -97,7 +96,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -125,7 +123,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import coil3.Uri
 import coil3.compose.AsyncImage
 import coil3.toUri
@@ -151,7 +148,6 @@ import com.srisu.srisu.utils.rememberGalleryManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.collections.emptyList
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -447,7 +443,7 @@ private fun ChatScaffold(
 @Composable
 private fun ChatMessagesList(
     messages: List<ChatMessage?>,
-    currentUserId: Int?,
+    currentUserId: Long?,
     listState: LazyListState,
     selectedMessageId: Long?,
     onMessageLongClick: (Long?, ChatMessage) -> Unit,
@@ -529,7 +525,7 @@ private fun ChatMessagesList(
 @Composable
 private fun AnimatedMessageItem(
     message: ChatMessage,
-    currentUserId: Int?,
+    currentUserId: Long?,
     isOwn: Boolean,
     isActionShown: Boolean,
     onLongClick: () -> Unit,
@@ -598,7 +594,7 @@ private fun AnimatedMessageItem(
 @Composable
 private fun SwipeableMessageCompo(
     message: ChatMessage,
-    currentUserId: Int?,
+    currentUserId: Long?,
     isOwn: Boolean,
     onLongClick: () -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
@@ -661,7 +657,7 @@ private fun SwipeableMessageCompo(
 @Composable
 private fun MessageBubble(
     message: ChatMessage,
-    currentUserId: Int?,
+    currentUserId: Long?,
     isOwn: Boolean,
     onLongClick: () -> Unit,
     onReactionClick: () -> Unit,
@@ -834,7 +830,7 @@ private fun MessageBubble(
 @Composable
 fun PhotoMessageBubble(
     message: ChatMessage,
-    currentUserId: Int?,
+    currentUserId: Long?,
     isOwn: Boolean,
     onLongClick: () -> Unit,
     onReactionClick: () -> Unit,
@@ -1171,7 +1167,7 @@ private fun messageDisplayText(
     deleteEntry: ChatMessage.DeleteMessageAction??,
     isDeletedForEveryone: Boolean,
     messageText: String?,
-    currentUserId: Int?
+    currentUserId: Long?
 ) = if (isDeletedForEveryone) {
     if (deleteEntry?.user_id == currentUserId) {
         "You deleted this message"
@@ -1408,11 +1404,10 @@ private fun ChatTopBar(
 ) {
 
     var chatTopBarSubTitle by remember { mutableStateOf("Online") }
-    val avatarUrl = "https://randomuser.me/api/portraits/men/81.jpg"
+    val avatarUrl = "https://randomuser.me/api/portraits/men/85.jpg"
     val isTyping = chatState.isTyping
 
     LaunchedEffect(key1 = isTyping) {
-        AppLogger.log("Inside launched Effect for typing")
         chatTopBarSubTitle = if (isTyping) {
             "Typing..."
         } else {

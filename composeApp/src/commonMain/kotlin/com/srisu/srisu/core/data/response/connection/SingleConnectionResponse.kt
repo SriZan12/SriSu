@@ -55,7 +55,7 @@ data class SingleConnectionResponse(
             @SerialName("gender")
             val gender: String? = null,
             @SerialName("id")
-            val id: Int? = null,
+            val id: Long? = null,
             @SerialName("is_phone_verified")
             val isPhoneVerified: Boolean? = null,
             @SerialName("is_profile_complete")

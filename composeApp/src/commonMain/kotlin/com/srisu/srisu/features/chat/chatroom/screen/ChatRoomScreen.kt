@@ -191,7 +191,7 @@ private fun ChatRoomContent(
 private fun ChatRoomListCompo(
     chatRoomList: List<ChatRoomResponse.Data.ChatRoom?>,
     onFetchChatRoom: () -> Unit,
-    me: Int?,
+    me: Long?,
     onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
     val myId = me?.toString()
@@ -242,16 +242,40 @@ private fun ChatRoomListCompo(
             val otherUser = chatRoom?.otherUser
             val room = chatRoom?.chatRoom
 
-            AppLogger.log("UNREAD COUNT = ${room?.unreadCount}")
-
             val unreadCount = myId
                 ?.let { room?.unreadCount?.get(it) }
                 ?.takeIf { it > 0 }
                 ?.toString()
                 .orEmpty()
 
-            val lastMessage =
-                if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
+            val typingUsers = room
+                ?.isTyping
+                ?.typingData
+                ?.typingUsers
+                .orEmpty()
+
+            AppLogger.log("Typing users = ${typingUsers}")
+
+            val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
+                userId != me.toString() && isTyping
+            }
+
+            var lastMessage by remember {
+                mutableStateOf(if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty())
+            }
+
+            AppLogger.log("IS typing = $isSomeoneElseTyping")
+
+            LaunchedEffect(key1 = isSomeoneElseTyping) {
+                lastMessage = if (isSomeoneElseTyping) {
+                    AppLogger.log("Yes someone is typing")
+                    "Typing..."
+                } else {
+                    if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
+                }
+            }
+//
+//
             val time = getChatTimestamp(room?.lastMessage?.timestamp)
 
             ChatRoomItem(

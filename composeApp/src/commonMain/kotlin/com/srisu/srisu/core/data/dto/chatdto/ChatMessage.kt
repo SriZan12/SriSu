@@ -21,7 +21,7 @@ data class ChatMessage(
     @SerialName("id")
     val id: Long? = null,
     @SerialName("user_id")
-    val user_id: Int? = null,
+    val user_id: Long? = null,
 
     // Chat info
     @SerialName("chat_room")
@@ -35,10 +35,10 @@ data class ChatMessage(
 
     // Sender / receiver
     @SerialName("sender_id")
-    val senderId: Int? = null,
+    val senderId: Long? = null,
 
     @SerialName("receiver_id")
-    val receiverId: Int? = null,
+    val receiverId: Long? = null,
 
     // Message content
     @SerialName("message_type")
@@ -112,7 +112,7 @@ data class ChatMessage(
         @SerialName("text")
         val text: String? = null,
         @SerialName("sender_id")
-        val senderId: Int? = null,
+        val senderId: Long? = null,
         @SerialName("message_type")
         val messageType: String? = null
 
@@ -123,7 +123,7 @@ data class ChatMessage(
         @SerialName("delete_option")
         val option: String? = null,
         @SerialName("user_id")
-        val user_id: Int? = null,
+        val user_id: Long? = null,
         @SerialName("delete_message")
         val delete_message: String? = null
     )

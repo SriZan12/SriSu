@@ -1,6 +1,5 @@
 package com.srisu.srisu.core.data.websocket.chat
 
-import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
@@ -58,10 +57,8 @@ class ChatWebSocketClient(
     val events: SharedFlow<ChatRoomEvent> = _events.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val roomId = "bba87218-0780-4df9-aa8d-a69485b9f5c5"
-
     private val wsUrl =
-        "ws://$host:$port/ws/chat/$roomId/?token=$userToken"
+        "ws://$host:$port/ws/chat/?token=$userToken"
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _connectionState = MutableSharedFlow<ConnectionState>()
@@ -102,10 +99,8 @@ class ChatWebSocketClient(
                     _events.emit(ChatRoomEvent.Connected(roomId))
                     AppLogger.log("WebSocket connected")
 
-
                     // Auto-fetch initial messages on connection
                     getChatRooms()
-                    fetchMessages(page = null, pageSize = 50)
 
                     // Read incoming messages
                     readLoop()
@@ -269,12 +264,13 @@ class ChatWebSocketClient(
         }
     }
 
-    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50) {
+    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50, chatRoomId: String?) {
         try {
             val fetchMessage = FetchMessageDTO(
                 action = FETCH_MESSAGES,
                 page = page?.toLong(),
-                page_size = pageSize
+                page_size = pageSize,
+                chatRoomId = chatRoomId
             )
             val payload = Json.encodeToString(FetchMessageDTO.serializer(), fetchMessage)
             currentSession?.outgoing?.send(Frame.Text(payload))

@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
-import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.ReactToMessageDTO
 import com.srisu.srisu.core.data.dto.chatdto.TypingRequest
 import com.srisu.srisu.core.data.dto.chatdto.UploadState
@@ -16,7 +15,6 @@ import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
-import com.srisu.srisu.utils.Constants.ChatConstants.GET_CHAT_ROOMS
 import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.SEND_MESSAGE
@@ -29,12 +27,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlin.collections.any
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.orEmpty
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
@@ -52,9 +51,7 @@ class ChatViewModel(
 
 
     init {
-        observeChatRoom()
         updateChatRooms()
-
     }
 
 
@@ -104,7 +101,8 @@ class ChatViewModel(
         val payload = TypingRequest(
             action = TYPING,
             isTyping = isTyping,
-            userId = userId
+            userId = userId,
+            chat_room_id = chatState.value.chatRoomData?.chatRoom?.id
         )
 
         val encodedPayload = Json.encodeToString(payload)
@@ -191,7 +189,11 @@ class ChatViewModel(
         )
     }
 
-    fun updateShowImageScreen(show: Boolean, startingIndex: Int, images: List<ChatMessage.Media?>) {
+    fun updateShowImageScreen(
+        show: Boolean,
+        startingIndex: Int,
+        images: List<ChatMessage.Media?>
+    ) {
 
         val imageList = images.map { it?.mediaUrl }
 
@@ -251,7 +253,7 @@ class ChatViewModel(
             }
         }
         viewModelScope.launch {
-            repository.fetchInitialMessages()
+            repository.fetchInitialMessages(chatRoomId = chatState.value.chatRoomData?.chatRoom?.id)
             updateChatMessages()
 
         }
@@ -280,10 +282,10 @@ class ChatViewModel(
     }
 
     /*
-        private fun isInternetAvailable(): Boolean {
-            return connectivityObserver.isConnected.value
-        }
-    */
+    private fun isInternetAvailable(): Boolean {
+        return connectivityObserver.isConnected.value
+    }
+*/
 
     private fun showNoInternetConnection(isOffline: Boolean) {
         this._chatState.value =
@@ -303,47 +305,46 @@ class ChatViewModel(
     private fun updateChatRooms() {
         viewModelScope.launch {
             repository.chatRoomsList.collect { chatRoomList ->
-                _chatState.update {
-                    AppLogger.log("Updating chatRoomList")
-                    it.copy(chatRoomList = chatRoomList)
+
+                val chatRoomData = chatRoomList.find { chatRoom ->
+                    chatRoom.chatRoom?.id == chatState.value.chatRoomData?.chatRoom?.id
                 }
 
-//                AppLogger.log("After updating chatRoom = ${chatState.value.chatRoomList.first()}")
-            }
-
-        }
-    }
-
-
-    private fun observeChatRoom() {
-        viewModelScope.launch {
-
-            repository.chatRoom.collect { room ->
-
+                val room = chatRoomData?.chatRoom
                 val myUserId = chatState.value.session?.id ?: return@collect
 
-                val typingUsers = room
-                    ?.isTyping
-                    ?.typingData
-                    ?.typingUsers
-                    .orEmpty()
 
 
-                val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
-                    userId != myUserId.toString() && isTyping
-                }
 
-                _chatState.update { state ->
-                    state.copy(
+                _chatState.update {
+                    it.copy(
+                        chatRoomList = chatRoomList,
                         typingResponse = room?.isTyping,
-                        isTyping = isSomeoneElseTyping
+                        isTyping = isTyping(room = room, myUserId = myUserId)
                     )
                 }
             }
 
-
         }
     }
+
+    fun isTyping(
+        room: ChatRoomResponse.Data.ChatRoom.ChatRoom?,
+        myUserId: Long?
+    ): Boolean {
+        val typingUsers = room
+            ?.isTyping
+            ?.typingData
+            ?.typingUsers
+            .orEmpty()
+
+        val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
+            userId != myUserId.toString() && isTyping
+        }
+
+        return isSomeoneElseTyping
+    }
+
 
 
     /**
@@ -553,7 +554,7 @@ class ChatViewModel(
     }
 
     fun fetchOlderMessages() {
-        repository.fetchOlderMessages()
+        repository.fetchOlderMessages(chatRoomId = chatState.value.chatRoomData?.chatRoom?.id)
     }
 
     fun fetchNewChatRooms() {
@@ -602,6 +603,7 @@ class ChatViewModel(
 
         return mediaFile
     }
-
-
 }
+
+
+

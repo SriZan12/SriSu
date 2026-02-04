@@ -31,7 +31,7 @@ data class Session(
     @SerialName("gender")
     val gender: String? = null,
     @SerialName("id")
-    val id: Int? = null,
+    val id: Long? = null,
     @SerialName("is_active")
     val isActive: Boolean? = null,
     @SerialName("is_phone_verified")
@@ -68,7 +68,7 @@ data class Session(
     val bio: String? = null,
 )
 
-fun User.toSession(access: String?, refresh: String?,id: Int?): Session {
+fun User.toSession(access: String?, refresh: String?,id: Long?): Session {
     return Session(
         access = access,
         refresh = refresh,
