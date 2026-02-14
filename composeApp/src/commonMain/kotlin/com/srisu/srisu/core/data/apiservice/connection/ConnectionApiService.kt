@@ -6,7 +6,7 @@ import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.network.safeRequest
 import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
-import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
+import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
 import io.ktor.client.HttpClient
@@ -83,9 +83,9 @@ class ConnectionApiService(private val httpClient: HttpClient) {
     suspend fun getSentLoveRequests(
         pageSize: Int,
         page: Int,
-    ): ResultHandler<LoveRequestResponse?> {
+    ): ResultHandler<CoupleConnectionRequestResponse?> {
 
-        return httpClient.safeRequest<LoveRequestResponse?> {
+        return httpClient.safeRequest<CoupleConnectionRequestResponse?> {
             url("${BASE_URL}api/social/couple-connection/sent-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)
@@ -96,9 +96,9 @@ class ConnectionApiService(private val httpClient: HttpClient) {
     suspend fun getLoveRequests(
         page: Int,
         pageSize: Int
-    ): ResultHandler<LoveRequestResponse?> {
+    ): ResultHandler<CoupleConnectionRequestResponse?> {
 
-        return httpClient.safeRequest<LoveRequestResponse?> {
+        return httpClient.safeRequest<CoupleConnectionRequestResponse?> {
             url("${BASE_URL}api/social/couple-connection/received-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)

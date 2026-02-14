@@ -13,20 +13,22 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.srisu.srisu.components.CommonTabPager
 import com.srisu.srisu.features.home.connection.common.ConnectionToolBar
-import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.state.LoveRequestListState
-import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.vm.LoveRequestViewModel
+import com.srisu.srisu.features.home.connection.coupleconnection.state.CoupleConnectionListState
+import com.srisu.srisu.features.home.connection.coupleconnection.vm.CoupleConnectionViewModel
 import com.srisu.srisu.utils.Constants
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun CoupleConnectionScreen(
-    loveRequestViewModel: LoveRequestViewModel = koinViewModel(),
+    coupleConnectionViewModel: CoupleConnectionViewModel = koinViewModel(),
     onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
-    val loveRequestUiState by loveRequestViewModel.loveRequestListState.collectAsStateWithLifecycle()
+    val loveRequestUiState by coupleConnectionViewModel.coupleConnectionListState.collectAsStateWithLifecycle()
+
+    Initialization(viewModel = coupleConnectionViewModel)
 
     LoveRequestContent(
-        loveRequestViewModel = loveRequestViewModel,
+        coupleConnectionViewModel = coupleConnectionViewModel,
         loveRequestUiState = loveRequestUiState,
         onNavigateToProfile = { userProfileData ->
             onNavigateToProfile(userProfileData)
@@ -35,9 +37,17 @@ fun CoupleConnectionScreen(
 }
 
 @Composable
+private fun Initialization(
+    viewModel: CoupleConnectionViewModel
+) {
+    viewModel.getLoveRequestList()
+    viewModel.getSentLoveRequestList()
+}
+
+@Composable
 private fun LoveRequestContent(
-    loveRequestViewModel: LoveRequestViewModel,
-    loveRequestUiState: LoveRequestListState,
+    coupleConnectionViewModel: CoupleConnectionViewModel,
+    loveRequestUiState: CoupleConnectionListState,
     onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
     Scaffold(
@@ -62,7 +72,7 @@ private fun LoveRequestContent(
                 tabItems = tabItems,
                 pagerState = pagerState,
                 onUpdateCurrentTab = {
-                    loveRequestViewModel.updateCurrentTab(it)
+                    coupleConnectionViewModel.updateCurrentTab(it)
                 }
             ) { index ->
 
@@ -71,11 +81,11 @@ private fun LoveRequestContent(
                         LoveRequestListScreen(
                             onNavigateToProfile = { userProfileData ->
                                 val user =
-                                    loveRequestViewModel.getUserProfile(userProfile = userProfileData)
+                                    coupleConnectionViewModel.getUserProfile(userProfile = userProfileData)
                                 onNavigateToProfile(user)
                             },
                             onAcceptLoveRequest = { id, senderNumber, receiverNumber ->
-                                loveRequestViewModel.updateLoveRequest(
+                                coupleConnectionViewModel.updateLoveRequest(
                                     loveRequestId = id,
                                     senderNumber = senderNumber,
                                     receiverNumber = receiverNumber,
@@ -83,14 +93,14 @@ private fun LoveRequestContent(
                                 )
                             },
                             onRejectLoveRequest = { id, senderNumber, receiverNumber ->
-                                loveRequestViewModel.updateLoveRequest(
+                                coupleConnectionViewModel.updateLoveRequest(
                                     loveRequestId = id,
                                     senderNumber = senderNumber,
                                     receiverNumber = receiverNumber,
                                     connectionStatus = Constants.ConnectionStatus.REJECTED
                                 )
                             },
-                            loveRequestList = loveRequestViewModel.loveRequests
+                            loveRequestList = coupleConnectionViewModel.loveRequests
                         )
                     }
 
@@ -98,18 +108,18 @@ private fun LoveRequestContent(
                         LoveRequestSentListScreen(
                             onNavigateToProfile = { userProfileData ->
                                 val user =
-                                    loveRequestViewModel.getUserProfile(userProfile = userProfileData)
+                                    coupleConnectionViewModel.getUserProfile(userProfile = userProfileData)
                                 onNavigateToProfile(user)
                             },
                             onCancelLoveRequest = { id, senderNumber, receiverNumber ->
-                                loveRequestViewModel.updateLoveRequest(
+                                coupleConnectionViewModel.updateLoveRequest(
                                     loveRequestId = id,
                                     senderNumber = senderNumber,
                                     receiverNumber = receiverNumber,
                                     connectionStatus = Constants.ConnectionStatus.NOTHING
                                 )
                             },
-                            sentLoveRequestList = loveRequestViewModel.sentLoveRequests
+                            sentLoveRequestList = coupleConnectionViewModel.sentLoveRequests
                         )
                     }
                 }

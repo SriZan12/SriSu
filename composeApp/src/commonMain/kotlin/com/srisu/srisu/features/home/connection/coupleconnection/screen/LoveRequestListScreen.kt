@@ -31,7 +31,7 @@ import androidx.paging.PagingData
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
-import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
+import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.common.ConnectionItem
 import com.srisu.srisu.features.home.connection.common.ConnectionShimmerCompo
 import com.srisu.srisu.features.home.connection.common.NoConnectionsFound
@@ -45,10 +45,10 @@ typealias loveRequestId = Int?
 
 @Composable
 fun LoveRequestListScreen(
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
+    onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onAcceptLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
     onRejectLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
-    loveRequestList: StateFlow<PagingData<LoveRequestResponse.Result>>
+    loveRequestList: StateFlow<PagingData<CoupleConnectionRequestResponse.Result>>
 ) {
 
     LoveRequestListContent(
@@ -61,10 +61,10 @@ fun LoveRequestListScreen(
 
 @Composable
 private fun LoveRequestListContent(
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
+    onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onAcceptLoveRequest: (loveRequestId: Int?, senderNumber, receiverNumber) -> Unit,
     onRejectLoveRequest: (loveRequestId: Int?, senderNumber, receiverNumber) -> Unit,
-    loveRequestList: StateFlow<PagingData<LoveRequestResponse.Result>>
+    loveRequestList: StateFlow<PagingData<CoupleConnectionRequestResponse.Result>>
 ) {
     Box(
         modifier = Modifier.fillMaxSize().background(
@@ -119,8 +119,8 @@ private fun LoveRequestListContent(
 @Composable
 private fun LoveRequestListCompo(
     modifier: Modifier = Modifier,
-    loveRequestList: LazyPagingItems<LoveRequestResponse.Result>,
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
+    loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>,
+    onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onAcceptLoveRequest: (loveRequestId: Int?, senderNumber: String?, receiverNumber: String?) -> Unit,
     onRejectLoveRequest: (loveRequestId: Int?, senderNumber: String?, receiverNumber: String?) -> Unit,
 ) {

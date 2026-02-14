@@ -1,12 +1,11 @@
 package com.srisu.srisu.core.data.response.connection
 
 
-import com.srisu.srisu.core.data.response.auth.User
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LoveRequestResponse(
+data class CoupleConnectionRequestResponse(
     @SerialName("count")
     val count: Int? = null,
     @SerialName("next")
@@ -87,7 +86,7 @@ data class LoveRequestResponse(
                 @SerialName("id")
                 val id: Int? = null,
                 @SerialName("interest")
-                val interest: User.UserInterest? = null,
+                val interest: Int? = null,
                 @SerialName("name")
                 val name: String? = null,
                 @SerialName("removed")
