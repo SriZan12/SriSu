@@ -91,8 +91,6 @@ class SingleConnectionViewModel(
 
     init {
         initTabs()
-        getMyCrushList()
-        getCrushOnMeList()
     }
 
 
@@ -182,7 +180,7 @@ class SingleConnectionViewModel(
                         id = it.id,
                         name = it.name,
                         user = it.user,
-                        interest = it.interest?.interest, // map nested interest id
+                        interest = it.interest, // map nested interest id
                         removed = it.removed
                     )
                 }

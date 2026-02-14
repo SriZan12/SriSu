@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.coupleconnection.loverequest.vm
+package com.srisu.srisu.features.home.connection.coupleconnection.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,13 +10,11 @@ import app.cash.paging.filter
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.TabItem
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
-import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
 import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
-import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
-import com.srisu.srisu.features.home.connection.coupleconnection.loverequest.state.LoveRequestListState
+import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.coupleconnection.state.CoupleConnectionListState
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
 import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,19 +31,17 @@ import kotlinx.serialization.json.Json
 import kotlin.collections.contains
 import kotlin.collections.map
 
-class LoveRequestViewModel(
+class CoupleConnectionViewModel(
     private val connectionRepository: ConnectionRepository
 ) : ViewModel() {
 
-    private val _loveRequestListState: MutableStateFlow<LoveRequestListState> =
-        MutableStateFlow(LoveRequestListState())
+    private val _coupleConnectionListState: MutableStateFlow<CoupleConnectionListState> =
+        MutableStateFlow(CoupleConnectionListState())
 
-    val loveRequestListState = _loveRequestListState.asStateFlow()
-
-
+    val coupleConnectionListState = _coupleConnectionListState.asStateFlow()
 
     private fun initTabs() {
-        _loveRequestListState.value = _loveRequestListState.value.copy(
+        _coupleConnectionListState.value = _coupleConnectionListState.value.copy(
             loveRequestTabList = listOf(
                 TabItem(
                     title = "Requests"
@@ -59,23 +55,23 @@ class LoveRequestViewModel(
 
     // Separate flow for crush list paging
     private val sentLoveRequestFlow =
-        MutableStateFlow<PagingData<LoveRequestResponse.Result>>(PagingData.empty())
+        MutableStateFlow<PagingData<CoupleConnectionRequestResponse.Result>>(PagingData.empty())
 
     private val loveRequestFlow =
-        MutableStateFlow<PagingData<LoveRequestResponse.Result>>(PagingData.empty())
+        MutableStateFlow<PagingData<CoupleConnectionRequestResponse.Result>>(PagingData.empty())
 
 
     /*Exposes a reactive PagingData stream of crush list results
     Automatically filters out any items whose IDs are in the cancelledRequestIds set
     Updates in real-time when either the paging data OR the cancelled set changes*/
 
-    val sentLoveRequests: StateFlow<PagingData<LoveRequestResponse.Result>> =
+    val sentLoveRequests: StateFlow<PagingData<CoupleConnectionRequestResponse.Result>> =
         combine(
             // Combine the live paging data stream...
             sentLoveRequestFlow,
 
             // ...with the UI state's cancelled request IDs set
-            _loveRequestListState.map { it.cancelledRequestIds }
+            _coupleConnectionListState.map { it.cancelledRequestIds }
         ) { pagingData, cancelledIds ->
             // Filter out any results whose ID is in the cancelled list
             pagingData.filter { it.id?.toLong() !in cancelledIds }
@@ -92,10 +88,10 @@ class LoveRequestViewModel(
                 initialValue = PagingData.empty()
             )
 
-    val loveRequests: StateFlow<PagingData<LoveRequestResponse.Result>> =
+    val loveRequests: StateFlow<PagingData<CoupleConnectionRequestResponse.Result>> =
         combine(
             loveRequestFlow,
-            _loveRequestListState.map { it.rejectedIds }
+            _coupleConnectionListState.map { it.rejectedIds }
         ) { pagingData, cancelledIds ->
             pagingData.filter { it.id?.toLong() !in cancelledIds }
         }
@@ -107,18 +103,16 @@ class LoveRequestViewModel(
 
     init {
         initTabs()
-        getLoveRequestList()
-        getSentLoveRequestList()
     }
 
     fun updateCurrentTab(tab: TabItem) {
-        _loveRequestListState.value = _loveRequestListState.value.copy(
+        _coupleConnectionListState.value = _coupleConnectionListState.value.copy(
             currentTab = tab
         )
 
     }
 
-    fun LoveRequestResponse.Result.Receiver.toUser(): User {
+    fun CoupleConnectionRequestResponse.Result.Receiver.toUser(): User {
         return User(
             bio = bio,
             city = city,
@@ -141,7 +135,7 @@ class LoveRequestViewModel(
                         id = it.id,
                         name = it.name,
                         user = it.user,
-                        interest = it.interest?.interest, // map nested interest id
+                        interest = it.interest, // map nested interest id
                         removed = it.removed
                     )
                 }
@@ -174,7 +168,7 @@ class LoveRequestViewModel(
                     val resultHandler =
                         connectionRepository.getLoveRequests(pageSize = 20, page = page)
 
-                    var items: List<LoveRequestResponse.Result?> = emptyList()
+                    var items: List<CoupleConnectionRequestResponse.Result?> = emptyList()
 
                     resultHandler.onSuccess { response, _ ->
                         items = response?.results ?: emptyList()
@@ -207,7 +201,7 @@ class LoveRequestViewModel(
                     val resultHandler =
                         connectionRepository.getSentLoveRequests(pageSize = 20, page = page)
 
-                    var items: List<LoveRequestResponse.Result?> = emptyList()
+                    var items: List<CoupleConnectionRequestResponse.Result?> = emptyList()
 
                     resultHandler.onSuccess { response, _ ->
                         items = response?.results ?: emptyList()
@@ -250,7 +244,7 @@ class LoveRequestViewModel(
                         connectionStatus = connectionStatus
                     ),
                 ).onSuccess { _, _ ->
-                    _loveRequestListState.update {
+                    _coupleConnectionListState.update {
                         it.copy(baseUIState = BaseUIState.Success("Request updated successfully"))
                     }
 
@@ -274,23 +268,23 @@ class LoveRequestViewModel(
         }
     }
 
-    fun getUserProfile(userProfile: LoveRequestResponse.Result.Receiver?): String? {
+    fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?): String? {
         return Json.encodeToString(userProfile?.toUser())
     }
 
     private fun markAsAcceptedOrRejected(requestId: Long) {
-        val currentIds = _loveRequestListState.value.rejectedIds
+        val currentIds = _coupleConnectionListState.value.rejectedIds
         if (requestId !in currentIds) {
-            _loveRequestListState.update { state ->
+            _coupleConnectionListState.update { state ->
                 state.copy(rejectedIds = state.rejectedIds + requestId)
             }
         }
     }
 
     private fun markAsCancelled(requestId: Long) {
-        val currentIds = _loveRequestListState.value.cancelledRequestIds
+        val currentIds = _coupleConnectionListState.value.cancelledRequestIds
         if (requestId !in currentIds) {
-            _loveRequestListState.update { state ->
+            _coupleConnectionListState.update { state ->
                 state.copy(cancelledRequestIds = state.cancelledRequestIds + requestId)
             }
         }
@@ -318,7 +312,7 @@ class LoveRequestViewModel(
         message: String,
         errorType: String
     ) {
-        _loveRequestListState.update { state ->
+        _coupleConnectionListState.update { state ->
             state.copy(
                 cancelledRequestIds = state.cancelledRequestIds - requestId,
                 baseUIState = BaseUIState.Error(
@@ -334,7 +328,7 @@ class LoveRequestViewModel(
         message: String,
         errorType: String
     ) {
-        _loveRequestListState.update { state ->
+        _coupleConnectionListState.update { state ->
             state.copy(
                 rejectedIds = state.rejectedIds - requestId,
                 baseUIState = BaseUIState.Error(

@@ -82,7 +82,7 @@ data class SingleConnectionResponse(
                 @SerialName("id")
                 val id: Int? = null,
                 @SerialName("interest")
-                val interest: User.UserInterest? = null,
+                val interest: Int? = null,
                 @SerialName("name")
                 val name: String? = null,
                 @SerialName("removed")

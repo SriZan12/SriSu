@@ -29,7 +29,7 @@ import app.cash.paging.PagingData
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
-import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
+import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.common.ConnectionItem
 import com.srisu.srisu.features.home.connection.common.ConnectionShimmerCompo
 import com.srisu.srisu.features.home.connection.common.NoConnectionsFound
@@ -38,9 +38,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun LoveRequestSentListScreen(
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
+    onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onCancelLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
-    sentLoveRequestList: StateFlow<PagingData<LoveRequestResponse.Result>>
+    sentLoveRequestList: StateFlow<PagingData<CoupleConnectionRequestResponse.Result>>
 ) {
     LoveRequestSentListContent(
         onNavigateToProfile = onNavigateToProfile,
@@ -51,9 +51,9 @@ fun LoveRequestSentListScreen(
 
 @Composable
 private fun LoveRequestSentListContent(
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
+    onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onCancelLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
-    sentLoveRequestList: StateFlow<PagingData<LoveRequestResponse.Result>>,
+    sentLoveRequestList: StateFlow<PagingData<CoupleConnectionRequestResponse.Result>>,
 ) {
     Box(
         modifier = Modifier.fillMaxSize()
@@ -106,8 +106,8 @@ private fun LoveRequestSentListContent(
 @Composable
 private fun LoveRequestSentListCompo(
     modifier: Modifier = Modifier,
-    sentLoveRequestList: LazyPagingItems<LoveRequestResponse.Result>,
-    onNavigateToProfile: (userProfileData: LoveRequestResponse.Result.Receiver?) -> Unit,
+    sentLoveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>,
+    onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onCancelCrushRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit
 ) {
 

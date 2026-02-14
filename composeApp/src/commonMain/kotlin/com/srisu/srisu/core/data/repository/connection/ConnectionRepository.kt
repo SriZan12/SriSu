@@ -5,7 +5,7 @@ import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
 import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
-import com.srisu.srisu.core.data.response.connection.LoveRequestResponse
+import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
@@ -41,7 +41,7 @@ class ConnectionRepository(
     suspend fun getSentLoveRequests(
         pageSize: Int,
         page: Int
-    ): ResultHandler<LoveRequestResponse?> {
+    ): ResultHandler<CoupleConnectionRequestResponse?> {
         return connectionApiService.getSentLoveRequests(
             pageSize = pageSize,
             page = page
@@ -51,7 +51,7 @@ class ConnectionRepository(
     suspend fun getLoveRequests(
         pageSize: Int,
         page: Int
-    ): ResultHandler<LoveRequestResponse?> {
+    ): ResultHandler<CoupleConnectionRequestResponse?> {
         return connectionApiService.getLoveRequests(
             pageSize = pageSize,
             page = page
