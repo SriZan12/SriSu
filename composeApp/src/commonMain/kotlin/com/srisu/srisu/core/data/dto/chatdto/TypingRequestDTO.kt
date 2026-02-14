@@ -10,5 +10,7 @@ data class TypingRequest(
     @SerialName("is_typing")
     val isTyping: Boolean,
     @SerialName("user_id")
-    val userId: Int
+    val userId: Long,
+    @SerialName("chat_room_id")
+    val chat_room_id: String?
 )

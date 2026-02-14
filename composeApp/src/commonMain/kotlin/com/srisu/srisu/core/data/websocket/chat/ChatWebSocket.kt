@@ -1,6 +1,8 @@
 package com.srisu.srisu.core.data.websocket.chat
 
+import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
+import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.data.response.chat.FetchMessageResponse
 import com.srisu.srisu.core.data.response.chat.MessageDeliveredResponse
 import com.srisu.srisu.core.data.response.chat.MessageReadResponse
@@ -10,6 +12,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.EDIT_MESSAGE
 import com.srisu.srisu.utils.Constants.ChatConstants.FETCH_MESSAGES
+import com.srisu.srisu.utils.Constants.ChatConstants.GET_CHAT_ROOMS
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_DELIVERED
 import com.srisu.srisu.utils.Constants.ChatConstants.MESSAGE_READ
 import com.srisu.srisu.utils.Constants.ChatConstants.REACT_TO_MESSAGE
@@ -47,21 +50,16 @@ class ChatWebSocketClient(
     userToken: String?
 ) {
 
-    private val _events = MutableSharedFlow<ChatEvent>(
+    private val _events = MutableSharedFlow<ChatRoomEvent>(
         extraBufferCapacity = 64,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-    val events: SharedFlow<ChatEvent> = _events.asSharedFlow()
+    val events: SharedFlow<ChatRoomEvent> = _events.asSharedFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val roomId = "7fe512b9-548b-4a21-93cd-0a25d1aed5b4"
-
     private val wsUrl =
-        "ws://$host:$port/ws/chat/$roomId/?token=$userToken"
+        "ws://$host:$port/ws/chat/?token=$userToken"
     private val json = Json { ignoreUnknownKeys = true }
-
-    private val _connectionState = MutableSharedFlow<ConnectionState>()
-    val connectionState = _connectionState.asSharedFlow()
 
     @Volatile
     private var isRunning = false
@@ -70,7 +68,7 @@ class ChatWebSocketClient(
     private var currentSession: DefaultClientWebSocketSession? = null
 
 
-    fun connect(roomId: String) {
+    fun connect() {
         if (isRunning) {
             AppLogger.log("WebSocket already running")
             return
@@ -78,13 +76,12 @@ class ChatWebSocketClient(
         isRunning = true
 
         scope.launch {
-            _connectionState.emit(ConnectionState.Connecting)
-            connectionLoop(roomId = roomId)
+            connectionLoop()
         }
 
     }
 
-    private suspend fun connectionLoop(roomId: String) {
+    private suspend fun connectionLoop() {
         var backoff = 1.seconds
         val maxBackoff = 30.seconds
 
@@ -94,26 +91,22 @@ class ChatWebSocketClient(
                     currentSession = this
                     backoff = 1.seconds
 
-                    _connectionState.emit(ConnectionState.Connected)
-                    _events.emit(ChatEvent.Connected(roomId))
+                    _events.emit(ChatRoomEvent.Connected)
                     AppLogger.log("WebSocket connected")
 
-
                     // Auto-fetch initial messages on connection
-                    fetchMessages(page = null, pageSize = 50)
+                    getChatRooms()
 
                     // Read incoming messages
                     readLoop()
                 }
             } catch (e: Exception) {
                 AppLogger.log("WebSocket error: ${e.message}")
-                _connectionState.emit(ConnectionState.Error(e.message ?: "Unknown error"))
             }
 
             if (!isRunning) break
 
             // Reconnect with exponential backoff
-            _connectionState.emit(ConnectionState.Reconnecting)
             AppLogger.log("Reconnecting in $backoff...")
             delay(backoff)
             backoff = (backoff * 2).coerceAtMost(maxBackoff)
@@ -132,7 +125,6 @@ class ChatWebSocketClient(
                     is Frame.Close -> {
                         val reason = frame.readReason()
                         AppLogger.log("WebSocket closed: ${reason?.message}")
-                        _connectionState.emit(ConnectionState.Disconnected)
                         break
                     }
 
@@ -143,7 +135,6 @@ class ChatWebSocketClient(
             }
         } catch (e: Exception) {
             AppLogger.log("Read loop error: ${e.message}")
-            _connectionState.emit(ConnectionState.Error(e.message ?: "Read error"))
         }
     }
 
@@ -153,8 +144,7 @@ class ChatWebSocketClient(
         scope.launch {
             currentSession?.close(CloseReason(CloseReason.Codes.NORMAL, "Client disconnected"))
             currentSession = null
-            _connectionState.emit(ConnectionState.Disconnected)
-            _events.emit(ChatEvent.Disconnected(reason))
+            _events.emit(ChatRoomEvent.Disconnected(reason))
 
         }
     }
@@ -177,13 +167,18 @@ class ChatWebSocketClient(
 
                 FETCH_MESSAGES -> {
                     val response = json.decodeFromString(FetchMessageResponse.serializer(), raw)
-                    _events.emit(value = ChatEvent.FetchMessages(messages = response))
+                    _events.emit(value = ChatRoomEvent.FetchMessages(messages = response))
                 }
 
                 SEND_MESSAGE -> {
                     val response = json.decodeFromString(MessageResponse.serializer(), raw)
-                    response.data?.let { chatMessage ->
-                        _events.emit(value = ChatEvent.SendMessage(chatMessage))
+                    response.let { chatMessage ->
+                        _events.emit(
+                            value = ChatRoomEvent.SendMessage(
+                                message = chatMessage.data,
+                                updatedChatRoom = chatMessage.updatedChatRoom
+                            )
+                        )
                     }
                 }
 
@@ -196,7 +191,7 @@ class ChatWebSocketClient(
                     response.data?.let { editedMessage ->
                         AppLogger.log("Message edited: $editedMessage")
 
-                        _events.emit(value = ChatEvent.MessageEdited(editedMessage))
+                        _events.emit(value = ChatRoomEvent.MessageEdited(editedMessage))
                     }
                 }
 
@@ -208,25 +203,25 @@ class ChatWebSocketClient(
                     )
 
                     response.data?.let { deletedMessage ->
-                        _events.emit(value = ChatEvent.MessageDeleted(message = deletedMessage))
+                        _events.emit(value = ChatRoomEvent.MessageDeleted(message = deletedMessage))
                     }
                 }
 
                 TYPING -> {
                     val typingResponse = json.decodeFromString(TypingResponse.serializer(), raw)
-                    _events.emit(ChatEvent.MessageTyping(typingResponse = typingResponse))
+                    _events.emit(ChatRoomEvent.MessageTyping(typingResponse = typingResponse))
                 }
 
                 MESSAGE_READ -> {
                     val messageReadResponse =
                         json.decodeFromString(MessageReadResponse.serializer(), raw)
-                    _events.emit(ChatEvent.MessageRead(messageReadResponse = messageReadResponse))
+                    _events.emit(ChatRoomEvent.MessageRead(messageReadResponse = messageReadResponse))
                 }
 
                 MESSAGE_DELIVERED -> {
                     val messageDeliveredResponse =
                         json.decodeFromString(MessageDeliveredResponse.serializer(), raw)
-                    _events.emit(ChatEvent.MessageDelivered(messageDeliveredResponse = messageDeliveredResponse))
+                    _events.emit(ChatRoomEvent.MessageDelivered(messageDeliveredResponse = messageDeliveredResponse))
                 }
 
                 REACT_TO_MESSAGE -> {
@@ -235,8 +230,18 @@ class ChatWebSocketClient(
                         raw
                     )
 
-                    _events.emit(ChatEvent.ReactToMessage(reactToMessage = reactToMessageResponse.data))
+                    _events.emit(ChatRoomEvent.ReactToMessage(reactToMessage = reactToMessageResponse.data))
                 }
+
+                GET_CHAT_ROOMS -> {
+                    val chatRoomResponse = json.decodeFromString(
+                        deserializer = ChatRoomResponse.serializer(),
+                        string = raw
+                    )
+
+                    _events.emit(ChatRoomEvent.GetChatRooms(chatRoomResponse))
+                }
+
 
                 else -> {
                     AppLogger.log("Unknown action: $action")
@@ -245,16 +250,17 @@ class ChatWebSocketClient(
 
         } catch (e: Exception) {
             AppLogger.log("Error handling incoming message: ${e.message}")
-            _events.emit(ChatEvent.Error(e))
+            _events.emit(ChatRoomEvent.Error(e))
         }
     }
 
-    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50) {
+    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50, chatRoomId: String?) {
         try {
             val fetchMessage = FetchMessageDTO(
                 action = FETCH_MESSAGES,
                 page = page?.toLong(),
-                page_size = pageSize
+                page_size = pageSize,
+                chatRoomId = chatRoomId
             )
             val payload = Json.encodeToString(FetchMessageDTO.serializer(), fetchMessage)
             currentSession?.outgoing?.send(Frame.Text(payload))
@@ -262,5 +268,22 @@ class ChatWebSocketClient(
             AppLogger.log("Error fetching messages: ${e.message}")
             throw e
         }
+    }
+
+    private suspend fun getChatRooms(lastUpdatedAt: String? = null) {
+        try {
+            val chatRoomDTO = ChatRoomDTO(
+                action = GET_CHAT_ROOMS,
+                limit = 10,
+                lastUpdated = lastUpdatedAt ?: ""
+            )
+            send(
+                rawPayload = Json.encodeToString(value = chatRoomDTO),
+            )
+        } catch (exception: Exception) {
+            AppLogger.log("Something went wrong = ${exception.message}")
+        }
+
+
     }
 }

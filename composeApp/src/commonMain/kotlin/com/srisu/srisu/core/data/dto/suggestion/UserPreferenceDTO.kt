@@ -24,5 +24,5 @@ data class UserPreferenceDTO(
     @SerialName("radius_km")
     val radiusKm: Int? = null,
     @SerialName("user")
-    val user: Int? = null
+    val user: Long? = null
 )

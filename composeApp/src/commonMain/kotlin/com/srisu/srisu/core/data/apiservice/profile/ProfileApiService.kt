@@ -44,7 +44,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
     }
 
     suspend fun sendUpdateProfileRequest(
-        userId: Int?,
+        userId: Long?,
         profileUpdateDTO: ProfileUpdateDTO,
         mediaFile: MediaFile?,
         gallery: List<MediaFile?>?

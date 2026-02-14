@@ -20,7 +20,7 @@ data class User(
     @SerialName("gender")
     val gender: String? = null,
     @SerialName("id")
-    val id: Int? = null,
+    val id: Long? = null,
     @SerialName("is_active")
     val isActive: Boolean? = null,
     @SerialName("is_phone_verified")

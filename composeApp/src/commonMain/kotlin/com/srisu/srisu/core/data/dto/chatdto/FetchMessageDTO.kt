@@ -10,5 +10,7 @@ data class FetchMessageDTO(
     @SerialName("page")
     val page: Long?,
     @SerialName("page_size")
-    val page_size: Int?
+    val page_size: Int?,
+    @SerialName("chat_room_id")
+    val chatRoomId: String? = null
 )

@@ -1,6 +1,7 @@
 package com.srisu.srisu.core.data.dto.chatdto
 
 import coil3.Uri
+import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -20,7 +21,7 @@ data class ChatMessage(
     @SerialName("id")
     val id: Long? = null,
     @SerialName("user_id")
-    val user_id: Int? = null,
+    val user_id: Long? = null,
 
     // Chat info
     @SerialName("chat_room")
@@ -34,10 +35,10 @@ data class ChatMessage(
 
     // Sender / receiver
     @SerialName("sender_id")
-    val senderId: Int? = null,
+    val senderId: Long? = null,
 
     @SerialName("receiver_id")
-    val receiverId: Int? = null,
+    val receiverId: Long? = null,
 
     // Message content
     @SerialName("message_type")
@@ -103,7 +104,7 @@ data class ChatMessage(
     @SerialName("timestamp")
     val timestamp: String? = null,
 
-    ) {
+) {
     @Serializable
     data class ReplyMessage(
         @SerialName("id")
@@ -111,9 +112,11 @@ data class ChatMessage(
         @SerialName("text")
         val text: String? = null,
         @SerialName("sender_id")
-        val senderId: Int? = null,
+        val senderId: Long? = null,
         @SerialName("message_type")
-        val messageType: String? = null
+        val messageType: String? = null,
+        @SerialName("message_owner_name")
+        val messageOwnerName: String? = null,
 
     )
 
@@ -122,7 +125,7 @@ data class ChatMessage(
         @SerialName("delete_option")
         val option: String? = null,
         @SerialName("user_id")
-        val user_id: Int? = null,
+        val user_id: Long? = null,
         @SerialName("delete_message")
         val delete_message: String? = null
     )

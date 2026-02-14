@@ -5,12 +5,14 @@ import androidx.compose.ui.text.input.TextFieldValue
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
+import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 import com.srisu.srisu.session.Session
 
 @Stable
 data class ChatState(
     val session: Session? = null,
+    val chatRoomData: ChatRoomResponse.Data.ChatRoom? = null,
     val messageInput: TextFieldValue = TextFieldValue(),
     val chatMessages: List<ChatMessage?>? = null,
     val selectedMessageForAction: ChatMessage? = null,
@@ -24,6 +26,8 @@ data class ChatState(
     val selectedPhotos: List<Uri?>? = null,
     val isUploadingPhoto: Boolean = false,
     val showImageScreen: ShowImageScreen = ShowImageScreen(),
+    val chatRoomList: List<ChatRoomResponse.Data.ChatRoom?> = emptyList(),
+    val chatRoomLastUpdatedAt: String?? = null,
     val baseUIState: BaseUIState = BaseUIState.Idle
 
 ) {

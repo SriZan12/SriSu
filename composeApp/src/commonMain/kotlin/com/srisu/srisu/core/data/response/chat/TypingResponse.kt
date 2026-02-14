@@ -17,6 +17,8 @@ data class TypingResponse(
     data class TypingData(
         @SerialName("typing_users")
         val typingUsers: Map<String, Boolean>,
+        @SerialName("chat_room_id")
+        val chatRoomId: String? = null
     )
 }
 
