@@ -25,9 +25,12 @@ import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 class EditProfileViewModel(
@@ -42,11 +45,93 @@ class EditProfileViewModel(
     val editProfileUIState = _editProfileUIState.asStateFlow()
 
     init {
-        setSession()
-        getProfile()
-        getInterestList()
-        loadAllCountries()
+        viewModelScope.launch {
+            val session = loadSession()
+            val countries = loadCountries()
+            val interests = loadInterest()
+            val profile = loadProfile()
+
+            val mergedState = buildInitialState(
+                session = session,
+                profile = profile,
+                countries = countries,
+                interests = interests
+            )
+
+            _editProfileUIState.value = mergedState
+
+        }
     }
+
+
+    private fun loadSession(): Session? {
+        return try {
+            sessionStorage.getSession(SESSION_KEY)
+                ?.let { Json.decodeFromString<Session>(it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun loadCountries(): List<CountryModel> =
+        withContext(Dispatchers.IO) {
+            getAllCountriesFromJson() ?: emptyList()
+        }
+
+    private fun buildInitialState(
+        session: Session?,
+        profile: ProfileResponse?,
+        countries: List<CountryModel>,
+        interests: List<InterestResponse.Interest?>?
+    ): EditProfileUIState {
+
+        val profileData = profile?.toUIModel()
+            ?: session?.toUIModel()
+            ?: UserProfileUIModel()
+
+        val largePhotos = MutableList(2) { index ->
+            profileData.userPhotos?.getOrNull(index)?.let { photo ->
+                GalleyPhotoModel(
+                    id = photo.id,
+                    photoUri = photo.photo?.toUri(),
+                    index = index,
+                    removed = photo.removed ?: false
+                )
+            } ?: GalleyPhotoModel(photoUri = null, index = index)
+        }
+
+        val smallPhotos = MutableList(3) { index ->
+            profileData.userPhotos?.getOrNull(index + 2)?.let { photo ->
+                GalleyPhotoModel(
+                    id = photo.id,
+                    photoUri = photo.photo?.toUri(),
+                    index = index,
+                    removed = photo.removed ?: false
+                )
+            } ?: GalleyPhotoModel(photoUri = null, index = index)
+        }
+
+        return EditProfileUIState(
+            session = session,
+            profileResponse = profile,
+            countryList = countries,
+            interestList = interests,
+            fullName = profileData.fullName.orEmpty(),
+            userName = profileData.username.orEmpty(),
+            bio = profileData.bio,
+            country = Country.getCountryModelFromName(profileData.country),
+            city = profileData.city,
+            currentInterests = profileData.userInterests,
+            profilePictureUri = profileData.profilePhoto?.toUri(),
+            largePhotos = largePhotos,
+            smallPhotos = smallPhotos,
+            baseUIState = BaseUIState.Idle
+        )
+    }
+
+
+
+
 
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
@@ -207,21 +292,22 @@ class EditProfileViewModel(
     }
 
 
-    fun getProfile() {
-        viewModelScope.launch {
+    private suspend fun loadProfile(): ProfileResponse? {
+        return try {
+            var result: ProfileResponse? = null
+
             profileRepository.getProfile()
                 .onSuccess { profileResponse, _ ->
-                    updateProfileResponse(profileResponse = profileResponse)
-                    updateSessionWithCredentials(
-                        access = _editProfileUIState.value.session?.access,
-                        refresh = _editProfileUIState.value.session?.refresh,
-                        userInfo = profileResponse?.user
-                    )
+                    result = profileResponse
                 }
                 .onError { error, errorType ->
-                    showErrorMessage(message = error, errorType = errorType.name)
-                    setUserProfileData() // fallback to session data
+                    showErrorMessage(errorType.name, error)
                 }
+
+            result
+        } catch (e: Exception) {
+            showErrorMessage("Exception", e.message)
+            null
         }
     }
 
@@ -294,14 +380,22 @@ class EditProfileViewModel(
         }
     }
 
-    fun getInterestList() {
-        viewModelScope.launch {
-            profileRepository.getInterestList().onSuccess { interestResponse, message ->
-                updateInterestList(interestList = interestResponse?.interests)
-            }.onError { error, errorType ->
-                showErrorMessage(message = error, errorType = errorType.name)
-                AppLogger.log("Error getting interest list = $error")
-            }
+    private suspend fun loadInterest(): List<InterestResponse.Interest?>? {
+        return try {
+            var result: List<InterestResponse.Interest?>? = null
+
+            profileRepository.getInterestList()
+                .onSuccess { interestResponse, _ ->
+                    result = interestResponse?.interests
+                }
+                .onError { error, errorType ->
+                    showErrorMessage(errorType.name, error)
+                }
+
+            result
+        } catch (e: Exception) {
+            showErrorMessage("Exception", e.message)
+            null
         }
     }
 
@@ -386,17 +480,20 @@ class EditProfileViewModel(
     }
 
     fun setSession() {
-        try {
-            val sessionData = sessionStorage.getSession(SESSION_KEY)
-            var session: Session? = null
-            if (sessionData != null) {
-                session = Json.decodeFromString<Session>(sessionData)
-            }
-            updateSession(session)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val sessionData = sessionStorage.getSession(SESSION_KEY)
+                var session: Session? = null
+                if (sessionData != null) {
+                    session = Json.decodeFromString<Session>(sessionData)
+                }
+                updateSession(session)
 
-        } catch (exception: Exception) {
-            AppLogger.log("Exception = ${exception.message}")
+            } catch (exception: Exception) {
+                AppLogger.log("Exception = ${exception.message}")
+            }
         }
+
 
     }
 }
