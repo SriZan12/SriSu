@@ -133,7 +133,7 @@ fun Initialization(
     editedInterest: List<User.UserInterest?>? = null,
     editProfileViewModel: EditProfileViewModel
 ) {
-    LaunchedEffect(Unit) {
+    LaunchedEffect(editedInterest) {
         if (editedInterest != null) {
             editProfileViewModel.updateCurrentInterests(interests = editedInterest)
         }
@@ -233,8 +233,8 @@ fun EditProfileScreenContent(
             ) {
                 ProfilePictureCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    editProfileViewModel = editProfileViewModel,
-                    editProfileUIState = editProfileUIState
+                    profilePictureUri = editProfileUIState.profilePictureUri,
+                    onUpdateProfilePictureUri = editProfileViewModel::updateProfilePictureUri
                 )
 
                 GeneralInfoCompo(
@@ -246,28 +246,20 @@ fun EditProfileScreenContent(
                     country = editProfileUIState.country,
                     city = editProfileUIState.city,
                     cities = editProfileUIState.cities,
-                    onUpdateFullName = { fullName ->
-                        editProfileViewModel.updateFullName(fullName)
-                    },
-                    onUpdateUserName = { userName ->
-                        editProfileViewModel.updateUserName(userName)
-                    },
-                    onUpdateBio = { bio ->
-                        editProfileViewModel.updateBio(bio)
-
-                    },
+                    onUpdateFullName = editProfileViewModel::updateFullName,
+                    onUpdateUserName = editProfileViewModel::updateUserName,
+                    onUpdateBio = editProfileViewModel::updateBio,
                     onUpdateCountry = { countryModel ->
                         editProfileViewModel.updateCountry(countryModel)
                         editProfileViewModel.updateCity("")
                     },
-                    onUpdateCity = {
-                        editProfileViewModel.updateCity(it)
-                    }
+                    onUpdateCity = editProfileViewModel::updateCity
                 )
 
-                val allInterests =
+                val allInterests = remember(editProfileUIState.currentInterests) {
                     editProfileUIState.currentInterests?.filter { it?.removed == false }
                         ?.map { it?.name }
+                }
 
                 InterestCompo(allInterests = allInterests) {
                     onNavigateInterestScreen(
@@ -360,44 +352,21 @@ fun EditProfileScreenContent(
 @Composable
 private fun ProfilePictureCompo(
     modifier: Modifier = Modifier,
-    editProfileViewModel: EditProfileViewModel,
-    editProfileUIState: EditProfileUIState,
+    profilePictureUri: Uri?,
+    onUpdateProfilePictureUri: (Uri?) -> Unit
 ) {
-    val profilePictureUri = editProfileUIState.profilePictureUri
     var showPermissionDialog by remember { mutableStateOf(false) }
-//    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
-
 
     val permissionManager = createPermissionsManager(object : PermissionCallback {
         override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
             AppLogger.log("INSIDE CALLBACK = $status")
-            when (status) {
-                PermissionState.GRANTED -> {
-//                    permissionState = PermissionState.GRANTED
-                }
-
-                PermissionState.SHOW_RATIONALE -> {
-//                    permissionState = PermissionState.SHOW_RATIONALE
-                }
-
-                PermissionState.DENIED -> {
-//                    permissionState = PermissionState.DENIED
-                }
-
-                PermissionState.NOT_ASKED_YET -> {
-                }
-
-                PermissionState.REQUEST_LAUNCHED -> {
-//                    permissionState = PermissionState.REQUEST_LAUNCHED
-                }
-            }
         }
     })
 
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
             if (!uris.isNullOrEmpty()) {
-                editProfileViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
+                onUpdateProfilePictureUri(uris.firstOrNull()?.toUri())
             }
         },
         mediaType = MediaType.IMAGE_ONLY,
@@ -473,18 +442,14 @@ private fun GeneralInfoCompo(
             label = "Full Name",
             value = fullName ?: "",
             imeAction = ImeAction.Done,
-            onValueChange = {
-                onUpdateFullName(it)
-            }
+            onValueChange = onUpdateFullName
         )
 
         FormFieldCompo(
             label = "Username",
             value = userName ?: "",
             imeAction = ImeAction.Done,
-            onValueChange = {
-                onUpdateUserName(it)
-            }
+            onValueChange = onUpdateUserName
         )
 
 
@@ -493,23 +458,19 @@ private fun GeneralInfoCompo(
             placeholder = "Enter your bio...",
             imeAction = ImeAction.Done,
             value = bio ?: "",
-            onValueChange = { onUpdateBio(it) }
+            onValueChange = onUpdateBio
         )
 
         CountryDropDownCompo(
             selectedCountry = country,
             countryList = countryList,
-            onCountrySelected = {
-                onUpdateCountry(it)
-            }
+            onCountrySelected = onUpdateCountry
         )
 
         CityDropDownCompo(
             modifier = Modifier.fillMaxWidth(),
             selectedCity = city,
-            onCitySelected = {
-                onUpdateCity(it)
-            },
+            onCitySelected = onUpdateCity,
             cityList = cities,
         )
 
@@ -539,9 +500,7 @@ private fun CountryDropDownCompo(
             countryList = countryList,
             option = selectedCountry,
             backgroundColor = MaterialTheme.colorScheme.surface,
-            onOptionSelected = {
-                onCountrySelected(it)
-            },
+            onOptionSelected = onCountrySelected,
             onShowCountryBottomSheetChange = {
                 showCountryBottomSheet = !showCountryBottomSheet
             },
@@ -608,9 +567,7 @@ private fun InterestCompo(
                 label = if (allInterests.isNullOrEmpty()) "Add" else "Edit",
                 textStyle = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary),
                 fontWeight = FontWeight.SemiBold,
-                onClick = {
-                    onEditInterest()
-                }
+                onClick = onEditInterest
             )
 
         }
@@ -622,7 +579,7 @@ private fun InterestCompo(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(items = allInterests ?: emptyList()) { interest ->
+            items(items = allInterests ?: emptyList(), key = { it ?: "" }) { interest ->
                 if (!interest.isNullOrEmpty()) {
                     InterestChip(modifier = Modifier, label = interest)
                 }
@@ -645,9 +602,7 @@ fun InterestChip(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
-        onClick = {
-            onChipClick()
-        }
+        onClick = onChipClick
     ) {
         Text(
             text = label,
@@ -693,9 +648,10 @@ fun GalleryCompo(
                 .height(200.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val photos = largePhotos?.sortedBy { it?.index }
-            AppLogger.log("LARGE PHOTOS SIZE = ${photos?.size}")
-            photos?.forEachIndexed { index, photo ->
+            val sortedLargePhotos = remember(largePhotos) {
+                largePhotos?.sortedBy { it?.index }
+            }
+            sortedLargePhotos?.forEachIndexed { index, photo ->
                 GalleryAddCard(
                     modifier = Modifier
                         .weight(1f)
@@ -703,7 +659,6 @@ fun GalleryCompo(
                     photoUri = photo?.photoUri,
                     onClick = { onAddImageClicked(index, PhotoType.LARGE, photo?.id) },
                     onRemove = {
-                        AppLogger.log("WHILE REMOVING ID = ${photo?.id}")
                         onRemoveImage(index, PhotoType.LARGE, photo?.id)
                     }
                 )
@@ -718,9 +673,10 @@ fun GalleryCompo(
                 .height(120.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val photos = smallPhotos?.sortedBy { it?.index }
-            AppLogger.log("small photos size = ${photos?.size}")
-            photos?.forEachIndexed { index, photo ->
+            val sortedSmallPhotos = remember(smallPhotos) {
+                smallPhotos?.sortedBy { it?.index }
+            }
+            sortedSmallPhotos?.forEachIndexed { index, photo ->
                 GalleryAddCard(
                     modifier = Modifier
                         .weight(1f)
@@ -735,18 +691,6 @@ fun GalleryCompo(
                 )
             }
         }
-
-        /* Spacer(modifier = Modifier.height(12.dp))
-
-         PrimaryTextButton(
-             modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally),
-             label = "View all",
-             textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.primary),
-             fontWeight = FontWeight.SemiBold,
-             onClick = {
-
-             }
-         )*/
     }
 }
 
@@ -803,9 +747,7 @@ fun GalleryAddCard(
 
         if (photoUri != null) {
             IconButton(
-                onClick = {
-                    onRemove()
-                },
+                onClick = onRemove,
 
                 modifier = Modifier
                     .align(Alignment.TopEnd)

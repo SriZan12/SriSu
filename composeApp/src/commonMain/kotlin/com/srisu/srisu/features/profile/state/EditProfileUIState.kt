@@ -37,6 +37,7 @@ data class EditProfileUIState(
     val baseUIState: BaseUIState = BaseUIState.Idle
 )
 
+@Stable
 data class GalleyPhotoModel(
     val id: Int? = null,
     val photoUri: Uri?,
@@ -44,11 +45,13 @@ data class GalleyPhotoModel(
     val index: Int
 )
 
+@Stable
 data class InterestCategoryUI(
     val category: String,
     val interests: List<InterestUI>
 )
 
+@Stable
 data class InterestUI(
     val interestName: String?,
     val id: Int? = null,
@@ -56,6 +59,7 @@ data class InterestUI(
     val category: Int? = null,
 )
 
+@Stable
 data class UserProfileUIModel(
     val fullName: String? = null,
     val username: String? = null,
@@ -88,6 +92,3 @@ fun Session?.toUIModel() = UserProfileUIModel(
     profilePhoto = this?.profilePhoto,
     userPhotos = this?.userPhotos.orEmpty()
 )
-
-
-

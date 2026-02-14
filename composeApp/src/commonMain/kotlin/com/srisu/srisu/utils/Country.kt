@@ -18,11 +18,16 @@ data class CountryModel(
 )
 
 object Country {
+    private var cachedCountries: List<CountryModel>? = null
+
     fun getAllCountriesFromJson(): List<CountryModel>? {
+        if (cachedCountries != null) return cachedCountries
+        
         val json = readJsonFromAssets(COUNTRY_JSON_FILE_NAME)
-        return json?.let {
+        cachedCountries = json?.let {
             Json.decodeFromString<List<CountryModel>>(it)
         }
+        return cachedCountries
     }
 
     fun getCountryModelFromName(country: String?): CountryModel? {
