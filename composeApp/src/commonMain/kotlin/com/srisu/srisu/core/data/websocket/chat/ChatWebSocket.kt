@@ -61,9 +61,6 @@ class ChatWebSocketClient(
         "ws://$host:$port/ws/chat/?token=$userToken"
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val _connectionState = MutableSharedFlow<ConnectionState>()
-    val connectionState = _connectionState.asSharedFlow()
-
     @Volatile
     private var isRunning = false
 
@@ -71,7 +68,7 @@ class ChatWebSocketClient(
     private var currentSession: DefaultClientWebSocketSession? = null
 
 
-    fun connect(roomId: String) {
+    fun connect() {
         if (isRunning) {
             AppLogger.log("WebSocket already running")
             return
@@ -79,13 +76,12 @@ class ChatWebSocketClient(
         isRunning = true
 
         scope.launch {
-            _connectionState.emit(ConnectionState.Connecting)
-            connectionLoop(roomId = roomId)
+            connectionLoop()
         }
 
     }
 
-    private suspend fun connectionLoop(roomId: String) {
+    private suspend fun connectionLoop() {
         var backoff = 1.seconds
         val maxBackoff = 30.seconds
 
@@ -95,8 +91,7 @@ class ChatWebSocketClient(
                     currentSession = this
                     backoff = 1.seconds
 
-                    _connectionState.emit(ConnectionState.Connected)
-                    _events.emit(ChatRoomEvent.Connected(roomId))
+                    _events.emit(ChatRoomEvent.Connected)
                     AppLogger.log("WebSocket connected")
 
                     // Auto-fetch initial messages on connection
@@ -107,13 +102,11 @@ class ChatWebSocketClient(
                 }
             } catch (e: Exception) {
                 AppLogger.log("WebSocket error: ${e.message}")
-                _connectionState.emit(ConnectionState.Error(e.message ?: "Unknown error"))
             }
 
             if (!isRunning) break
 
             // Reconnect with exponential backoff
-            _connectionState.emit(ConnectionState.Reconnecting)
             AppLogger.log("Reconnecting in $backoff...")
             delay(backoff)
             backoff = (backoff * 2).coerceAtMost(maxBackoff)
@@ -132,7 +125,6 @@ class ChatWebSocketClient(
                     is Frame.Close -> {
                         val reason = frame.readReason()
                         AppLogger.log("WebSocket closed: ${reason?.message}")
-                        _connectionState.emit(ConnectionState.Disconnected)
                         break
                     }
 
@@ -143,7 +135,6 @@ class ChatWebSocketClient(
             }
         } catch (e: Exception) {
             AppLogger.log("Read loop error: ${e.message}")
-            _connectionState.emit(ConnectionState.Error(e.message ?: "Read error"))
         }
     }
 
@@ -153,7 +144,6 @@ class ChatWebSocketClient(
         scope.launch {
             currentSession?.close(CloseReason(CloseReason.Codes.NORMAL, "Client disconnected"))
             currentSession = null
-            _connectionState.emit(ConnectionState.Disconnected)
             _events.emit(ChatRoomEvent.Disconnected(reason))
 
         }

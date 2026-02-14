@@ -38,7 +38,10 @@ fun NavGraphBuilder.chatGraph(
 
         ChatScreen(
             session = session,
-            chatRoomData = chatRoomData
+            chatRoomData = chatRoomData,
+            onNavBack = {
+                navController.popBackStack()
+            }
         )
     }
 

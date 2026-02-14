@@ -2,7 +2,6 @@ package com.srisu.srisu.core.data.repository.chat
 
 import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
 import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
-import com.srisu.srisu.core.data.dto.chatdto.ChatRoom
 import com.srisu.srisu.core.data.dto.chatdto.ChatRoomDTO
 import com.srisu.srisu.core.data.dto.chatdto.FetchMessageDTO
 import com.srisu.srisu.core.data.network.ResultHandler
@@ -42,9 +41,6 @@ class ChatRepository(
         messageMap.map { it.values.toList() }
             .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _chatRoom = MutableStateFlow<ChatRoom?>(ChatRoom())
-    val chatRoom = _chatRoom.asStateFlow()
-
     private val _chatRooms =
         MutableStateFlow<List<ChatRoomResponse.Data.ChatRoom>>(emptyList())
 
@@ -60,10 +56,12 @@ class ChatRepository(
     private var hasMore: Boolean = true
     private var chatRoomLastUpdateAt: String? = null
     private var chatRoomLastCursor: String? = null
+    private var currentUserId: Long? = null
 
 
     init {
-        webSocketClient.connect(roomId = "bba87218-0780-4df9-aa8d-a69485b9f5c5")
+        currentUserId = SessionUtils().getCurrentUserId()
+        webSocketClient.connect()
         scope.launch {
             webSocketClient.events.collect { event ->
                 when (event) {
@@ -97,6 +95,49 @@ class ChatRepository(
         }
     }
 
+    suspend fun sendRequest(payload: String?) {
+        payload ?: return
+        webSocketClient.send(rawPayload = payload)
+    }
+
+    suspend fun fetchInitialMessages(chatRoomId: String?) {
+        webSocketClient.fetchMessages(chatRoomId = chatRoomId)
+    }
+
+
+    fun fetchOlderMessages(chatRoomId: String?) {
+        if (!hasMore) return
+        scope.launch {
+            val fetchPayload = FetchMessageDTO(
+                action = FETCH_MESSAGES,
+                page = nextCursor,
+                page_size = 50,
+                chatRoomId = chatRoomId
+            )
+            webSocketClient.send(rawPayload = Json.encodeToString(fetchPayload))
+        }
+    }
+
+    fun fetchNewChatRooms() {
+        scope.launch {
+            val chatRoomDTO = ChatRoomDTO(
+                action = GET_CHAT_ROOMS,
+                limit = 10,
+                lastUpdated = chatRoomLastUpdateAt ?: ""
+            )
+            webSocketClient.send(rawPayload = Json.encodeToString(chatRoomDTO))
+        }
+    }
+
+
+    suspend fun uploadMedias(
+        medias: List<MediaFile?>?
+    ): ResultHandler<ChatMediaResponse?> {
+        return chatApiService.uploadMedias(
+            medias = medias
+        )
+    }
+
     private fun applyChatRoomsList(chatRooms: List<ChatRoomResponse.Data.ChatRoom>) {
         _chatRooms.value = chatRooms
         hasMoreChatRooms = chatRooms.size >= 10
@@ -125,26 +166,20 @@ class ChatRepository(
         updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?
     ) {
         updatedChatRoom ?: return
+
         _chatRooms.update { oldList ->
-            val otherUser = oldList.find { chatRoom ->
-                chatRoom.chatRoom?.id == updatedChatRoom.id
-            }?.otherUser
 
-            buildList(oldList.size + 1) {
-                // Add updated chat room at top
-                add(
-                    ChatRoomResponse.Data.ChatRoom(
-                        chatRoom = updatedChatRoom,
-                        otherUser = otherUser
-                    )
-                )
+            val existingRoom = oldList.firstOrNull {
+                it.chatRoom?.id == updatedChatRoom.id
+            }
 
-//                // Add rest, excluding old version
-                for (chatRoom in oldList) {
-                    if (chatRoom.chatRoom?.id != updatedChatRoom.id) {
-                        add(chatRoom)
-                    }
-                }
+            val updatedItem = ChatRoomResponse.Data.ChatRoom(
+                chatRoom = updatedChatRoom,
+                otherUser = existingRoom?.otherUser
+            )
+
+            listOf(updatedItem) + oldList.filter {
+                it.chatRoom?.id != updatedChatRoom.id
             }
         }
     }
@@ -152,26 +187,19 @@ class ChatRepository(
     private fun updateMessageReadInChatRoom(
         messageReadResponse: MessageReadResponse?
     ) {
-        messageReadResponse ?: return
-
-        val chatRoomId = messageReadResponse.data?.chatRoomId ?: return
-        val currentUserId = SessionUtils().getCurrentUserId()?.toString() ?: return
+        val chatRoomId = messageReadResponse?.data?.chatRoomId ?: return
+        val currentUserId = currentUserId ?: return
 
         _chatRooms.update { chatRooms ->
             chatRooms.map { item ->
-
                 val chatRoom = item.chatRoom
 
-                if (chatRoom?.id != chatRoomId) {
-                    return@map item
-                }
-
-                val updatedUnreadCount = chatRoom.unreadCount
-                    .toMutableMap()
-                    .apply { this[currentUserId] = 0 }
+                if (chatRoom?.id != chatRoomId) return@map item
 
                 item.copy(
-                    chatRoom = chatRoom.copy(unreadCount = updatedUnreadCount)
+                    chatRoom = chatRoom.copy(
+                        unreadCount = chatRoom.unreadCount + (currentUserId.toString() to 0)
+                    )
                 )
             }
         }
@@ -185,7 +213,6 @@ class ChatRepository(
                 val room = item.chatRoom
 
                 if (room?.id == chatRoomId) {
-                    AppLogger.log("Room id while typing = ${chatRoomId}")
                     item.copy(chatRoom = room.copy(isTyping = typingResponse))
                 } else item
             }
@@ -210,7 +237,6 @@ class ChatRepository(
                 (oldMap + updates).toMutableMap() as LinkedHashMap<Long, ChatMessage>
             }
 
-            AppLogger.log("Inside applyFetchMessages")
         } catch (exception: Exception) {
             AppLogger.log("Exception: ${exception.message}")
         }
@@ -229,7 +255,6 @@ class ChatRepository(
             (mapOf(id to message) + oldMap).toMutableMap() as LinkedHashMap<Long, ChatMessage>
         }
 
-        AppLogger.log("Message send/receive event.. updating chatRoom now.")
         updateChatRoomOnMessage(updatedChatRoom = updatedChatRoom)
 
     }
@@ -250,21 +275,22 @@ class ChatRepository(
     ) {
         message.id ?: return
 
-        val wasRemoved = messageMap.updateAndGet { oldMap ->
+        messageMap.updateAndGet { oldMap ->
             val mutableMap = LinkedHashMap(oldMap)
 
             val localMessage = oldMap.values.firstOrNull { it.isLocalOnly }
 
             if (localMessage != null) {
-                mutableMap.remove(localMessage.id)
+                mutableMap.remove(key = localMessage.id)
+                AppLogger.log("LOCAL PHOTO REMOVED!")
             }
 
             mutableMap
-        }.isNotEmpty()
-
-        if (wasRemoved) {
-            prependMessage(message, updatedChatRoom)
         }
+
+        prependMessage(message, updatedChatRoom)
+
+
     }
 
     private fun deleteMessage(message: ChatMessage?) {
@@ -275,7 +301,6 @@ class ChatRepository(
         val deleteForMap = message.deleteFor
         if (deleteForMap != null) {
             // If "me" (or current user) is already in the delete_for list → fully remove from local map
-            val currentUserId = SessionUtils().getCurrentUserId()
             val hasBeenDeletedForMe = deleteForMap.values
                 .flatten()
                 .any { action -> action.option == DELETE_FOR_ME && action.user_id == currentUserId }
@@ -335,49 +360,6 @@ class ChatRepository(
                 }
             }
         }
-    }
-
-    suspend fun fetchInitialMessages(chatRoomId: String?) {
-        webSocketClient.fetchMessages(chatRoomId = chatRoomId)
-    }
-
-
-    fun fetchOlderMessages(chatRoomId: String?) {
-        if (!hasMore) return
-        scope.launch {
-            val fetchPayload = FetchMessageDTO(
-                action = FETCH_MESSAGES,
-                page = nextCursor,
-                page_size = 50,
-                chatRoomId = chatRoomId
-            )
-            webSocketClient.send(rawPayload = Json.encodeToString(fetchPayload))
-        }
-    }
-
-    fun fetchNewChatRooms() {
-        scope.launch {
-            val chatRoomDTO = ChatRoomDTO(
-                action = GET_CHAT_ROOMS,
-                limit = 10,
-                lastUpdated = chatRoomLastUpdateAt ?: ""
-            )
-            webSocketClient.send(rawPayload = Json.encodeToString(chatRoomDTO))
-        }
-    }
-
-
-    suspend fun sendRequest(payload: String?) {
-        payload ?: return
-        webSocketClient.send(rawPayload = payload)
-    }
-
-    suspend fun uploadMedias(
-        medias: List<MediaFile?>?
-    ): ResultHandler<ChatMediaResponse?> {
-        return chatApiService.uploadMedias(
-            medias = medias
-        )
     }
 
 

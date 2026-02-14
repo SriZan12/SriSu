@@ -50,12 +50,14 @@ import com.srisu.srisu.features.chat.chatroom.ChatViewModel
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.DateTimeUtils.getChatTimestamp
-import com.srisu.srisu.utils.DateTimeUtils.getDate
-import com.srisu.srisu.utils.DateTimeUtils.getReadableDate
 import com.srisu.srisu.utils.isInternetAvailable
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.collections.any
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.orEmpty
 
 @Composable
 fun ChatRoomScreen(
@@ -242,48 +244,28 @@ private fun ChatRoomListCompo(
             val otherUser = chatRoom?.otherUser
             val room = chatRoom?.chatRoom
 
-            val unreadCount = myId
-                ?.let { room?.unreadCount?.get(it) }
-                ?.takeIf { it > 0 }
-                ?.toString()
-                .orEmpty()
+            val lastMessage =
+                if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
 
-            val typingUsers = room
-                ?.isTyping
-                ?.typingData
-                ?.typingUsers
-                .orEmpty()
+            val isSomeOneElseTyping = isSomeOneElseTyping(me = me, room = room)
 
-            AppLogger.log("Typing users = ${typingUsers}")
 
-            val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
-                userId != me.toString() && isTyping
-            }
-
-            var lastMessage by remember {
-                mutableStateOf(if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty())
-            }
-
-            AppLogger.log("IS typing = $isSomeoneElseTyping")
-
-            LaunchedEffect(key1 = isSomeoneElseTyping) {
-                lastMessage = if (isSomeoneElseTyping) {
-                    AppLogger.log("Yes someone is typing")
-                    "Typing..."
-                } else {
-                    if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
-                }
-            }
-//
-//
-            val time = getChatTimestamp(room?.lastMessage?.timestamp)
+//            LaunchedEffect(key1 = isSomeOneElseTyping) {
+//                lastMessage = if (isSomeOneElseTyping) {
+//                    AppLogger.log("Yes someone is typing")
+//                    "Typing..."
+//                } else {
+//                    if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
+//                }
+//            }
 
             ChatRoomItem(
                 avatarUrl = otherUser?.profilePhoto.orEmpty(),
                 name = otherUser?.fullName.orEmpty(),
+                isTyping = isSomeOneElseTyping,
                 lastMessage = lastMessage,
-                time = time,
-                unreadCount = unreadCount,
+                time = getChatTimestamp(room?.lastMessage?.timestamp),
+                unreadCount = getUnReadCount(myId = myId, room = room),
                 modifier = Modifier,
                 onClick = { onClickChatRoom(chatRoom) }
             )
@@ -302,7 +284,8 @@ fun ChatRoomItem(
     time: String?,
     unreadCount: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    isTyping: Boolean
 ) {
     Row(
         modifier = modifier
@@ -337,18 +320,26 @@ fun ChatRoomItem(
             Spacer(modifier = Modifier.height(2.dp))
             val isUnread = unreadCount.isNotEmpty()
 
-            Text(
-                text = lastMessage,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Normal
-                ),
-                color = if (isUnread)
-                    MaterialTheme.colorScheme.onSurface
-                else
-                    Color.Gray,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            if (isTyping) {
+                Text(
+                    text = "Typing...",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                )
+            } else {
+                Text(
+                    text = lastMessage,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Normal
+                    ),
+                    color = if (isUnread)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
 
         }
 
@@ -389,6 +380,38 @@ fun ChatRoomItem(
     }
 }
 
+private fun getUnReadCount(
+    myId: String?,
+    room: ChatRoomResponse.Data.ChatRoom.ChatRoom?,
+
+    ): String {
+    val unreadCount = myId
+        ?.let { room?.unreadCount?.get(it) }
+        ?.takeIf { it > 0 }
+        ?.toString()
+        .orEmpty()
+
+    return unreadCount
+}
+
+private fun isSomeOneElseTyping(
+    me: Long?,
+    room: ChatRoomResponse.Data.ChatRoom.ChatRoom?
+): Boolean {
+
+    val typingUsers = room
+        ?.isTyping
+        ?.typingData
+        ?.typingUsers
+        .orEmpty()
+
+    val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
+        userId != me.toString() && isTyping
+    }
+
+    return isSomeoneElseTyping
+}
+
 @Preview()
 @Composable
 private fun ChatRoomItemPreview() {
@@ -397,7 +420,8 @@ private fun ChatRoomItemPreview() {
         name = "Sarthak Koirala",
         lastMessage = "I'd ma haldincha paisa?",
         time = "Fri",
-        unreadCount = "3"
+        unreadCount = "3",
+        isTyping = false
     )
 }
 

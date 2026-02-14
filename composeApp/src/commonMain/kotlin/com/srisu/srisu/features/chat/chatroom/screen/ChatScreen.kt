@@ -160,7 +160,8 @@ typealias messageId = Long?
 fun ChatScreen(
     session: Session?,
     viewModel: ChatViewModel = koinViewModel(),
-    chatRoomData: String?
+    chatRoomData: String?,
+    onNavBack:() -> Unit
 ) {
 
     val chatState by viewModel.chatState.collectAsState()
@@ -179,7 +180,8 @@ fun ChatScreen(
     ChatScaffold(
         chatState = chatState,
         viewModel = viewModel,
-        onNavBack = {}
+        onNavBack = onNavBack
+
     )
 
 
@@ -350,17 +352,9 @@ private fun ChatScaffold(
 
 //            FloatingHearts()
 
-
                 Column(
                     modifier = Modifier
                 ) {
-//                    error?.let { message ->
-//                        ErrorBanner(
-//                            message = message,
-//                            onDismiss = viewModel::clearError,
-//                            onRetry = viewModel::retryConnection
-//                        )
-//                    }
 
                     ChatMessagesList(
                         messages = chatState.chatMessages ?: emptyList(),
@@ -411,8 +405,6 @@ private fun ChatScaffold(
                     )
 
                 }
-
-
 
                 if (openGallery) {
                     MediaCompo(
@@ -471,7 +463,7 @@ private fun ChatMessagesList(
             .distinctUntilChanged()
             .collect { (firstVisibleIndex, totalItems) ->
 
-                // We are in reverseLayout, so oldest messages are at the top (index = last in normal list)
+                // We are in reverseLayout, so the oldest messages are at the top (index = last in normal list)
                 val shouldFetchOlder = firstVisibleIndex <= 2 && // small threshold
                         totalItems > 0 &&
                         !isFetchingOlder
@@ -648,8 +640,7 @@ private fun SwipeableMessageCompo(
             }
 
         },
-        backgroundContent = {
-        },
+        backgroundContent = {},
 
         )
 }
@@ -837,7 +828,6 @@ fun PhotoMessageBubble(
     onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
 
     var bubbleWidthPx by remember { mutableStateOf(0) }
@@ -984,7 +974,6 @@ private fun PhotoGrid(
 ) {
     when (photos.size) {
         1 -> {
-            AppLogger.log("PHOTO URL = ${photos.first()?.mediaUrl}")
             AsyncImage(
                 model = photos.first()?.mediaUrl,
                 contentDescription = "Photo",
@@ -1127,67 +1116,6 @@ private fun UploadingPhotoItem(
     }
 }
 
-
-@Composable
-private fun backgroundColor(isOwn: Boolean) = if (isOwn)
-    MaterialTheme.colorScheme.primaryContainer
-else
-    MaterialTheme.colorScheme.surfaceContainerHigh
-
-@Composable
-private fun bubbleShape(isOwn: Boolean) = RoundedCornerShape(
-    topStart = 20.dp,
-    topEnd = 20.dp,
-    bottomStart = if (isOwn) 20.dp else 4.dp,
-    bottomEnd = if (isOwn) 4.dp else 20.dp
-)
-
-@Composable
-private fun clickableModifier(
-    isDeletedForEveryone: Boolean,
-    haptic: HapticFeedback,
-    onLongClick: () -> Unit,
-    onClick: () -> Unit
-) = if (isDeletedForEveryone) {
-    Modifier
-} else {
-    Modifier.combinedClickable(
-        interactionSource = remember { MutableInteractionSource() },
-        indication = null,
-        onLongClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onLongClick()
-        },
-        onClick = onClick
-    )
-}
-
-@Composable
-private fun messageDisplayText(
-    deleteEntry: ChatMessage.DeleteMessageAction??,
-    isDeletedForEveryone: Boolean,
-    messageText: String?,
-    currentUserId: Long?
-) = if (isDeletedForEveryone) {
-    if (deleteEntry?.user_id == currentUserId) {
-        "You deleted this message"
-    } else {
-        "This message was deleted"
-    }
-} else {
-    messageText.orEmpty()
-}
-
-@Composable
-private fun messageTextColor(isOwn: Boolean, isDeletedForEveryone: Boolean): Color =
-    if (isDeletedForEveryone) {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    } else if (isOwn) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
 @Composable
 private fun ReplyPreview(
     reply: ChatMessage.ReplyMessage,
@@ -1233,7 +1161,7 @@ private fun ReplyPreview(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
-                    text = "Nathan Silva",
+                    text = reply.messageOwnerName ?: "",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1241,7 +1169,6 @@ private fun ReplyPreview(
 
                 val messageText =
                     if (reply.messageType == IMAGE) "Photo" else reply.text.orEmpty()
-                AppLogger.log("Message text = ${messageText}")
                 Text(
                     text = messageText,
                     style = MaterialTheme.typography.bodySmall,
@@ -1404,7 +1331,7 @@ private fun ChatTopBar(
 ) {
 
     var chatTopBarSubTitle by remember { mutableStateOf("Online") }
-    val avatarUrl = "https://randomuser.me/api/portraits/men/85.jpg"
+    val avatarUrl = chatState.chatRoomData?.otherUser?.profilePhoto
     val isTyping = chatState.isTyping
 
     LaunchedEffect(key1 = isTyping) {
@@ -1428,7 +1355,7 @@ private fun ChatTopBar(
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Srijan Khadka",
+                        text = chatState.chatRoomData?.otherUser?.fullName ?: "",
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1863,6 +1790,67 @@ private fun FloatingHeartItem(
             }
     )
 }
+
+
+@Composable
+private fun backgroundColor(isOwn: Boolean) = if (isOwn)
+    MaterialTheme.colorScheme.primaryContainer
+else
+    MaterialTheme.colorScheme.surfaceContainerHigh
+
+@Composable
+private fun bubbleShape(isOwn: Boolean) = RoundedCornerShape(
+    topStart = 20.dp,
+    topEnd = 20.dp,
+    bottomStart = if (isOwn) 20.dp else 4.dp,
+    bottomEnd = if (isOwn) 4.dp else 20.dp
+)
+
+@Composable
+private fun clickableModifier(
+    isDeletedForEveryone: Boolean,
+    haptic: HapticFeedback,
+    onLongClick: () -> Unit,
+    onClick: () -> Unit
+) = if (isDeletedForEveryone) {
+    Modifier
+} else {
+    Modifier.combinedClickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onLongClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onLongClick()
+        },
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun messageDisplayText(
+    deleteEntry: ChatMessage.DeleteMessageAction??,
+    isDeletedForEveryone: Boolean,
+    messageText: String?,
+    currentUserId: Long?
+) = if (isDeletedForEveryone) {
+    if (deleteEntry?.user_id == currentUserId) {
+        "You deleted this message"
+    } else {
+        "This message was deleted"
+    }
+} else {
+    messageText.orEmpty()
+}
+
+@Composable
+private fun messageTextColor(isOwn: Boolean, isDeletedForEveryone: Boolean): Color =
+    if (isDeletedForEveryone) {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    } else if (isOwn) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
 
 
 

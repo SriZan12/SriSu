@@ -114,7 +114,9 @@ data class ChatMessage(
         @SerialName("sender_id")
         val senderId: Long? = null,
         @SerialName("message_type")
-        val messageType: String? = null
+        val messageType: String? = null,
+        @SerialName("message_owner_name")
+        val messageOwnerName: String? = null,
 
     )
 

@@ -8,10 +8,14 @@ import com.srisu.srisu.core.data.response.chat.MessageReadResponse
 import com.srisu.srisu.core.data.response.chat.TypingResponse
 
 sealed interface ChatRoomEvent {
-    data class Connected(val roomId: String) : ChatRoomEvent
+    data object Connected : ChatRoomEvent
     data class Disconnected(val reason: String?) : ChatRoomEvent
     data class FetchMessages(val messages: FetchMessageResponse?) : ChatRoomEvent
-    data class SendMessage(val message: ChatMessage?, val updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?) : ChatRoomEvent
+    data class SendMessage(
+        val message: ChatMessage?,
+        val updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?
+    ) : ChatRoomEvent
+
     data class MessageEdited(val message: ChatMessage) : ChatRoomEvent
     data class MessageDeleted(val message: ChatMessage?) : ChatRoomEvent
     data class MessageTyping(val typingResponse: TypingResponse) : ChatRoomEvent

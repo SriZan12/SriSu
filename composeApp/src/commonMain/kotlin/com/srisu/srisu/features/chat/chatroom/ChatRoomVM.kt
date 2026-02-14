@@ -44,16 +44,13 @@ class ChatViewModel(
 
     private val _chatState = MutableStateFlow(ChatState())
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
-
     private var typingJob: Job? = null
     private val TYPING_TIMEOUT = 1200L // ms
     private var isCurrentlyTyping = false
 
-
     init {
         updateChatRooms()
     }
-
 
     // -----------------------------
     // User Actions
@@ -69,6 +66,51 @@ class ChatViewModel(
 
         startTyping()
         scheduleStopTyping()
+    }
+
+    fun updateIsEditMessage(isEditMessage: Boolean) {
+        _chatState.update {
+            it.copy(isEditMessage = isEditMessage)
+        }
+    }
+
+    fun showActionsForMessage(messageId: Long?, message: ChatMessage) {
+
+        _chatState.update {
+            it.copy(
+                selectedMessageIdForActions = messageId,
+                selectedMessageForAction = message
+            )
+        }
+    }
+
+
+    fun dismissActions() {
+        _chatState.update {
+            it.copy(selectedMessageIdForActions = null)
+        }
+    }
+
+    fun updateSession(session: Session?) {
+        _chatState.update {
+            it.copy(session = session)
+        }
+    }
+
+    fun setChatRoomData(chatRoomData: String?) {
+        chatRoomData?.let {
+            val chatRoom = Json.decodeFromString<ChatRoomResponse.Data.ChatRoom>(chatRoomData)
+            _chatState.update {
+                it.copy(chatRoomData = chatRoom)
+            }
+        }
+        viewModelScope.launch {
+            repository.fetchInitialMessages(chatRoomId = chatState.value.chatRoomData?.chatRoom?.id)
+            updateChatMessages()
+
+        }
+
+
     }
 
     private fun startTyping() {
@@ -93,23 +135,6 @@ class ChatViewModel(
         }
         typingJob?.cancel()
         typingJob = null
-    }
-
-    fun sendTypingRequest(isTyping: Boolean) {
-        val userId = chatState.value.session?.id ?: return
-
-        val payload = TypingRequest(
-            action = TYPING,
-            isTyping = isTyping,
-            userId = userId,
-            chat_room_id = chatState.value.chatRoomData?.chatRoom?.id
-        )
-
-        val encodedPayload = Json.encodeToString(payload)
-
-        viewModelScope.launch {
-            repository.sendRequest(payload = encodedPayload)
-        }
     }
 
 
@@ -170,7 +195,7 @@ class ChatViewModel(
             reactions = null,
             deleteFor = null,
             messageDeletionDict = null,
-            chatRoom = "bba87218-0780-4df9-aa8d-a69485b9f5c5",
+            chatRoom = _chatState.value.chatRoomData?.chatRoom?.id,
             messageType = IMAGE,
             uploadingPhotos = listOfMedia?.map {
                 ChatMessage.UploadingPhoto(
@@ -214,51 +239,6 @@ class ChatViewModel(
         _chatState.update {
             it.copy(selectedMessageForAction = chatMessage)
         }
-    }
-
-    fun updateIsEditMessage(isEditMessage: Boolean) {
-        _chatState.update {
-            it.copy(isEditMessage = isEditMessage)
-        }
-    }
-
-    fun showActionsForMessage(messageId: Long?, message: ChatMessage) {
-
-        _chatState.update {
-            it.copy(
-                selectedMessageIdForActions = messageId,
-                selectedMessageForAction = message
-            )
-        }
-    }
-
-
-    fun dismissActions() {
-        _chatState.update {
-            it.copy(selectedMessageIdForActions = null)
-        }
-    }
-
-    fun updateSession(session: Session?) {
-        _chatState.update {
-            it.copy(session = session)
-        }
-    }
-
-    fun setChatRoomData(chatRoomData: String?) {
-        chatRoomData?.let {
-            val chatRoom = Json.decodeFromString<ChatRoomResponse.Data.ChatRoom>(chatRoomData)
-            _chatState.update {
-                it.copy(chatRoomData = chatRoom)
-            }
-        }
-        viewModelScope.launch {
-            repository.fetchInitialMessages(chatRoomId = chatState.value.chatRoomData?.chatRoom?.id)
-            updateChatMessages()
-
-        }
-
-
     }
 
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
@@ -346,7 +326,6 @@ class ChatViewModel(
     }
 
 
-
     /**
      * Send message and clear input
      */
@@ -394,6 +373,24 @@ class ChatViewModel(
         }
     }
 
+    fun sendTypingRequest(isTyping: Boolean) {
+        val userId = chatState.value.session?.id ?: return
+
+        val payload = TypingRequest(
+            action = TYPING,
+            isTyping = isTyping,
+            userId = userId,
+            chat_room_id = chatState.value.chatRoomData?.chatRoom?.id
+        )
+
+        val encodedPayload = Json.encodeToString(payload)
+
+        viewModelScope.launch {
+            repository.sendRequest(payload = encodedPayload)
+        }
+    }
+
+
     fun sendMediaMessage(
         listOfMedia: List<ChatMessage.Media?>?
     ) {
@@ -434,7 +431,7 @@ class ChatViewModel(
                 onMessageInputChanged(TextFieldValue())
                 setReplyMessage(chatMessage = null, isOn = false)
                 updateIsUploadingPhoto(isUploading = false)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 showErrorMessage(errorType = "Error", message = "Something went wrong")
             }
         }
@@ -462,7 +459,7 @@ class ChatViewModel(
                     payload = Json.encodeToString(editMessagePayload)
                 )
                 onMessageInputChanged(TextFieldValue())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 showErrorMessage(errorType = "Error", message = "Something went wrong")
             }
 
@@ -487,7 +484,7 @@ class ChatViewModel(
                 repository.sendRequest(
                     payload = Json.encodeToString(deleteMessagePayload)
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 showErrorMessage(errorType = "Error", message = "Something went wrong")
             }
 
@@ -507,7 +504,7 @@ class ChatViewModel(
                 repository.sendRequest(
                     payload = Json.encodeToString(readMessagePayload)
                 )
-            } catch (exception: Exception) {
+            } catch (_: Exception) {
                 showErrorMessage(errorType = "Error", message = "Something went wrong")
             }
         }
@@ -526,7 +523,7 @@ class ChatViewModel(
                     payload = Json.encodeToString(deliveredMessagePayload)
                 )
 
-            } catch (exception: Exception) {
+            } catch (_: Exception) {
                 showErrorMessage(errorType = "Error", message = "Something went wrong")
             }
 
@@ -539,7 +536,7 @@ class ChatViewModel(
                 val reactToMessagePayload = ReactToMessageDTO(
                     action = "react_to_message",
                     messageId = messageId,
-                    userId = chatState.value.session?.id?.toLong(),
+                    userId = chatState.value.session?.id,
                     reaction = reaction
                 )
 
@@ -547,8 +544,11 @@ class ChatViewModel(
                     payload = Json.encodeToString(reactToMessagePayload)
 
                 )
-            } catch (exception: Exception) {
-                showErrorMessage(errorType = "Error", message = "Something went wrong")
+            } catch (_: Exception) {
+                showErrorMessage(
+                    errorType = "Error",
+                    message = "Something went wrong"
+                )
             }
         }
     }
