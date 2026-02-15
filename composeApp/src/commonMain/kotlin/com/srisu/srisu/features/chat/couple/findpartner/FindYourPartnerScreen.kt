@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.chat.couple.findpartner
 
-import InterestChip
+import com.srisu.srisu.features.suggestions.screens.InterestChip
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

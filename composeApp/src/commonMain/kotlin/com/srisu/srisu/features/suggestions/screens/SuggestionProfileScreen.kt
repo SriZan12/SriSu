@@ -1,3 +1,5 @@
+package com.srisu.srisu.features.suggestions.screens
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -63,7 +65,6 @@ import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
 import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.suggestions.state.SuggestionUIStates
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.utils.DateTimeUtils
@@ -79,7 +80,6 @@ import kotlin.random.Random
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SuggestionProfileScreen(
-    userProfileData: String?,
     suggestionViewModel: SuggestionViewModel,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope
@@ -89,8 +89,6 @@ fun SuggestionProfileScreen(
     val shouldShowRequestButton by remember {
         mutableStateOf(false)
     }
-
-    Init(suggestionViewModel = suggestionViewModel, suggestionProfileData = userProfileData)
 
     HandleUiStates(
         suggestionViewModel = suggestionViewModel,
@@ -115,18 +113,6 @@ fun SuggestionProfileScreen(
     }
 
 
-}
-
-@Composable
-private fun Init(
-    suggestionViewModel: SuggestionViewModel,
-    suggestionProfileData: String?
-) {
-    LaunchedEffect(
-        key1 = Unit
-    ) {
-        suggestionViewModel.setSuggestionProfileData(suggestionProfileData)
-    }
 }
 
 @Composable
@@ -277,14 +263,13 @@ fun ProfilePictureCompo(
         with(sharedTransitionScope) {
             AsyncImage(
                 model = profileUrl,
-//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
                 imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
                 placeholder = painterResource(Res.drawable.image_placeholder),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(500.dp)
                     .sharedElement(
                         sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
                         animatedVisibilityScope = animatedContentScope,
@@ -382,7 +367,7 @@ fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?)
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
             ) {
-                items(interests) { interest ->
+                items(interests, key = { it?.id ?: Random.nextInt() }) { interest ->
                     interest?.let {
                         if (!interest.name.isNullOrEmpty()) {
                             InterestChip(label = interest.name)
@@ -390,23 +375,6 @@ fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?)
                     }
                 }
             }
-
-            /* LazyVerticalGrid(
-                 modifier = Modifier.padding(top = 8.dp).heightIn(min = 150.dp, max = 200.dp),
-                 columns = GridCells.Fixed(3),
-                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
-             ) {
-                 items(interests) { interest ->
-                     val backgroundColor = remember { getRandomPastelColor() }
-                     interest?.let {
-                         if (!interest.name.isNullOrEmpty()) {
-                             InterestChip(label = interest.name, backgroundColor = backgroundColor)
-                         }
-                     }
-                 }
-             }*/
         }
     }
 }
@@ -428,14 +396,6 @@ fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
             style = MaterialTheme.typography.labelMedium
         )
     }
-}
-
-fun getRandomPastelColor(): Color {
-    val base = 200 // to ensure soft colors (pastel-ish)
-    val red = base + Random.nextInt(0, 56)
-    val green = base + Random.nextInt(0, 56)
-    val blue = base + Random.nextInt(0, 56)
-    return Color(red, green, blue)
 }
 
 @Preview
@@ -472,28 +432,19 @@ fun GallerySection(
     photos: List<UserSuggestionResponse.Result.UserPhoto?>?
 ) {
 
-    val listPhotos = listOf(
-        "https://media.istockphoto.com/id/1197578214/photo/beautiful-young-woman.jpg?s=1024x1024&w=is&k=20&c=au0eZV8dc7lE2VC8ghRF8igL19OxPBXbKvKzcmyjeQE=",
-        "https://media.istockphoto.com/id/184888055/photo/beautiful-young-woman-smiling.jpg?s=1024x1024&w=is&k=20&c=Veh-hAfi6G3HSkdRPHyoFdjFWdGfYB9S6kd4LkihkkM=",
-        "https://media.istockphoto.com/id/185123021/photo/portrait-of-a-beautiful-brunette-woman.jpg?s=1024x1024&w=is&k=20&c=tj3AIS7iGpwkr1QgY0w90prerVhUSFA-QrAOMby9x1E=",
-        "https://media.istockphoto.com/id/1197578214/photo/beautiful-young-woman.jpg?s=1024x1024&w=is&k=20&c=au0eZV8dc7lE2VC8ghRF8igL19OxPBXbKvKzcmyjeQE=",
-        "https://media.istockphoto.com/id/184888055/photo/beautiful-young-woman-smiling.jpg?s=1024x1024&w=is&k=20&c=Veh-hAfi6G3HSkdRPHyoFdjFWdGfYB9S6kd4LkihkkM=",
-        "https://media.istockphoto.com/id/185123021/photo/portrait-of-a-beautiful-brunette-woman.jpg?s=1024x1024&w=is&k=20&c=tj3AIS7iGpwkr1QgY0w90prerVhUSFA-QrAOMby9x1E="
-    )
-
     photos?.let {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(items = listPhotos) { photoItem ->
+            items(items = it, key = { it?.id ?: Random.nextInt() }) { photoItem ->
                 AsyncImage(
                     modifier = Modifier
                         .size(200.dp)
                         .aspectRatio(1f)
                         .clip(shape = RoundedCornerShape(8.dp)),
-                    model = photoItem,
+                    model = photoItem?.photo,
                     contentDescription = "user_photos",
                     contentScale = ContentScale.Crop
                 )
@@ -501,4 +452,3 @@ fun GallerySection(
         }
     }
 }
-

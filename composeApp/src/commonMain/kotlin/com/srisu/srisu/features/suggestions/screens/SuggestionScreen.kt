@@ -3,7 +3,6 @@ package com.srisu.srisu.features.suggestions.screens
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -49,7 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,15 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemContentType
-import coil3.ImageLoader
-import coil3.SingletonImageLoader
-import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.decode.BlackholeDecoder
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
-import coil3.size.Size
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.OfflineBottomSheetCompo
@@ -77,12 +67,8 @@ import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.cross_love
 import srisu.composeapp.generated.resources.filter_icon
@@ -101,9 +87,6 @@ fun SuggestionScreen(
     navigateFilterScreen: () -> Unit,
 ) {
     Scaffold(
-        topBar = {
-
-        },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
         modifier = Modifier.navigationBarsPadding().padding(bottom = 76.dp)
     ) { paddingValues ->
@@ -115,9 +98,7 @@ fun SuggestionScreen(
         ) {
 
             SuggestionTopBarCompo(
-                showFilterDialog = {
-                    navigateFilterScreen()
-                }
+                showFilterDialog = navigateFilterScreen
             )
 
             Initialization(
@@ -127,8 +108,8 @@ fun SuggestionScreen(
             )
 
             HandleUiStates(
-                authViewModel = suggestionViewModel,
-                authUIStates = suggestionUIState
+                suggestionViewModel = suggestionViewModel,
+                suggestionUIStates = suggestionUIState
             )
 
 
@@ -139,10 +120,7 @@ fun SuggestionScreen(
                 onRetry = {
                     suggestionViewModel.getUserSuggestions()
                 },
-                onNavigateProfileScreen = {
-//                    val userProfileData = Json.encodeToString(it)
-                    navigateProfileScreen(it)
-                }
+                onNavigateProfileScreen = navigateProfileScreen
             )
         }
 
@@ -155,7 +133,7 @@ private fun Initialization(
     filterApplied: Boolean,
     filterCleared: Boolean,
 ) {
-    LaunchedEffect(Unit) {
+    LaunchedEffect(filterApplied, filterCleared) {
         if (filterCleared || filterApplied) {
             suggestionViewModel.getUserSuggestions()
         }
@@ -164,8 +142,8 @@ private fun Initialization(
 
 @Composable
 private fun HandleUiStates(
-    authViewModel: SuggestionViewModel,
-    authUIStates: SuggestionUIStates
+    suggestionViewModel: SuggestionViewModel,
+    suggestionUIStates: SuggestionUIStates
 ) {
 
     val isConnected = isInternetAvailable()
@@ -175,14 +153,14 @@ private fun HandleUiStates(
         showBottomSheet = !isConnected
     }
 
-    when (val baseUIState = authUIStates.baseUIState) {
+    when (val baseUIState = suggestionUIStates.baseUIState) {
         is BaseUIState.Error -> {
             ErrorDialog(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
                 onDismiss = {
-                    authViewModel.idleScreen()
+                    suggestionViewModel.idleScreen()
                 },
             )
         }
@@ -191,16 +169,11 @@ private fun HandleUiStates(
             SuggestionShimmerCompo()
         }
 
-        is BaseUIState.Success<*> -> {
-//            val data = baseUIState.data
-            // Handle success case based on the expected type
-        }
-
         is BaseUIState.NoInternetConnection -> {
             showBottomSheet = baseUIState.isOffline
         }
 
-        is BaseUIState.Idle -> Unit
+        else -> Unit
     }
 
     if (showBottomSheet) {
@@ -208,7 +181,7 @@ private fun HandleUiStates(
             show = showBottomSheet,
             onDismiss = {
                 showBottomSheet = false
-                authViewModel.idleScreen()
+                suggestionViewModel.idleScreen()
             }
         )
     }
@@ -233,9 +206,7 @@ private fun SuggestionTopBarCompo(
 
 
         IconButton(
-            onClick = {
-                showFilterDialog()
-            }
+            onClick = showFilterDialog
         ) {
             Icon(
                 modifier = Modifier.size(24.dp),
@@ -268,9 +239,7 @@ private fun SuggestionContent(
             }
 
             suggestions.itemCount == 0 -> {
-                NoSuggestionComp {
-                    onRetry()
-                }
+                NoSuggestionComp(onRetry = onRetry)
             }
 
             else -> {
@@ -283,12 +252,12 @@ private fun SuggestionContent(
                 ) {
                     items(
                         count = suggestions.itemCount,
-                        key = { suggestions[it]?.id!! },
+                        key = { suggestions[it]?.id ?: it },
                         contentType = suggestions.itemContentType { "Suggestion Items" },
                     ) { index ->
                         val item = suggestions[index]
 
-                        val height = if (index % 2 == 0) 188.dp else 252.dp
+                        val height = remember(index) { if (index % 2 == 0) 188.dp else 252.dp }
 
                         SuggestionCardCompo(
                             modifier = Modifier.animateItem(
@@ -298,10 +267,9 @@ private fun SuggestionContent(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedContentScope = animatedContentScope,
                             height = height,
-                            suggestionItem = item
-                        ) { userProfileData ->
-                            onNavigateProfileScreen(userProfileData)
-                        }
+                            suggestionItem = item,
+                            onClick = onNavigateProfileScreen
+                        )
 
                     }
                 }
@@ -352,17 +320,6 @@ private fun SuggestionCardCompo(
         Box(modifier = Modifier.fillMaxWidth()) {
 
             val profileUrl = suggestionItem?.profilePhoto
-//                "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-
-            val context = LocalPlatformContext.current
-            val imageLoader = remember { SingletonImageLoader.get(context) }
-            LaunchedEffect(profileUrl) {
-                val request = ImageRequest.Builder(context)
-                    .data(profileUrl)
-                    .size(Size.ORIGINAL)
-                    .build()
-                imageLoader.enqueue(request)
-            }
 
             with(sharedTransitionScope) {
 
@@ -370,7 +327,6 @@ private fun SuggestionCardCompo(
                     contentDescription = "User Image",
                     contentScale = ContentScale.Crop,
                     model = profileUrl,
-                    imageLoader = imageLoader,
                     modifier = Modifier
                         .sharedElement(
                             sharedTransitionScope.rememberSharedContentState(key = "profile_image-${suggestionItem?.id}"),
@@ -403,8 +359,9 @@ private fun SuggestionCardCompo(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val zodiacSignImg =
-                            ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
+                        val zodiacSignImg = remember(suggestionItem?.zodiacSign) {
+                             ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
+                        }
 
                         zodiacSignImg?.let {
                             Image(
@@ -551,7 +508,7 @@ private fun NoSuggestionComp(
             )
 
             OutlinedButton(
-                onClick = { onRetry() },
+                onClick = onRetry,
                 border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
                 contentPadding = PaddingValues(vertical = 4.dp, horizontal = 24.dp),
                 shape = RoundedCornerShape(10.dp)
@@ -566,9 +523,3 @@ private fun NoSuggestionComp(
         }
     }
 }
-
-
-
-
-
-

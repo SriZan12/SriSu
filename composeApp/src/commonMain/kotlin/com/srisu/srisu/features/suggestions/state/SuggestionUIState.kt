@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.suggestions.state
 
+import androidx.compose.runtime.Stable
 import app.cash.paging.PagingData
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.response.suggestion.UserPreferenceResponse
@@ -11,14 +12,15 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import kotlinx.coroutines.flow.Flow
 
+@Stable
 data class SuggestionUIStates(
     //Used in Suggestion Screen
-    var suggestions: Flow<PagingData<UserSuggestionResponse.Result>>? = null,
+    val suggestions: Flow<PagingData<UserSuggestionResponse.Result>>? = null,
     val session: Session? = null,
     val baseUIState: BaseUIState = BaseUIState.Idle,
 
     val suggestionProfileData: UserSuggestionResponse.Result? = null,
-    val requestedUsers: HashSet<Int> = hashSetOf(),
+    val requestedUsers: Set<Int> = emptySet(),
     val isRequested: Boolean = false,
 
     // Used in Suggestion Filter UI

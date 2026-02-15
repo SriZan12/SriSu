@@ -1,22 +1,19 @@
 package com.srisu.srisu.navigation
 
-import SuggestionProfileScreen
+import com.srisu.srisu.features.suggestions.screens.SuggestionProfileScreen
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
 import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
 import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_APPLIED
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Serializable
 sealed class SuggestionsNav : Route {
@@ -25,7 +22,7 @@ sealed class SuggestionsNav : Route {
     data object Suggestions : SuggestionsNav()
 
     @Serializable
-    data class SuggestionProfile(val suggestionProfileData: String?) : SuggestionsNav()
+    data object SuggestionProfile : SuggestionsNav()
 
     @Serializable
     data object Filter : SuggestionsNav()
@@ -54,20 +51,17 @@ fun NavGraphBuilder.suggestionsGraph(
             animatedContentScope = this@composable,
             navigateFilterScreen = { navController.navigate(SuggestionsNav.Filter) },
             navigateProfileScreen = { suggestionProfileData ->
-                val json = Json.encodeToString(suggestionProfileData)
-                navController.navigate(SuggestionsNav.SuggestionProfile(json))
+                suggestionViewModel.setSuggestionProfileData(suggestionProfileData)
+                navController.navigate(SuggestionsNav.SuggestionProfile)
             },
         )
     }
 
-    composable<SuggestionsNav.SuggestionProfile> { backStackEntry ->
-        val userProfileData =
-            backStackEntry.toRoute<SuggestionsNav.SuggestionProfile>().suggestionProfileData
+    composable<SuggestionsNav.SuggestionProfile> {
         clearFilterFlags(navController = navController)
 
         SuggestionProfileScreen(
             suggestionViewModel = suggestionViewModel,
-            userProfileData = userProfileData,
             sharedTransitionScope = sharedTransitionScope,
             animatedContentScope = this@composable,
         )
@@ -75,7 +69,7 @@ fun NavGraphBuilder.suggestionsGraph(
     }
 
 
-    composable<SuggestionsNav.Filter> { backStackEntry ->
+    composable<SuggestionsNav.Filter> {
 
         FilterSuggestionScreen(
             suggestionViewModel = suggestionViewModel,

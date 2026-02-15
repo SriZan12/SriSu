@@ -25,10 +25,14 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import io.ktor.util.network.UnresolvedAddressException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 /**
@@ -52,10 +56,14 @@ class SuggestionViewModel(
     )
     val suggestionUIStates = _suggestionUIStates.asStateFlow()
 
+
     init {
-        setSession()
-        getUserSuggestions()
-        loadAllCountries()
+        viewModelScope.launch {
+            setSession()
+            getUserSuggestions()
+            loadAllCountries()
+        }
+
     }
 
     private fun success(message: String = "") {
@@ -149,7 +157,10 @@ class SuggestionViewModel(
 
     private fun addRequestedUsers(userId: Int?) {
         if (userId != null) {
-            _suggestionUIStates.value.requestedUsers.add(userId)
+            val currentRequested = _suggestionUIStates.value.requestedUsers.toMutableSet()
+            currentRequested.add(userId)
+            _suggestionUIStates.value =
+                _suggestionUIStates.value.copy(requestedUsers = currentRequested)
         }
     }
 
@@ -162,11 +173,16 @@ class SuggestionViewModel(
         )
     }
 
-    private fun loadAllCountries() {
-        viewModelScope.launch {
-            val countries = getAllCountriesFromJson() ?: emptyList()
-            _suggestionUIStates.value = _suggestionUIStates.value.copy(countryList = countries)
+    private suspend fun loadAllCountries() {
+        val countries = withContext(Dispatchers.IO) {
+            getAllCountriesFromJson() ?: emptyList()
         }
+
+        _suggestionUIStates.update {
+            it.copy(countryList = countries)
+        }
+
+
     }
 
 
@@ -207,13 +223,7 @@ class SuggestionViewModel(
         updateSelectedZodiac(zodiac = zodiac)
     }
 
-    fun setSuggestionProfileData(suggestionProfileData: String?) {
-        val profileData =
-            suggestionProfileData?.let {
-                Json.decodeFromString<UserSuggestionResponse.Result?>(
-                    it
-                )
-            }
+    fun setSuggestionProfileData(profileData: UserSuggestionResponse.Result?) {
         _suggestionUIStates.value =
             _suggestionUIStates.value.copy(suggestionProfileData = profileData)
 
@@ -365,9 +375,7 @@ class SuggestionViewModel(
                     message = message ?: "Request sent successfully"
                 )
                 val suggestionProfileData =
-                    suggestionUIStates.value.suggestionProfileData.apply {
-                        this?.crushed = true
-                    }
+                    suggestionUIStates.value.suggestionProfileData?.copy(crushed = true)
                 updateSuggestionProfileData(suggestionProfileData = suggestionProfileData)
             }.onError { error, errorType ->
                 showErrorMessage(
