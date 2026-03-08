@@ -273,24 +273,27 @@ class ChatRepository(
         message: ChatMessage,
         updatedChatRoom: ChatRoomResponse.Data.ChatRoom.ChatRoom?
     ) {
-        message.id ?: return
+        val id = message.id ?: return
 
-        messageMap.updateAndGet { oldMap ->
+        messageMap.update { oldMap ->
+
             val mutableMap = LinkedHashMap(oldMap)
 
-            val localMessage = oldMap.values.firstOrNull { it.isLocalOnly }
+            // remove all local messages
+            oldMap.values
+                .filter { it.isLocalOnly }
+                .forEach { local ->
+                    local.id?.let { mutableMap.remove(it) }
+                }
 
-            if (localMessage != null) {
-                mutableMap.remove(key = localMessage.id)
-                AppLogger.log("LOCAL PHOTO REMOVED!")
+            // prepend server message
+            LinkedHashMap<Long, ChatMessage>().apply {
+                put(id, message)
+                putAll(mutableMap)
             }
-
-            mutableMap
         }
 
-        prependMessage(message, updatedChatRoom)
-
-
+        updateChatRoomOnMessage(updatedChatRoom)
     }
 
     private fun deleteMessage(message: ChatMessage?) {
