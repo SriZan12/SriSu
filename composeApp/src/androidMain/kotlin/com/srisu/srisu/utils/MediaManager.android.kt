@@ -64,7 +64,7 @@ actual fun rememberGalleryManager(
             rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.PickMultipleVisualMedia(
                     maxItems = 5
-                )
+                ),
             ) { uris ->
                 onResult(
                     uris.takeIf { it.isNotEmpty() }?.map { it.toString() }
@@ -88,7 +88,7 @@ actual fun rememberGalleryManager(
 
                         MediaType.NOTHING ->
                             ActivityResultContracts.PickVisualMedia.ImageOnly
-                    }
+                    },
                 )
                 pickMultipleMedia.launch(request)
             })

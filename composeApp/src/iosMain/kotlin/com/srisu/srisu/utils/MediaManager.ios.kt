@@ -79,7 +79,9 @@ actual fun rememberGalleryManager(
                 viewController.presentViewController(
                     picker,
                     animated = true,
-                    completion = null
+                    completion = {
+                        onResult(emptyList())
+                    }
                 )
 
             } else {
@@ -102,7 +104,9 @@ actual fun rememberGalleryManager(
                 viewController.presentViewController(
                     picker,
                     animated = true,
-                    completion = null
+                    completion = {
+                        onResult(emptyList())
+                    }
                 )
             }
         })
