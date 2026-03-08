@@ -210,7 +210,7 @@ class ChatViewModel(
 
         repository.prependMessage(
             message = mediaMessage,
-            updatedChatRoom = null
+            updatedChatRoom = chatState.value.chatRoomData?.chatRoom
         )
     }
 
@@ -597,7 +597,7 @@ class ChatViewModel(
     private suspend fun getMediaFile(): ArrayList<MediaFile?> {
         val mediaFile = arrayListOf<MediaFile?>()
         _chatState.value.selectedPhotos?.forEach {
-            AppLogger.log("While building media file, URI = ${it}")
+            AppLogger.log("While building media file, URI = $it")
             mediaFile.add(getMediaFileFromUri(uri = it, id = null, removed = null))
         }
 
