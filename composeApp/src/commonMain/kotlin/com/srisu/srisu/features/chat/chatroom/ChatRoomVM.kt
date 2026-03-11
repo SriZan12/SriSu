@@ -22,6 +22,7 @@ import com.srisu.srisu.utils.Constants.ChatConstants.TEXT
 import com.srisu.srisu.utils.Constants.ChatConstants.TYPING
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlin.collections.any
 import kotlin.collections.component1
@@ -44,12 +46,28 @@ class ChatViewModel(
 
     private val _chatState = MutableStateFlow(ChatState())
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
+
     private var typingJob: Job? = null
-    private val TYPING_TIMEOUT = 1200L // ms
+    private val TYPING_TIMEOUT = 1200L
     private var isCurrentlyTyping = false
 
     init {
         updateChatRooms()
+        observeMessages()
+    }
+
+    /**
+     * Collect messages once and update state
+     * This prevents blocking coroutine chains.
+     */
+    private fun observeMessages() {
+        viewModelScope.launch {
+            repository.messages.collect { messages ->
+                _chatState.update {
+                    it.copy(chatMessages = messages)
+                }
+            }
+        }
     }
 
     // -----------------------------
@@ -75,7 +93,6 @@ class ChatViewModel(
     }
 
     fun showActionsForMessage(messageId: Long?, message: ChatMessage) {
-
         _chatState.update {
             it.copy(
                 selectedMessageIdForActions = messageId,
@@ -83,7 +100,6 @@ class ChatViewModel(
             )
         }
     }
-
 
     fun dismissActions() {
         _chatState.update {
@@ -97,26 +113,39 @@ class ChatViewModel(
         }
     }
 
+    /**
+     * Parse chat room on background thread
+     * then fetch initial messages
+     */
     fun setChatRoomData(chatRoomData: String?) {
-        chatRoomData?.let {
-            val chatRoom = Json.decodeFromString<ChatRoomResponse.Data.ChatRoom>(chatRoomData)
-            _chatState.update {
-                it.copy(chatRoomData = chatRoom)
+
+        if (chatRoomData == null) return
+
+        viewModelScope.launch(Dispatchers.Default) {
+
+            val chatRoom =
+                Json.decodeFromString<ChatRoomResponse.Data.ChatRoom>(chatRoomData)
+
+            withContext(Dispatchers.Main) {
+                _chatState.update {
+                    it.copy(chatRoomData = chatRoom)
+                }
             }
+
+            repository.fetchInitialMessages(
+                chatRoomId = chatRoom.chatRoom?.id
+            )
         }
-        viewModelScope.launch {
-            repository.fetchInitialMessages(chatRoomId = chatState.value.chatRoomData?.chatRoom?.id)
-            updateChatMessages()
-
-        }
-
-
     }
+
+    // -----------------------------
+    // Typing logic
+    // -----------------------------
 
     private fun startTyping() {
         if (!isCurrentlyTyping) {
             isCurrentlyTyping = true
-            sendTypingRequest(isTyping = true)
+            sendTypingRequest(true)
         }
     }
 
@@ -137,7 +166,6 @@ class ChatViewModel(
         typingJob = null
     }
 
-
     fun setMessageInputText(text: String) {
         _chatState.update {
             it.copy(
@@ -147,16 +175,6 @@ class ChatViewModel(
                 )
             )
         }
-    }
-
-
-    suspend fun updateChatMessages() {
-        repository.messages.collect { messages ->
-            _chatState.update {
-                it.copy(chatMessages = messages)
-            }
-        }
-
     }
 
     fun setReplyMessage(chatMessage: ChatMessage?, isOn: Boolean) {
@@ -230,10 +248,8 @@ class ChatViewModel(
                     startingIndex = startingIndex
                 )
             )
-
         }
     }
-
 
     fun updateLongClickedMessage(chatMessage: ChatMessage) {
         _chatState.update {
@@ -241,9 +257,13 @@ class ChatViewModel(
         }
     }
 
+    // -----------------------------
+    // UI State helpers
+    // -----------------------------
+
     private fun <T> showSuccessMessage(data: T? = null, message: String) {
-        this._chatState.value =
-            this._chatState.value.copy(
+        _chatState.value =
+            _chatState.value.copy(
                 baseUIState = BaseUIState.Success(
                     data = data,
                     message = message
@@ -252,8 +272,8 @@ class ChatViewModel(
     }
 
     private fun showErrorMessage(errorType: String?, message: String?) {
-        this._chatState.value =
-            this._chatState.value.copy(
+        _chatState.value =
+            _chatState.value.copy(
                 baseUIState = BaseUIState.Error(
                     errorType = errorType,
                     message = message
@@ -261,40 +281,33 @@ class ChatViewModel(
             )
     }
 
-    /*
-    private fun isInternetAvailable(): Boolean {
-        return connectivityObserver.isConnected.value
-    }
-*/
-
-    private fun showNoInternetConnection(isOffline: Boolean) {
-        this._chatState.value =
-            _chatState.value.copy(baseUIState = BaseUIState.NoInternetConnection(isOffline = isOffline))
-    }
-
     private fun showLoading() {
-        this._chatState.value =
-            this._chatState.value.copy(baseUIState = BaseUIState.Loading)
+        _chatState.value =
+            _chatState.value.copy(baseUIState = BaseUIState.Loading)
     }
 
     fun idleScreen() {
-        this._chatState.value =
-            this._chatState.value.copy(baseUIState = BaseUIState.Idle)
+        _chatState.value =
+            _chatState.value.copy(baseUIState = BaseUIState.Idle)
     }
 
+    // -----------------------------
+    // Chat room updates
+    // -----------------------------
+
     private fun updateChatRooms() {
+
         viewModelScope.launch {
+
             repository.chatRoomsList.collect { chatRoomList ->
 
                 val chatRoomData = chatRoomList.find { chatRoom ->
-                    chatRoom.chatRoom?.id == chatState.value.chatRoomData?.chatRoom?.id
+                    chatRoom.chatRoom?.id ==
+                            chatState.value.chatRoomData?.chatRoom?.id
                 }
 
                 val room = chatRoomData?.chatRoom
                 val myUserId = chatState.value.session?.id ?: return@collect
-
-
-
 
                 _chatState.update {
                     it.copy(
@@ -304,7 +317,6 @@ class ChatViewModel(
                     )
                 }
             }
-
         }
     }
 
@@ -312,68 +324,64 @@ class ChatViewModel(
         room: ChatRoomResponse.Data.ChatRoom.ChatRoom?,
         myUserId: Long?
     ): Boolean {
-        val typingUsers = room
-            ?.isTyping
-            ?.typingData
-            ?.typingUsers
-            .orEmpty()
 
-        val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
+        val typingUsers =
+            room?.isTyping?.typingData?.typingUsers.orEmpty()
+
+        return typingUsers.any { (userId, isTyping) ->
             userId != myUserId.toString() && isTyping
         }
-
-        return isSomeoneElseTyping
     }
 
+    // -----------------------------
+    // Sending messages
+    // -----------------------------
 
-    /**
-     * Send message and clear input
-     */
-    @OptIn(ExperimentalTime::class)
     fun sendTextMessage() {
+
         val text = chatState.value.messageInput.text.trim()
         if (text.isBlank()) return
 
         viewModelScope.launch {
+
             try {
 
-                val replyTo = if (chatState.value.replyMessage.isOn) {
-                    ChatMessage.ReplyMessage(
-                        id = chatState.value.replyMessage.message?.id,
-                        text = chatState.value.replyMessage.message?.text,
-                        senderId = chatState.value.replyMessage.message?.senderId,
-                        messageType = chatState.value.replyMessage.message?.messageType
-                    )
-                } else {
-                    null
-                }
+                val replyTo =
+                    if (chatState.value.replyMessage.isOn) {
+                        ChatMessage.ReplyMessage(
+                            id = chatState.value.replyMessage.message?.id,
+                            text = chatState.value.replyMessage.message?.text,
+                            senderId = chatState.value.replyMessage.message?.senderId,
+                            messageType = chatState.value.replyMessage.message?.messageType
+                        )
+                    } else null
 
-                val sendMessagePayload = ChatMessage(
+                val payload = ChatMessage(
                     action = SEND_MESSAGE,
                     text = text,
                     senderId = chatState.value.session?.id,
                     receiverId = chatState.value.chatRoomData?.otherUser?.id,
                     singles = chatState.value.chatRoomData?.chatRoom?.singles,
-                    reactions = null,
-                    deleteFor = null,
-                    messageDeletionDict = null,
                     chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
                     messageType = TEXT,
                     replyTo = replyTo
                 )
 
                 repository.sendRequest(
-                    payload = Json.encodeToString(value = sendMessagePayload)
+                    payload = Json.encodeToString(payload)
                 )
+
                 onMessageInputChanged(TextFieldValue())
-                setReplyMessage(chatMessage = null, isOn = false)
+                setReplyMessage(null, false)
+
             } catch (e: Exception) {
-                showErrorMessage(errorType = "Error", message = "Something went wrong")
+                showErrorMessage("Error", "Something went wrong")
             }
         }
     }
 
     fun sendTypingRequest(isTyping: Boolean) {
+
         val userId = chatState.value.session?.id ?: return
 
         val payload = TypingRequest(
@@ -383,13 +391,10 @@ class ChatViewModel(
             chat_room_id = chatState.value.chatRoomData?.chatRoom?.id
         )
 
-        val encodedPayload = Json.encodeToString(payload)
-
         viewModelScope.launch {
-            repository.sendRequest(payload = encodedPayload)
+            repository.sendRequest(Json.encodeToString(payload))
         }
     }
-
 
     fun sendMediaMessage(
         listOfMedia: List<ChatMessage.Media?>?
@@ -554,7 +559,9 @@ class ChatViewModel(
     }
 
     fun fetchOlderMessages() {
-        repository.fetchOlderMessages(chatRoomId = chatState.value.chatRoomData?.chatRoom?.id)
+        repository.fetchOlderMessages(
+            chatRoomId = chatState.value.chatRoomData?.chatRoom?.id
+        )
     }
 
     fun fetchNewChatRooms() {

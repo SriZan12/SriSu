@@ -137,7 +137,6 @@ import com.srisu.srisu.core.data.dto.chatdto.ChatMessage
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.chatroom.ChatState
 import com.srisu.srisu.features.chat.chatroom.ChatViewModel
-import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_ME
 import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
@@ -146,12 +145,8 @@ import com.srisu.srisu.utils.DateTimeUtils.formatTimeInHourAndMinute
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
-import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 typealias reaction = String
 typealias messageId = Long?
@@ -159,19 +154,11 @@ typealias messageId = Long?
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    session: Session?,
-    viewModel: ChatViewModel = koinViewModel(),
-    chatRoomData: String?,
+    viewModel: ChatViewModel,
     onNavBack: () -> Unit
 ) {
 
     val chatState by viewModel.chatState.collectAsState()
-
-    ChatInitialization(
-        session = session,
-        viewModel = viewModel,
-        chatRoomData = chatRoomData
-    )
 
     HandleUiStates(
         chatRoomVm = viewModel,
@@ -186,18 +173,6 @@ fun ChatScreen(
     )
 
 
-}
-
-@Composable
-private fun ChatInitialization(
-    session: Session?,
-    viewModel: ChatViewModel,
-    chatRoomData: String? = null
-) {
-    LaunchedEffect(Unit) {
-        viewModel.updateSession(session = session)
-        viewModel.setChatRoomData(chatRoomData = chatRoomData)
-    }
 }
 
 @Composable
@@ -432,7 +407,6 @@ private fun ChatScaffold(
     }
 }
 
-@OptIn(ExperimentalTime::class)
 @Composable
 private fun ChatMessagesList(
     messages: List<ChatMessage?>,
@@ -491,7 +465,7 @@ private fun ChatMessagesList(
     ) {
         items(
             items = messages,
-            key = { it?.id ?: Clock.System.now().epochSeconds }
+            key = { it?.id ?: it.hashCode() }
         ) { message ->
             message?.let {
                 AnimatedMessageItem(
@@ -531,21 +505,26 @@ private fun AnimatedMessageItem(
     onClickMessageReplied: (messageId) -> Unit,
     onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit
 ) {
-    val hasAnimated = remember(message.id) { mutableStateOf(false) }
+//    val hasAnimated = remember(message.id) { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
 
-    LaunchedEffect(message.id) {
-        delay(50) // Stagger animations slightly
-        hasAnimated.value = true
-    }
+    /**
+     * for now animations are turned off as it resulted in performance of the message loading.
+     * */
 
-    AnimatedVisibility(
-        visible = hasAnimated.value,
-        enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
-                slideInVertically(animationSpec = tween(durationMillis = 300)) { it / 8 } +
-                scaleIn(animationSpec = tween(durationMillis = 300), initialScale = 0.94f),
-        exit = fadeOut(animationSpec = tween(durationMillis = 150))
-    ) {
+
+//    LaunchedEffect(message.id) {
+//        delay(50) // Stagger animations slightly
+//        hasAnimated.value = true
+//    }
+//
+//    AnimatedVisibility(
+//        visible = hasAnimated.value,
+//        enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
+//                slideInVertically(animationSpec = tween(durationMillis = 300)) { it / 8 } +
+//                scaleIn(animationSpec = tween(durationMillis = 300), initialScale = 0.94f),
+//        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+//    ) {
         Box {
 
             SwipeableMessageCompo(
@@ -581,7 +560,7 @@ private fun AnimatedMessageItem(
                 onDismiss = { showReactions = false }
             )
         }
-    }
+//    }
 }
 
 @Composable
