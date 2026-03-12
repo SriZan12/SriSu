@@ -443,7 +443,7 @@ class ChatViewModel(
     }
 
     fun editMessage(
-        messageId: Long?
+        message: ChatMessage?,
     ) {
         val text = chatState.value.messageInput.text.trim()
         if (text.isBlank()) return
@@ -452,12 +452,13 @@ class ChatViewModel(
             try {
                 val editMessagePayload = ChatMessage(
                     action = "edit_message",
-                    id = messageId,
+                    id = message?.id,
                     text = text,
                     senderId = chatState.value.session?.id,
                     receiverId = chatState.value.chatRoomData?.otherUser?.id,
                     singles = chatState.value.chatRoomData?.chatRoom?.singles,
                     chatRoom = chatState.value.chatRoomData?.chatRoom?.id,
+                    isRead = message?.isRead,
                     messageType = "text"
                 )
                 repository.sendRequest(

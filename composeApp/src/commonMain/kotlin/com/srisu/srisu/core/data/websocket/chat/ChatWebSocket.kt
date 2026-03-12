@@ -254,7 +254,7 @@ class ChatWebSocketClient(
         }
     }
 
-    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 50, chatRoomId: String?) {
+    suspend fun fetchMessages(page: Int? = null, pageSize: Int = 20, chatRoomId: String?) {
         try {
             val fetchMessage = FetchMessageDTO(
                 action = FETCH_MESSAGES,

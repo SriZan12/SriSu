@@ -293,7 +293,7 @@ private fun ChatScaffold(
                     onSend = {
                         if (chatState.messageInput.text.isNotBlank()) {
                             if (chatState.isEditMessage) {
-                                viewModel.editMessage(messageId = chatState.selectedMessageForAction?.id)
+                                viewModel.editMessage(message = chatState.selectedMessageForAction)
                             } else {
                                 viewModel.sendTextMessage()
                             }
@@ -525,41 +525,41 @@ private fun AnimatedMessageItem(
 //                scaleIn(animationSpec = tween(durationMillis = 300), initialScale = 0.94f),
 //        exit = fadeOut(animationSpec = tween(durationMillis = 150))
 //    ) {
-        Box {
+    Box {
 
-            SwipeableMessageCompo(
-                message = message,
-                currentUserId = currentUserId,
-                isOwn = isOwn,
-                onLongClick = onLongClick,
-                onReplyMessage = onReplyMessage,
-                onReactionClick = {
-                    showReactions = true
-                },
-                onPhotoClick = onPhotoClick,
-                onClickMessageReplied = onClickMessageReplied
-            )
+        SwipeableMessageCompo(
+            message = message,
+            currentUserId = currentUserId,
+            isOwn = isOwn,
+            onLongClick = onLongClick,
+            onReplyMessage = onReplyMessage,
+            onReactionClick = {
+                showReactions = true
+            },
+            onPhotoClick = onPhotoClick,
+            onClickMessageReplied = onClickMessageReplied
+        )
 
-            AnimatedMessageDropDownCompo(
-                modifier = Modifier.align(alignment = if (isOwn) Alignment.TopEnd else Alignment.TopStart),
-                isOwn = isOwn,
-                isActionShown = isActionShown,
-                onDismissActions = onDismissActions,
-                onEdit = onEdit,
-                onDeleteForMe = onDeleteForMe,
-                onDeleteForEveryone = onDeleteForEveryone,
-                canEdit = isOwn && message.messageType != IMAGE,
-                canCopy = message.messageType == TEXT
-            )
+        AnimatedMessageDropDownCompo(
+            modifier = Modifier.align(alignment = if (isOwn) Alignment.TopEnd else Alignment.TopStart),
+            isOwn = isOwn,
+            isActionShown = isActionShown,
+            onDismissActions = onDismissActions,
+            onEdit = onEdit,
+            onDeleteForMe = onDeleteForMe,
+            onDeleteForEveryone = onDeleteForEveryone,
+            canEdit = isOwn && message.messageType != IMAGE,
+            canCopy = message.messageType == TEXT
+        )
 
-            AnimatedReactionPickerOverlay(
-                modifier = Modifier.align(Alignment.TopEnd),
-                isOwn = isOwn,
-                showReactions = showReactions,
-                onReactionSelected = onReactionSelected,
-                onDismiss = { showReactions = false }
-            )
-        }
+        AnimatedReactionPickerOverlay(
+            modifier = Modifier.align(Alignment.TopEnd),
+            isOwn = isOwn,
+            showReactions = showReactions,
+            onReactionSelected = onReactionSelected,
+            onDismiss = { showReactions = false }
+        )
+    }
 //    }
 }
 
@@ -746,14 +746,14 @@ private fun MessageBubble(
                                     )
                                 }
 
-                                message.isDelivered == true -> {
-                                    Icon(
-                                        Icons.Default.DoneAll,
-                                        contentDescription = "Delivered",
-                                        tint = MaterialTheme.colorScheme.surfaceContainerLowest,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
+//                                message.isDelivered == true -> {
+//                                    Icon(
+//                                        Icons.Default.DoneAll,
+//                                        contentDescription = "Delivered",
+//                                        tint = MaterialTheme.colorScheme.surfaceContainerLowest,
+//                                        modifier = Modifier.size(16.dp)
+//                                    )
+//                                }
 
                                 else -> {
                                     Icon(
@@ -1406,20 +1406,22 @@ private fun ChatInputBar(
         } else if (isReplying.isOn) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val replyingOnText =
-                    if (isReplying.message?.messageType == IMAGE) "Photo" else isReplying.message?.text.orEmpty()
+                    if (isReplying.message?.messageType == IMAGE) "Photo"
+                    else isReplying.message?.text.orEmpty()
+
                 Text(
                     text = replyingOnText,
                     style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
 
                 IconButton(
-                    onClick = {
-                        onCancelEdit()
-                    },
+                    onClick = { onCancelEdit() }
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
