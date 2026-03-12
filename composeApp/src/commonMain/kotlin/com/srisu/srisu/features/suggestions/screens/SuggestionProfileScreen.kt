@@ -266,7 +266,6 @@ fun ProfilePictureCompo(
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
                 imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
-                placeholder = painterResource(Res.drawable.image_placeholder),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(500.dp)

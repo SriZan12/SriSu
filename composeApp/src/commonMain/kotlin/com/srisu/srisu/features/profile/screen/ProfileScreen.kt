@@ -191,14 +191,7 @@ private fun ProfilePictureContent(
             .navigationBarsPadding()
     ) {
         ProfilePictureCompo(
-            profileUrl = userProfileData?.profilePhoto,
-//            hasSentRequest = userProfileData?.crushed,
-            hasSentRequest = false,
-            shouldShowRequestButton = shouldShowRequestButton,
-            isRequestSentSuccessfully = profileUIState.isRequestSentSuccessfully,
-            onSendRequest = {
-                onSendRequest()
-            }
+            profileUrl = userProfileData?.profilePhoto
         )
 
         // Name and Age
@@ -239,10 +232,6 @@ private fun ProfilePictureContent(
 @Composable
 fun ProfilePictureCompo(
     profileUrl: String? = null,
-    hasSentRequest: Boolean? = false,
-    shouldShowRequestButton: Boolean,
-    isRequestSentSuccessfully: Boolean?,
-    onSendRequest: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
         if (profileUrl == null) {
@@ -252,7 +241,7 @@ fun ProfilePictureCompo(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(500.dp)
             )
         } else {
             /*AsyncImage(
@@ -272,7 +261,7 @@ fun ProfilePictureCompo(
                 alignment = Alignment.TopCenter,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(500.dp)
             )
 
         }
@@ -416,7 +405,6 @@ fun getRandomPastelColor(): Color {
     return Color(red, green, blue)
 }
 
-@Preview
 @Composable
 private fun AboutCompo(
     bio: String?
@@ -444,7 +432,6 @@ private fun AboutCompo(
     }
 }
 
-@Preview
 @Composable
 fun GallerySection(
     photos: List<User.UserPhoto?>?
