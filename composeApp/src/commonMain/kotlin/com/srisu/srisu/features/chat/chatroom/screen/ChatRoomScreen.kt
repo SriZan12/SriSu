@@ -36,7 +36,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
@@ -47,13 +51,11 @@ import com.srisu.srisu.core.data.response.chat.ChatRoomResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.chatroom.ChatState
 import com.srisu.srisu.features.chat.chatroom.ChatViewModel
-import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.Constants.ChatConstants.IMAGE
 import com.srisu.srisu.utils.DateTimeUtils.getChatTimestamp
 import com.srisu.srisu.utils.isInternetAvailable
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.viewmodel.koinViewModel
 import kotlin.collections.any
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -61,16 +63,11 @@ import kotlin.collections.orEmpty
 
 @Composable
 fun ChatRoomScreen(
-    session: Session?,
-    viewModel: ChatViewModel = koinViewModel(),
+    viewModel: ChatViewModel,
     onNavigateToChatScreen: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
-    val chatState by viewModel.chatState.collectAsState()
 
-    Initialization(
-        session = session,
-        viewModel = viewModel
-    )
+    val chatState by viewModel.chatState.collectAsStateWithLifecycle()
 
     HandleUiStates(
         chatRoomVm = viewModel,
@@ -79,19 +76,9 @@ fun ChatRoomScreen(
 
     ChatRoomContent(
         chatState = chatState,
-        viewModel = viewModel
-    ) { chatRoom ->
-        onNavigateToChatScreen(chatRoom)
-    }
-
-}
-
-@Composable
-private fun Initialization(
-    session: Session?,
-    viewModel: ChatViewModel
-) {
-    viewModel.updateSession(session = session)
+        viewModel = viewModel,
+        onClickChatRoom = onNavigateToChatScreen
+    )
 }
 
 @Composable
@@ -101,6 +88,7 @@ private fun HandleUiStates(
 ) {
 
     val isConnected = isInternetAvailable()
+
     var showBottomSheet by remember { mutableStateOf(!isConnected) }
 
     LaunchedEffect(isConnected) {
@@ -108,24 +96,19 @@ private fun HandleUiStates(
     }
 
     when (val baseUIState = chatUiState.baseUIState) {
+
         is BaseUIState.Error -> {
             ErrorDialog(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    chatRoomVm.idleScreen()
-                },
+                onDismiss = { chatRoomVm.idleScreen() }
             )
         }
 
         is BaseUIState.Loading -> {
-            AppLogger.log("I am loading....")
-
             LoadingScrim(
-                onDismissRequest = {
-                    chatRoomVm.idleScreen()
-                }
+                onDismissRequest = { chatRoomVm.idleScreen() }
             )
         }
 
@@ -133,9 +116,7 @@ private fun HandleUiStates(
             SuccessDialog(
                 successMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    chatRoomVm.idleScreen()
-                }
+                onDismiss = { chatRoomVm.idleScreen() }
             )
         }
 
@@ -143,9 +124,7 @@ private fun HandleUiStates(
             showBottomSheet = baseUIState.isOffline
         }
 
-        is BaseUIState.Idle -> {
-            Unit
-        }
+        BaseUIState.Idle -> Unit
     }
 
     if (showBottomSheet) {
@@ -165,77 +144,77 @@ private fun ChatRoomContent(
     viewModel: ChatViewModel,
     onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             PrimaryToolBar(
                 title = "Chats",
-                onNavigate = {},
+                onNavigate = {}
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
-            ChatRoomListCompo(
-                chatRoomList = chatState.chatRoomList,
-                me = chatState.session?.id,
-                onFetchChatRoom = {
-                    viewModel.fetchNewChatRooms()
-                },
-                onClickChatRoom = onClickChatRoom
-            )
-        }
+
+        ChatRoomListCompo(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            chatRoomList = chatState.chatRoomList,
+            me = chatState.session?.id,
+            onFetchChatRoom = viewModel::fetchNewChatRooms,
+            onClickChatRoom = onClickChatRoom
+        )
     }
 }
 
-
 @Composable
 private fun ChatRoomListCompo(
+    modifier: Modifier = Modifier,
     chatRoomList: List<ChatRoomResponse.Data.ChatRoom?>,
     onFetchChatRoom: () -> Unit,
     me: Long?,
     onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
 ) {
+
     val myId = me?.toString()
     val listState = rememberLazyListState()
 
-    // Prevent multiple triggers
     var isFetching by remember { mutableStateOf(false) }
 
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, chatRoomList.size) {
+
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
-            val lastVisibleItemIndex =
+            val lastVisibleItem =
                 layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            val totalItemsCount = layoutInfo.totalItemsCount
 
-            lastVisibleItemIndex to totalItemsCount
+            lastVisibleItem to layoutInfo.totalItemsCount
         }
             .distinctUntilChanged()
-            .collect { (lastVisibleIndex, totalItems) ->
+            .collect { (lastVisible, total) ->
 
                 val shouldFetch =
-                    lastVisibleIndex >= totalItems - 3 && // threshold
-                            totalItems > 0 &&
+                    lastVisible >= total - 3 &&
+                            total > 0 &&
                             !isFetching
 
                 if (shouldFetch) {
                     isFetching = true
-                    AppLogger.log("Reached bottom, fetching more chat rooms")
                     onFetchChatRoom()
                 }
             }
     }
 
-    // Reset fetching flag when new data arrives
     LaunchedEffect(chatRoomList.size) {
         isFetching = false
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        state = listState,
+        modifier = modifier,
+        state = listState
     ) {
+
         items(
             items = chatRoomList,
             key = { it?.chatRoom?.id ?: it.hashCode() }
@@ -245,28 +224,23 @@ private fun ChatRoomListCompo(
             val room = chatRoom?.chatRoom
 
             val lastMessage =
-                if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
+                if (room?.lastMessage?.messageType == IMAGE)
+                    "Photo"
+                else
+                    room?.lastMessage?.text.orEmpty()
 
-            val isSomeOneElseTyping = isSomeOneElseTyping(me = me, room = room)
-
-
-//            LaunchedEffect(key1 = isSomeOneElseTyping) {
-//                lastMessage = if (isSomeOneElseTyping) {
-//                    AppLogger.log("Yes someone is typing")
-//                    "Typing..."
-//                } else {
-//                    if (room?.lastMessage?.messageType == IMAGE) "Photo" else room?.lastMessage?.text.orEmpty()
-//                }
-//            }
+            val isTyping = isSomeOneElseTyping(
+                me = me,
+                room = room
+            )
 
             ChatRoomItem(
-                avatarUrl = otherUser?.profilePhoto.orEmpty(),
-                name = otherUser?.fullName.orEmpty(),
-                isTyping = isSomeOneElseTyping,
+                avatarUrl = otherUser?.profilePhoto,
+                name = otherUser?.fullName,
+                isTyping = isTyping,
                 lastMessage = lastMessage,
                 time = getChatTimestamp(room?.lastMessage?.timestamp),
-                unreadCount = getUnReadCount(myId = myId, room = room),
-                modifier = Modifier,
+                unreadCount = getUnReadCount(myId, room),
                 onClick = { onClickChatRoom(chatRoom) }
             )
 
@@ -287,6 +261,7 @@ fun ChatRoomItem(
     onClick: () -> Unit = {},
     isTyping: Boolean
 ) {
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -296,7 +271,10 @@ fun ChatRoomItem(
     ) {
 
         AsyncImage(
-            model = avatarUrl,
+            model = ImageRequest.Builder(LocalPlatformContext.current)
+                .data(avatarUrl)
+                .crossfade(true)
+                .build(),
             contentDescription = "Profile Picture",
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -304,11 +282,10 @@ fun ChatRoomItem(
                 .clip(CircleShape)
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(Modifier.width(12.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(Modifier.weight(1f)) {
+
             Text(
                 text = name ?: "",
                 style = MaterialTheme.typography.titleMedium,
@@ -317,37 +294,42 @@ fun ChatRoomItem(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(Modifier.height(2.dp))
+
             val isUnread = unreadCount.isNotEmpty()
 
             if (isTyping) {
+
                 Text(
                     text = "Typing...",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.bodyMedium
+                        .copy(fontWeight = FontWeight.SemiBold)
                 )
+
             } else {
+
                 Text(
                     text = lastMessage,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Normal
+                        fontWeight =
+                            if (isUnread) FontWeight.SemiBold
+                            else FontWeight.Normal
                     ),
-                    color = if (isUnread)
-                        MaterialTheme.colorScheme.onSurface
-                    else
-                        Color.Gray,
+                    color =
+                        if (isUnread)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            Color.Gray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-
-
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(Modifier.width(8.dp))
 
-        Column(
-            horizontalAlignment = Alignment.End
-        ) {
+        Column(horizontalAlignment = Alignment.End) {
+
             if (!time.isNullOrEmpty()) {
                 Text(
                     text = time,
@@ -357,8 +339,8 @@ fun ChatRoomItem(
             }
 
             if (unreadCount.isNotEmpty()) {
-                AppLogger.log("UnRead count = $unreadCount")
-                Spacer(modifier = Modifier.height(6.dp))
+
+                Spacer(Modifier.height(6.dp))
 
                 Box(
                     modifier = Modifier
@@ -369,6 +351,7 @@ fun ChatRoomItem(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Text(
                         text = unreadCount,
                         style = MaterialTheme.typography.labelSmall,

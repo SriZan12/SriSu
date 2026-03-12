@@ -4,12 +4,14 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.srisu.srisu.features.chat.chatroom.ChatViewModel
 import com.srisu.srisu.features.chat.chatroom.screen.ChatRoomScreen
 import com.srisu.srisu.features.chat.chatroom.screen.ChatScreen
 import com.srisu.srisu.features.chat.couple.findpartner.FindYourPartnerScreen
 import com.srisu.srisu.session.Session
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.koin.compose.viewmodel.koinViewModel
 
 sealed class ChatNav : Route {
 
@@ -35,10 +37,12 @@ fun NavGraphBuilder.chatGraph(
 
     composable<ChatNav.ChatScreen> { backStackEntry ->
         val chatRoomData = backStackEntry.toRoute<ChatNav.ChatScreen>().chatRoomData
+        val chatViewModel: ChatViewModel = koinViewModel()
+        chatViewModel.updateSession(session = session)
+        chatViewModel.setChatRoomData(chatRoomData = chatRoomData)
 
         ChatScreen(
-            session = session,
-            chatRoomData = chatRoomData,
+            viewModel = chatViewModel,
             onNavBack = {
                 navController.popBackStack()
             }
@@ -46,8 +50,11 @@ fun NavGraphBuilder.chatGraph(
     }
 
     composable<ChatNav.ChatRoomScreen> {
+        val chatViewModel: ChatViewModel = koinViewModel()
+        chatViewModel.updateSession(session = session)
+
         ChatRoomScreen(
-            session = session,
+            viewModel = chatViewModel
         ) { chatRoom ->
             val chatRoomData = Json.encodeToString(chatRoom)
             navController.navigate(ChatNav.ChatScreen(chatRoomData))

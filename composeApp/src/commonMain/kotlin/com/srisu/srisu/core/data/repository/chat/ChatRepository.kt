@@ -111,7 +111,7 @@ class ChatRepository(
             val fetchPayload = FetchMessageDTO(
                 action = FETCH_MESSAGES,
                 page = nextCursor,
-                page_size = 50,
+                page_size = 20,
                 chatRoomId = chatRoomId
             )
             webSocketClient.send(rawPayload = Json.encodeToString(fetchPayload))
