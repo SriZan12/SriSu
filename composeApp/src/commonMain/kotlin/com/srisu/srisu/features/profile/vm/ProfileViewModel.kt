@@ -5,14 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
 import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.session.SessionUtils
 import com.srisu.srisu.utils.ConnectivityObserver
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -66,7 +62,8 @@ class ProfileViewModel(
         return connectivityObserver.isConnected.value
     }
 
-    fun updateUserProfileData(userProfileData: String?) {
+
+    fun setUserProfileData(userProfileData: String?) {
         userProfileData?.let {
             val profileData = Json.decodeFromString<User?>(
                 userProfileData

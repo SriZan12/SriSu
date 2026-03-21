@@ -14,9 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -24,13 +22,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,7 +51,6 @@ import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
 import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
@@ -73,16 +67,11 @@ import kotlin.random.Random
 
 @Composable
 fun ProfileScreen(
-    userProfileData: String?,
     profileViewModel: ProfileViewModel = koinViewModel<ProfileViewModel>()
 ) {
 
     val profileUIState by profileViewModel.profileUIState.collectAsStateWithLifecycle()
-    val shouldShowRequestButton by remember {
-        mutableStateOf(false)
-    }
 
-    Init(profileViewModel = profileViewModel, userProfileData = userProfileData)
 
     HandleUiStates(
         profileViewModel = profileViewModel,
@@ -91,27 +80,9 @@ fun ProfileScreen(
 
     ProfilePictureContent(
         profileUIState = profileUIState,
-        shouldShowRequestButton = shouldShowRequestButton,
-        onSendRequest = {
-            AppLogger.log("ON SEND REQUEST")
-            profileViewModel.sendSingleConnectionRequest()
-        }
     )
 
 }
-
-@Composable
-private fun Init(
-    profileViewModel: ProfileViewModel,
-    userProfileData: String?
-) {
-    LaunchedEffect(
-        key1 = Unit
-    ) {
-        profileViewModel.updateUserProfileData(userProfileData = userProfileData)
-    }
-}
-
 @Composable
 private fun HandleUiStates(
     profileViewModel: ProfileViewModel,
@@ -177,8 +148,6 @@ private fun HandleUiStates(
 @Composable
 private fun ProfilePictureContent(
     profileUIState: ProfileUIState,
-    onSendRequest: () -> Unit,
-    shouldShowRequestButton: Boolean
 ) {
 
     val userProfileData = profileUIState.userProfileData
@@ -194,12 +163,9 @@ private fun ProfilePictureContent(
             profileUrl = userProfileData?.profilePhoto
         )
 
-        // Name and Age
-        val age = DateTimeUtils.calculateAge(userProfileData?.dob)
-
         UserInfo(
             name = userProfileData?.fullName,
-            age = age,
+            age = DateTimeUtils.calculateAge(userProfileData?.dob),
             zodiacSign = userProfileData?.zodiacSign,
             city = userProfileData?.city,
             country = userProfileData?.country
@@ -244,15 +210,6 @@ fun ProfilePictureCompo(
                     .height(500.dp)
             )
         } else {
-            /*AsyncImage(
-                model = profileUrl,
-//                model = "https://images.unsplash.com/photo-1576828831022-ca41d3905fb7?q=80&w=1923&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Inside,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )*/
 
             AsyncImage(
                 model = profileUrl,
@@ -265,27 +222,6 @@ fun ProfilePictureCompo(
             )
 
         }
-
-      /*  if (hasSentRequest == false && !isRequestSentSuccessfully!!) {
-
-            IconButton(
-                onClick = {
-                    onSendRequest()
-                },
-                modifier = Modifier
-                    .size(48.dp)
-                    .align(Alignment.BottomCenter)
-                    .offset(y = 24.dp),
-                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(
-                    modifier = Modifier.size(48.dp).padding(all = 8.dp),
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = "Like",
-                    tint = Color.White
-                )
-            }
-        }*/
     }
 }
 
@@ -357,23 +293,6 @@ fun InterestCompo(interests: List<User.UserInterest?>?) {
                     }
                 }
             }
-
-            /* LazyVerticalGrid(
-                 modifier = Modifier.padding(top = 8.dp).heightIn(min = 150.dp, max = 200.dp),
-                 columns = GridCells.Fixed(3),
-                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
-             ) {
-                 items(interests) { interest ->
-                     val backgroundColor = remember { getRandomPastelColor() }
-                     interest?.let {
-                         if (!interest.name.isNullOrEmpty()) {
-                             InterestChip(label = interest.name, backgroundColor = backgroundColor)
-                         }
-                     }
-                 }
-             }*/
         }
     }
 }

@@ -63,6 +63,7 @@ import com.srisu.srisu.session.SessionStorage
 import com.srisu.srisu.theme.AppTheme
 import com.srisu.srisu.utils.Constants.Auth.FIRST_INSTALL_FLAG
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinMultiplatformApplication
@@ -72,7 +73,6 @@ import org.koin.core.annotation.KoinExperimentalAPI
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
-@Preview
 fun App(
     darkTheme: Boolean,
     dynamicColor: Boolean,
@@ -99,8 +99,10 @@ private fun checkSession(session: SessionStorage): Session? {
 
     try {
         sessionData = sessionJson?.let { Json.decodeFromString<Session>(it) }
-    } catch (_: Exception) {
-        AppLogger.log("SESSION SERIALIZATION EXCEPTION")
+    } catch (illegalArgumentException: IllegalArgumentException) {
+        AppLogger.log("Exception = ${illegalArgumentException.message}")
+    } catch (serializationException: SerializationException) {
+        AppLogger.log("Exception = ${serializationException.message}")
     }
 
     return sessionData
@@ -195,7 +197,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.Home
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> ChatNav.ChatRoomScreen
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }

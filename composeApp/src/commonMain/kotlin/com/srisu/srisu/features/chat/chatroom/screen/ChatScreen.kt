@@ -1331,20 +1331,22 @@ private fun ChatTopBar(
                 Column {
                     Text(
                         text = chatState.chatRoomData?.otherUser?.fullName ?: "",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = chatTopBarSubTitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.labelMedium.copy(color = Color.White),
                     )
                 }
             }
         },
         navigationIcon = {
-            IconButton(onClick = onBack) {
+            IconButton(
+                onClick = onBack,
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White)
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back"
@@ -1352,15 +1354,21 @@ private fun ChatTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onCall) {
+            IconButton(
+                onClick = onCall,
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White)
+            ) {
                 Icon(imageVector = Icons.Default.Call, contentDescription = "Call")
             }
-            IconButton(onClick = onVideoCall) {
+            IconButton(
+                onClick = onVideoCall,
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White)
+            ) {
                 Icon(imageVector = Icons.Default.Videocam, contentDescription = "Video call")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            containerColor = MaterialTheme.colorScheme.primary
         )
     )
 }

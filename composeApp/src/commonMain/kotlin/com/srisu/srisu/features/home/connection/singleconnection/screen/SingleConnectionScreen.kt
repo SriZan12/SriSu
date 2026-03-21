@@ -31,18 +31,18 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun SingleConnectionScreen(
-    viewModel: SingleConnectionViewModel = koinViewModel<SingleConnectionViewModel>(),
+    singleConnectionViewModel: SingleConnectionViewModel,
     onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
 
-    val connectionUiState: ConnectionUIState by viewModel.connectionUiState.collectAsStateWithLifecycle()
+    val connectionUiState: ConnectionUIState by singleConnectionViewModel.connectionUiState.collectAsStateWithLifecycle()
 
     Initialization(
-        viewModel = viewModel
+        viewModel = singleConnectionViewModel
     )
 
     ConnectionScreenContent(
-        viewModel = viewModel,
+        viewModel = singleConnectionViewModel,
         connectionUiState =
             connectionUiState,
         onNavigateToProfile = onNavigateToProfile
