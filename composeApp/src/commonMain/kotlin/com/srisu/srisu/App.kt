@@ -2,6 +2,7 @@ package com.srisu.srisu
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -70,6 +71,22 @@ import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.NavigationBarItemColors
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
@@ -197,7 +214,7 @@ private fun NavHostController(session: Session?) {
 
 private fun startDestination(session: Session?): Route {
     return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> ChatNav.ChatRoomScreen
+        session?.isPhoneVerified == true && session.isProfileComplete == true -> HomeNavigation.Home
         else -> AuthNavigation.Auth
 //        else -> HomeNavigation.EditProfile
     }
@@ -232,7 +249,7 @@ private fun BottomNavigation(
             modifier = Modifier,
             windowInsets = NavigationBarDefaults.windowInsets,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            tonalElevation = 0.dp
+            tonalElevation = 0.dp,
         ) {
             BottomNavDestination.entries.forEach { destination ->
                 // Use hasRoute per destination (no toRoute or full sealed deserialization)
@@ -246,6 +263,7 @@ private fun BottomNavigation(
 
                 NavigationBarItem(
                     selected = selected,
+                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent),
                     onClick = {
                         when (destination) {
                             BottomNavDestination.HOME -> navController.navigate(HomeNavigation.Home) {
@@ -296,7 +314,8 @@ private fun BottomNavigation(
                         }
                     },
                     icon = {
-                        GlowingIcon(
+//                        MorphBackgroundIcon(
+                        GlassIcon(
                             imageVector = destination.icon,
                             contentDescription = destination.label,
                             selected = selected
@@ -318,36 +337,56 @@ fun GlowingIcon(
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition()
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1f,
+
+    // Glow animation (only meaningful when selected)
+    val glowScale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.4f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         )
     )
 
     val iconScale by animateFloatAsState(
-        targetValue = if (selected) 1.2f else 1f,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        targetValue = if (selected) 1.15f else 1f,
+        animationSpec = tween(300, easing = FastOutSlowInEasing),
+        label = ""
     )
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
     ) {
+
+        // 🔥 Glow layer (behind icon)
         if (selected) {
-            Icon(
-                imageVector = imageVector,
-                contentDescription = contentDescription,
+            Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .blur(8.dp)
-                    .alpha(glowAlpha),
-                tint = MaterialTheme.colorScheme.primary
+                    .graphicsLayer {
+                        scaleX = glowScale
+                        scaleY = glowScale
+                        alpha = glowAlpha
+                    }
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                        shape = CircleShape
+                    )
+                    .blur(16.dp) // THIS is the key for glow ✨
             )
         }
 
+        // Icon
         Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
@@ -357,9 +396,412 @@ fun GlowingIcon(
                     scaleX = iconScale
                     scaleY = iconScale
                 },
-            tint = if (selected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant
+            tint = if (selected)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
+@Composable
+fun PulseRingIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_transition")
+
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse_scale"
+    )
+
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse_alpha"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.1f else 1f,
+        animationSpec = tween(250),
+        label = "icon_scale"
+    )
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .graphicsLayer {
+                        scaleX = pulseScale
+                        scaleY = pulseScale
+                        alpha = pulseAlpha
+                    }
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        shape = CircleShape
+                    )
+            )
+        }
+
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                }
+        )
+    }
+}
+
+@Composable
+fun GradientRingIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "ring_transition")
+
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ring_rotation"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = tween(250),
+        label = "icon_scale"
+    )
+
+    Box(
+        modifier = modifier.size(40.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        rotationZ = rotation
+                    }
+                    .border(
+                        width = 2.dp,
+                        brush = Brush.sweepGradient(
+                            listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.primary,
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+        }
+
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                }
+        )
+    }
+}
+
+@Composable
+fun ShimmerIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer_transition")
+
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -80f,
+        targetValue = 80f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_offset"
+    )
+
+    val iconColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Box(
+        modifier = modifier.size(40.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp)
+        )
+
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .graphicsLayer {
+                        clip = true
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.15f),
+                                    Color.Transparent
+                                ),
+                                start = Offset(shimmerOffset, 0f),
+                                end = Offset(shimmerOffset + 40f, size.height)
+                            )
+                        )
+                    }
+            )
+        }
+    }
+}
+
+@Composable
+fun MorphBackgroundIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val bgScale by animateFloatAsState(
+        targetValue = if (selected) 1.15f else 0.9f,
+        animationSpec = tween(350, easing = FastOutSlowInEasing),
+        label = "bg_scale"
+    )
+
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.18f else 0f,
+        animationSpec = tween(350),
+        label = "bg_alpha"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = tween(300),
+        label = "icon_scale"
+    )
+
+    Box(
+        modifier = modifier.size(40.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .graphicsLayer {
+                    scaleX = bgScale
+                    scaleY = bgScale
+                    alpha = bgAlpha
+                }
+                .background(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                )
+        )
+
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                }
+        )
+    }
+}
+
+@Composable
+fun ShadowIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val elevation by animateDpAsState(
+        targetValue = if (selected) 10.dp else 0.dp,
+        animationSpec = tween(300),
+        label = "shadow_elevation"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = tween(250),
+        label = "icon_scale"
+    )
+
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .shadow(
+                elevation = elevation,
+                shape = CircleShape,
+                clip = false
+            )
+            .background(
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    Color.Transparent
+                },
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                }
+        )
+    }
+}
+
+@Composable
+fun BreathingColorIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "breathing_transition")
+
+    val breathingColor by infiniteTransition.animateColor(
+        initialValue = MaterialTheme.colorScheme.primary,
+        targetValue = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathing_color"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.07f else 1f,
+        animationSpec = tween(250),
+        label = "icon_scale"
+    )
+
+    Icon(
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        tint = if (selected) breathingColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier
+            .size(24.dp)
+            .graphicsLayer {
+                scaleX = iconScale
+                scaleY = iconScale
+            }
+    )
+}
+
+@Composable
+fun GlassIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.16f else 0f,
+        animationSpec = tween(300),
+        label = "bg_alpha"
+    )
+
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.28f else 0f,
+        animationSpec = tween(300),
+        label = "border_alpha"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.06f else 1f,
+        animationSpec = tween(250),
+        label = "icon_scale"
+    )
+
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(
+                MaterialTheme.colorScheme.surface.copy(alpha = bgAlpha)
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = borderAlpha),
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                }
+        )
+    }
+}

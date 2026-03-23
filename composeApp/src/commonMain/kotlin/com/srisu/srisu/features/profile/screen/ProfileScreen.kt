@@ -356,22 +356,13 @@ fun GallerySection(
     photos: List<User.UserPhoto?>?
 ) {
 
-    val listPhotos = listOf(
-        "https://media.istockphoto.com/id/1197578214/photo/beautiful-young-woman.jpg?s=1024x1024&w=is&k=20&c=au0eZV8dc7lE2VC8ghRF8igL19OxPBXbKvKzcmyjeQE=",
-        "https://media.istockphoto.com/id/184888055/photo/beautiful-young-woman-smiling.jpg?s=1024x1024&w=is&k=20&c=Veh-hAfi6G3HSkdRPHyoFdjFWdGfYB9S6kd4LkihkkM=",
-        "https://media.istockphoto.com/id/185123021/photo/portrait-of-a-beautiful-brunette-woman.jpg?s=1024x1024&w=is&k=20&c=tj3AIS7iGpwkr1QgY0w90prerVhUSFA-QrAOMby9x1E=",
-        "https://media.istockphoto.com/id/1197578214/photo/beautiful-young-woman.jpg?s=1024x1024&w=is&k=20&c=au0eZV8dc7lE2VC8ghRF8igL19OxPBXbKvKzcmyjeQE=",
-        "https://media.istockphoto.com/id/184888055/photo/beautiful-young-woman-smiling.jpg?s=1024x1024&w=is&k=20&c=Veh-hAfi6G3HSkdRPHyoFdjFWdGfYB9S6kd4LkihkkM=",
-        "https://media.istockphoto.com/id/185123021/photo/portrait-of-a-beautiful-brunette-woman.jpg?s=1024x1024&w=is&k=20&c=tj3AIS7iGpwkr1QgY0w90prerVhUSFA-QrAOMby9x1E="
-    )
-
     photos?.let {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(items = listPhotos) { photoItem ->
+            items(items = photos) { photoItem ->
                 AsyncImage(
                     modifier = Modifier
                         .size(200.dp)

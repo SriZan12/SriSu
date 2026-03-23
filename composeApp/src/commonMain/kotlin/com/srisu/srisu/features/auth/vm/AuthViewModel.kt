@@ -50,7 +50,6 @@ class AuthViewModel(
     private val connectivityObserver: ConnectivityObserver,
     private val dataStoreRepo: AppDataStoreRepo
 ) : ViewModel() {
-
     private val _authUiState: MutableStateFlow<AuthUIStates> = MutableStateFlow(AuthUIStates())
     val authUiState = this._authUiState.stateIn(
         scope = viewModelScope,
@@ -366,8 +365,6 @@ class AuthViewModel(
                         id = response.user.id
                     )
 
-                    AppLogger.log("SESSION = ${response?.user?.id}")
-
                     val credentials = Json.encodeToString(session)
 
                     saveSession(credentials = credentials, sessionKey = SESSION_KEY)
@@ -569,9 +566,6 @@ class AuthViewModel(
         val stack = this._authUiState.value.screenStack
         if (stack.isEmpty()) return
 
-        AppLogger.log("current screen order before = ${CustomAuthScreen.screenOrder}")
-
-
         if (stack.isNotEmpty()) {
             removeCurrentScreen()
             updateCurrentScreen()
@@ -593,17 +587,9 @@ class AuthViewModel(
 
             val currentIndex = getCurrentScreenIndex(currentScreen = currentScreen)
 
-            AppLogger.log("CURRENT INDEX = $currentIndex")
-
-
             if (currentIndex > 0) {
 
-                AppLogger.log("SCREEN ORDER = ${CustomAuthScreen.screenOrder}")
-
                 val previousScreen = CustomAuthScreen.screenOrder[currentIndex - 1]
-
-                AppLogger.log("PREVIOUS SCREEN = $previousScreen")
-                AppLogger.log("IS OTP VERIFIED = $isPhoneNumberVerified")
 
                 val shouldSkipAddingPreviousScreen =
                     (isPhoneNumberVerified == true && (previousScreen == CustomAuthScreen.PhoneNumberVerificationScreen || previousScreen == CustomAuthScreen.AddPhoneNumberScreen))
