@@ -12,7 +12,7 @@ import com.srisu.srisu.components.TabItem
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.coupleconnection.state.CoupleConnectionListState
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED

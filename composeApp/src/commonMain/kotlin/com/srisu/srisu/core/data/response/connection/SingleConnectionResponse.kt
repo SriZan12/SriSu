@@ -1,8 +1,6 @@
 package com.srisu.srisu.core.data.response.connection
 
 
-import com.srisu.srisu.core.data.response.auth.User
-import io.ktor.http.auth.HttpAuthHeader
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

@@ -2,8 +2,7 @@ package com.srisu.srisu.features.profile.state
 
 import androidx.compose.runtime.Stable
 import com.srisu.srisu.baseframework.BaseUIState
-import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.data.response.suggestion.UserSuggestionResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
 
 @Stable
 data class ProfileUIState(

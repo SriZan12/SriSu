@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.session.SessionUtils

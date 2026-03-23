@@ -50,8 +50,7 @@ import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.ReadMoreText
 import com.srisu.srisu.components.RequestSentDialog
-import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.features.profile.state.ProfileUIState
 import com.srisu.srisu.features.profile.vm.ProfileViewModel
 import com.srisu.srisu.utils.DateTimeUtils

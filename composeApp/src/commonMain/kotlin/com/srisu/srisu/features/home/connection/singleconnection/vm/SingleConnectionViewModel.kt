@@ -12,7 +12,7 @@ import com.srisu.srisu.components.TabItem
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.BasePagingSource
 import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import com.srisu.srisu.features.home.connection.singleconnection.state.ConnectionUIState
 import com.srisu.srisu.utils.ConnectivityObserver

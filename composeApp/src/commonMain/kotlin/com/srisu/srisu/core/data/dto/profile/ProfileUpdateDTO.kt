@@ -1,7 +1,6 @@
 package com.srisu.srisu.core.data.dto.profile
 
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.User
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

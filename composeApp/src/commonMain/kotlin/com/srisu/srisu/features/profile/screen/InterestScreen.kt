@@ -38,8 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryToolBar
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.features.profile.state.InterestCategoryUI
 import com.srisu.srisu.features.profile.state.InterestUI
 import org.jetbrains.compose.ui.tooling.preview.Preview

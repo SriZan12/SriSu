@@ -7,9 +7,9 @@ import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.repository.profile.ProfileRepository
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.ProfileResponse
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
+import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel

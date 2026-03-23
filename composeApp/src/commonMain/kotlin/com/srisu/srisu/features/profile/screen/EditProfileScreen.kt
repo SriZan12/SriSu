@@ -1,10 +1,5 @@
 package com.srisu.srisu.features.profile.screen
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -19,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -41,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,8 +68,8 @@ import com.srisu.srisu.components.PrimaryTextButton
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.SuccessDialog
 import com.srisu.srisu.components.TextAreaCompo
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.profile.state.EditProfileUIState
 import com.srisu.srisu.features.profile.state.GalleyPhotoModel
@@ -89,7 +82,6 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 

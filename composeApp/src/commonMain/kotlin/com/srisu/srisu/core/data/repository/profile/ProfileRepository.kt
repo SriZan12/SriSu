@@ -1,11 +1,11 @@
 package com.srisu.srisu.core.data.repository.profile
 
-import com.srisu.srisu.core.data.apiservice.base.BaseApiService
-import com.srisu.srisu.core.data.apiservice.profile.ProfileApiService
+import com.srisu.srisu.core.data.remote.apiservice.base.BaseApiService
+import com.srisu.srisu.core.data.remote.apiservice.profile.ProfileApiService
 import com.srisu.srisu.core.data.dto.profile.ProfileUpdateDTO
 import com.srisu.srisu.core.data.network.ResultHandler
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.ProfileResponse
+import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
+import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.core.data.response.suggestion.CityResponse
 import com.srisu.srisu.core.data.response.suggestion.SingleConnectionResponse
 import com.srisu.srisu.utils.MediaFile

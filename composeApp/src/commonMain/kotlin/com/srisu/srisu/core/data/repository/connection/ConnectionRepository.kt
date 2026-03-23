@@ -1,10 +1,10 @@
 package com.srisu.srisu.core.data.repository.connection
 
-import com.srisu.srisu.core.data.apiservice.connection.ConnectionApiService
+import com.srisu.srisu.core.data.remote.apiservice.connection.ConnectionApiService
 import com.srisu.srisu.core.data.dto.couple.CoupleConnectionDTO
 import com.srisu.srisu.core.data.dto.couple.SingleConnectionDTO
 import com.srisu.srisu.core.data.network.ResultHandler
-import com.srisu.srisu.core.data.response.chat.FindYourPartnerResponse
+import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
 import com.srisu.srisu.core.data.response.connection.CoupleConnectionRequestResponse
 import com.srisu.srisu.core.data.response.connection.SingleConnectionResponse
 import com.srisu.srisu.core.data.response.suggestion.CoupleConnectionResponse

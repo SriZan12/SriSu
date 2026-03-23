@@ -1,13 +1,11 @@
 package com.srisu.srisu.session
 
-import com.srisu.srisu.core.data.response.auth.ProfileResponse
-import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.core.data.response.auth.User.UserInterest
-import com.srisu.srisu.core.data.response.auth.User.UserPhoto
-import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
+import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
+import com.srisu.srisu.features.auth.data.remote.response.User.UserInterest
+import com.srisu.srisu.features.auth.data.remote.response.User.UserPhoto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable

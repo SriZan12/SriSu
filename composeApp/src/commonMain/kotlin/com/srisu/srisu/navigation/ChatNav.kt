@@ -4,10 +4,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.features.chat.chatroom.ChatViewModel
-import com.srisu.srisu.features.chat.chatroom.screen.ChatRoomScreen
-import com.srisu.srisu.features.chat.chatroom.screen.ChatScreen
-import com.srisu.srisu.features.chat.couple.findpartner.FindYourPartnerScreen
+import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
+import com.srisu.srisu.features.chat.presentation.findpartner.screen.FindYourPartnerScreen
 import com.srisu.srisu.session.Session
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

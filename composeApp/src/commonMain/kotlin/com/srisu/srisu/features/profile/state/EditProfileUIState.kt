@@ -3,9 +3,9 @@ package com.srisu.srisu.features.profile.state
 import androidx.compose.runtime.Stable
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.ProfileResponse
-import com.srisu.srisu.core.data.response.auth.User
+import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
+import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.session.Session
 import com.srisu.srisu.utils.CountryModel
 
