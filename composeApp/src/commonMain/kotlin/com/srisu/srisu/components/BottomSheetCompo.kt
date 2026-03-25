@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -95,204 +96,111 @@ fun CountrySelectionBottomSheet(
         skipPartiallyExpanded = true
     )
 
-    val scope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("") }
 
-    var countryList by remember { mutableStateOf(countries) }
-    var filterCountryList by remember { mutableStateOf<List<CountryModel>>(emptyList()) }
-    var isSearchOn by remember { mutableStateOf(false) }
+    val filteredCountries by remember(countries, query) {
+        derivedStateOf {
+            if (query.isBlank()) {
+                countries
+            } else {
+                countries.filter {
+                    it.name?.contains(query, ignoreCase = true) == true
+                }
+            }
+        }
+    }
 
     ModalBottomSheet(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier,
         sheetState = sheetState,
         containerColor = Color.White,
-        onDismissRequest = { onClose() }
+        onDismissRequest = onClose
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(all = 12.dp)
+                .padding(12.dp)
         ) {
             SearchBar(
                 modifier = Modifier.fillMaxWidth(),
                 hint = "Search Country",
-                onTextChange = { query ->
-                    scope.launch(Dispatchers.Default) {
-                        if (query.isBlank()) {
-                            withContext(Dispatchers.Main) {
-                                isSearchOn = false
-                                filterCountryList = emptyList()
-                            }
-                        } else {
-                            val filtered = countryList.filter {
-                                it.name?.contains(query, ignoreCase = true) == true
-                            }
-                            withContext(Dispatchers.Main) {
-                                isSearchOn = true
-                                filterCountryList = filtered
-                            }
-                        }
-                    }
-                }
+                onTextChange = { query = it }
             )
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                val countriesToShow = if (isSearchOn) filterCountryList else countryList
-
                 items(
-                    items = countriesToShow,
-                    key = { it.code ?: it.name ?: it.hashCode().toString() }
+                    items = filteredCountries,
+                    key = { it.code ?: it.name.orEmpty() }
                 ) { item ->
-                    key(item.code ?: item.hashCode()) {
-                        CountryCodeSelectionItem(
-                            countryModel = item,
-                            onCountrySelected = { onCountrySelected(it) }
-                        )
-                    }
+                    CountryCodeSelectionItem(
+                        countryModel = item,
+                        onCountrySelected = onCountrySelected
+                    )
                 }
             }
-
         }
     }
 }
-
-
-/*@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CountrySelectionBottomSheet(
-    show: Boolean,
-    onCountrySelected: (CountryModel) -> Unit,
-    onClose: () -> Unit
-) {
-
-    if (show) {
-        val countryList = getAllCountriesFromJson()
-
-        val sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true
-        )
-
-        var isSearchOn by remember {
-            mutableStateOf(false)
-        }
-        var filterCountryList by remember {
-            mutableStateOf(listOf<CountryModel>())
-        }
-
-        ModalBottomSheet(
-            modifier = Modifier.fillMaxSize(),
-            sheetState = sheetState,
-            containerColor = Color.White,
-            onDismissRequest = {
-                onClose()
-            }) {
-
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                SearchBar(
-                    modifier = Modifier.fillMaxWidth(),
-                    hint = "Search Country",
-                    onTextChange = { query ->
-
-                        isSearchOn = true
-
-                        if (query.isEmpty() || query.isBlank()) {
-                            isSearchOn = false
-                        }
-
-                        countryList?.let { countryList ->
-                            filterCountryList = countryList.filter {
-                                it.name?.contains(query, ignoreCase = true) == true
-                            }
-                        }
-                    }
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-
-                    val countriesList = if (isSearchOn) filterCountryList else countryList
-
-                    items(countriesList ?: emptyList()) { item ->
-                        CountryCodeSelectionItem(
-                            countryModel = item,
-                            onCountrySelected = {
-                                onCountrySelected(it)
-                            }
-                        )
-                    }
-                }
-
-            }
-        }
-    }
-}*/
 
 @Composable
 private fun CountryCodeSelectionItem(
     countryModel: CountryModel,
     onCountrySelected: (CountryModel) -> Unit,
 ) {
+    val countryCode = countryModel.code.orEmpty()
+
+//    var flag by remember(countryCode) { mutableStateOf<ImageBitmap?>(null) }
+//
+//    LaunchedEffect(countryCode) {
+//        flag = if (countryCode.isNotBlank()) {
+//            getCountryFlagFromAssets(countryCode)
+//        } else {
+//            null
+//        }
+//    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 12.dp)
-                .clickable {
-                    onCountrySelected(
-                        countryModel
-                    )
-                },
+                .clickable { onCountrySelected(countryModel) }
+                .padding(vertical = 10.dp, horizontal = 12.dp),
             verticalAlignment = CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-
-
-            /*  val flag by produceState<ImageBitmap?>(initialValue = null, key1 = countryModel.code) {
-                  value = getCountryFlagFromAssets(countryModel.code ?: "")
-              }*/
-
-            var flag by remember { mutableStateOf<ImageBitmap?>(null) }
-            LaunchedEffect(countryModel.code) {
-                flag = getCountryFlagFromAssets(countryModel.code ?: "")
-            }
-
             Row(
-                modifier = Modifier,
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (flag == null) {
-                    Image(
-                        painter = painterResource(Res.drawable.country_flag),
-                        contentDescription = "country_flag",
-                        modifier = Modifier.size(22.dp)
-                    )
-                } else {
-                    Image(
-                        bitmap = flag!!,
-                        contentDescription = "flag",
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+//                if (flag != null) {
+//                    Image(
+//                        bitmap = flag!!,
+//                        contentDescription = "flag",
+//                        modifier = Modifier.size(22.dp)
+//                    )
+//                } else {
+//                    Image(
+//                        painter = painterResource(Res.drawable.country_flag),
+//                        contentDescription = "country_flag",
+//                        modifier = Modifier.size(22.dp)
+//                    )
+//                }
 
                 Text(
-                    text = countryModel.name ?: "",
+                    text = countryModel.name.orEmpty(),
                     color = Color.Black,
                     style = MaterialTheme.typography.titleSmall
                 )
             }
 
             Text(
-                text = countryModel.prefix ?: "",
+                text = countryModel.prefix.orEmpty(),
                 color = Color.Black,
                 style = MaterialTheme.typography.titleSmall
             )

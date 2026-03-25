@@ -1,9 +1,10 @@
-package com.srisu.srisu.navigation
+package com.srisu.srisu.navigation.graph
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.srisu.srisu.features.auth.presentation.screen.BaseAuthScreen
+import com.srisu.srisu.navigation.graph.Route
 import kotlinx.serialization.Serializable
 
 @Serializable

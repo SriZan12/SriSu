@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.time.ExperimentalTime
 
@@ -45,15 +46,13 @@ class AuthViewModel(
     private val connectivityObserver: ConnectivityObserver,
     private val dataStoreRepo: AuthDataStore
 ) : ViewModel() {
-    private val _authUiState: MutableStateFlow<AuthUIStates> = MutableStateFlow(AuthUIStates())
-    val authUiState = this._authUiState.stateIn(
+
+    private val _authUiState = MutableStateFlow(AuthUIStates())
+    val authUiState = _authUiState.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(
-            stopTimeoutMillis = 5000
-        ),
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
         initialValue = AuthUIStates()
     )
-
 
     init {
         checkSession()
@@ -62,9 +61,23 @@ class AuthViewModel(
         loadAllCountries()
     }
 
-    private fun showErrorMessage(errorType: String = "ERROR", error: String) {
-        this._authUiState.value = this._authUiState.value.copy(
-            baseUIState = BaseUIState.Error(
+    private val currentState: AuthUIStates
+        get() = _authUiState.value
+
+    private fun updateState(transform: (AuthUIStates) -> AuthUIStates) {
+        _authUiState.value = transform(_authUiState.value)
+    }
+
+    private fun setBaseUiState(state: BaseUIState) {
+        updateState { it.copy(baseUIState = state) }
+    }
+
+    private fun showErrorMessage(
+        error: String,
+        errorType: String = "ERROR"
+    ) {
+        setBaseUiState(
+            BaseUIState.Error(
                 errorType = errorType,
                 message = error
             )
@@ -72,260 +85,289 @@ class AuthViewModel(
     }
 
     private fun showSuccessMessage(message: String) {
-        this._authUiState.value =
-            this._authUiState.value.copy(baseUIState = BaseUIState.Success(message))
+        setBaseUiState(BaseUIState.Success(message))
     }
 
     private fun showLoading() {
-        this._authUiState.value = this._authUiState.value.copy(baseUIState = BaseUIState.Loading)
+        setBaseUiState(BaseUIState.Loading)
     }
 
     fun idleScreen() {
-        this._authUiState.value = this._authUiState.value.copy(baseUIState = BaseUIState.Idle)
+        setBaseUiState(BaseUIState.Idle)
     }
 
     private fun showNoInternetConnection(isOffline: Boolean) {
-        this._authUiState.value =
-            this._authUiState.value.copy(baseUIState = BaseUIState.NoInternetConnection(isOffline = isOffline))
+        setBaseUiState(BaseUIState.NoInternetConnection(isOffline = isOffline))
     }
 
     private fun isInternetAvailable(): Boolean {
         return connectivityObserver.isConnected.value
     }
 
-    //    Events
+    private inline fun launchSafely(
+        crossinline onError: (String) -> Unit = { message ->
+            showErrorMessage(error = message)
+        },
+        crossinline block: suspend () -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                block()
+            } catch (exception: Exception) {
+                AppLogger.log("AuthViewModel exception: ${exception.message}")
+                onError(exception.message ?: "Something went wrong.")
+            }
+        }
+    }
+
+    // Session
+
     private fun checkSession(): Session? {
         val sessionJson = getSession(sessionKey = SESSION_KEY)
-        var session: Session? = null
-        try {
-            session = sessionJson?.let { Json.decodeFromString<Session>(it) }
 
+        val session = try {
+            sessionJson?.let { Json.decodeFromString<Session>(it) }
         } catch (exception: Exception) {
-            AppLogger.log("SESSION SERIALIZATION EXCEPTION")
+            AppLogger.log("Session deserialization failed: ${exception.message}")
+            null
         }
 
         if (session == null) {
             updateProgress(isIncrease = true)
-        } else {
-            if (session.isPhoneVerified == true) {
-                updateProgress(isIncrease = true, step = FULL_NAME_PROGRESS)
-            } else if (session.isPhoneVerified == false) {
-                updateProgress(isIncrease = true, step = PHONE_NUMBER_VERIFICATION_PROGRESS)
-            }
-
-            updateSession(session = session)
-//            updateIsOtpVerified(isPhoneNumberVerified = session.isPhoneVerified == true)
-            AppLogger.log("SESSIONS = ${Json.encodeToString(session)}")
+            return null
         }
+
+        when (session.isPhoneVerified) {
+            true -> updateProgress(isIncrease = true, step = FULL_NAME_PROGRESS)
+            false -> updateProgress(
+                isIncrease = true,
+                step = PHONE_NUMBER_VERIFICATION_PROGRESS
+            )
+            null -> updateProgress(isIncrease = true)
+        }
+
+        updateSession(session)
+        AppLogger.log("SESSION = ${runCatching { Json.encodeToString(session) }.getOrNull()}")
 
         return session
     }
 
-    private fun updateProgress(isIncrease: Boolean, step: Int? = null) {
+    private fun saveSession(credentials: String, sessionKey: String) {
+        runCatching {
+            sessionStorage.saveSession(credentials, sessionKey)
+        }.onFailure {
+            AppLogger.log("Failed to save session: ${it.message}")
+        }
+    }
+
+    private fun getSession(sessionKey: String): String? {
+        return try {
+            sessionStorage.getSession(sessionKey)
+        } catch (exception: Exception) {
+            AppLogger.log("Failed to get session: ${exception.message}")
+            null
+        }
+    }
+
+    private fun updateSession(session: Session?) {
+        updateState { it.copy(session = session) }
+    }
+
+    // Progress
+
+    private fun updateProgress(
+        isIncrease: Boolean,
+        step: Int? = null
+    ) {
         val totalSteps = TOTAL_PROGRESS
-        val currentStep = this._authUiState.value.currentProgressStep
+        val currentStep = currentState.currentProgressStep
 
         val newStep = when {
-            isIncrease -> {
-                step ?: (currentStep + 1).coerceAtMost(totalSteps)
-            }
-
+            isIncrease -> step ?: (currentStep + 1).coerceAtMost(totalSteps)
             else -> (currentStep - 1).coerceAtLeast(1)
         }
 
-        val currentProgress = newStep.toFloat() / totalSteps.toFloat()
-
-        this._authUiState.value = this._authUiState.value.copy(
-            currentProgressStep = newStep,
-            progress = currentProgress
-        )
+        updateState {
+            it.copy(
+                currentProgressStep = newStep,
+                progress = newStep.toFloat() / totalSteps.toFloat()
+            )
+        }
     }
 
-    fun updatePhoneNumber(phoneNumber: String, showValidationMessage: () -> Unit) {
+    // UI updates
+
+    fun updatePhoneNumber(
+        phoneNumber: String,
+        showValidationMessage: () -> Unit
+    ) {
         if (phoneNumber.length <= 10) {
-            this._authUiState.value = this._authUiState.value.copy(phoneNumber = phoneNumber)
+            updateState { it.copy(phoneNumber = phoneNumber) }
         } else {
             showValidationMessage()
         }
     }
 
     fun updateCountry(code: String, prefix: String) {
-        this._authUiState.value =
-            this._authUiState.value.copy(countryCode = code, countryPrefix = prefix)
-    }
-
-
-    fun updateOtpValues(index: Int, value: String) {
-        val newOtpValues = this._authUiState.value.optValues.toMutableList()
-        newOtpValues[index] = value
-        this._authUiState.value = this._authUiState.value.copy(optValues = newOtpValues)
-
-    }
-
-    private fun loadAllCountries() {
-        viewModelScope.launch {
-            val countries = getAllCountriesFromJson() ?: emptyList()
-            _authUiState.value = _authUiState.value.copy(countryList = countries)
+        updateState {
+            it.copy(
+                countryCode = code,
+                countryPrefix = prefix
+            )
         }
     }
 
-    /* private fun updateIsOtpVerified(isPhoneNumberVerified: Boolean) {
-         _authUiState.value = _authUiState.value.copy(isPhoneNumberVerified = isPhoneNumberVerified)
-     }*/
+    fun updateOtpValues(index: Int, value: String) {
+        val otpValues = currentState.optValues.toMutableList()
+        if (index !in otpValues.indices) return
+
+        otpValues[index] = value
+        updateState { it.copy(optValues = otpValues) }
+    }
+
+    private fun loadAllCountries() {
+        launchSafely {
+            val countries = getAllCountriesFromJson().orEmpty()
+            updateState { it.copy(countryList = countries) }
+        }
+    }
 
     fun updateOTPRemainingTime(remainingOTPTimestamp: Long?) {
-        this._authUiState.value =
-            this._authUiState.value.copy(remainingOTPTimestamp = remainingOTPTimestamp)
+        updateState { it.copy(remainingOTPTimestamp = remainingOTPTimestamp) }
     }
 
     fun updateFullName(name: String) {
-        this._authUiState.value = this._authUiState.value.copy(fullName = name)
+        updateState { it.copy(fullName = name) }
     }
 
     fun updateUserName(username: String) {
-        this._authUiState.value = this._authUiState.value.copy(username = username)
+        updateState { it.copy(username = username) }
     }
 
     fun updateDOB(dob: String) {
-        this._authUiState.value = this._authUiState.value.copy(dob = dob)
+        updateState { it.copy(dob = dob) }
         updateZodiacSign()
-        updateAge(dob = dob)
+        updateAge(dob)
     }
 
     private fun updateAge(dob: String) {
-        this._authUiState.value = this._authUiState.value.copy(age = calculateAge(dob).toString())
+        updateState { it.copy(age = calculateAge(dob).toString()) }
     }
 
     fun updateProfilePictureUri(uri: Uri?) {
-        this._authUiState.value = this._authUiState.value.copy(profilePictureUri = uri)
+        updateState { it.copy(profilePictureUri = uri) }
     }
-
-    /* private fun updateTokens(tokens: OtpVerificationResponse.Tokens?) {
-         _authUiState.value = _authUiState.value.copy(tokens = tokens)
-     }*/
-
-    private fun updateSession(session: Session?) {
-        this._authUiState.value = this._authUiState.value.copy(session = session)
-    }
-
-    private fun updateZodiacSign() {
-        val dob = this._authUiState.value.dob
-        val dateParts = getDayAndMonthIndividually(dateString = dob)
-        val month = dateParts.first
-        val day = dateParts.second
-
-        val zodiacSign = findZodiacSign(month, day)
-        this._authUiState.value = this._authUiState.value.copy(zodiacSign = zodiacSign)
-
-        AppLogger.log("ZODIAC SIGN = ${this._authUiState.value.zodiacSign}")
-    }
-
 
     fun updateGender(gender: Gender) {
-        this._authUiState.value = this._authUiState.value.copy(gender = gender)
+        updateState { it.copy(gender = gender) }
     }
 
     fun updateValidationError(validation: Validation) {
-        this._authUiState.value = this._authUiState.value.copy(validationError = validation)
+        updateState { it.copy(validationError = validation) }
     }
 
-
-//Api calls and local savings.
+    // API calls and local persistence
 
     fun requestOTP(isNavigateScreen: Boolean = true) {
-
         if (!isInternetAvailable()) {
             showNoInternetConnection(isOffline = true)
             return
         }
 
-        viewModelScope.launch {
-
+        launchSafely {
             showLoading()
 
+            val state = currentState
             val authDTO = AuthDTO(
-                fullName = this@AuthViewModel._authUiState.value.fullName,
-                dob = this@AuthViewModel._authUiState.value.dob,
-                gender = this@AuthViewModel._authUiState.value.gender.name,
-                phoneNumber = "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}",
+                fullName = state.fullName,
+                dob = state.dob,
+                gender = state.gender.name,
+                phoneNumber = "${state.countryPrefix}${state.phoneNumber}"
+            )
 
-                )
-
+            // Preserved current behavior:
+            // local session is saved and navigation proceeds even though API call is currently disabled.
             val session = Session(isPhoneVerified = false)
-
             val credentials = Json.encodeToString(session)
 
             saveSession(credentials = credentials, sessionKey = SESSION_KEY)
+
             if (isNavigateScreen) {
                 navigateNextScreen()
             }
+
             idleScreen()
 
-            /* authRepository.sendOTPRequest(authDTO = authDTO)
-                 .onSuccess { _, _ ->
-                     val credentials = setCredentials(
-                         tokens = null,
-                         isPhoneVerified = false
-                     )
-                     saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-                     if(isNavigateScreen){
-                     navigateNextScreen()
-                     }
-                     idleScreen()
-                 }
-                 .onError { error, errorType ->
-                     AppLogger.log("ERROR API CALL = ${errorType.name}")
-                     AppLogger.log("ERROR API CALL = ${error.toString()}")
+            /*
+            authRepository.sendOTPRequest(authDTO = authDTO)
+                .onSuccess { _, _ ->
+                    val credentials = setCredentials(
+                        tokens = null,
+                        isPhoneVerified = false
+                    )
+                    saveSession(credentials = credentials, sessionKey = SESSION_KEY)
 
-                     *//*  showErrorMessage(
-                          errorType = "${errorType.name} ERROR",
-                          error = error.toString()
-                      )*//*
-                }*/
+                    if (isNavigateScreen) {
+                        navigateNextScreen()
+                    }
+
+                    idleScreen()
+                }
+                .onError { error, errorType ->
+                    AppLogger.log("OTP request errorType = ${errorType.name}")
+                    AppLogger.log("OTP request error = ${error.toString()}")
+
+                    showErrorMessage(
+                        errorType = "${errorType.name} ERROR",
+                        error = error.toString()
+                    )
+                }
+            */
         }
     }
 
     @OptIn(ExperimentalTime::class)
     fun saveOTPTimeStamp() {
-        viewModelScope.launch {
-            if (this@AuthViewModel._authUiState.value.remainingOTPTimestamp == null) {
-                dataStoreRepo.saveOTPTimestamp(
-                    otpScreenMetadata = OTPScreenMetadata(
-                        countryCode = this@AuthViewModel._authUiState.value.countryCode,
-                        countryPrefix = this@AuthViewModel._authUiState.value.countryPrefix,
-                        phoneNumber = this@AuthViewModel._authUiState.value.phoneNumber,
-                        saveTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
-                        totalTime = OTP_WAITING_TIME
-                    )
+        launchSafely {
+            if (currentState.remainingOTPTimestamp != null) return@launchSafely
+
+            dataStoreRepo.saveOTPTimestamp(
+                otpScreenMetadata = OTPScreenMetadata(
+                    countryCode = currentState.countryCode,
+                    countryPrefix = currentState.countryPrefix,
+                    phoneNumber = currentState.phoneNumber,
+                    saveTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
+                    totalTime = OTP_WAITING_TIME
                 )
-            }
+            )
         }
     }
 
     @OptIn(ExperimentalTime::class)
     fun getRemainingOTPTimeStamp() {
-        viewModelScope.launch {
+        launchSafely {
             dataStoreRepo.getOTPTimestamp().collectLatest { otpTimestamp ->
                 val currentTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
+
                 val timeRemaining = otpTimestamp?.let {
                     val elapsedTime = currentTime - it.saveTime
-                    val remainingTime = (it.totalTime - elapsedTime).coerceAtLeast(0L)
-                    remainingTime
+                    (it.totalTime - elapsedTime).coerceAtLeast(0L)
                 }
 
-                updateOTPRemainingTime(remainingOTPTimestamp = timeRemaining)
+                updateOTPRemainingTime(timeRemaining)
 
-                otpTimestamp?.countryCode?.let {
+                otpTimestamp?.countryCode?.let { code ->
                     updateCountry(
-                        code = otpTimestamp.countryCode,
+                        code = code,
                         prefix = otpTimestamp.countryPrefix
                     )
                 }
 
-                otpTimestamp?.phoneNumber?.let {
+                otpTimestamp?.phoneNumber?.let { phoneNumber ->
                     updatePhoneNumber(
-                        phoneNumber = otpTimestamp.phoneNumber,
-                        showValidationMessage = {})
+                        phoneNumber = phoneNumber,
+                        showValidationMessage = {}
+                    )
                 }
 
                 if (timeRemaining == null || timeRemaining == 0L) {
@@ -335,48 +377,43 @@ class AuthViewModel(
         }
     }
 
-
     fun verifyOtp(onGoToHomeScreen: () -> Unit) {
-
         if (!isInternetAvailable()) {
             showNoInternetConnection(isOffline = true)
             return
         }
 
-        viewModelScope.launch {
-
+        launchSafely {
             showLoading()
 
-            val otpCode = this@AuthViewModel._authUiState.value.optValues.joinToString("")
-            val phoneNumber =
-                "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}"
+            val state = currentState
+            val otpCode = state.optValues.joinToString("")
+            val phoneNumber = "${state.countryPrefix}${state.phoneNumber}"
 
-            authRepository.sendVerifyOtpRequest(phoneNumber = phoneNumber, otp = otpCode)
-                .onSuccess { response, _ ->
+            authRepository.sendVerifyOtpRequest(
+                phoneNumber = phoneNumber,
+                otp = otpCode
+            ).onSuccess { response, _ ->
+                val session = response?.user?.toSession(
+                    access = response.tokens?.access,
+                    refresh = response.tokens?.refresh,
+                    id = response.user.id
+                )
 
-                    val session = response?.user?.toSession(
-                        access = response.tokens?.access,
-                        refresh = response.tokens?.refresh,
-                        id = response.user.id
-                    )
+                val credentials = Json.encodeToString(session)
+                saveSession(credentials = credentials, sessionKey = SESSION_KEY)
+                dataStoreRepo.deleteOTPTimeStamp()
 
-                    val credentials = Json.encodeToString(session)
+                onOtpVerifiedSuccess(
+                    isPhoneNumberVerified = response?.user?.isPhoneVerified == true,
+                    isProfileCompleted = response?.user?.isProfileComplete == true,
+                    onGoToHomeScreen = onGoToHomeScreen
+                )
 
-                    saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-                    dataStoreRepo.deleteOTPTimeStamp()
-
-                    onOtpVerifiedSuccess(
-                        isPhoneNumberVerified = response?.user?.isPhoneVerified == true,
-                        isProfileCompleted = response?.user?.isProfileComplete == true
-                    ) {
-                        onGoToHomeScreen()
-                    }
-//                    updateProgress(isIncrease = true)
-                    idleScreen()
-                }
-                .onError { error, _ ->
-                    showErrorMessage(error = error.toString())
-                }
+                idleScreen()
+            }.onError { error, _ ->
+                showErrorMessage(error = error.toString())
+            }
         }
     }
 
@@ -385,361 +422,352 @@ class AuthViewModel(
         isProfileCompleted: Boolean,
         onGoToHomeScreen: () -> Unit
     ) {
-
         if (isPhoneNumberVerified && isProfileCompleted) {
             onGoToHomeScreen()
-        } else {
-            if (isPhoneNumberVerified) {
-                removeScreen(screen = CustomAuthScreen.AddPhoneNumberScreen)
-                removeScreen(screen = CustomAuthScreen.PhoneNumberVerificationScreen)
-                checkSession()
-                updateCurrentScreen()
-            }
+            return
+        }
+
+        if (isPhoneNumberVerified) {
+            removeScreen(CustomAuthScreen.AddPhoneNumberScreen)
+            removeScreen(CustomAuthScreen.PhoneNumberVerificationScreen)
+            checkSession()
+            updateCurrentScreen()
         }
     }
 
     fun sendSetupProfileRequest() {
-
         if (!isInternetAvailable()) {
             showNoInternetConnection(isOffline = true)
             return
         }
 
-        viewModelScope.launch {
-
+        launchSafely {
             showLoading()
 
-            val session = _authUiState.value.session
+            val state = currentState
+            val session = state.session
+
             val phoneNumber = session?.phoneNumber
-                ?: "${this@AuthViewModel._authUiState.value.countryPrefix}${this@AuthViewModel._authUiState.value.phoneNumber}"
-            val country = getCountryModelFromPrefix(prefix = _authUiState.value.countryPrefix)
-            val countryPrefix = this@AuthViewModel._authUiState.value.countryPrefix
+                ?: "${state.countryPrefix}${state.phoneNumber}"
+
+            val country = getCountryModelFromPrefix(prefix = state.countryPrefix)
+            val profilePicturePath = state.profilePictureUri?.toString()
 
             val profileDTO = ProfileSetupDTO(
                 phoneNumber = phoneNumber,
-                dob = this@AuthViewModel._authUiState.value.dob,
-                fullName = this@AuthViewModel._authUiState.value.fullName,
-                username = this@AuthViewModel._authUiState.value.username,
-                gender = this@AuthViewModel._authUiState.value.gender.name.uppercase(),
+                dob = state.dob,
+                fullName = state.fullName,
+                username = state.username,
+                gender = state.gender.name.uppercase(),
                 mood = "HAPPY",
                 country = country?.name,
-                profilePhoto = this@AuthViewModel._authUiState.value.profilePictureUri.toString(),
-                zodiacSign = this@AuthViewModel._authUiState.value.zodiacSign?.sign?.uppercase(),
+                profilePhoto = profilePicturePath,
+                zodiacSign = state.zodiacSign?.sign?.uppercase()
             )
 
             val fileManager = FileManager()
-            val profilePictureUri =
-                if (this@AuthViewModel._authUiState.value.profilePictureUri == null) {
-                    null
-                } else {
-                    this@AuthViewModel._authUiState.value.profilePictureUri.toString()
-                }
-            val mediaFile =
+            val mediaFile = profilePicturePath?.let { path ->
                 fileManager.createMediaFileFromPath(
-                    path = profilePictureUri,
+                    path = path,
                     id = null,
                     removed = null
                 )
+            }
 
             authRepository.sendProfileSetupRequest(
                 profileSetupDTO = profileDTO,
                 mediaFile = mediaFile
-            )
-                .onSuccess { response, _ ->
+            ).onSuccess { response, _ ->
+                val credentials = setUserWholeCredentials(
+                    access = currentState.session?.access,
+                    refresh = currentState.session?.refresh,
+                    userInfo = response?.user
+                )
 
-                    val credentials = setUserWholeCredentials(
-                        access = this@AuthViewModel._authUiState.value.session?.access,
-                        refresh = this@AuthViewModel._authUiState.value.session?.refresh,
-                        userInfo = response?.user
-                    )
-
-                    saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-                    idleScreen()
-                    showSuccessMessage(message = "")
-                }
-                .onError { error, errorType ->
-                    showErrorMessage(
-                        error = error.toString(),
-                        errorType = "${errorType.name} ERROR"
-                    )
-                }
+                saveSession(credentials = credentials, sessionKey = SESSION_KEY)
+                idleScreen()
+                showSuccessMessage(message = "")
+            }.onError { error, errorType ->
+                showErrorMessage(
+                    error = error.toString(),
+                    errorType = "${errorType.name} ERROR"
+                )
+            }
         }
     }
 
-    //Sessions
-    private fun saveSession(credentials: String, sessionKey: String) {
-        sessionStorage.saveSession(credentials, sessionKey)
-    }
+    // Navigation
 
-    private fun getSession(sessionKey: String): String? {
-        return try {
-            sessionStorage.getSession(sessionKey)
-        } catch (exception: Exception) {
-            AppLogger.log("EXCEPTION ON GETTING SESSION = ${exception.message}")
-            null
-        }
-
-    }
-
-
-    //    NAVIGATION
     private fun initializeAuthNavigationFlow() {
-
-        val session = this._authUiState.value.session
+        val session = currentState.session
         val isPhoneNumberVerified = session?.isPhoneVerified
-        val screenStack: ArrayDeque<CustomAuthScreen> = ArrayDeque()
+        val screenStack = ArrayDeque<CustomAuthScreen>()
 
         clearAuthScreenStack()
 
-        if (isPhoneNumberVerified == true) {
-            screenStack.addAll(
-                listOf(
-                    CustomAuthScreen.AddFullNameScreen,
-                    CustomAuthScreen.AddDOBScreen,
-                    CustomAuthScreen.ZodiacScreen,
-                    CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.SetProfilePictureScreen
+        when {
+            isPhoneNumberVerified == true -> {
+                screenStack.addAll(
+                    listOf(
+                        CustomAuthScreen.AddFullNameScreen,
+                        CustomAuthScreen.AddDOBScreen,
+                        CustomAuthScreen.ZodiacScreen,
+                        CustomAuthScreen.SelectGenderScreen,
+                        CustomAuthScreen.SetProfilePictureScreen
+                    )
                 )
-            )
-        } else if (session != null && isPhoneNumberVerified == false) {
-            screenStack.addAll(
-                listOf(
-                    CustomAuthScreen.PhoneNumberVerificationScreen,
-                    CustomAuthScreen.AddFullNameScreen,
-                    CustomAuthScreen.AddDOBScreen,
-                    CustomAuthScreen.ZodiacScreen,
-                    CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.SetProfilePictureScreen
-                )
-            )
-        } else {
+            }
 
-            screenStack.addAll(
-                listOf(
-                    CustomAuthScreen.AddPhoneNumberScreen,
-                    CustomAuthScreen.PhoneNumberVerificationScreen,
-                    CustomAuthScreen.AddFullNameScreen,
-                    CustomAuthScreen.AddDOBScreen,
-                    CustomAuthScreen.ZodiacScreen,
-                    CustomAuthScreen.SelectGenderScreen,
-                    CustomAuthScreen.SetProfilePictureScreen
+            session != null && isPhoneNumberVerified == false -> {
+                screenStack.addAll(
+                    listOf(
+                        CustomAuthScreen.PhoneNumberVerificationScreen,
+                        CustomAuthScreen.AddFullNameScreen,
+                        CustomAuthScreen.AddDOBScreen,
+                        CustomAuthScreen.ZodiacScreen,
+                        CustomAuthScreen.SelectGenderScreen,
+                        CustomAuthScreen.SetProfilePictureScreen
+                    )
                 )
-            )
+            }
+
+            else -> {
+                screenStack.addAll(
+                    listOf(
+                        CustomAuthScreen.AddPhoneNumberScreen,
+                        CustomAuthScreen.PhoneNumberVerificationScreen,
+                        CustomAuthScreen.AddFullNameScreen,
+                        CustomAuthScreen.AddDOBScreen,
+                        CustomAuthScreen.ZodiacScreen,
+                        CustomAuthScreen.SelectGenderScreen,
+                        CustomAuthScreen.SetProfilePictureScreen
+                    )
+                )
+            }
         }
 
-        this._authUiState.value = this._authUiState.value.copy(
-            screenStack = screenStack
-        )
-
+        updateState { it.copy(screenStack = screenStack) }
         updateCurrentScreen()
     }
 
     private fun clearAuthScreenStack() {
-        this._authUiState.value = this._authUiState.value.copy(screenStack = ArrayDeque())
+        updateState { it.copy(screenStack = ArrayDeque()) }
     }
 
     private fun updateCurrentScreen() {
-
-
-        this._authUiState.value = this._authUiState.value.copy(
-            currentScreen = this._authUiState.value.screenStack.firstOrNull()
-                ?: CustomAuthScreen.SelectGenderScreen
-        )
-
-
+        updateState {
+            it.copy(
+                currentScreen = it.screenStack.firstOrNull()
+                    ?: CustomAuthScreen.SelectGenderScreen
+            )
+        }
     }
 
     private fun removeCurrentScreen() {
-        this._authUiState.value.screenStack.removeFirst()
+        currentState.screenStack.removeFirstOrNull()
     }
 
     private fun removeScreen(screen: CustomAuthScreen) {
-        this._authUiState.value.screenStack.remove(screen)
+        currentState.screenStack.remove(screen)
     }
 
     fun navigateNextScreen(isIncrease: Boolean = true) {
-        val stack = this._authUiState.value.screenStack
+        val stack = currentState.screenStack
         if (stack.isEmpty()) return
 
-        if (stack.isNotEmpty()) {
-            removeCurrentScreen()
-            updateCurrentScreen()
-            updateProgress(isIncrease = isIncrease)
-        }
-
+        removeCurrentScreen()
+        updateCurrentScreen()
+        updateProgress(isIncrease = isIncrease)
     }
 
     fun navigateBack() {
-        val currentScreen = this._authUiState.value.currentScreen
-        val session = this._authUiState.value.session
-        val isPhoneNumberVerified = session?.isPhoneVerified
+        val state = currentState
+        val currentScreen = state.currentScreen
+        val isPhoneNumberVerified = state.session?.isPhoneVerified
 
         if (currentScreen == CustomAuthScreen.PhoneNumberVerificationScreen) {
             return
         }
 
-        if (this._authUiState.value.screenStack.size < CustomAuthScreen.screenOrder.size) {
-
-            val currentIndex = getCurrentScreenIndex(currentScreen = currentScreen)
-
-            if (currentIndex > 0) {
-
-                val previousScreen = CustomAuthScreen.screenOrder[currentIndex - 1]
-
-                val shouldSkipAddingPreviousScreen =
-                    (isPhoneNumberVerified == true && (previousScreen == CustomAuthScreen.PhoneNumberVerificationScreen || previousScreen == CustomAuthScreen.AddPhoneNumberScreen))
-
-                if (!shouldSkipAddingPreviousScreen) {
-                    if (previousScreen == CustomAuthScreen.AddDOBScreen) {
-                        this._authUiState.value.screenStack.addFirst(CustomAuthScreen.ZodiacScreen)
-                        this._authUiState.value.screenStack.addFirst(previousScreen)
-                        updateProgress(isIncrease = false)
-                        updateProgress(isIncrease = false)
-
-                    } else {
-                        this._authUiState.value.screenStack.addFirst(previousScreen)
-                        updateProgress(isIncrease = false)
-                    }
-
-                }
-
-
-                updateCurrentScreen()
-            }
+        if (state.screenStack.size >= CustomAuthScreen.screenOrder.size) {
+            return
         }
+
+        val currentIndex = getCurrentScreenIndex(currentScreen)
+        if (currentIndex <= 0) return
+
+        val previousScreen = CustomAuthScreen.screenOrder[currentIndex - 1]
+
+        val shouldSkipAddingPreviousScreen =
+            isPhoneNumberVerified == true &&
+                    (
+                            previousScreen == CustomAuthScreen.PhoneNumberVerificationScreen ||
+                                    previousScreen == CustomAuthScreen.AddPhoneNumberScreen
+                            )
+
+        if (shouldSkipAddingPreviousScreen) {
+            updateCurrentScreen()
+            return
+        }
+
+        if (previousScreen == CustomAuthScreen.AddDOBScreen) {
+            currentState.screenStack.addFirst(CustomAuthScreen.ZodiacScreen)
+            currentState.screenStack.addFirst(previousScreen)
+            updateProgress(isIncrease = false)
+            updateProgress(isIncrease = false)
+        } else {
+            currentState.screenStack.addFirst(previousScreen)
+            updateProgress(isIncrease = false)
+        }
+
+        updateCurrentScreen()
     }
 
-    private fun getCurrentScreenIndex(
-        currentScreen: CustomAuthScreen
-    ): Int {
+    private fun getCurrentScreenIndex(currentScreen: CustomAuthScreen): Int {
         val isCurrentScreenGender =
-            this._authUiState.value.currentScreen == CustomAuthScreen.SelectGenderScreen
+            currentState.currentScreen == CustomAuthScreen.SelectGenderScreen
 
         return if (!isCurrentScreenGender) {
             CustomAuthScreen.screenOrder.indexOf(currentScreen)
         } else {
-
             CustomAuthScreen.screenOrder.indexOf(CustomAuthScreen.ZodiacScreen)
         }
-
     }
+
+    // Zodiac
 
     private fun setZodiacSign() {
-
         val zodiacSignList = ZodiacUtils.getZodiacSignList()
-
-        this._authUiState.value = this._authUiState.value.copy(zodiacSignList = zodiacSignList)
+        updateState { it.copy(zodiacSignList = zodiacSignList) }
     }
 
+    private fun updateZodiacSign() {
+        val dob = currentState.dob
+        val dateParts = getDayAndMonthIndividually(dateString = dob)
+        val month = dateParts.first
+        val day = dateParts.second
+
+        val zodiacSign = findZodiacSign(month, day)
+        updateState { it.copy(zodiacSign = zodiacSign) }
+
+        AppLogger.log("ZODIAC SIGN = ${currentState.zodiacSign}")
+    }
 
     private fun findZodiacSign(month: Int, day: Int): ZodiacSign? {
-        val zodiacSigns = this._authUiState.value.zodiacSignList
+        return currentState.zodiacSignList.find { sign ->
+            when {
+                sign.startMonth == sign.endMonth -> {
+                    month == sign.startMonth && day in sign.startDay..sign.endDay
+                }
 
-        return zodiacSigns.find { sign ->
-            if (sign.startMonth == sign.endMonth) {
-                // Same month range
-                month == sign.startMonth && day in sign.startDay..sign.endDay
-            } else if (sign.startMonth < sign.endMonth) {
-                // Normal range (e.g., Aries: March 21 - April 19)
-                (month == sign.startMonth && day >= sign.startDay) ||
-                        (month == sign.endMonth && day <= sign.endDay)
-            } else {
-                // Wrap-around range (e.g., Capricorn: Dec 22 - Jan 19)
-                (month == sign.startMonth && day >= sign.startDay) ||
-                        (month == sign.endMonth && day <= sign.endDay)
+                sign.startMonth < sign.endMonth -> {
+                    (month == sign.startMonth && day >= sign.startDay) ||
+                            (month == sign.endMonth && day <= sign.endDay)
+                }
+
+                else -> {
+                    (month == sign.startMonth && day >= sign.startDay) ||
+                            (month == sign.endMonth && day <= sign.endDay)
+                }
             }
         }
     }
 
-// Validations
+    // Validations
 
     fun isPhoneNumberValid(): Boolean {
-        if (this._authUiState.value.phoneNumber.length < 10 || this._authUiState.value.phoneNumber.isEmpty()) {
-            updateValidationError(
-                validation = Validation(
-                    validationMessage = "Invalid phone number format!",
-                    isPhoneNumber = true
+        return when {
+            currentState.phoneNumber.isBlank() || currentState.phoneNumber.length < 10 -> {
+                updateValidationError(
+                    Validation(
+                        validationMessage = "Invalid phone number format!",
+                        isPhoneNumber = true
+                    )
                 )
-            )
-            return false
-        } else if (this._authUiState.value.countryPrefix.isEmpty()) {
-            updateValidationError(
-                validation = Validation(
-                    validationMessage = "Country code is required!",
-                    isPhoneNumber = true
-                )
-            )
-            return false
-        }
+                false
+            }
 
-        return true
+            currentState.countryPrefix.isBlank() -> {
+                updateValidationError(
+                    Validation(
+                        validationMessage = "Country code is required!",
+                        isPhoneNumber = true
+                    )
+                )
+                false
+            }
+
+            else -> true
+        }
     }
 
     fun isFullNameValid(): Boolean {
-        if (this._authUiState.value.fullName.isEmpty()) {
+        return if (currentState.fullName.isBlank()) {
             updateValidationError(
-                validation = Validation(
+                Validation(
                     validationMessage = "Full name is required!",
                     isFullName = true
                 )
             )
-            return false
+            false
+        } else {
+            true
         }
-        return true
     }
 
     fun isUsernameValid(): Boolean {
-        if (this._authUiState.value.username.isEmpty()) {
+        return if (currentState.username.isBlank()) {
             updateValidationError(
-                validation = Validation(
+                Validation(
                     validationMessage = "Username is required!",
                     isUserName = true
                 )
             )
-            return false
+            false
+        } else {
+            true
         }
-        return true
     }
 
     fun isOtpValid(): Boolean {
-        if (this._authUiState.value.optValues.any { it.isEmpty() }) {
+        return if (currentState.optValues.any { it.isBlank() }) {
             updateValidationError(
-                validation = Validation(
+                Validation(
                     validationMessage = "Otp is required!",
                     isOtp = true
                 )
             )
-            return false
+            false
+        } else {
+            true
         }
-        return true
     }
 
     fun isDOBValid(): Boolean {
-        if (this._authUiState.value.dob.isEmpty()) {
+        return if (currentState.dob.isBlank()) {
             updateValidationError(
-                validation = Validation(
+                Validation(
                     validationMessage = "Date of birth is required!",
                     isDOB = true
                 )
             )
-            return false
+            false
+        } else {
+            true
         }
-
-        return true
     }
 
     fun isGenderValid(): Boolean {
-        if (this._authUiState.value.gender == Gender.NONE) {
+        return if (currentState.gender == Gender.NONE) {
             updateValidationError(
-                validation = Validation(
+                Validation(
                     validationMessage = "Please choose your gender!",
                     isGender = true
                 )
             )
-            return false
+            false
+        } else {
+            true
         }
-        return true
     }
-
-
 }

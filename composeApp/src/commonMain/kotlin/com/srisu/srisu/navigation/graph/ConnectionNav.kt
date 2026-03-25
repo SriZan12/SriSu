@@ -1,13 +1,13 @@
-package com.srisu.srisu.navigation
+package com.srisu.srisu.navigation.graph
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.features.home.connection.coupleconnection.presentation.screen.CoupleConnectionScreen
-import com.srisu.srisu.features.home.connection.singleconnection.screen.SingleConnectionScreen
-import com.srisu.srisu.features.home.connection.singleconnection.vm.SingleConnectionViewModel
+import com.srisu.srisu.features.home.connection.presentation.coupleconnection.screen.CoupleConnectionScreen
+import com.srisu.srisu.features.home.connection.presentation.singleconnection.screen.SingleConnectionScreen
+import com.srisu.srisu.features.home.connection.presentation.singleconnection.vm.SingleConnectionViewModel
 import com.srisu.srisu.features.home.profile.presentation.screen.ProfileScreen
 import com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel
 import kotlinx.serialization.Serializable
@@ -21,7 +21,8 @@ sealed class ConnectionNav : Route {
     data class Profile(val userProfileData: String?) : ConnectionNav()
 
     @Serializable
-    data object LoveRequestScreen : ChatNav()
+    data object LoveRequestScreen :
+        ChatNav()
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)

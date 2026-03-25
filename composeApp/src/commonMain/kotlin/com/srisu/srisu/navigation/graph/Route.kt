@@ -1,4 +1,4 @@
-package com.srisu.srisu.navigation
+package com.srisu.srisu.navigation.graph
 
 import kotlinx.serialization.Serializable
 

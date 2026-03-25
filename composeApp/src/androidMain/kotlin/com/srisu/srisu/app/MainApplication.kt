@@ -1,4 +1,4 @@
-package com.srisu.srisu.application
+package com.srisu.srisu.app
 
 import android.app.Application
 import androidx.compose.runtime.Composer

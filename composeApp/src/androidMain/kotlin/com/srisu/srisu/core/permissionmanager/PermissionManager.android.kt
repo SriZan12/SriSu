@@ -1,4 +1,4 @@
-package com.srisu.srisu.permissionmanager
+package com.srisu.srisu.core.permissionmanager
 
 import android.Manifest
 import android.content.Intent
@@ -15,11 +15,6 @@ import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.core.permissionmanager.PermissionCallback
-import com.srisu.srisu.core.permissionmanager.PermissionHandler
-import com.srisu.srisu.core.permissionmanager.PermissionState
-import com.srisu.srisu.core.permissionmanager.PermissionType
-import com.srisu.srisu.core.permissionmanager.PermissionsManager
 import com.srisu.srisu.utils.AppContext
 import kotlinx.coroutines.launch
 

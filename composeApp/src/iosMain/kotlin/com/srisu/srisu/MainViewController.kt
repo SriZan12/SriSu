@@ -1,6 +1,7 @@
 package com.srisu.srisu
 
 import androidx.compose.ui.window.ComposeUIViewController
+import com.srisu.srisu.app.App
 import platform.UIKit.UIScreen
 import platform.UIKit.UIUserInterfaceStyle
 

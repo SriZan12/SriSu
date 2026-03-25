@@ -75,7 +75,6 @@ import srisu.composeapp.generated.resources.filter_icon
 
 
 @OptIn(ExperimentalSharedTransitionApi::class)
-@Preview
 @Composable
 fun SuggestionScreen(
     suggestionViewModel: SuggestionViewModel,
@@ -88,7 +87,7 @@ fun SuggestionScreen(
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        modifier = Modifier.navigationBarsPadding().padding(bottom = 76.dp)
+        modifier = Modifier
     ) { paddingValues ->
 
         val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()

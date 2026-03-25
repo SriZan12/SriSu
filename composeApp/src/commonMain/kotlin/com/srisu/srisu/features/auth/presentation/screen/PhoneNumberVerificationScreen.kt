@@ -26,7 +26,7 @@ import androidx.navigation.NavController
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
-import com.srisu.srisu.navigation.HomeNavigation
+import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.utils.DateTimeUtils.CountdownTimer
 import com.srisu.srisu.utils.formatTime
 import com.srisu.srisu.utils.isInternetAvailable

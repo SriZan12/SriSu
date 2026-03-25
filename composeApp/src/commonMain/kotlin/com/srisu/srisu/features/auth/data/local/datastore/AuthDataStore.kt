@@ -21,7 +21,7 @@ class AuthDataStore(
 
     suspend fun saveOTPTimestamp(otpScreenMetadata: OTPScreenMetadata): Boolean =
         try {
-            val jsonString = Json.Default.encodeToString(otpScreenMetadata)
+            val jsonString = Json.encodeToString(otpScreenMetadata)
 
             dataStore.edit { preferences ->
                 preferences[OTP_META_DATA] = jsonString
@@ -40,7 +40,7 @@ class AuthDataStore(
             .map { preferences ->
                 preferences[OTP_META_DATA]?.let { jsonString ->
                     try {
-                        Json.Default.decodeFromString<OTPScreenMetadata>(jsonString)
+                        Json.decodeFromString<OTPScreenMetadata>(jsonString)
                     } catch (illegalArgumentException: IllegalArgumentException) {
                         AppLogger.log("Illegal Argument Exception: $illegalArgumentException")
                         null

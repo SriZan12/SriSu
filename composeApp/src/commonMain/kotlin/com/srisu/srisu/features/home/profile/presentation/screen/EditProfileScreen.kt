@@ -199,7 +199,7 @@ fun EditProfileScreenContent(
     onNavigateInterestScreen: (List<User.UserInterest?>?) -> Unit,
 ) {
     Scaffold(
-        modifier = Modifier.padding(bottom = 52.dp),
+        modifier = Modifier,
         topBar = {
             PrimaryToolBar(
                 title = "Edit Profile",
@@ -213,7 +213,6 @@ fun EditProfileScreenContent(
     ) { innerPadding ->
         Box(
             modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)
-                .navigationBarsPadding()
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
