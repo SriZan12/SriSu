@@ -3,7 +3,7 @@ package com.srisu.srisu.utils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
+import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.compose.koinInject
 

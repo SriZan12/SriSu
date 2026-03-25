@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,9 +44,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.di.createKoinConfiguration
-import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.AuthNavigation
-import com.srisu.srisu.navigation.ChatNav
 import com.srisu.srisu.navigation.ConnectionNav
 import com.srisu.srisu.navigation.HomeNavigation
 import com.srisu.srisu.navigation.ProfileNav
@@ -59,34 +56,29 @@ import com.srisu.srisu.navigation.connectionGraph
 import com.srisu.srisu.navigation.homeGraph
 import com.srisu.srisu.navigation.profileGraph
 import com.srisu.srisu.navigation.suggestionsGraph
-import com.srisu.srisu.session.Session
-import com.srisu.srisu.session.SessionStorage
+import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.theme.AppTheme
 import com.srisu.srisu.utils.Constants.Auth.FIRST_INSTALL_FLAG
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
@@ -315,7 +307,7 @@ private fun BottomNavigation(
                     },
                     icon = {
 //                        MorphBackgroundIcon(
-                        GlassIcon(
+                        GradientRingIcon(
                             imageVector = destination.icon,
                             contentDescription = destination.label,
                             selected = selected
@@ -368,7 +360,6 @@ fun GlowingIcon(
         modifier = modifier
     ) {
 
-        // 🔥 Glow layer (behind icon)
         if (selected) {
             Box(
                 modifier = Modifier

@@ -5,10 +5,10 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.core.data.response.auth.InterestResponse
-import com.srisu.srisu.core.data.response.auth.User
-import com.srisu.srisu.features.profile.screen.EditProfileScreen
-import com.srisu.srisu.features.profile.screen.InterestScreen
+import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
+import com.srisu.srisu.features.auth.data.remote.response.User
+import com.srisu.srisu.features.home.profile.presentation.screen.EditProfileScreen
+import com.srisu.srisu.features.home.profile.presentation.screen.InterestScreen
 import com.srisu.srisu.utils.Constants.HomeGraph.EDITED_INTERESTS
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

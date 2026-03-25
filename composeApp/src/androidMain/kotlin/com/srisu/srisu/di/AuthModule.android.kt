@@ -3,7 +3,7 @@ package com.srisu.srisu.di
 import android.content.Context
 import com.liftric.kvault.KVault
 import com.srisu.srisu.session.AndroidSessionStorage
-import com.srisu.srisu.session.SessionStorage
+import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.utils.Constants.Auth.SESSION_FILE
 import org.koin.dsl.module
 import org.koin.android.ext.koin.androidContext

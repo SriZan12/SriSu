@@ -1,16 +1,15 @@
 package com.srisu.srisu.navigation
 
-import com.srisu.srisu.features.suggestions.screens.SuggestionProfileScreen
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
-import com.srisu.srisu.features.suggestions.screens.FilterSuggestionScreen
-import com.srisu.srisu.features.suggestions.screens.SuggestionScreen
-import com.srisu.srisu.features.suggestions.vm.SuggestionViewModel
+import com.srisu.srisu.features.home.suggestions.presentation.screen.FilterSuggestionScreen
+import com.srisu.srisu.features.home.suggestions.presentation.screen.SuggestionProfileScreen
+import com.srisu.srisu.features.home.suggestions.presentation.screen.SuggestionScreen
+import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_APPLIED
 import com.srisu.srisu.utils.Constants.HomeGraph.FILTER_CLEARED
 import kotlinx.serialization.Serializable

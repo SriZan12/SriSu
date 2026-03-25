@@ -1,20 +1,19 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.core.data.apiservice.auth.AuthApiService
-import com.srisu.srisu.core.data.apiservice.base.BaseApiService
-import com.srisu.srisu.core.data.apiservice.chat.ChatApiService
-import com.srisu.srisu.core.data.apiservice.connection.ConnectionApiService
-import com.srisu.srisu.core.data.apiservice.profile.ProfileApiService
-import com.srisu.srisu.core.data.apiservice.suggestion.SuggestionApiService
-import com.srisu.srisu.core.data.network.HttpClientFactory
-import com.srisu.srisu.core.data.repository.auth.AuthRepository
-import com.srisu.srisu.core.data.repository.chat.ChatRepository
-import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
-import com.srisu.srisu.core.data.repository.profile.ProfileRepository
-import com.srisu.srisu.core.data.repository.suggestion.SuggestionRepository
-import com.srisu.srisu.core.data.websocket.chat.ChatWebSocketClient
-import com.srisu.srisu.session.SessionUtils
-//import io.ktor.client.engine.cio.CIO
+import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
+import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.features.chat.data.remote.api.ChatApiService
+import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.api.ConnectionApiService
+import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
+import com.srisu.srisu.features.home.suggestions.data.api.SuggestionApiService
+import com.srisu.srisu.core.data.remote.HttpClientFactory
+import com.srisu.srisu.features.auth.domain.repository.AuthRepository
+import com.srisu.srisu.features.chat.domain.repository.ChatRepository
+import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
+import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
+import com.srisu.srisu.features.home.suggestions.domain.repository.SuggestionRepository
+import com.srisu.srisu.core.session.SessionUtils
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
