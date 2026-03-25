@@ -1,8 +1,8 @@
 package com.srisu.srisu.features.auth.data.remote.api
 
-import com.srisu.srisu.core.data.remote.apiservice.base.BaseApiService
-import com.srisu.srisu.core.data.network.ResultHandler
-import com.srisu.srisu.core.data.network.safeRequest
+import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.ResultHandler
+import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.features.auth.data.remote.response.OtpVerificationResponse
 import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO

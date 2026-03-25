@@ -2,6 +2,7 @@ package com.srisu.srisu.session
 
 import com.liftric.kvault.KVault
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.core.session.SessionStorage
 import platform.Foundation.NSUserDefaults
 
 

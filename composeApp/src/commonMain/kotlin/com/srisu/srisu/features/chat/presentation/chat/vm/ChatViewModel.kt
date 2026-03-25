@@ -14,7 +14,7 @@ import com.srisu.srisu.features.chat.data.remote.dto.UploadState
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomResponse
 import com.srisu.srisu.features.chat.domain.repository.ChatRepository
 import com.srisu.srisu.features.chat.presentation.chat.state.ChatState
-import com.srisu.srisu.session.Session
+import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri

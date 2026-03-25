@@ -7,7 +7,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.features.chat.data.remote.dto.ChatMessage
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomResponse
 import com.srisu.srisu.features.chat.data.remote.response.TypingResponse
-import com.srisu.srisu.session.Session
+import com.srisu.srisu.core.session.Session
 
 @Stable
 data class ChatState(

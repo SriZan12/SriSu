@@ -1,6 +1,5 @@
 package com.srisu.srisu.features.chat.presentation.findpartner.screen
 
-import com.srisu.srisu.features.suggestions.screens.InterestChip
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +59,7 @@ import com.srisu.srisu.components.TextIfNotEmpty
 import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerState
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
+import com.srisu.srisu.features.home.suggestions.presentation.screen.InterestChip
 import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
@@ -434,7 +434,9 @@ fun PartnerProfileDialog(
                         ) { interest ->
                             interest?.let {
                                 if (!interest.name.isNullOrEmpty()) {
-                                    InterestChip(label = interest.name)
+                                    InterestChip(
+                                        label = interest.name
+                                    )
                                 }
                             }
                         }

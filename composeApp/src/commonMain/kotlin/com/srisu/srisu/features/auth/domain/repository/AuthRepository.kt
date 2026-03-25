@@ -1,7 +1,7 @@
 package com.srisu.srisu.features.auth.domain.repository
 
 import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
-import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.features.auth.data.remote.response.OtpVerificationResponse
 import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO

@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.auth.presentation.Components.OTPScreenMetadata
+import com.srisu.srisu.features.auth.presentation.components.OTPScreenMetadata
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.SerializationException

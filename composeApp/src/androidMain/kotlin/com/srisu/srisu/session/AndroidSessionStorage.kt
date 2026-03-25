@@ -1,13 +1,7 @@
 package com.srisu.srisu.session
 
-import android.content.Context
-import android.preference.PreferenceManager
 import com.liftric.kvault.KVault
-import com.srisu.srisu.session.SessionStorage
-import androidx.core.content.edit
-import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.utils.AppContext
-import java.io.File
+import com.srisu.srisu.core.session.SessionStorage
 
 class AndroidSessionStorage(private val kVault: KVault) : SessionStorage {
     override fun saveSession(credentials: String, sessionKey: String) {

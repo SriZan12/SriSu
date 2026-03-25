@@ -3,7 +3,7 @@ package com.srisu.srisu.navigation
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.srisu.srisu.features.home.home.screen.HomeScreen
+import com.srisu.srisu.features.home.entertainment.screen.HomeScreen
 import kotlinx.serialization.Serializable
 
 @Serializable

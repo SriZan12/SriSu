@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.chat.domain.repository
 
-import com.srisu.srisu.core.data.network.ResultHandler
+import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.features.chat.data.remote.response.ChatMediaResponse
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomResponse
 import com.srisu.srisu.features.chat.data.remote.response.FetchMessageResponse
@@ -14,7 +14,7 @@ import com.srisu.srisu.features.chat.data.remote.dto.ChatRoomDTO
 import com.srisu.srisu.features.chat.data.remote.dto.FetchMessageDTO
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketEvent
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
-import com.srisu.srisu.session.SessionUtils
+import com.srisu.srisu.core.session.SessionUtils
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.MediaFile
 import kotlinx.coroutines.CoroutineScope

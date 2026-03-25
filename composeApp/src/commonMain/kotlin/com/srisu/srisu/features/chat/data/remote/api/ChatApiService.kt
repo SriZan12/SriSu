@@ -1,8 +1,8 @@
 package com.srisu.srisu.features.chat.data.remote.api
 
-import com.srisu.srisu.core.data.remote.apiservice.base.BaseApiService
-import com.srisu.srisu.core.data.network.ResultHandler
-import com.srisu.srisu.core.data.network.safeRequest
+import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.ResultHandler
+import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.features.chat.data.remote.response.ChatMediaResponse
 import com.srisu.srisu.utils.MediaFile
 import io.ktor.client.HttpClient

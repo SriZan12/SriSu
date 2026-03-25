@@ -3,12 +3,12 @@ package com.srisu.srisu.features.chat.presentation.findpartner.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.baseframework.BaseUIState
-import com.srisu.srisu.core.data.repository.connection.ConnectionRepository
+import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerState
 import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
-import com.srisu.srisu.session.Session
-import com.srisu.srisu.session.SessionStorage
+import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.Country
 import kotlinx.coroutines.flow.MutableStateFlow

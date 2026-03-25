@@ -5,11 +5,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.srisu.srisu.features.home.connection.coupleconnection.screen.CoupleConnectionScreen
+import com.srisu.srisu.features.home.connection.coupleconnection.presentation.screen.CoupleConnectionScreen
 import com.srisu.srisu.features.home.connection.singleconnection.screen.SingleConnectionScreen
 import com.srisu.srisu.features.home.connection.singleconnection.vm.SingleConnectionViewModel
-import com.srisu.srisu.features.profile.screen.ProfileScreen
-import com.srisu.srisu.features.profile.vm.ProfileViewModel
+import com.srisu.srisu.features.home.profile.presentation.screen.ProfileScreen
+import com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel
 import kotlinx.serialization.Serializable
 import org.koin.compose.viewmodel.koinViewModel
 
