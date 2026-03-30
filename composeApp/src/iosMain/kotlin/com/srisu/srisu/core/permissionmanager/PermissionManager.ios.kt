@@ -1,12 +1,7 @@
-package com.srisu.srisu.permissionmanager
+package com.srisu.srisu.core.permissionmanager
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.srisu.srisu.core.permissionmanager.PermissionCallback
-import com.srisu.srisu.core.permissionmanager.PermissionHandler
-import com.srisu.srisu.core.permissionmanager.PermissionState
-import com.srisu.srisu.core.permissionmanager.PermissionType
-import com.srisu.srisu.core.permissionmanager.PermissionsManager
 import platform.AVFoundation.AVAuthorizationStatus
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied

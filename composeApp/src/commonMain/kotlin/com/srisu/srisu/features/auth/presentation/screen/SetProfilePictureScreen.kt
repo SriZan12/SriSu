@@ -38,7 +38,7 @@ import com.srisu.srisu.features.auth.presentation.components.InfoText
 import com.srisu.srisu.features.auth.presentation.components.TitleText
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
-import com.srisu.srisu.navigation.HomeNavigation
+import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.core.permissionmanager.PermissionCallback
 import com.srisu.srisu.core.permissionmanager.PermissionState
 import com.srisu.srisu.core.permissionmanager.PermissionType
@@ -238,109 +238,5 @@ private fun ProfilePictureCompo(
 
     }
 }
-
-
-/*@Composable
-private fun ProfilePictureCompo(
-    authViewModel: AuthViewModel,
-    authUIStates: AuthViewModel.AuthUIStates
-) {
-    val profilePictureUri = authUIStates.profilePictureUri
-//    var showPermissionDialog by remember { mutableStateOf(true) }
-//    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
-//    var hasRequestedPermission by remember { mutableStateOf(true) }
-//    var permissionRequestCompleted by remember { mutableStateOf(false) }
-
-    val galleryManager = rememberGalleryManager(
-        onResult = { uris ->
-            if (uris.isNotEmpty()) {
-                authViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
-            }
-        },
-        mediaType = MediaType.IMAGE_ONLY
-    )
-
-    *//*
-        val permissionManager = createPermissionsManager(object : PermissionCallback {
-            override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
-                AppLogger.log("INSIDE CALLBACK = $status")
-                when (status) {
-                    PermissionState.GRANTED -> {
-                        permissionState = PermissionState.GRANTED
-    //                    galleryManager.launch()
-                    }
-
-                    PermissionState.SHOW_RATIONALE -> permissionState = PermissionState.SHOW_RATIONALE
-
-                    PermissionState.DENIED -> {
-                        permissionState = PermissionState.DENIED
-                    }
-
-                    PermissionState.NOT_ASKED_YET -> {
-                    }
-
-                    PermissionState.REQUEST_LAUNCHED -> {
-                        permissionState = PermissionState.REQUEST_LAUNCHED
-                    }
-                }
-            }
-        })
-    *//*
-    *//*
-        LaunchedEffect(permissionState) {
-            AppLogger.log("INSIDE PERMISSION STATE LAUNCHED EFFECT")
-            if (hasRequestedPermission) {
-                permissionRequestCompleted = true
-            }
-        }*//*
-
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(211.dp)
-                .clip(CircleShape)
-                .background(backgroundGray)
-                .clickable {
-                    *//*   showPermissionDialog = true
-                       hasRequestedPermission = true*//*
-
-                    galleryManager.launch()
-
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            if (profilePictureUri != null) {
-                AsyncImage(
-                    model = profilePictureUri,
-                    contentDescription = "Selected Profile Picture",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Image(
-                    painter = painterResource(Res.drawable.image_placeholder),
-                    contentDescription = "Image_picker",
-                    modifier = Modifier.size(80.dp)
-                )
-            }
-        }
-
-        *//*
-                if (showPermissionDialog) {
-                    if (!permissionManager.isPermissionGranted(permission = PermissionType.STORAGE)) {
-                        permissionManager.askPermission(
-                            permission = PermissionType.STORAGE,
-                            permissionRequestCompleted = permissionRequestCompleted
-                        )
-
-                    } else {
-                           galleryManager.launch()
-                    }
-                    showPermissionDialog = false
-                }
-        *//*
-
-    }
-}*/
 
 

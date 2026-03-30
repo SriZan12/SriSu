@@ -1,9 +1,10 @@
-package com.srisu.srisu.navigation
+package com.srisu.srisu.navigation.graph
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.srisu.srisu.features.home.entertainment.screen.HomeScreen
+import com.srisu.srisu.navigation.graph.Route
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -1,4 +1,4 @@
-package com.srisu.srisu.navigation
+package com.srisu.srisu.navigation.graph
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.navigation.NavController
@@ -9,6 +9,7 @@ import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.User
 import com.srisu.srisu.features.home.profile.presentation.screen.EditProfileScreen
 import com.srisu.srisu.features.home.profile.presentation.screen.InterestScreen
+import com.srisu.srisu.navigation.graph.Route
 import com.srisu.srisu.utils.Constants.HomeGraph.EDITED_INTERESTS
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

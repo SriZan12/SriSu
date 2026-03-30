@@ -1,4 +1,4 @@
-package com.srisu.srisu.navigation
+package com.srisu.srisu.navigation.graph
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -9,6 +9,7 @@ import com.srisu.srisu.features.chat.presentation.chat.screen.ChatScreen
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.screen.FindYourPartnerScreen
 import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.navigation.graph.Route
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel

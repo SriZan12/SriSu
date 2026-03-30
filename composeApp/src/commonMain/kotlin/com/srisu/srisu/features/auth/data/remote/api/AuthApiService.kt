@@ -3,10 +3,10 @@ package com.srisu.srisu.features.auth.data.remote.api
 import com.srisu.srisu.core.data.remote.BaseApiService
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
-import com.srisu.srisu.features.auth.data.remote.response.OtpVerificationResponse
-import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO
 import com.srisu.srisu.features.auth.data.remote.dto.ProfileSetupDTO
+import com.srisu.srisu.features.auth.data.remote.response.OtpVerificationResponse
+import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.utils.MediaFile
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.MultiPartFormDataContent
@@ -20,8 +20,8 @@ import io.ktor.http.HttpMethod
 class AuthApiService(private val httpClient: HttpClient) {
     suspend fun sendOTPRequest(authDTO: AuthDTO): ResultHandler<String?> {
         return httpClient.safeRequest<String?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/send-otp/")
-            method = HttpMethod.Companion.Post
+            url("${BaseApiService.BASE_URL}api/auth/send-otp/")
+            method = HttpMethod.Post
             setBody(authDTO)
         }
     }
@@ -36,8 +36,8 @@ class AuthApiService(private val httpClient: HttpClient) {
         otpVerificationBody["otp_code"] = otp
 
         return httpClient.safeRequest<OtpVerificationResponse> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/verify-otp/")
-            method = HttpMethod.Companion.Post
+            url("${BaseApiService.BASE_URL}api/auth/verify-otp/")
+            method = HttpMethod.Post
             setBody(otpVerificationBody)
         }
     }
@@ -48,8 +48,8 @@ class AuthApiService(private val httpClient: HttpClient) {
     ): ResultHandler<ProfileResponse?> {
 
         return httpClient.safeRequest<ProfileResponse> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/setup-profile/")
-            method = HttpMethod.Companion.Put
+            url("${BaseApiService.BASE_URL}api/auth/setup-profile/")
+            method = HttpMethod.Put
 
             setBody(
                 MultiPartFormDataContent(
@@ -67,7 +67,7 @@ class AuthApiService(private val httpClient: HttpClient) {
                             append(
                                 "profile_photo",
                                 fileBytes,
-                                Headers.Companion.build {
+                                Headers.build {
                                     append(
                                         HttpHeaders.ContentDisposition,
                                         "form-data; name=profile_photo; filename=${mediaFile.fileName}"
