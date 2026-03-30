@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -37,73 +38,80 @@ import com.srisu.srisu.features.home.connection.presentation.components.NoConnec
 import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-typealias crushRequestId = Int?
-typealias senderNumber = String?
-typealias receiverNumber = String?
+typealias CrushRequestId = Int?
+typealias SenderNumber = String?
+typealias ReceiverNumber = String?
 
 @Composable
 fun MyCrushScreen(
-    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
-    onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit,
-    crushList: StateFlow<PagingData<SingleConnectionResponse.Result>>
+    crushList: LazyPagingItems<SingleConnectionResponse.Result>,
+    onNavigateToProfile: (SingleConnectionResponse.Result.Receiver?) -> Unit,
+    onCancelCrushRequest: (CrushRequestId, SenderNumber, ReceiverNumber) -> Unit
 ) {
-    MyCrushScreenContent(
-        crushList = crushList,
-        onNavigateToProfile = onNavigateToProfile,
-        onCancelCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
-            onCancelCrushRequest(crushRequestId, senderNumber, receiverNumber)
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MyCrushScreenContent(
-    modifier: Modifier = Modifier,
-    crushList: StateFlow<PagingData<SingleConnectionResponse.Result>>,
-    onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
-    onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit
-) {
-    Box(modifier = Modifier.fillMaxSize().background(color = MaterialTheme.colorScheme.surfaceContainerHighest)) {
-
-        val myCrushList = crushList.collectAsLazyPagingItems()
-        val loadState = myCrushList.loadState
-
-        when {
-            loadState.refresh is LoadState.Loading -> {
-                ConnectionShimmerCompo()
-            }
-
-            myCrushList.itemCount == 0 -> {
-                var isVisible by remember { mutableStateOf(false) }
-
-                LaunchedEffect(Unit) {
-                    isVisible = true
-                }
-
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = fadeIn(animationSpec = tween(600)) + slideInVertically(
-                        initialOffsetY = { it / 2 },
-                        animationSpec = tween(600, easing = FastOutSlowInEasing)
-                    ),
-                ) {
-                    NoConnectionsFound(
-                        modifier = Modifier.fillMaxSize(),
-                        title = "maybe it’s time to find one?"
-                    )
-                }
-            }
-
-            else -> {
-                MyCrushListCompo(
-                    modifier = modifier,
-                    myCrushList = myCrushList,
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {
+        PagedConnectionContent(
+            items = crushList,
+            emptyTitle = "maybe it’s time to find one?",
+            loadingContent = { ConnectionShimmerCompo() },
+            listContent = {
+                MyCrushListContent(
+                    myCrushList = crushList,
                     onNavigateToProfile = onNavigateToProfile,
                     onCancelCrushRequest = onCancelCrushRequest
-
                 )
             }
+        )
+    }
+}
+
+@Composable
+private fun MyCrushListContent(
+    myCrushList: LazyPagingItems<SingleConnectionResponse.Result>,
+    onNavigateToProfile: (SingleConnectionResponse.Result.Receiver?) -> Unit,
+    onCancelCrushRequest: (CrushRequestId, SenderNumber, ReceiverNumber) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 16.dp,
+            bottom = 80.dp
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(
+            count = myCrushList.itemCount,
+            key = { index -> myCrushList[index]?.id ?: index },
+            contentType = { "my_crush_item" }
+        ) { index ->
+            val crush = myCrushList[index] ?: return@items
+
+            ConnectionItem(
+                modifier = Modifier,
+                userName = crush.receiver?.username.orEmpty(),
+                userImage = crush.receiver?.profilePhoto.orEmpty(),
+                dob = crush.receiver?.dob,
+                zodiacSign = crush.receiver?.zodiacSign,
+                onClick = { onNavigateToProfile(crush.receiver) },
+                firstButtonTitle = "Cancel",
+                onClickFirstButton = {
+                    onCancelCrushRequest(
+                        crush.id,
+                        crush.senderNumber,
+                        crush.receiverNumber
+                    )
+                }
+            )
         }
     }
 }
@@ -113,7 +121,7 @@ private fun MyCrushListCompo(
     modifier: Modifier = Modifier,
     myCrushList: LazyPagingItems<SingleConnectionResponse.Result>,
     onNavigateToProfile: (userProfileData: SingleConnectionResponse.Result.Receiver?) -> Unit,
-    onCancelCrushRequest: (crushRequestId, senderNumber, receiverNumber) -> Unit
+    onCancelCrushRequest: (CrushRequestId, SenderNumber, ReceiverNumber) -> Unit
 ) {
 
     LazyColumn(

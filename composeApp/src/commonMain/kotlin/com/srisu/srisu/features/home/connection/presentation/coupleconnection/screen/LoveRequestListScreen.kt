@@ -35,8 +35,6 @@ import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.res
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionItem
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionShimmerCompo
 import com.srisu.srisu.features.home.connection.presentation.components.NoConnectionsFound
-import com.srisu.srisu.features.home.connection.presentation.singleconnection.screen.receiverNumber
-import com.srisu.srisu.features.home.connection.presentation.singleconnection.screen.senderNumber
 import kotlinx.coroutines.flow.StateFlow
 
 typealias senderNumber = String?
