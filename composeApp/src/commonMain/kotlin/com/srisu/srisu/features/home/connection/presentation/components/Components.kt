@@ -1,5 +1,10 @@
 package com.srisu.srisu.features.home.connection.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,6 +32,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +44,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
+import app.cash.paging.compose.LazyPagingItems
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.shimmerEffect
 import com.srisu.srisu.utils.DateTimeUtils
@@ -46,7 +58,6 @@ import srisu.composeapp.generated.resources.no_love
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Preview
 fun ConnectionToolBar(
     title: String,
     onClickAction: () -> Unit = {}
@@ -328,6 +339,54 @@ fun ConnectionItemShimmer(
                 .size(100.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .shimmerEffect()
+        )
+    }
+}
+
+@Composable
+fun <T : Any> PagedConnectionContent(
+    items: LazyPagingItems<T>,
+    emptyTitle: String,
+    loadingContent: @Composable () -> Unit,
+    listContent: @Composable () -> Unit
+) {
+    when {
+        items.loadState.refresh is LoadState.Loading -> {
+            loadingContent()
+        }
+
+        items.itemCount == 0 -> {
+            AnimatedEmptyState(title = emptyTitle)
+        }
+
+        else -> {
+            listContent()
+        }
+    }
+}
+
+@Composable
+private fun AnimatedEmptyState(
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    var isVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(animationSpec = tween(600)) +
+                slideInVertically(
+                    initialOffsetY = { it / 2 },
+                    animationSpec = tween(600, easing = FastOutSlowInEasing)
+                )
+    ) {
+        NoConnectionsFound(
+            modifier = modifier.fillMaxSize(),
+            title = title
         )
     }
 }

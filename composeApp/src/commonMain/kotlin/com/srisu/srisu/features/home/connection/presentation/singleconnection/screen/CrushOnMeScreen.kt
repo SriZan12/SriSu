@@ -17,6 +17,7 @@ import app.cash.paging.compose.LazyPagingItems
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.SingleConnectionResponse
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionItem
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionShimmerCompo
+import com.srisu.srisu.features.home.connection.presentation.components.PagedConnectionContent
 
 @Composable
 fun CrushOnMeScreen(

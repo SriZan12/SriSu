@@ -194,6 +194,7 @@ class SingleConnectionViewModel(
     fun refreshCrushOnMeList() {
         crushOnMeRefreshTrigger.update { it + 1 }
     }
+
     fun getUserProfile(userProfile: SingleConnectionResponse.Result.Receiver?): String? {
         return runCatching {
             Json.encodeToString(userProfile?.toUser())

@@ -35,6 +35,7 @@ import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.res
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionItem
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionShimmerCompo
 import com.srisu.srisu.features.home.connection.presentation.components.NoConnectionsFound
+import com.srisu.srisu.features.home.connection.presentation.components.PagedConnectionContent
 import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.ui.tooling.preview.Preview
 

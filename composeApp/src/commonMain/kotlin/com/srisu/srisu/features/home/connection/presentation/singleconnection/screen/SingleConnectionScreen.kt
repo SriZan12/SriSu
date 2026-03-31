@@ -71,15 +71,11 @@ fun SingleConnectionScreen(
 private fun Initialization(
     viewModel: SingleConnectionViewModel
 ) {
-    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(viewModel) {
-//        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+    LaunchedEffect(Unit) {
             AppLogger.log("SingleConnectionScreen Initialization")
             viewModel.refreshMyCrushList()
             viewModel.refreshCrushOnMeList()
-
-//        }
     }
 }
 
@@ -108,8 +104,8 @@ fun ConnectionScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .padding(paddingValues = innerPadding)
+                .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
         ) {
             CommonTabPager(
                 tabItems = tabItems,
@@ -163,55 +159,6 @@ fun ConnectionScreenContent(
         }
     }
 }
-
-@Composable
-fun <T : Any> PagedConnectionContent(
-    items: LazyPagingItems<T>,
-    emptyTitle: String,
-    loadingContent: @Composable () -> Unit,
-    listContent: @Composable () -> Unit
-) {
-    when {
-        items.loadState.refresh is LoadState.Loading -> {
-            loadingContent()
-        }
-
-        items.itemCount == 0 -> {
-            AnimatedEmptyState(title = emptyTitle)
-        }
-
-        else -> {
-            listContent()
-        }
-    }
-}
-
-@Composable
-private fun AnimatedEmptyState(
-    title: String,
-    modifier: Modifier = Modifier
-) {
-    var isVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        isVisible = true
-    }
-
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(animationSpec = tween(600)) +
-                slideInVertically(
-                    initialOffsetY = { it / 2 },
-                    animationSpec = tween(600, easing = FastOutSlowInEasing)
-                )
-    ) {
-        NoConnectionsFound(
-            modifier = modifier.fillMaxSize(),
-            title = title
-        )
-    }
-}
-
 
 @Preview
 @Composable
