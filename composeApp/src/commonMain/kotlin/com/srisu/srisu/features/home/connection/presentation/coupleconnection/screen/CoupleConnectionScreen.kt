@@ -8,12 +8,16 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.cash.paging.compose.LazyPagingItems
+import app.cash.paging.compose.collectAsLazyPagingItems
 import com.srisu.srisu.components.CommonTabPager
+import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionToolBar
-import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.CoupleConnectionListState
+import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.CoupleConnectionUiState
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel
 import com.srisu.srisu.utils.Constants
 import org.koin.compose.viewmodel.koinViewModel
@@ -23,13 +27,19 @@ fun CoupleConnectionScreen(
     coupleConnectionViewModel: CoupleConnectionViewModel = koinViewModel(),
     onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
-    val loveRequestUiState by coupleConnectionViewModel.coupleConnectionListState.collectAsStateWithLifecycle()
+    val coupleConnectionUiState by coupleConnectionViewModel.coupleConnectionUiState.collectAsStateWithLifecycle()
+    val loveRequestList = coupleConnectionViewModel.loveRequests.collectAsLazyPagingItems()
+    val loveRequestSentList = coupleConnectionViewModel.sentLoveRequests.collectAsLazyPagingItems()
+
+
 
     Initialization(viewModel = coupleConnectionViewModel)
 
     LoveRequestContent(
         coupleConnectionViewModel = coupleConnectionViewModel,
-        loveRequestUiState = loveRequestUiState,
+        coupleConnectionUiState = coupleConnectionUiState,
+        loveRequestList = loveRequestList,
+        loveRequestSentList = loveRequestSentList,
         onNavigateToProfile = { userProfileData ->
             onNavigateToProfile(userProfileData)
         }
@@ -40,40 +50,45 @@ fun CoupleConnectionScreen(
 private fun Initialization(
     viewModel: CoupleConnectionViewModel
 ) {
-    viewModel.getLoveRequestList()
-    viewModel.getSentLoveRequestList()
+    LaunchedEffect(Unit) {
+        viewModel.refreshLoveRequests()
+        viewModel.refreshSentLoveRequests()
+    }
+
 }
 
 @Composable
 private fun LoveRequestContent(
     coupleConnectionViewModel: CoupleConnectionViewModel,
-    loveRequestUiState: CoupleConnectionListState,
-    onNavigateToProfile: (userProfileData: String?) -> Unit
+    coupleConnectionUiState: CoupleConnectionUiState,
+    onNavigateToProfile: (userProfileData: String?) -> Unit,
+    loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>,
+    loveRequestSentList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             ConnectionToolBar(
-                title = "Love Requests"
+                title = coupleConnectionUiState.currentTab?.title ?: "Connection"
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding).background(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
+            modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                )
         ) {
 
-            val tabItems = loveRequestUiState.loveRequestTabList
+            val tabItems = coupleConnectionUiState.loveRequestTabList
             val pagerState = rememberPagerState { tabItems.size }
 
             CommonTabPager(
                 tabItems = tabItems,
                 pagerState = pagerState,
-                onUpdateCurrentTab = {
-                    coupleConnectionViewModel.updateCurrentTab(it)
-                }
+                onUpdateCurrentTab = coupleConnectionViewModel::updateCurrentTab
+
             ) { index ->
 
                 when (index) {
@@ -100,7 +115,7 @@ private fun LoveRequestContent(
                                     connectionStatus = Constants.ConnectionStatus.REJECTED
                                 )
                             },
-                            loveRequestList = coupleConnectionViewModel.loveRequests
+                            loveRequestList = loveRequestList
                         )
                     }
 
@@ -119,7 +134,7 @@ private fun LoveRequestContent(
                                     connectionStatus = Constants.ConnectionStatus.NOTHING
                                 )
                             },
-                            sentLoveRequestList = coupleConnectionViewModel.sentLoveRequests
+                            sentLoveRequestList = loveRequestSentList
                         )
                     }
                 }

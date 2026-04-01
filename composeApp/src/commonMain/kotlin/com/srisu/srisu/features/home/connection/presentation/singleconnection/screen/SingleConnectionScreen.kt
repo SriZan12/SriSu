@@ -1,5 +1,10 @@
 package com.srisu.srisu.features.home.connection.presentation.singleconnection.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,14 +19,26 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.paging.LoadState
+import app.cash.paging.compose.LazyPagingItems
+import app.cash.paging.compose.collectAsLazyPagingItems
 import com.srisu.srisu.components.CommonTabPager
+import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.SingleConnectionResponse
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionItem
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionItemShimmer
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionToolBar
+import com.srisu.srisu.features.home.connection.presentation.components.NoConnectionsFound
 import com.srisu.srisu.features.home.connection.presentation.singleconnection.state.ConnectionUIState
 import com.srisu.srisu.features.home.connection.presentation.singleconnection.vm.SingleConnectionViewModel
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
@@ -35,17 +52,17 @@ fun SingleConnectionScreen(
     singleConnectionViewModel: SingleConnectionViewModel,
     onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
+    val connectionUiState by singleConnectionViewModel.connectionUiState.collectAsStateWithLifecycle()
+    val myCrushList = singleConnectionViewModel.myCrushList.collectAsLazyPagingItems()
+    val crushOnMeList = singleConnectionViewModel.crushOnMeList.collectAsLazyPagingItems()
 
-    val connectionUiState: ConnectionUIState by singleConnectionViewModel.connectionUiState.collectAsStateWithLifecycle()
-
-    Initialization(
-        viewModel = singleConnectionViewModel
-    )
+    Initialization(viewModel = singleConnectionViewModel)
 
     ConnectionScreenContent(
         viewModel = singleConnectionViewModel,
-        connectionUiState =
-            connectionUiState,
+        connectionUiState = connectionUiState,
+        myCrushList = myCrushList,
+        crushOnMeList = crushOnMeList,
         onNavigateToProfile = onNavigateToProfile
     )
 }
@@ -54,9 +71,11 @@ fun SingleConnectionScreen(
 private fun Initialization(
     viewModel: SingleConnectionViewModel
 ) {
-    LaunchedEffect(Unit){
-        viewModel.getMyCrushList()
-        viewModel.getCrushOnMeList()
+
+    LaunchedEffect(Unit) {
+            AppLogger.log("SingleConnectionScreen Initialization")
+            viewModel.refreshMyCrushList()
+            viewModel.refreshCrushOnMeList()
     }
 }
 
@@ -65,6 +84,8 @@ private fun Initialization(
 fun ConnectionScreenContent(
     viewModel: SingleConnectionViewModel,
     connectionUiState: ConnectionUIState,
+    myCrushList: LazyPagingItems<SingleConnectionResponse.Result>,
+    crushOnMeList: LazyPagingItems<SingleConnectionResponse.Result>,
     onNavigateToProfile: (userProfileData: String?) -> Unit
 ) {
     Scaffold(
@@ -77,30 +98,26 @@ fun ConnectionScreenContent(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) { innerPadding ->
 
+        val tabItems = connectionUiState.connectionTabList
+        val pagerState = rememberPagerState { tabItems.size }
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues = innerPadding)
                 .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
         ) {
-
-            val tabItems = connectionUiState.connectionTabList
-            val pagerState = rememberPagerState { tabItems.size }
-
             CommonTabPager(
                 tabItems = tabItems,
                 pagerState = pagerState,
-                onUpdateCurrentTab = {
-                    viewModel.updateCurrentTab(it)
-                }
+                onUpdateCurrentTab = viewModel::updateCurrentTab
             ) { index ->
-
                 when (index) {
                     0 -> {
                         MyCrushScreen(
-                            crushList = viewModel.myCrushList,
-                            onNavigateToProfile = { userProfileData ->
-                                val user = viewModel.getUserProfile(userProfile = userProfileData)
-                                onNavigateToProfile(user)
+                            crushList = myCrushList,
+                            onNavigateToProfile = { receiver ->
+                                onNavigateToProfile(viewModel.getUserProfile(receiver))
                             },
                             onCancelCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
                                 viewModel.updateCrushRequest(
@@ -115,7 +132,7 @@ fun ConnectionScreenContent(
 
                     1 -> {
                         CrushOnMeScreen(
-                            crushOnMeList = viewModel.crushOnMeList,
+                            crushOnMeList = crushOnMeList,
                             onAcceptCrushRequest = { crushRequestId, senderNumber, receiverNumber ->
                                 viewModel.updateCrushRequest(
                                     crushRequestId = crushRequestId,
@@ -132,20 +149,16 @@ fun ConnectionScreenContent(
                                     connectionStatus = REJECTED
                                 )
                             },
-                            onNavigateToProfile = { userProfileData ->
-                                val user = viewModel.getUserProfile(userProfile = userProfileData)
-                                onNavigateToProfile(user)
-                            },
+                            onNavigateToProfile = { receiver ->
+                                onNavigateToProfile(viewModel.getUserProfile(receiver))
+                            }
                         )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(64.dp))
         }
     }
 }
-
 
 @Preview
 @Composable
