@@ -24,10 +24,10 @@ data class UserSuggestionResponse(
         val city: String? = null,
         @SerialName("country")
         val country: String? = null,
-        @SerialName("crushed")
-        var crushed: Boolean? = null,
-        @SerialName("dob")
-        val dob: String? = null,
+        @SerialName("has_active_connection")
+        var hasActiveConnection: Boolean? = null,
+        @SerialName("age")
+        val age: Int? = null,
         @SerialName("full_name")
         val fullName: String? = null,
         @SerialName("gender")

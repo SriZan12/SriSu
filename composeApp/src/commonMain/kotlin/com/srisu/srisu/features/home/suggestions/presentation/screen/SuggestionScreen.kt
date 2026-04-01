@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,7 +67,6 @@ import com.srisu.srisu.utils.DateTimeUtils
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.cross_love
 import srisu.composeapp.generated.resources.filter_icon
@@ -85,71 +83,67 @@ fun SuggestionScreen(
     navigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit,
     navigateFilterScreen: () -> Unit,
 ) {
+    val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
+
+    SuggestionScreenEffects(
+        suggestionViewModel = suggestionViewModel,
+        filterApplied = filterApplied,
+        filterCleared = filterCleared,
+    )
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        modifier = Modifier
     ) { paddingValues ->
-
-        val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
-
-        Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                SuggestionTopBar(
+                    onFilterClick = navigateFilterScreen
+                )
 
-            SuggestionTopBarCompo(
-                showFilterDialog = navigateFilterScreen
-            )
+                SuggestionFeedbackLayer(
+                    suggestionViewModel = suggestionViewModel,
+                    suggestionUIStates = suggestionUIState,
+                )
 
-            Initialization(
-                suggestionViewModel = suggestionViewModel,
-                filterApplied = filterApplied,
-                filterCleared = filterCleared
-            )
-
-            HandleUiStates(
-                suggestionViewModel = suggestionViewModel,
-                suggestionUIStates = suggestionUIState
-            )
-
-
-            SuggestionContent(
-                suggestionUIState = suggestionUIState,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedContentScope = animatedContentScope,
-                onRetry = {
-                    suggestionViewModel.getUserSuggestions()
-                },
-                onNavigateProfileScreen = navigateProfileScreen
-            )
+                SuggestionContent(
+                    suggestionUIState = suggestionUIState,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedContentScope = animatedContentScope,
+                    onRetry = suggestionViewModel::getUserSuggestions,
+                    onNavigateProfileScreen = navigateProfileScreen,
+                )
+            }
         }
-
     }
 }
 
 @Composable
-private fun Initialization(
+private fun SuggestionScreenEffects(
     suggestionViewModel: SuggestionViewModel,
     filterApplied: Boolean,
     filterCleared: Boolean,
 ) {
     LaunchedEffect(filterApplied, filterCleared) {
-        if (filterCleared || filterApplied) {
+        if (filterApplied || filterCleared) {
             suggestionViewModel.getUserSuggestions()
         }
     }
 }
 
 @Composable
-private fun HandleUiStates(
+private fun SuggestionFeedbackLayer(
     suggestionViewModel: SuggestionViewModel,
-    suggestionUIStates: SuggestionUIStates
+    suggestionUIStates: SuggestionUIStates,
 ) {
-
     val isConnected = isInternetAvailable()
-    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+    var showOfflineBottomSheet by remember { mutableStateOf(!isConnected) }
 
     LaunchedEffect(isConnected) {
-        showBottomSheet = !isConnected
+        showOfflineBottomSheet = !isConnected
     }
 
     when (val baseUIState = suggestionUIStates.baseUIState) {
@@ -158,28 +152,26 @@ private fun HandleUiStates(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    suggestionViewModel.idleScreen()
-                },
+                onDismiss = suggestionViewModel::idleScreen,
             )
         }
 
         is BaseUIState.Loading -> {
-            SuggestionShimmerCompo()
+            SuggestionShimmerGrid()
         }
 
         is BaseUIState.NoInternetConnection -> {
-            showBottomSheet = baseUIState.isOffline
+            showOfflineBottomSheet = baseUIState.isOffline
         }
 
         else -> Unit
     }
 
-    if (showBottomSheet) {
+    if (showOfflineBottomSheet) {
         OfflineBottomSheetCompo(
-            show = showBottomSheet,
+            show = showOfflineBottomSheet,
             onDismiss = {
-                showBottomSheet = false
+                showOfflineBottomSheet = false
                 suggestionViewModel.idleScreen()
             }
         )
@@ -187,35 +179,30 @@ private fun HandleUiStates(
 }
 
 @Composable
-private fun SuggestionTopBarCompo(
-    showFilterDialog: () -> Unit
+private fun SuggestionTopBar(
+    onFilterClick: () -> Unit,
 ) {
-
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-
         Text(
             text = "Suggestions",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
         )
 
-
-        IconButton(
-            onClick = showFilterDialog
-        ) {
+        IconButton(onClick = onFilterClick) {
             Icon(
                 modifier = Modifier.size(24.dp),
                 painter = painterResource(Res.drawable.filter_icon),
                 contentDescription = "Filter Icon",
             )
         }
-
     }
-
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -225,72 +212,78 @@ private fun SuggestionContent(
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     onRetry: () -> Unit,
-    onNavigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit
+    onNavigateProfileScreen: (UserSuggestionResponse.Result?) -> Unit,
 ) {
+    val suggestionsFlow = suggestionUIState.suggestions ?: return
+    val suggestions = suggestionsFlow.collectAsLazyPagingItems()
+    val loadState = suggestions.loadState
 
-    suggestionUIState.suggestions?.let { suggestionsFlow ->
-        val suggestions = suggestionsFlow.collectAsLazyPagingItems()
-        val loadState = suggestions.loadState
+    when {
+        loadState.refresh is LoadState.Loading -> {
+            SuggestionShimmerGrid()
+        }
 
-        when {
-            loadState.refresh is LoadState.Loading -> {
-                SuggestionShimmerCompo()
-            }
+        suggestions.itemCount == 0 -> {
+            NoSuggestionComp(onRetry = onRetry)
+        }
 
-            suggestions.itemCount == 0 -> {
-                NoSuggestionComp(onRetry = onRetry)
-            }
+        else -> {
+            LazyVerticalStaggeredGrid(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                columns = StaggeredGridCells.Fixed(2),
+                contentPadding = PaddingValues(8.dp),
+                verticalItemSpacing = 12.dp,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(
+                    count = suggestions.itemCount,
+                    key = { index -> suggestions[index]?.id ?: index },
+                    contentType = { "SuggestionItem" },
+                ) { index ->
+                    val item = suggestions[index]
+                    val itemHeight = if (index % 2 == 0) 188.dp else 252.dp
 
-            else -> {
-                LazyVerticalStaggeredGrid(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    columns = StaggeredGridCells.Fixed(2),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalItemSpacing = 12.dp,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(
-                        count = suggestions.itemCount,
-                        key = { suggestions[it]?.id ?: it },
-                        contentType = suggestions.itemContentType { "Suggestion Items" },
-                    ) { index ->
-                        val item = suggestions[index]
-
-                        val height = remember(index) { if (index % 2 == 0) 188.dp else 252.dp }
-
-                        SuggestionCardCompo(
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = tween(200),
-                                fadeOutSpec = tween(200)
-                            ),
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedContentScope = animatedContentScope,
-                            height = height,
-                            suggestionItem = item,
-                            onClick = onNavigateProfileScreen
-                        )
-
-                    }
+                    SuggestionCard(
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = tween(200),
+                            fadeOutSpec = tween(200),
+                        ),
+                        height = itemHeight,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedContentScope = animatedContentScope,
+                        suggestionItem = item,
+                        onClick = onNavigateProfileScreen,
+                    )
                 }
+
+//                if (loadState.append is LoadState.Loading) {
+//                    items(2) { index ->
+//                        val itemHeight = if (index % 2 == 0) 188.dp else 252.dp
+//                        SuggestionCardShimmerCompo(
+//                            modifier = Modifier,
+//                            height = itemHeight,
+//                        )
+//                    }
+//                }
             }
         }
     }
 }
 
 @Composable
-private fun SuggestionShimmerCompo() {
+private fun SuggestionShimmerGrid() {
     LazyVerticalStaggeredGrid(
         modifier = Modifier.padding(horizontal = 12.dp),
         columns = StaggeredGridCells.Fixed(2),
         contentPadding = PaddingValues(8.dp),
         verticalItemSpacing = 12.dp,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(10) { index ->
-            val height = if (index % 2 == 0) 188.dp else 252.dp
-
+            val itemHeight = if (index % 2 == 0) 188.dp else 252.dp
             SuggestionCardShimmerCompo(
-                modifier = Modifier, height = height
+                modifier = Modifier,
+                height = itemHeight,
             )
         }
     }
@@ -298,138 +291,115 @@ private fun SuggestionShimmerCompo() {
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun SuggestionCardCompo(
+private fun SuggestionCard(
     modifier: Modifier,
     height: Dp,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
     suggestionItem: UserSuggestionResponse.Result?,
-    onClick: (UserSuggestionResponse.Result?) -> Unit
+    onClick: (UserSuggestionResponse.Result?) -> Unit,
 ) {
+    val userId = suggestionItem?.id
+    val profileImageKey = "profile_image-$userId"
+    val usernameKey = "username_text-$userId"
+    val zodiacKey = "zodiac_image-$userId"
+    val ageKey = "dob_text-$userId"
+
+    val displayName = suggestionItem?.username ?: suggestionItem?.fullName.orEmpty()
+    val zodiacSignImg = remember(suggestionItem?.zodiacSign) {
+        ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
+    }
 
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = {
-            onClick(suggestionItem)
-        }
+        onClick = { onClick(suggestionItem) },
     ) {
-
         Box(modifier = Modifier.fillMaxWidth()) {
-
-            val profileUrl = suggestionItem?.profilePhoto
-
             with(sharedTransitionScope) {
-
                 AsyncImage(
+                    model = suggestionItem?.profilePhoto,
                     contentDescription = "User Image",
                     contentScale = ContentScale.Crop,
-                    model = profileUrl,
                     modifier = Modifier
                         .sharedElement(
-                            sharedTransitionScope.rememberSharedContentState(key = "profile_image-${suggestionItem?.id}"),
-                            animatedVisibilityScope = animatedContentScope
+                            sharedTransitionScope.rememberSharedContentState(key = profileImageKey),
+                            animatedVisibilityScope = animatedContentScope,
                         )
                         .fillMaxWidth()
-                        .height(height)
+                        .height(height),
                 )
 
-
-
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .align(Alignment.BottomStart)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        modifier = Modifier.fillMaxWidth().sharedElement(
-                            sharedTransitionScope.rememberSharedContentState(key = "username_text-${suggestionItem?.id}"),
-                            animatedVisibilityScope = animatedContentScope
-                        ),
-                        text = suggestionItem?.username ?: suggestionItem?.fullName ?: "",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sharedElement(
+                                sharedTransitionScope.rememberSharedContentState(key = usernameKey),
+                                animatedVisibilityScope = animatedContentScope,
+                            ),
+                        text = displayName,
                         textAlign = TextAlign.Start,
                         style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
                         fontWeight = FontWeight.Medium,
-                        maxLines = 1
-
+                        maxLines = 1,
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val zodiacSignImg = remember(suggestionItem?.zodiacSign) {
-                             ZodiacUtils.getZodiacSignImage(suggestionItem?.zodiacSign ?: "")
-                        }
-
-                        zodiacSignImg?.let {
+                        zodiacSignImg?.let { zodiacDrawable ->
                             Image(
-                                modifier = Modifier.size(38.dp).sharedElement(
-                                    sharedTransitionScope.rememberSharedContentState(key = "zodiac_image-${suggestionItem?.id}"),
-                                    animatedVisibilityScope = animatedContentScope
-                                ),
-                                painter = painterResource(zodiacSignImg),
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .sharedElement(
+                                        sharedTransitionScope.rememberSharedContentState(key = zodiacKey),
+                                        animatedVisibilityScope = animatedContentScope,
+                                    ),
+                                painter = painterResource(zodiacDrawable),
                                 contentDescription = "Zodiac Sign",
                             )
                         }
 
-                        suggestionItem?.dob?.let { dob ->
+                        suggestionItem?.age?.let { age ->
                             Text(
                                 modifier = Modifier.sharedElement(
-                                    sharedTransitionScope.rememberSharedContentState(key = "dob_text-${suggestionItem?.id}"),
-                                    animatedVisibilityScope = animatedContentScope
+                                    sharedTransitionScope.rememberSharedContentState(key = ageKey),
+                                    animatedVisibilityScope = animatedContentScope,
                                 ),
-                                text = "${DateTimeUtils.calculateAge(dob)}",
+                                text = age.toString(),
                                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
                                 fontWeight = FontWeight.Medium,
-                                maxLines = 1
+                                maxLines = 1,
                             )
                         }
-
                     }
-
-
                 }
             }
         }
-
     }
 }
 
 @Composable
 fun SuggestionCardShimmerCompo(
     modifier: Modifier = Modifier,
-    height: Dp
+    height: Dp,
 ) {
-    val shimmerColors = listOf(
-        Color.White.copy(alpha = 0.7f),
-        Color.LightGray.copy(alpha = 0.7f),
-        Color.White.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.7f),
-    )
-
-    val transition = rememberInfiniteTransition()
-    val translateAnim = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing)
-        )
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim.value, y = translateAnim.value)
-    )
+    val brush = rememberSuggestionShimmerBrush()
 
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Shimmer image placeholder
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -440,10 +410,9 @@ fun SuggestionCardShimmerCompo(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
                     .align(Alignment.BottomStart)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                // Username shimmer
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.5f)
@@ -456,9 +425,8 @@ fun SuggestionCardShimmerCompo(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Zodiac icon shimmer
                     Box(
                         modifier = Modifier
                             .size(38.dp)
@@ -468,7 +436,6 @@ fun SuggestionCardShimmerCompo(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // Age shimmer
                     Box(
                         modifier = Modifier
                             .width(40.dp)
@@ -483,40 +450,70 @@ fun SuggestionCardShimmerCompo(
 }
 
 @Composable
+private fun rememberSuggestionShimmerBrush(): Brush {
+    val shimmerColors = listOf(
+        Color.White.copy(alpha = 0.7f),
+        Color.LightGray.copy(alpha = 0.7f),
+        Color.White.copy(alpha = 0.6f),
+        Color.LightGray.copy(alpha = 0.7f),
+    )
+
+    val transition = rememberInfiniteTransition()
+    val translateAnim = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
+        ),
+    )
+
+    return Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset.Zero,
+        end = Offset(x = translateAnim.value, y = translateAnim.value),
+    )
+}
+
+@Composable
 private fun NoSuggestionComp(
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             Text(
                 text = "No Suggestions",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.Black
+                color = Color.Black,
             )
-
 
             Image(
                 painter = painterResource(Res.drawable.cross_love),
                 contentDescription = "Love Icon",
-                modifier = Modifier.size(60.dp)
+                modifier = Modifier.size(60.dp),
             )
 
             OutlinedButton(
                 onClick = onRetry,
-                border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                ),
                 contentPadding = PaddingValues(vertical = 4.dp, horizontal = 24.dp),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(10.dp),
             ) {
                 Text(
                     text = "Retry",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }

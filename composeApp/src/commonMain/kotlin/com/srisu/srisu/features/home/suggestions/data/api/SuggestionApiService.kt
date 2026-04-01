@@ -25,11 +25,19 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         pageSize: Int
     ): ResultHandler<UserSuggestionResponse?> {
         return httpClient.safeRequest<UserSuggestionResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/social/user-suggestions/")
+            url("${BaseApiService.BASE_URL}api/social/user-suggestions/")
             parameter("page", page)
             parameter("page_size", pageSize)
 
-            method = HttpMethod.Companion.Get
+            method = HttpMethod.Get
+        }
+    }
+
+    suspend fun getSuggestionProfile(userId: Int?): ResultHandler<UserSuggestionResponse.Result?> {
+        return httpClient.safeRequest<UserSuggestionResponse.Result?> {
+            url("${BaseApiService.BASE_URL}api/social/get-suggestion-profile/")
+            parameter("user_id",userId)
+            method = HttpMethod.Get
         }
     }
 

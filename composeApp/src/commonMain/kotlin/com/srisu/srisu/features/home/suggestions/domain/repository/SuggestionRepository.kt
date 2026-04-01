@@ -21,6 +21,10 @@ class SuggestionRepository(
         return suggestionApiService.getUserSuggestions(pageSize = pageSize, page = page)
     }
 
+    suspend fun getSuggestionProfile(userId: Int?): ResultHandler<UserSuggestionResponse.Result?> {
+        return suggestionApiService.getSuggestionProfile(userId = userId)
+    }
+
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return suggestionApiService.getUserPreferences()
     }

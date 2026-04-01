@@ -72,37 +72,35 @@ fun FilterSuggestionScreen(
     suggestionViewModel: SuggestionViewModel,
     onNavigateBack: () -> Unit,
     onClearFilter: () -> Unit,
-    onFilterApplied: () -> Unit
+    onFilterApplied: () -> Unit,
 ) {
-
     val suggestionUIStates by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
 
-    Initialization(
-        suggestionViewModel = suggestionViewModel
+    FilterSuggestionScreenEffects(
+        suggestionViewModel = suggestionViewModel,
     )
 
-    HandleUiStates(
+    FilterSuggestionFeedbackLayer(
         suggestionVM = suggestionViewModel,
-        suggestionUIStates = suggestionUIStates
+        suggestionUIStates = suggestionUIStates,
     )
 
-    SuggestionFilterContent(
+    FilterSuggestionScaffold(
         suggestionViewModel = suggestionViewModel,
         suggestionUIStates = suggestionUIStates,
         onNavigateBack = onNavigateBack,
         onClearFilter = onClearFilter,
-        onFilterApplied = onFilterApplied
+        onFilterApplied = onFilterApplied,
     )
 
-    BackHandler(true) {
-        AppLogger.log("FROM BACK HANDLER")
+    BackHandler {
         onNavigateBack()
     }
 }
 
 @Composable
-private fun Initialization(
-    suggestionViewModel: SuggestionViewModel
+private fun FilterSuggestionScreenEffects(
+    suggestionViewModel: SuggestionViewModel,
 ) {
     LaunchedEffect(Unit) {
         suggestionViewModel.getPreferences()
@@ -110,16 +108,15 @@ private fun Initialization(
 }
 
 @Composable
-private fun HandleUiStates(
+private fun FilterSuggestionFeedbackLayer(
     suggestionVM: SuggestionViewModel,
-    suggestionUIStates: SuggestionUIStates
+    suggestionUIStates: SuggestionUIStates,
 ) {
-
     val isConnected = isInternetAvailable()
-    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+    var showOfflineBottomSheet by remember { mutableStateOf(!isConnected) }
 
     LaunchedEffect(isConnected) {
-        showBottomSheet = !isConnected
+        showOfflineBottomSheet = !isConnected
     }
 
     when (val baseUIState = suggestionUIStates.baseUIState) {
@@ -128,92 +125,75 @@ private fun HandleUiStates(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    suggestionVM.idleScreen()
-                },
+                onDismiss = suggestionVM::idleScreen,
             )
         }
 
         is BaseUIState.Loading -> {
             LoadingScrim(
-                onDismissRequest = {
-
-                }
+                onDismissRequest = {},
             )
         }
 
         is BaseUIState.NoInternetConnection -> {
-            showBottomSheet = baseUIState.isOffline
+            showOfflineBottomSheet = baseUIState.isOffline
         }
 
         else -> Unit
     }
 
-    if (showBottomSheet) {
+    if (showOfflineBottomSheet) {
         OfflineBottomSheetCompo(
-            show = showBottomSheet,
+            show = showOfflineBottomSheet,
             onDismiss = {
-                showBottomSheet = false
+                showOfflineBottomSheet = false
                 suggestionVM.idleScreen()
-            }
+            },
         )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SuggestionFilterContent(
+private fun FilterSuggestionScaffold(
     suggestionViewModel: SuggestionViewModel,
     suggestionUIStates: SuggestionUIStates,
     onNavigateBack: () -> Unit,
     onClearFilter: () -> Unit,
-    onFilterApplied: () -> Unit
+    onFilterApplied: () -> Unit,
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                ),
-                title = {
-                    Text(
-                        text = "Filter Suggestions",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier,
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(24.dp),
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Close Icon",
-                        )
-                    }
-                }
+            FilterSuggestionTopBar(
+                onNavigateBack = onNavigateBack,
             )
         },
         bottomBar = {
             PrimaryButtonCompo(
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(all = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(12.dp),
                 label = "Apply Filter",
                 onClick = {
                     if (suggestionUIStates.userPreferences == null) {
                         suggestionViewModel.setUserPreferences(onFilterApplied)
                     } else {
-                        suggestionViewModel.updateUserPreferences(onPreferencesSuccess = onFilterApplied)
+                        suggestionViewModel.updateUserPreferences(
+                            onPreferencesSuccess = onFilterApplied,
+                        )
                     }
-                }
+                },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { paddingValues ->
-
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues = paddingValues)) {
-            FilterSuggestionCompo(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            FilterSuggestionContent(
                 minAge = suggestionUIStates.minAge,
                 maxAge = suggestionUIStates.maxAge,
                 selectedCountry = suggestionUIStates.selectedCountry,
@@ -225,28 +205,56 @@ private fun SuggestionFilterContent(
                     suggestionViewModel.clearFilters()
                     suggestionViewModel.updateUserPreferences(
                         isClear = true,
-                        onPreferencesSuccess = onClearFilter
+                        onPreferencesSuccess = onClearFilter,
                     )
                 },
                 onMinAgeChanged = suggestionViewModel::updateMinAge,
                 onMaxAgeChanged = suggestionViewModel::updateMaxAge,
-                onCountrySelected = {
-                    suggestionViewModel.updateSelectedCountry(it)
+                onCountrySelected = { country ->
+                    suggestionViewModel.updateSelectedCountry(country)
                     suggestionViewModel.updateSelectedCity("")
                     suggestionViewModel.getCityList(
-                        country = it.name?.lowercase(),
-                        showLoading = true
+                        country = country.name?.lowercase(),
+                        showLoading = true,
                     )
                 },
                 onCitySelected = suggestionViewModel::updateSelectedCity,
-                onZodiacSelected = suggestionViewModel::updateSelectedZodiac
+                onZodiacSelected = suggestionViewModel::updateSelectedZodiac,
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterSuggestionCompo(
+private fun FilterSuggestionTopBar(
+    onNavigateBack: () -> Unit,
+) {
+    TopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        title = {
+            Text(
+                text = "Filter Suggestions",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Close Icon",
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun FilterSuggestionContent(
     minAge: Int,
     maxAge: Int,
     selectedCountry: CountryModel?,
@@ -259,57 +267,56 @@ private fun FilterSuggestionCompo(
     onMaxAgeChanged: (Int) -> Unit,
     onCountrySelected: (CountryModel) -> Unit,
     onCitySelected: (String) -> Unit,
-    onZodiacSelected: (ZodiacSign) -> Unit
+    onZodiacSelected: (ZodiacSign) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+    ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-
-            AgeFilterCompo(
+            AgeFilterSection(
                 onClearFilter = onClearFilterClicked,
                 minAge = minAge,
                 maxAge = maxAge,
                 onChangeMinAge = onMinAgeChanged,
-                onChangeMaxAge = onMaxAgeChanged
+                onChangeMaxAge = onMaxAgeChanged,
             )
 
-
-            CountryFilterCompo(
+            CountryFilterSection(
                 selectedCountry = selectedCountry,
                 countryList = countryList,
-                onOptionSelected = onCountrySelected
+                onOptionSelected = onCountrySelected,
             )
 
-            CityDropDownCompo(
-                modifier = Modifier,
+            CityFilterSection(
                 selectedCity = selectedCity,
                 onCitySelected = onCitySelected,
                 cityList = cities ?: emptyList(),
             )
 
-            ZodiacSignCompo(
-                modifier = Modifier,
+            ZodiacFilterSection(
                 selectedZodiac = selectedZodiac,
                 onZodiacSelected = onZodiacSelected,
             )
-
         }
     }
-
 }
 
 @Composable
 private fun FilterTitle(
-    showReset: Boolean = false,
     headerTitle: String,
-    onClearFilter: () -> Unit = {}
+    showReset: Boolean = false,
+    onClearFilter: () -> Unit = {},
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = headerTitle,
@@ -318,9 +325,7 @@ private fun FilterTitle(
         )
 
         if (showReset) {
-            TextButton(
-                onClick = onClearFilter,
-            ) {
+            TextButton(onClick = onClearFilter) {
                 Text(
                     text = "Clear Filter",
                     style = MaterialTheme.typography.titleMedium,
@@ -333,50 +338,48 @@ private fun FilterTitle(
 }
 
 @Composable
-fun AgeFilterCompo(
+fun AgeFilterSection(
     onClearFilter: () -> Unit,
     onChangeMinAge: (Int) -> Unit,
     onChangeMaxAge: (Int) -> Unit,
     minAge: Int,
-    maxAge: Int
+    maxAge: Int,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         FilterTitle(
             headerTitle = "Age",
             showReset = true,
-            onClearFilter = onClearFilter
+            onClearFilter = onClearFilter,
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
         ) {
-
-            AgeFilterDropdownCardCompo(
+            AgeFilterDropdownCard(
                 modifier = Modifier.weight(1f),
                 selectedAge = minAge,
                 headerTitle = "Min Age",
-                onAgeSelected = onChangeMinAge
+                onAgeSelected = onChangeMinAge,
             )
 
-            AgeFilterDropdownCardCompo(
+            AgeFilterDropdownCard(
                 modifier = Modifier.weight(1f),
                 selectedAge = maxAge,
                 headerTitle = "Max Age",
-                onAgeSelected = onChangeMaxAge
+                onAgeSelected = onChangeMaxAge,
             )
         }
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgeFilterDropdownCardCompo(
+fun AgeFilterDropdownCard(
     modifier: Modifier,
     selectedAge: Int,
     headerTitle: String,
-    onAgeSelected: (Int) -> Unit
+    onAgeSelected: (Int) -> Unit,
 ) {
     val ageOptions = remember { (16..35).toList() }
     var expanded by remember { mutableStateOf(false) }
@@ -386,60 +389,64 @@ fun AgeFilterDropdownCardCompo(
         onExpandedChange = { expanded = !expanded },
         modifier = modifier,
     ) {
-        val age = if (selectedAge == 0) "" else selectedAge.toString()
+        val selectedAgeText = if (selectedAge == 0) "" else selectedAge.toString()
+
         OutlinedTextField(
+            modifier = Modifier
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
             readOnly = true,
-            value = age,
+            value = selectedAgeText,
             onValueChange = {},
             label = { Text(headerTitle) },
             trailingIcon = {
-                DropDownIcon(expanded) {
+                DropDownIcon(expanded = expanded) {
                     expanded = !expanded
                 }
             },
-            textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+            ),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color.Black
-            )
+                focusedTextColor = Color.Black,
+            ),
         )
-
 
         ExposedDropdownMenu(
             modifier = Modifier.height(300.dp),
             expanded = expanded,
             shape = RoundedCornerShape(12.dp),
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
         ) {
             ageOptions.forEach { age ->
                 DropdownMenuItem(
-                    text = {
-                        Text(age.toString())
-                    },
+                    text = { Text(age.toString()) },
                     onClick = {
                         onAgeSelected(age)
                         expanded = false
                     },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
         }
     }
 }
 
-
 @Composable
-private fun CountryFilterCompo(
+private fun CountryFilterSection(
     selectedCountry: CountryModel?,
     countryList: List<CountryModel>,
-    onOptionSelected: (CountryModel) -> Unit
+    onOptionSelected: (CountryModel) -> Unit,
 ) {
+    var showCountryBottomSheet by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        var showCountryBottomSheet by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         FilterTitle(headerTitle = "Country")
 
         CountryDropDown(
@@ -450,22 +457,24 @@ private fun CountryFilterCompo(
             onShowCountryBottomSheetChange = {
                 showCountryBottomSheet = !showCountryBottomSheet
             },
-            showCountryBottomSheet = showCountryBottomSheet
+            showCountryBottomSheet = showCountryBottomSheet,
         )
     }
 }
 
-
 @Composable
-private fun CityDropDownCompo(
-    modifier: Modifier = Modifier,
+private fun CityFilterSection(
     selectedCity: String?,
     onCitySelected: (String) -> Unit,
     cityList: List<String?>,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         FilterTitle(headerTitle = "City")
 
         CityDropDown(
@@ -476,84 +485,79 @@ private fun CityDropDownCompo(
             onExpandedChange = {
                 expanded = !expanded
             },
-            expanded = expanded
+            expanded = expanded,
         )
     }
 }
 
 @Composable
-private fun ZodiacSignCompo(
-    modifier: Modifier = Modifier,
+private fun ZodiacFilterSection(
     selectedZodiac: ZodiacSign?,
     onZodiacSelected: (ZodiacSign) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    var expanded by rememberSaveable {
-        mutableStateOf(false)
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val zodiacSignImg = remember(selectedZodiac?.sign) {
+        ZodiacUtils.getZodiacSignImage(selectedZodiac?.sign ?: "")
     }
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         FilterTitle(headerTitle = "Zodiac Sign")
 
         Card(
             modifier = modifier,
             shape = RoundedCornerShape(12.dp),
-            onClick = {
-                expanded = true
-            },
+            onClick = { expanded = true },
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            border = BorderStroke(
-                1.dp, color = Color.Gray
-            )
+            border = BorderStroke(1.dp, Color.Gray),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
-                    modifier = Modifier,
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-
                     Text(
-                        modifier = Modifier,
                         text = selectedZodiac?.sign ?: "Select Zodiac Sign",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Start
+                        textAlign = TextAlign.Start,
                     )
 
-                    val zodiacSignImg = remember(selectedZodiac?.sign) {
-                        ZodiacUtils.getZodiacSignImage(selectedZodiac?.sign ?: "")
-                    }
-
-                    if (zodiacSignImg != null) {
+                    zodiacSignImg?.let {
                         Image(
-                            painter = painterResource(zodiacSignImg),
+                            painter = painterResource(it),
                             contentDescription = "zodiac_sign",
-                            modifier = Modifier
-                                .size(24.dp)
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }
 
-                DropDownIcon(expanded = expanded, onClick = {
-                    expanded = true
-                })
-
-
-                ZodiacSignSelectionBottomSheet(
-                    show = expanded,
-                    onZodiacSelected = {
-                        onZodiacSelected(it)
-                        expanded = false
-                    },
-                    onClose = {
-                        expanded = false
-                    }
+                DropDownIcon(
+                    expanded = expanded,
+                    onClick = { expanded = true },
                 )
             }
-
         }
+
+        ZodiacSignSelectionBottomSheet(
+            show = expanded,
+            onZodiacSelected = {
+                onZodiacSelected(it)
+                expanded = false
+            },
+            onClose = {
+                expanded = false
+            },
+        )
     }
 }
