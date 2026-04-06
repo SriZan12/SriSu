@@ -66,32 +66,24 @@ import com.srisu.srisu.components.ReadMoreText
 import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.features.home.suggestions.data.response.UserSuggestionResponse
 import com.srisu.srisu.features.home.suggestions.presentation.state.SuggestionUIStates
-import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
-import com.srisu.srisu.utils.DateTimeUtils
-import com.srisu.srisu.utils.ZodiacUtils
+import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.leo
-import kotlin.random.Random
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SuggestionProfileScreen(
     suggestionViewModel: SuggestionViewModel,
     sharedTransitionScope: SharedTransitionScope,
-    animatedContentScope: AnimatedContentScope
+    animatedContentScope: AnimatedContentScope,
 ) {
-
     val suggestionUIState by suggestionViewModel.suggestionUIStates.collectAsStateWithLifecycle()
-    val shouldShowRequestButton by remember {
-        mutableStateOf(false)
-    }
 
-    HandleUiStates(
+    SuggestionProfileFeedbackLayer(
         suggestionViewModel = suggestionViewModel,
-        suggestionUIState = suggestionUIState
+        suggestionUIState = suggestionUIState,
     )
 
     AnimatedContent(
@@ -100,31 +92,25 @@ fun SuggestionProfileScreen(
             fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
         }
     ) {
-        ProfilePictureContent(
+        SuggestionProfileContent(
             suggestionUIState = suggestionUIState,
-            shouldShowRequestButton = shouldShowRequestButton,
             sharedTransitionScope = sharedTransitionScope,
             animatedContentScope = animatedContentScope,
-            onSendRequest = {
-                suggestionViewModel.sendSingleConnectionRequest()
-            }
+            onSendRequest = suggestionViewModel::sendSingleConnectionRequest,
         )
     }
-
-
 }
 
 @Composable
-private fun HandleUiStates(
+private fun SuggestionProfileFeedbackLayer(
     suggestionViewModel: SuggestionViewModel,
-    suggestionUIState: SuggestionUIStates
+    suggestionUIState: SuggestionUIStates,
 ) {
-
     val isConnected = isInternetAvailable()
-    var showBottomSheet by remember { mutableStateOf(!isConnected) }
+    var showOfflineBottomSheet by remember { mutableStateOf(!isConnected) }
 
     LaunchedEffect(isConnected) {
-        showBottomSheet = !isConnected
+        showOfflineBottomSheet = !isConnected
     }
 
     when (val baseUIState = suggestionUIState.baseUIState) {
@@ -133,132 +119,116 @@ private fun HandleUiStates(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    suggestionViewModel.idleScreen()
-                },
+                onDismiss = suggestionViewModel::idleScreen,
             )
         }
 
-
         is BaseUIState.Loading -> {
             LoadingScrim(
-                onDismissRequest = {
-                    suggestionViewModel.idleScreen()
-                }
+                onDismissRequest = suggestionViewModel::idleScreen,
             )
         }
 
         is BaseUIState.Success<*> -> {
             RequestSentDialog(
                 successMessage = baseUIState.message,
-                onDismiss = {
-                    suggestionViewModel.idleScreen()
-                },
+                onDismiss = suggestionViewModel::idleScreen,
             )
         }
 
         is BaseUIState.NoInternetConnection -> {
-            showBottomSheet = baseUIState.isOffline
+            showOfflineBottomSheet = baseUIState.isOffline
         }
 
-        is BaseUIState.Idle -> {
-            Unit
-        }
+        is BaseUIState.Idle -> Unit
     }
 
-    if (showBottomSheet) {
+    if (showOfflineBottomSheet) {
         OfflineBottomSheetCompo(
-            show = showBottomSheet,
+            show = showOfflineBottomSheet,
             onDismiss = {
-                showBottomSheet = false
+                showOfflineBottomSheet = false
                 suggestionViewModel.idleScreen()
-            }
+            },
         )
     }
 }
 
-
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun ProfilePictureContent(
+private fun SuggestionProfileContent(
     suggestionUIState: SuggestionUIStates,
     onSendRequest: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    shouldShowRequestButton: Boolean
 ) {
-
     val userProfileData = suggestionUIState.suggestionProfileData
 
     Column(
         modifier = Modifier
-            .animateContentSize()
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .verticalScroll(rememberScrollState())
+            .animateContentSize(),
     ) {
         ProfilePictureCompo(
             id = userProfileData?.id,
             profileUrl = userProfileData?.profilePhoto,
-            hasSentRequest = userProfileData?.crushed,
-            shouldShowRequestButton = shouldShowRequestButton,
+            hasSentRequest = userProfileData?.hasActiveConnection,
             isRequestSentSuccessfully = suggestionUIState.isRequested,
             sharedTransitionScope = sharedTransitionScope,
             animatedContentScope = animatedContentScope,
-            onSendRequest = {
-                onSendRequest()
-            }
+            onSendRequest = onSendRequest,
         )
 
-        // Name and Age
-        val age = DateTimeUtils.calculateAge(userProfileData?.dob)
-
-        UserInfo(
+        UserInfoSection(
             name = userProfileData?.fullName,
-            age = age,
+            age = userProfileData?.age,
             zodiacSign = userProfileData?.zodiacSign,
             city = userProfileData?.city,
             country = userProfileData?.country,
         )
 
-        //Interest
-        val interests = userProfileData?.userInterests
-        InterestCompo(interests = interests)
-
-        AboutCompo(
-            bio = userProfileData?.bio
+        InterestSection(
+            interests = userProfileData?.userInterests,
         )
 
-        // Gallery
+        AboutSection(
+            bio = userProfileData?.bio,
+        )
+
         Text(
-            "Gallery",
+            text = "Gallery",
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
         GallerySection(
-            photos = userProfileData?.userPhotos
+            photos = userProfileData?.userPhotos,
         )
-
     }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
-@Preview
 @Composable
 fun ProfilePictureCompo(
     id: Int?,
     profileUrl: String? = null,
     hasSentRequest: Boolean? = false,
-    shouldShowRequestButton: Boolean,
     isRequestSentSuccessfully: Boolean,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    onSendRequest: () -> Unit
+    onSendRequest: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+    val shouldShowRequestButton = hasSentRequest == false && !isRequestSentSuccessfully
+    val profileImageKey = "profile_image-$id"
 
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp),
+    ) {
         with(sharedTransitionScope) {
             AsyncImage(
                 model = profileUrl,
@@ -269,32 +239,31 @@ fun ProfilePictureCompo(
                     .fillMaxWidth()
                     .height(500.dp)
                     .sharedElement(
-                        sharedTransitionScope.rememberSharedContentState(key = "profile_image-${id}"),
+                        sharedTransitionScope.rememberSharedContentState(key = profileImageKey),
                         animatedVisibilityScope = animatedContentScope,
-                        renderInOverlayDuringTransition = false
-                    )
+                        renderInOverlayDuringTransition = false,
+                    ),
             )
-
         }
 
-
-        if (hasSentRequest == false && !isRequestSentSuccessfully) {
-
+        if (shouldShowRequestButton) {
             IconButton(
-                onClick = {
-                    onSendRequest()
-                },
+                onClick = onSendRequest,
                 modifier = Modifier
                     .size(48.dp)
                     .align(Alignment.BottomCenter)
                     .offset(y = 24.dp),
-                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
             ) {
                 Icon(
-                    modifier = Modifier.size(48.dp).padding(all = 8.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(8.dp),
                     imageVector = Icons.Default.Favorite,
                     contentDescription = "Like",
-                    tint = Color.White
+                    tint = Color.White,
                 )
             }
         }
@@ -302,77 +271,94 @@ fun ProfilePictureCompo(
 }
 
 @Composable
-fun UserInfo(
+fun UserInfoSection(
     name: String?,
     age: Int?,
     zodiacSign: String?,
     city: String?,
-    country: String?
+    country: String?,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-
-        Text(
-            modifier = Modifier,
-            text = name ?: "",
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-
-        Text("(${age})", style = MaterialTheme.typography.titleMedium)
-
-        val zodiacSignImage = ZodiacUtils.getZodiacSignImage(zodiacSign?.trim() ?: "")
-        Image(
-            painter = painterResource(resource = zodiacSignImage ?: Res.drawable.leo),
-            contentDescription = "zodiac sign",
-            modifier = Modifier.size(32.dp)
-        )
-
+    val zodiacSignImage = remember(zodiacSign) {
+        ZodiacUtils.getZodiacSignImage(zodiacSign?.trim().orEmpty()) ?: Res.drawable.leo
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(start = 16.dp)
-    ) {
-        Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = Color.Black)
-        Text(
-            "${city ?: "Some City"}, ${country ?: "Some Country"} ",
-            style = MaterialTheme.typography.titleSmall
-        )
+    val locationText = remember(city, country) {
+        "${city ?: "Some City"}, ${country ?: "Some Country"}"
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
+        ) {
+            Text(
+                text = name.orEmpty(),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
+            )
+
+            if (age != null) {
+                Text(
+                    text = "($age)",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+
+            Image(
+                painter = painterResource(resource = zodiacSignImage),
+                contentDescription = "zodiac sign",
+                modifier = Modifier.size(32.dp),
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 16.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = "Location",
+                tint = Color.Black,
+            )
+            Text(
+                text = locationText,
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
     }
 }
 
 @Composable
-fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?) {
+fun InterestSection(
+    interests: List<UserSuggestionResponse.Result.UserInterest?>?,
+) {
+    if (interests.isNullOrEmpty()) return
+
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 16.dp),
     ) {
-        if (!interests.isNullOrEmpty()) {
+        Text(
+            text = "Interest",
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(start = 16.dp),
+        )
 
-            Text(
-                "Interest",
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(start = 16.dp)
-            )
-
-            LazyRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
-            ) {
-                items(interests, key = { it?.id ?: Random.nextInt() }) { interest ->
-                    interest?.let {
-                        if (!interest.name.isNullOrEmpty()) {
-                            InterestChip(
-                                label = interest.name
-                            )
-                        }
-                    }
+        LazyRow(
+            modifier = Modifier.padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp),
+        ) {
+            items(
+                items = interests,
+                key = { interest -> interest?.id ?: interest?.name.orEmpty() },
+            ) { interest ->
+                val label = interest?.name
+                if (!label.isNullOrEmpty()) {
+                    InterestChip(label = label)
                 }
             }
         }
@@ -380,38 +366,41 @@ fun InterestCompo(interests: List<UserSuggestionResponse.Result.UserInterest?>?)
 }
 
 @Composable
-fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
+fun InterestChip(
+    label: String,
+    backgroundColor: Color = Color.LightGray,
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(24.dp),
-        modifier = Modifier
-            .padding(end = 8.dp),
+        modifier = Modifier.padding(end = 8.dp),
     ) {
         Text(
             text = label,
             maxLines = 1,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .basicMarquee(iterations = 10),
-            style = MaterialTheme.typography.labelMedium
+            style = MaterialTheme.typography.labelMedium,
         )
     }
 }
 
-@Preview
 @Composable
-private fun AboutCompo(
-    bio: String?
+private fun AboutSection(
+    bio: String?,
 ) {
-    // About Section
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
     ) {
         Text(
-            "About",
+            text = "About",
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -420,35 +409,34 @@ private fun AboutCompo(
             modifier = Modifier,
             text = bio ?: "No bio",
             style = MaterialTheme.typography.bodyMedium,
-            expandableTextStyle = MaterialTheme.typography.titleMedium
+            expandableTextStyle = MaterialTheme.typography.titleMedium,
         )
-
     }
 }
 
-@Preview
 @Composable
 fun GallerySection(
-    photos: List<UserSuggestionResponse.Result.UserPhoto?>?
+    photos: List<UserSuggestionResponse.Result.UserPhoto?>?,
 ) {
+    if (photos.isNullOrEmpty()) return
 
-    photos?.let {
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            modifier = Modifier,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(items = it, key = { it?.id ?: Random.nextInt() }) { photoItem ->
-                AsyncImage(
-                    modifier = Modifier
-                        .size(200.dp)
-                        .aspectRatio(1f)
-                        .clip(shape = RoundedCornerShape(8.dp)),
-                    model = photoItem?.photo,
-                    contentDescription = "user_photos",
-                    contentScale = ContentScale.Crop
-                )
-            }
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            items = photos,
+            key = { photo -> photo?.id ?: photo?.photo.orEmpty() },
+        ) { photoItem ->
+            AsyncImage(
+                model = photoItem?.photo,
+                contentDescription = "user_photos",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(200.dp)
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(8.dp)),
+            )
         }
     }
 }
