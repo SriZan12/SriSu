@@ -21,7 +21,6 @@ import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.filter_icon
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview
 @Composable
 fun PrimaryToolBar(
     title: String,

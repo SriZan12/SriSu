@@ -15,6 +15,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.navigation.graph.AuthNavigation
+import com.srisu.srisu.navigation.graph.ChatNav
 import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.navigation.navhost.AppBottomBar
 import com.srisu.srisu.navigation.navhost.AppNavHost
@@ -83,7 +84,7 @@ private fun readSessionSafely(sessionStorage: SessionStorage): Session? {
 private fun resolveStartDestination(session: Session?): Route {
     return when {
         session?.isPhoneVerified == true && session.isProfileComplete == true -> {
-            HomeNavigation.Home
+            ChatNav.ChatRoomScreen
         }
 
         else -> AuthNavigation.Auth
