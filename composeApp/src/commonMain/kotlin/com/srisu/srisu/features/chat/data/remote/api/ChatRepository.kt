@@ -135,11 +135,6 @@ class ChatRepository(
         }
     }
 
-    suspend fun sendRawRequest(payload: String?) {
-        payload ?: return
-        webSocketClient.send(payload)
-    }
-
     suspend fun fetchInitialMessages(chatRoomId: String) {
         clearMessages()
         _messagePagination.value = MessagePaginationState()
@@ -224,6 +219,10 @@ class ChatRepository(
             messageId = messageId,
             deleteOption = deleteOption,
         )
+
+        if (deleteOption == Constants.ChatConstants.DELETE_FOR_ME) {
+            removeMessageLocally(messageId)
+        }
     }
 
     suspend fun markRead(chatRoomId: String) {
@@ -401,6 +400,7 @@ class ChatRepository(
     }
 
     private fun upsertChatRoom(chatRoom: ChatRoomItemDto) {
+        AppLogger.log("Chat Room updated!!!")
         _chatRooms.update { oldList ->
             listOf(chatRoom) + oldList.filterNot { it.id == chatRoom.id }
         }
@@ -486,33 +486,27 @@ class ChatRepository(
     }
 
     private fun applyDeletedMessage(message: ChatMessage) {
-        val messageId = message.id ?: return
+        AppLogger.log("Inside applyDeletedMessage")
+       message.id ?: return
 
-        if (message.isDeleted == true) {
+        AppLogger.log("Chat message after deletion = $message")
+
+        val isDeletedForEveryone =
+            message.isDeleted == true ||
+                    message.deleteOption == Constants.ChatConstants.DELETE_FOR_EVERYONE
+
+        if (isDeletedForEveryone) {
+            AppLogger.log("Delete for everyone -> updating message in list")
             upsertMessage(message)
             return
         }
+    }
 
-        val deleteForMap = message.deleteFor
-        if (deleteForMap != null) {
-            val deletedForMe = deleteForMap.values
-                .flatten()
-                .any { action ->
-                    action.option == Constants.ChatConstants.DELETE_FOR_ME &&
-                            action.userId == currentUserId
-                }
-
-            if (deletedForMe) {
-                messageMap.update { oldMap ->
-                    LinkedHashMap(oldMap).apply {
-                        remove(messageId)
-                    }
-                }
-            } else {
-                upsertMessage(message)
+    private fun removeMessageLocally(messageId: Long) {
+        messageMap.update { oldMap ->
+            LinkedHashMap(oldMap).apply {
+                remove(messageId)
             }
-        } else {
-            upsertMessage(message)
         }
     }
 

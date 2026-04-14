@@ -7,7 +7,7 @@ import com.srisu.srisu.features.chat.data.remote.dto.EditMessageDto
 import com.srisu.srisu.features.chat.data.remote.dto.FetchMessagesDto
 import com.srisu.srisu.features.chat.data.remote.dto.MarkDeliveredDto
 import com.srisu.srisu.features.chat.data.remote.dto.MarkReadDto
-import com.srisu.srisu.features.chat.data.remote.dto.ReactToMessageDto
+import com.srisu.srisu.features.chat.data.remote.dto.ReactionMessageDto
 import com.srisu.srisu.features.chat.data.remote.dto.SendMessageDto
 import com.srisu.srisu.features.chat.data.remote.dto.SetTypingDto
 import kotlinx.serialization.json.Json
@@ -59,7 +59,7 @@ object ChatSocketRequests {
             ChatSocketDto(
                 action = ChatSocketActions.REACT_TO_MESSAGE,
                 requestId = requestId,
-                payload = ReactToMessageDto(
+                payload = ReactionMessageDto(
                     messageId = messageId,
                     reaction = reaction,
                 )

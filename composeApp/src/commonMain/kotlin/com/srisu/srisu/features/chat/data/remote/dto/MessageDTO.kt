@@ -72,7 +72,7 @@ data class MarkDeliveredDto(
 )
 
 @Serializable
-data class ReactToMessageDto(
+data class ReactionMessageDto(
     @SerialName("message_id")
     val messageId: Long,
 

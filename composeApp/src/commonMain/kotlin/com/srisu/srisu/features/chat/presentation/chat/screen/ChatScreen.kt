@@ -574,12 +574,8 @@ private fun MessageBubble(
     val density = LocalDensity.current
     var bubbleWidthPx by remember { mutableStateOf(0) }
 
-    val deleteEntry = message.deleteFor
-        ?.values
-        ?.flatten()
-        ?.firstOrNull { it.option == DELETE_FOR_EVERYONE }
-
-    val isDeletedForEveryone = deleteEntry != null
+    val isDeletedForEveryone =
+        message.isDeleted == true && message.deleteOption == DELETE_FOR_EVERYONE
     val finalBackground = if (isDeletedForEveryone) {
         backgroundColor(isOwn).copy(alpha = 0.7f)
     } else {
@@ -623,10 +619,9 @@ private fun MessageBubble(
 
                 Text(
                     text = messageDisplayText(
-                        deleteEntry = deleteEntry,
+                        isOwn = isOwn,
                         isDeletedForEveryone = isDeletedForEveryone,
                         messageText = message.text,
-                        currentUserId = currentUserId,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = messageTextColor(
@@ -757,10 +752,9 @@ fun PhotoMessageBubble(
                     } else {
                         Text(
                             text = messageDisplayText(
-                                deleteEntry = deleteEntry,
+                                isOwn = isOwn,
                                 isDeletedForEveryone = true,
                                 messageText = "",
-                                currentUserId = currentUserId,
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             fontStyle = FontStyle.Italic,
@@ -1682,12 +1676,11 @@ private fun clickableModifier(
 
 @Composable
 private fun messageDisplayText(
-    deleteEntry: ChatMessage.DeleteMessageAction??,
+    isOwn: Boolean,
     isDeletedForEveryone: Boolean,
     messageText: String?,
-    currentUserId: Long?
 ) = if (isDeletedForEveryone) {
-    if (deleteEntry?.userId == currentUserId) {
+    if (isOwn) {
         "You deleted this message"
     } else {
         "This message was deleted"
