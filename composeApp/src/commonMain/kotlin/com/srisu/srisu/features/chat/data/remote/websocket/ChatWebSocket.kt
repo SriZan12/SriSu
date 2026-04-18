@@ -132,8 +132,14 @@ class ChatWebSocketClient(
                         string = raw,
                     )
 
-                    response.data?.message?.let { editedMessage ->
-                        _events.emit(ChatWebSocketEvent.MessageEdited(editedMessage))
+                    response.data?.let { editedMessage ->
+                        _events.emit(
+                            ChatWebSocketEvent.MessageEdited(
+                                editedMessage.message,
+                                editedMessage.chatRoom
+                            )
+                        )
+
                     }
                 }
 
@@ -146,8 +152,8 @@ class ChatWebSocketClient(
                         string = raw,
                     )
 
-                    response.data?.message?.let { deletedMessage ->
-                        _events.emit(ChatWebSocketEvent.MessageDeleted(deletedMessage))
+                    response.data?.let { deletedMessage ->
+                        _events.emit(ChatWebSocketEvent.MessageDeleted(message = deletedMessage.message, chatRoom = deletedMessage.chatRoom))
                     }
                 }
 
@@ -215,6 +221,8 @@ class ChatWebSocketClient(
                         ),
                         string = raw,
                     )
+
+                    AppLogger.log("Fetched chat rooms: ${response.data}")
 
                     _events.emit(
                         ChatWebSocketEvent.GetChatRooms(

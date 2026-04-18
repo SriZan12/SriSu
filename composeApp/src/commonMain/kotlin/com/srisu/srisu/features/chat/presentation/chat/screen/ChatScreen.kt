@@ -133,7 +133,9 @@ import com.srisu.srisu.components.ImageViewerScreen
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.SuccessDialog
+import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.chat.data.remote.dto.ChatMessage
+import com.srisu.srisu.features.chat.data.remote.response.ChatRoomsData
 import com.srisu.srisu.features.chat.presentation.chat.state.ChatState
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
@@ -154,8 +156,16 @@ typealias messageId = Long?
 fun ChatScreen(
     viewModel: ChatViewModel,
     onNavBack: () -> Unit,
+    chatRoomData: String?,
+    session: Session?,
 ) {
     val chatState by viewModel.chatState.collectAsState()
+
+    Initialization(
+        chatViewModel = viewModel,
+        session = session,
+        chatRoomData = chatRoomData
+    )
 
     HandleUiStates(
         chatRoomVm = viewModel,
@@ -167,6 +177,18 @@ fun ChatScreen(
         viewModel = viewModel,
         onNavBack = onNavBack,
     )
+}
+
+@Composable
+private fun Initialization(
+    chatViewModel: ChatViewModel,
+    session: Session?,
+    chatRoomData: String?
+) {
+    LaunchedEffect(chatViewModel) {
+        chatViewModel.updateSession(session = session)
+        chatViewModel.setChatRoomData(chatRoomData = chatRoomData)
+    }
 }
 
 @Composable

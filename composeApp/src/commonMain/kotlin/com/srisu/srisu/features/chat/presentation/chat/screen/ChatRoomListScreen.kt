@@ -217,7 +217,7 @@ private fun ChatRoomListCompo(
                     room = room,
                 ),
                 lastMessage = lastMessageText,
-                time = getChatTimestamp(""),
+                time = getChatTimestamp(room.updatedAt),
                 unreadCount = getUnreadCount(
                     myId = myId,
                     room = room,

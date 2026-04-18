@@ -19,8 +19,8 @@ sealed interface ChatWebSocketEvent {
     data class Disconnected(val reason: String?) : ChatWebSocketEvent
     data class FetchMessages(val data: FetchMessagesData) : ChatWebSocketEvent
     data class SendMessage(val message: ChatMessage?, val updatedChatRoom: ChatRoomItemDto?) : ChatWebSocketEvent
-    data class MessageEdited(val message: ChatMessage) : ChatWebSocketEvent
-    data class MessageDeleted(val message: ChatMessage) : ChatWebSocketEvent
+    data class MessageEdited(val message: ChatMessage?, val chatRoom: ChatRoomItemDto?) : ChatWebSocketEvent
+    data class MessageDeleted(val message: ChatMessage?, val chatRoom: ChatRoomItemDto?) : ChatWebSocketEvent
     data class MessageTyping(val data: TypingData) : ChatWebSocketEvent
     data class MessageRead(val data: MessageReadData) : ChatWebSocketEvent
     data class MessageDelivered(val data: MessageDeliveredData) : ChatWebSocketEvent

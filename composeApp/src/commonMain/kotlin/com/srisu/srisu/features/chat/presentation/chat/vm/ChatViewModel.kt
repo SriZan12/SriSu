@@ -54,6 +54,7 @@ class ChatViewModel(
     override fun onCleared() {
         super.onCleared()
         typingJob?.cancel()
+        repository.clearActiveChatRoom()
         repository.disconnect("ChatViewModel cleared")
     }
 
@@ -83,7 +84,7 @@ class ChatViewModel(
                         chatRoomList = chatRooms,
                         chatRoomData = selectedRoom ?: state.chatRoomData,
                         isTyping = isSomeoneElseTyping(
-                            room = selectedRoom,
+                            room = selectedRoom ?: state.chatRoomData,
                             myUserId = myUserId,
                         )
                     )
@@ -124,14 +125,22 @@ class ChatViewModel(
 
                 withContext(Dispatchers.Main) {
                     _chatState.update { state ->
-                        state.copy(chatRoomData = room)
+                        state.copy(
+                            chatRoomData = room,
+                            selectedMessageForAction = null,
+                            selectedMessageIdForActions = null,
+                            isEditMessage = false,
+                            replyMessage = ChatState.ReplyMessage(),
+                            messageInput = TextFieldValue(),
+                            showImageScreen = ChatState.ShowImageScreen(),
+                        )
                     }
                 }
 
                 room.id?.let { roomId ->
-                    repository.fetchInitialMessages(roomId)
-                    repository.markDelivered(roomId)
-                    repository.markRead(roomId)
+                    repository.fetchInitialMessages(chatRoomId = roomId)
+                    repository.markDelivered(chatRoomId = roomId)
+                    repository.markRead(chatRoomId = roomId)
                 }
             } catch (_: Exception) {
                 withContext(Dispatchers.Main) {
@@ -141,6 +150,28 @@ class ChatViewModel(
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Call this when leaving ChatScreen.
+     */
+    fun clearActiveChatRoom() {
+        stopTyping()
+        repository.clearActiveChatRoom()
+
+        _chatState.update { state ->
+            state.copy(
+                chatRoomData = null,
+                chatMessages = emptyList(),
+                selectedMessageForAction = null,
+                selectedMessageIdForActions = null,
+                isEditMessage = false,
+                replyMessage = ChatState.ReplyMessage(),
+                messageInput = TextFieldValue(),
+                showImageScreen = ChatState.ShowImageScreen(),
+                isTyping = false,
+            )
         }
     }
 
@@ -239,7 +270,7 @@ class ChatViewModel(
     }
 
     // -------------------------------------------------
-    // Reply / edit / actions
+    // Reply / edit / message action sheet
     // -------------------------------------------------
 
     fun setReplyMessage(chatMessage: ChatMessage?, isOn: Boolean) {
@@ -325,6 +356,7 @@ class ChatViewModel(
 
                 onMessageInputChanged(TextFieldValue())
                 updateIsEditMessage(false)
+                dismissActions()
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -346,6 +378,7 @@ class ChatViewModel(
                     messageId = safeMessageId,
                     deleteOption = deleteOption,
                 )
+                dismissActions()
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -404,7 +437,7 @@ class ChatViewModel(
     }
 
     // -------------------------------------------------
-    // Media upload / optimistic placeholder
+    // Media upload / optimistic local placeholder
     // -------------------------------------------------
 
     fun updateIsUploadingPhoto(isUploading: Boolean) {
@@ -416,13 +449,13 @@ class ChatViewModel(
     @OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
     fun updateSelectedPhotos(photos: List<Uri?>?) {
         _chatState.update { state ->
-            state.copy(selectedPhotos = photos)
+            state.copy(selectedPhotos = photos.orEmpty())
         }
 
-        val selectedPhotos = _chatState.value.selectedPhotos.orEmpty()
+        val selectedPhotos = _chatState.value.selectedPhotos
         val roomId = _chatState.value.chatRoomData?.id
 
-        if (selectedPhotos.isEmpty() || roomId == null) return
+        if (selectedPhotos.isNullOrEmpty() || roomId == null) return
 
         val localMediaMessage = ChatMessage(
             id = Clock.System.now().epochSeconds,
@@ -514,7 +547,7 @@ class ChatViewModel(
 
     private suspend fun getMediaFiles(): ArrayList<MediaFile?> {
         val mediaFiles = arrayListOf<MediaFile?>()
-        _chatState.value.selectedPhotos.orEmpty().forEach { uri ->
+        _chatState.value.selectedPhotos?.forEach { uri ->
             mediaFiles.add(
                 getMediaFileFromUri(
                     uri = uri,
@@ -535,7 +568,6 @@ class ChatViewModel(
         startingIndex: Int,
         images: List<String?>,
     ) {
-
         _chatState.update { state ->
             state.copy(
                 showImageScreen = ChatState.ShowImageScreen(

@@ -19,8 +19,11 @@ data class ChatRoomItemDto(
     @SerialName("user_two_id")
     val userTwoId: Long? = null,
 
+    @SerialName("user")
+    val user: User? = null,
+
     @SerialName("other_user")
-    val otherUser: User? = null,
+    var otherUser: User? = null,
 
     @SerialName("last_message")
     val lastMessage: ChatMessage? = null,
