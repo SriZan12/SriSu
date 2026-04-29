@@ -141,6 +141,40 @@ fun OutlinedTextFieldCompo(
 }
 
 @Composable
+private fun PhoneNumberTextField(
+    phoneNumber: String,
+    onPhoneNumberChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = phoneNumber,
+        onValueChange = { value ->
+            onPhoneNumberChange(value.filter { it.isDigit() })
+        },
+        modifier = modifier.height(64.dp),
+        placeholder = {
+            Text(
+                text = "Phone number",
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(32.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        textStyle = MaterialTheme.typography.titleMedium.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            cursorColor = MaterialTheme.colorScheme.primary
+        )
+    )
+}
+
+@Composable
 fun OTPInputTextFields(
     otpLength: Int,
     onUpdateOtpValuesByIndex: (Int, String) -> Unit,
@@ -412,7 +446,6 @@ fun PhoneNumberCompo(
     countryCode: String,
     countryPrefix: String,
     phoneNumber: String,
-    isError: Boolean,
     backgroundColor: Color = Color.Transparent,
     updatePhoneNumber: (String) -> Unit,
     onShowCountryList: () -> Unit
@@ -424,6 +457,7 @@ fun PhoneNumberCompo(
     ) {
 
         CountryCodeDropDown(
+            modifier = Modifier,
             selectedCountryPrefix = countryPrefix,
             selectedCountryCode = countryCode,
             backgroundColor = backgroundColor,
@@ -432,20 +466,12 @@ fun PhoneNumberCompo(
             },
         )
 
-        OutlinedTextFieldCompo(
-            modifier = Modifier.fillMaxWidth(),
-            value = phoneNumber,
-            isError = isError,
-            textStyle = MaterialTheme.typography.titleMedium,
-            imeAction = ImeAction.Done,
-            keyboardActions = KeyboardActions.Default,
-            keyboardType = KeyboardType.Number,
-            placeholder = "Enter your number",
-            onValueChange = { input ->
-                if (input.all { it.isDigit() }) {
-                    updatePhoneNumber(input)
-                }
-            }
+        PhoneNumberTextField(
+            phoneNumber = phoneNumber,
+            onPhoneNumberChange = {
+                updatePhoneNumber(it)
+            },
+            modifier = Modifier.weight(0.62f)
         )
 
 

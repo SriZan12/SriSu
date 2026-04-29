@@ -265,7 +265,6 @@ private fun PhoneNumberCompo(
             countryCode = findPartnerUIState.countryCode,
             countryPrefix = findPartnerUIState.countryPrefix,
             phoneNumber = findPartnerUIState.phoneNumber,
-            isError = findPartnerUIState.validationErrorMsg.isEmpty(),
             updatePhoneNumber = { input ->
                 if (input.all { it.isDigit() }) {
                     findPartnerViewModel.updatePhoneNumber(phoneNumber = input)

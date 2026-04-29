@@ -1,6 +1,7 @@
 package com.srisu.srisu.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -15,19 +16,22 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.theme.AppTheme
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
+@Preview
 fun PrimaryButtonCompo(
-    modifier: Modifier,
-    label: String,
-    onClick: () -> Unit
+    modifier: Modifier = Modifier,
+    label: String = "Button",
+    onClick: () -> Unit = {}
 ) {
     AppTheme {
         Button(
             modifier = modifier,
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            onClick = onClick
+            onClick = onClick,
+            contentPadding = PaddingValues(16.dp)
         ) {
             Text(text = label, style = MaterialTheme.typography.bodyMedium)
         }
@@ -36,10 +40,10 @@ fun PrimaryButtonCompo(
 
 @Composable
 fun PrimaryOutlinedButtonCompo(
-    modifier: Modifier,
-    label: String,
+    modifier: Modifier = Modifier,
+    label: String = "Button",
     textStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary),
-    onClick: () -> Unit
+    onClick: () -> Unit = {}
 ) {
     AppTheme {
         OutlinedButton(
@@ -56,12 +60,12 @@ fun PrimaryOutlinedButtonCompo(
 
 @Composable
 fun CustomButtonCompo(
-    modifier: Modifier,
-    label: String,
+    modifier: Modifier = Modifier,
+    label: String = "Button",
     shape: RoundedCornerShape = RoundedCornerShape(8.dp),
     backgroundColor: Color = MaterialTheme.colorScheme.primary,
     textStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary),
-    onClick: () -> Unit
+    onClick: () -> Unit = {}
 ) {
     Button(
         modifier = modifier,
@@ -75,12 +79,12 @@ fun CustomButtonCompo(
 
 @Composable
 fun PrimaryTextButton(
-    modifier: Modifier,
-    label: String,
+    modifier: Modifier = Modifier,
+    label: String = "Button",
     textStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.primary),
     fontWeight: FontWeight = FontWeight.SemiBold,
-    onClick: () -> Unit,
-    ) {
+    onClick: () -> Unit = {},
+) {
     TextButton(
         modifier = modifier,
         onClick = {

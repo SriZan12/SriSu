@@ -7,11 +7,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -20,18 +17,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.features.auth.presentation.components.CustomAuthScreen
-import com.srisu.srisu.features.auth.presentation.components.ProgressIndicator
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 import com.srisu.srisu.utils.Constants.Auth.TOTAL_PROGRESS
@@ -43,42 +37,51 @@ fun BaseAuthScreen(
     navController: NavController,
     authViewModel: AuthViewModel = koinViewModel<AuthViewModel>()
 ) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-    ) { innerPadding ->
 
-        val authUIState by authViewModel.authUiState.collectAsState()
+    PhoneNumberScreen(
+        authViewModel = authViewModel
+    )
 
-        Column(modifier = Modifier.fillMaxWidth().padding(paddingValues = innerPadding)) {
-            AuthToolBar(
-                toolBartTitle = authUIState.currentScreen.title,
-                currentProgress = authUIState.currentProgressStep.toString()
-            ) {
-                authViewModel.navigateBack()
-            }
+//    Scaffold(
+//        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+//    ) { innerPadding ->
+//
+//        val authUIState by authViewModel.authUiState.collectAsState()
+//
+//        Column(
+//            modifier = Modifier.fillMaxWidth().padding(paddingValues = innerPadding),
+//            horizontalAlignment = Alignment.CenterHorizontally
+//        ) {
+//            AuthToolBar(
+//                toolBartTitle = authUIState.currentScreen.title,
+//                currentProgress = authUIState.currentProgressStep.toString()
+//            ) {
+//                authViewModel.navigateBack()
+//            }
+//
+//            Spacer(modifier = Modifier.height(10.dp))
+//
+//
+//            ProgressIndicator(
+//                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+//                currentProgress = authUIState.progress
+//            )
+//
+//            Spacer(modifier = Modifier.height(56.dp))
+//
+//            AuthScreenContent(
+//                navController = navController,
+//                authViewModel = authViewModel,
+//                authUIStates = authUIState
+//            )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-
-            ProgressIndicator(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                currentProgress = authUIState.progress
-            )
-
-            Spacer(modifier = Modifier.height(56.dp))
-
-            AuthScreenContent(
-                navController = navController,
-                authViewModel = authViewModel,
-                authUIStates = authUIState
-            )
-
-        }
-        ShowZodiacSignScreen(
-            authViewModel = authViewModel,
-            authUIStates = authUIState
-        )
-    }
+//            PhoneNumberScreen()
+//        }
+//        ShowZodiacSignScreen(
+//            authViewModel = authViewModel,
+//            authUIStates = authUIState
+//        )
+//    }
 }
 
 
@@ -102,9 +105,11 @@ private fun AuthScreenContent(
     ) { currentScreen ->
         when (currentScreen) {
             is CustomAuthScreen.AddPhoneNumberScreen -> {
-                AddPhoneNumberCompo(
-                    authViewModel = authViewModel
-                )
+//                AddPhoneNumberCompo(
+//                    authViewModel = authViewModel
+//                )
+//                PhoneNumberScreen()
+
             }
 
             is CustomAuthScreen.PhoneNumberVerificationScreen -> {
