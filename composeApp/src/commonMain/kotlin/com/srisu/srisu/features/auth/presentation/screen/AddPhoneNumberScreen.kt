@@ -62,13 +62,16 @@ import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.HighlightedTextComponent
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
+import com.srisu.srisu.components.OtpVerificationScreen
 import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
+import com.srisu.srisu.components.RoundedButtonCompo
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
 
@@ -212,9 +215,11 @@ private fun PhoneNumberScreenContent(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            PhoneNumberBottomSection(
+            RoundedButtonCompo(
+                modifier = Modifier,
+                title = "Send Code",
                 enabled = isButtonEnabled,
-                onSendCodeClick = onSendCodeClick
+                onClick = onSendCodeClick
             )
         }
     ) { innerPadding ->
@@ -501,6 +506,7 @@ private fun PhoneNumberTextField(
 
 @Composable
 fun PhoneNumberBottomSection(
+    title: String,
     enabled: Boolean,
     onSendCodeClick: () -> Unit
 ) {
@@ -532,36 +538,36 @@ fun PhoneNumberBottomSection(
                 fontWeight = FontWeight.Bold
             )
         }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = buildAnnotatedString {
-                append("By continuing you agree to our ")
-
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("Terms of Service")
-                }
-
-                append(" and ")
-
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    append("Privacy")
-                }
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+//
+//        Spacer(modifier = Modifier.height(14.dp))
+//
+//        Text(
+//            text = buildAnnotatedString {
+//                append("By continuing you agree to our ")
+//
+//                withStyle(
+//                    SpanStyle(
+//                        color = MaterialTheme.colorScheme.primary,
+//                        fontWeight = FontWeight.Bold
+//                    )
+//                ) {
+//                    append("Terms of Service")
+//                }
+//
+//                append(" and ")
+//
+//                withStyle(
+//                    SpanStyle(
+//                        color = MaterialTheme.colorScheme.primary,
+//                        fontWeight = FontWeight.Bold
+//                    )
+//                ) {
+//                    append("Privacy")
+//                }
+//            },
+//            style = MaterialTheme.typography.bodySmall,
+//            color = MaterialTheme.colorScheme.onSurfaceVariant,
+//            textAlign = TextAlign.Center
+//        )
     }
 }

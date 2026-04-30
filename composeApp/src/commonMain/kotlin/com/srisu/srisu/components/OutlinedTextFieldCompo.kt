@@ -255,7 +255,7 @@ fun OTPInputTextFields(
                         onOtpInputComplete()
                     }
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(32.dp),
                 isError = isError,
                 textStyle = TextStyle(
                     textAlign = TextAlign.Center,
