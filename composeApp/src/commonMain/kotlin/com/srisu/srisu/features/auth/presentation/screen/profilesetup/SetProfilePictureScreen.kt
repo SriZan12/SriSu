@@ -1,17 +1,32 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,6 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -50,39 +68,52 @@ import com.srisu.srisu.theme.backgroundGray
 
 
 @Composable
-fun SetProfilePictureScreen(navController: NavController, authViewModel: AuthViewModel) {
-    CommonAuthContainerCompo(buttonTitle = "Complete", onClickPrimaryButton = {
-        authViewModel.sendSetupProfileRequest()
-    }) {
+fun SetProfilePictureScreen(
+    navController: NavController,
+    authViewModel: AuthViewModel,
+    onBackClick: () -> Unit = {}
+) {
+    val authUiState by authViewModel.authUiState.collectAsState()
 
-        val authUiState by authViewModel.authUiState.collectAsState()
+    HandleUiStateDialog(
+        navController = navController,
+        authViewModel = authViewModel,
+        authUIStates = authUiState
+    )
 
-        HandleUiStateDialog(
-            navController = navController,
-            authViewModel = authViewModel,
-            authUIStates = authUiState
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+
+        Text(
+            text = "Put a face to the\nname",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontFamily = FontFamily.Serif,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
 
-        TitleText(
-            modifier = Modifier.fillMaxWidth(),
-            title = "What's your best look?"
+
+        Text(
+            text = "A photo helps people feel closer before\nthey even say hello.",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
 
-        InfoText(
-            modifier = Modifier.fillMaxWidth(),
-            info = "Upload a photo that shows the real you and helps others get to know you better."
-        )
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(48.dp))
-
-        ProfilePictureCompo(
+        ProfilePicturePickerSection(
             authViewModel = authViewModel,
             authUIStates = authUiState
         )
 
     }
 }
-
 
 @Composable
 private fun HandleUiStateDialog(
@@ -152,43 +183,31 @@ private fun HandleUiStateDialog(
 
 
 @Composable
-private fun ProfilePictureCompo(
+private fun ProfilePicturePickerSection(
     authViewModel: AuthViewModel,
     authUIStates: AuthUIStates
 ) {
     val profilePictureUri = authUIStates.profilePictureUri
-    var showPermissionDialog by remember { mutableStateOf(false) }
+    var shouldOpenGallery by remember { mutableStateOf(false) }
     var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
 
-
-    val permissionManager = createPermissionsManager(object : PermissionCallback {
-        override fun onPermissionStatus(permissionType: PermissionType, status: PermissionState) {
-            AppLogger.log("INSIDE CALLBACK = $status")
-            when (status) {
-                PermissionState.GRANTED -> {
-                    permissionState = PermissionState.GRANTED
-                }
-
-                PermissionState.SHOW_RATIONALE -> permissionState = PermissionState.SHOW_RATIONALE
-
-                PermissionState.DENIED -> {
-                    permissionState = PermissionState.DENIED
-                }
-
-                PermissionState.NOT_ASKED_YET -> {
-                }
-
-                PermissionState.REQUEST_LAUNCHED -> {
-                    permissionState = PermissionState.REQUEST_LAUNCHED
-                }
+    val permissionManager = createPermissionsManager(
+        object : PermissionCallback {
+            override fun onPermissionStatus(
+                permissionType: PermissionType,
+                status: PermissionState
+            ) {
+                permissionState = status
             }
         }
-    })
+    )
 
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
             if (!uris.isNullOrEmpty()) {
-                authViewModel.updateProfilePictureUri(uri = uris.firstOrNull()?.toUri())
+                authViewModel.updateProfilePictureUri(
+                    uri = uris.firstOrNull()?.toUri()
+                )
             } else {
                 authViewModel.idleScreen()
             }
@@ -197,45 +216,87 @@ private fun ProfilePictureCompo(
         isMultiple = false
     )
 
-
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(211.dp)
-                .clip(CircleShape)
-                .background(backgroundGray)
-                .clickable {
-                    showPermissionDialog = true
-
-                },
-            contentAlignment = Alignment.Center
+    Box(
+        modifier = Modifier.size(180.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            border = BorderStroke(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            ),
+            onClick = {
+                shouldOpenGallery = true
+            }
         ) {
-            if (profilePictureUri != null) {
-                AsyncImage(
-                    model = profilePictureUri,
-                    contentDescription = "Selected Profile Picture",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Image(
-                    imageVector = Icons.Outlined.Person,
-                    contentDescription = "Image_picker",
-                    modifier = Modifier.size(80.dp)
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(2.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (profilePictureUri != null) {
+                    AsyncImage(
+                        model = profilePictureUri,
+                        contentDescription = "Selected profile picture",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.PhotoCamera,
+                        contentDescription = "Add profile picture",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(56.dp)
+                    )
+                }
             }
         }
 
-        if (showPermissionDialog) {
-            if (!permissionManager.isPermissionGranted(permission = PermissionType.STORAGE)) {
-                permissionManager.askPermission(permission = PermissionType.STORAGE)
-            } else {
-                galleryManager.launch()
+        Surface(
+            onClick = {
+                shouldOpenGallery = true
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(52.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
+            border = BorderStroke(
+                width = 4.dp,
+                color = MaterialTheme.colorScheme.background
+            )
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = "Add photo",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(28.dp)
+                )
             }
-            showPermissionDialog = false
+        }
+    }
+
+    if (shouldOpenGallery) {
+        if (!permissionManager.isPermissionGranted(PermissionType.STORAGE)) {
+            permissionManager.askPermission(PermissionType.STORAGE)
+        } else {
+            galleryManager.launch()
         }
 
+        shouldOpenGallery = false
+    }
 
+    LaunchedEffect(permissionState) {
+        if (permissionState == PermissionState.GRANTED) {
+            galleryManager.launch()
+        }
     }
 }
 
