@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.auth.presentation.screen
+package com.srisu.srisu.features.auth.presentation.screen.authscreen
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -47,14 +48,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.CommonBottomSheetCompo
 import com.srisu.srisu.components.CountrySelectionBottomSheet
@@ -62,21 +61,22 @@ import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.HighlightedTextComponent
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
-import com.srisu.srisu.components.OtpVerificationScreen
 import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
 import com.srisu.srisu.components.RoundedButtonCompo
+import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
+import com.srisu.srisu.navigation.graph.AuthNavigation
 import com.srisu.srisu.utils.isInternetAvailable
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.country_flag
 
 @Composable
 fun PhoneNumberScreen(
+    navController: NavController,
     authViewModel: AuthViewModel
 ) {
     val authUIState by authViewModel.authUiState.collectAsState()
@@ -99,9 +99,10 @@ fun PhoneNumberScreen(
             showCountryList = true
         },
         onSendCodeClick = {
-            if (authViewModel.isPhoneNumberValid()) {
-                showPhoneNumberConfirmation = true
-            }
+//            if (authViewModel.isPhoneNumberValid()) {
+//                showPhoneNumberConfirmation = true
+//            }
+            navController.navigate(AuthNavigation.PhoneNumberVerificationScreen)
         },
     )
 
@@ -235,7 +236,10 @@ private fun PhoneNumberScreenContent(
         ) {
             SriSuHeader()
 
-            CallIconBox()
+            ScreenTopIcon(
+                imageVector = Icons.Outlined.Call,
+                color = MaterialTheme.colorScheme.primary
+            )
 
             PhoneNumberTitle()
 
@@ -350,24 +354,6 @@ fun SriSuHeader() {
                 modifier = Modifier.width(48.dp),
                 thickness = 1.dp,
                 color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.55f)
-            )
-        }
-    }
-}
-
-@Composable
-fun CallIconBox() {
-    Surface(
-        modifier = Modifier.size(85.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.primary
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Outlined.Call,
-                contentDescription = "Phone number verification",
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(48.dp)
             )
         }
     }

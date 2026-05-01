@@ -1,0 +1,41 @@
+<!--
+  ~ Copyright (C) 2026 The Android Open Source Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="296dp"
+    android:height="296dp"
+    android:viewportWidth="296"
+    android:viewportHeight="296">
+  <group>
+    <clip-path
+        android:pathData="M0,0h296v296h-296z"/>
+    <path
+        android:strokeWidth="1"
+        android:pathData="M97,44.5H199C225.79,44.5 247.5,66.21 247.5,93V195C247.5,221.79 225.79,243.5 199,243.5H97C70.21,243.5 48.5,221.79 48.5,195V93C48.5,66.21 70.21,44.5 97,44.5Z"
+        android:fillColor="#422A41"
+        android:strokeColor="#422A41"/>
+    <path
+        android:strokeWidth="1"
+        android:pathData="M199,44.5H97C70.21,44.5 48.5,66.21 48.5,93V195C48.5,221.79 70.21,243.5 97,243.5H199C225.79,243.5 247.5,221.79 247.5,195V93C247.5,66.21 225.79,44.5 199,44.5Z"
+        android:fillColor="#422A41"
+        android:strokeColor="#422A41"/>
+    <path
+        android:pathData="M92.04,91.33L97.11,93.02C100.27,94.08 103.14,95.85 105.5,98.21C109.53,102.24 111.79,107.7 111.79,113.4V114.38M111.79,114.38V160.46M111.79,114.38L122.44,101.06C124.11,98.98 126.09,97.16 128.31,95.69C132.56,92.85 137.56,91.33 142.68,91.33H145.95C149.46,91.33 152.93,92.15 156.07,93.72L157.77,94.57C162.05,96.71 165.31,100.47 166.82,105.01C167.44,106.85 167.75,108.78 167.75,110.72V151.7C167.75,153.15 167.87,154.59 168.11,156.02L169.71,165.61C170.07,167.82 170.73,169.96 171.65,171.97M171.65,171.97L176.41,165.42C177.22,164.31 178.11,163.26 179.09,162.29L182.58,158.79C185.73,155.64 190,153.88 194.45,153.88H194.64C200.42,153.88 205.78,156.91 208.75,161.87C211.88,167.08 211.88,173.59 208.75,178.8C205.78,183.76 200.42,186.79 194.64,186.79H192.55C187.21,186.79 182.09,184.67 178.31,180.89L176.79,179.37C174.63,177.21 172.9,174.71 171.65,171.97ZM171.65,171.97L153.49,196.93C152.05,198.92 150.14,200.53 147.95,201.63C145.82,202.7 143.47,203.25 141.09,203.25H128.25"
+        android:strokeWidth="7"
+        android:fillColor="#00000000"
+        android:strokeColor="#D4A5A0"
+        android:strokeLineCap="round"/>
+  </group>
+</vector>

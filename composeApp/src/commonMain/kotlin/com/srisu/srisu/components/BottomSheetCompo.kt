@@ -26,36 +26,22 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
-import com.srisu.srisu.utils.getCountryFlagFromAssets
 import com.srisu.srisu.theme.backgroundGraySecondary
 import com.srisu.srisu.utils.ZodiacUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.aries
-import srisu.composeapp.generated.resources.country_flag
 import srisu.composeapp.generated.resources.offline
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -473,7 +459,7 @@ fun ZodiacSignSelectionBottomSheet(
                         }
 
                         filterZodiacList = zodiacList.filter {
-                            it.sign.contains(query, ignoreCase = true)
+                            it.name.contains(query, ignoreCase = true)
                         }
                     }
                 )
@@ -523,7 +509,7 @@ private fun ZodiacSignSelectionItem(
 
 
             val zodiacLogo = ZodiacUtils.getZodiacSignImage(
-                name = zodiacSign.sign
+                name = zodiacSign.name
             )
 
             Row(
@@ -540,7 +526,7 @@ private fun ZodiacSignSelectionItem(
                 }
 
                 Text(
-                    text = zodiacSign.sign ?: "",
+                    text = zodiacSign.name ?: "",
                     color = Color.Black,
                     style = MaterialTheme.typography.titleSmall
                 )

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Stable
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.features.auth.presentation.components.CustomAuthScreen
-import com.srisu.srisu.features.auth.presentation.screen.Gender
+import com.srisu.srisu.features.auth.presentation.screen.profilesetup.Gender
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
@@ -28,7 +28,7 @@ data class AuthUIStates(
     val zodiacSign: ZodiacSign? = null,
     val profilePictureUri: Uri? = null,
     val session: Session? = null,
-    val currentScreen: CustomAuthScreen = CustomAuthScreen.AddPhoneNumberScreen,
+    val currentScreen: CustomAuthScreen = CustomAuthScreen.AddFullNameScreen,
     val screenStack: ArrayDeque<CustomAuthScreen> = ArrayDeque(),
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val validationError: Validation = Validation(),
