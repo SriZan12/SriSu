@@ -21,6 +21,7 @@ data class AuthUIStates(
     val countryCode: String = "NP",
     val countryPrefix: String = "+977",
     val progress: Float = 0f,
+    val relationshipSituation: RelationshipSituation = RelationshipSituation.NOTHING,
     val optValues: List<String> = mutableListOf("", "", "", "", "", ""),
     val isPhoneNumberVerified: Boolean = false,
     val remainingOTPTimestamp: Long? = null,
@@ -28,7 +29,7 @@ data class AuthUIStates(
     val zodiacSign: ZodiacSign? = null,
     val profilePictureUri: Uri? = null,
     val session: Session? = null,
-    val currentScreen: CustomAuthScreen = CustomAuthScreen.AddFullNameScreen,
+    val currentScreen: CustomAuthScreen = CustomAuthScreen.SelectGenderScreen,
     val screenStack: ArrayDeque<CustomAuthScreen> = ArrayDeque(),
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val validationError: Validation = Validation(),
@@ -44,3 +45,9 @@ data class Validation(
     val isDOB: Boolean = false,
     val isGender: Boolean = false,
 )
+
+enum class RelationshipSituation {
+    SINGLE,
+    COUPLE,
+    NOTHING
+}

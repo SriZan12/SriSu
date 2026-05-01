@@ -18,6 +18,7 @@ import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.core.session.setUserWholeCredentials
 import com.srisu.srisu.core.session.toSession
+import com.srisu.srisu.features.auth.presentation.state.RelationshipSituation
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.Auth.FULL_NAME_PROGRESS
 import com.srisu.srisu.utils.Constants.Auth.OTP_WAITING_TIME
@@ -260,6 +261,10 @@ class AuthViewModel(
 
     fun updateGender(gender: Gender) {
         updateState { it.copy(gender = gender) }
+    }
+
+    fun updateRelationshipSituation(situation: RelationshipSituation) {
+        updateState { it.copy(relationshipSituation = situation) }
     }
 
     fun updateValidationError(validation: Validation) {
