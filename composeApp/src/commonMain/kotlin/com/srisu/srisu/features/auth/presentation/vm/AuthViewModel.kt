@@ -11,7 +11,7 @@ import com.srisu.srisu.features.auth.domain.repository.AuthRepository
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.components.CustomAuthScreen
 import com.srisu.srisu.features.auth.presentation.components.OTPScreenMetadata
-import com.srisu.srisu.features.auth.presentation.screen.Gender
+import com.srisu.srisu.features.auth.presentation.screen.profilesetup.Gender
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.core.session.Session
@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.time.ExperimentalTime
 
@@ -143,6 +142,7 @@ class AuthViewModel(
                 isIncrease = true,
                 step = PHONE_NUMBER_VERIFICATION_PROGRESS
             )
+
             null -> updateProgress(isIncrease = true)
         }
 
@@ -462,7 +462,7 @@ class AuthViewModel(
                 mood = "HAPPY",
                 country = country?.name,
                 profilePhoto = profilePicturePath,
-                zodiacSign = state.zodiacSign?.sign?.uppercase()
+                zodiacSign = state.zodiacSign?.name?.uppercase()
             )
 
             val fileManager = FileManager()
@@ -505,46 +505,15 @@ class AuthViewModel(
 
         clearAuthScreenStack()
 
-        when {
-            isPhoneNumberVerified == true -> {
-                screenStack.addAll(
-                    listOf(
-                        CustomAuthScreen.AddFullNameScreen,
-                        CustomAuthScreen.AddDOBScreen,
-                        CustomAuthScreen.ZodiacScreen,
-                        CustomAuthScreen.SelectGenderScreen,
-                        CustomAuthScreen.SetProfilePictureScreen
-                    )
-                )
-            }
-
-            session != null && isPhoneNumberVerified == false -> {
-                screenStack.addAll(
-                    listOf(
-                        CustomAuthScreen.PhoneNumberVerificationScreen,
-                        CustomAuthScreen.AddFullNameScreen,
-                        CustomAuthScreen.AddDOBScreen,
-                        CustomAuthScreen.ZodiacScreen,
-                        CustomAuthScreen.SelectGenderScreen,
-                        CustomAuthScreen.SetProfilePictureScreen
-                    )
-                )
-            }
-
-            else -> {
-                screenStack.addAll(
-                    listOf(
-                        CustomAuthScreen.AddPhoneNumberScreen,
-                        CustomAuthScreen.PhoneNumberVerificationScreen,
-                        CustomAuthScreen.AddFullNameScreen,
-                        CustomAuthScreen.AddDOBScreen,
-                        CustomAuthScreen.ZodiacScreen,
-                        CustomAuthScreen.SelectGenderScreen,
-                        CustomAuthScreen.SetProfilePictureScreen
-                    )
-                )
-            }
-        }
+        screenStack.addAll(
+            listOf(
+                CustomAuthScreen.AddFullNameScreen,
+                CustomAuthScreen.AddDOBScreen,
+                CustomAuthScreen.ZodiacScreen,
+                CustomAuthScreen.SelectGenderScreen,
+                CustomAuthScreen.SetProfilePictureScreen
+            )
+        )
 
         updateState { it.copy(screenStack = screenStack) }
         updateCurrentScreen()

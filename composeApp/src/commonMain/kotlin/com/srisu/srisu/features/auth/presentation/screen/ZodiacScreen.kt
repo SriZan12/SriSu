@@ -73,7 +73,7 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
                         )
 
                         Text(
-                            text = it.zodiacDescription,
+                            text = it.description,
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium.copy(

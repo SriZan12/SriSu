@@ -498,8 +498,8 @@ private fun ZodiacFilterSection(
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    val zodiacSignImg = remember(selectedZodiac?.sign) {
-        ZodiacUtils.getZodiacSignImage(selectedZodiac?.sign ?: "")
+    val zodiacSignImg = remember(selectedZodiac?.name) {
+        ZodiacUtils.getZodiacSignImage(selectedZodiac?.name ?: "")
     }
 
     Column(
@@ -527,7 +527,7 @@ private fun ZodiacFilterSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = selectedZodiac?.sign ?: "Select Zodiac Sign",
+                        text = selectedZodiac?.name ?: "Select Zodiac Sign",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Start,

@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.auth.presentation.screen
+package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

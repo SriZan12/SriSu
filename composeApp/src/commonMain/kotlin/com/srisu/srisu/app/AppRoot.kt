@@ -24,7 +24,7 @@ import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.json.Json
 
 @Composable
- fun AppRoot(
+fun AppRoot(
     sessionStorage: SessionStorage
 ) {
     val navController = rememberNavController()
@@ -81,11 +81,15 @@ private fun readSessionSafely(sessionStorage: SessionStorage): Session? {
 }
 
 private fun resolveStartDestination(session: Session?): Route {
-    return when {
-        session?.isPhoneVerified == true && session.isProfileComplete == true -> {
-            HomeNavigation.Home
-        }
+//    return when (session?.isPhoneVerified) {
+//        true if session.isProfileComplete == true -> {
+//            HomeNavigation.Home
+//        }
+//        true if session.isProfileComplete == false -> {
+//            AuthNavigation.ProfileSetUp
+//        }
+//        else -> AuthNavigation.PhoneNumberScreen
+//    }
 
-        else -> AuthNavigation.Auth
-    }
+    return AuthNavigation.ProfileSetUp
 }

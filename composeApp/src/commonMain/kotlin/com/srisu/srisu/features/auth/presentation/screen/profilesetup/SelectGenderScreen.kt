@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.auth.presentation.screen
+package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

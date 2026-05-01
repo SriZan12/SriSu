@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.auth.presentation.screen
+package com.srisu.srisu.features.auth.presentation.screen.authscreen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,6 +52,7 @@ import com.srisu.srisu.components.OTPInputTextFields
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.RoundedButtonCompo
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
@@ -204,7 +206,7 @@ private fun PhoneNumberVerificationContent(
                 title = {},
                 modifier = Modifier,
                 navigationIcon = {
-                    IconButton(onClick = {}, modifier = Modifier) {
+                    IconButton(onClick = onBackClick, modifier = Modifier) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Navigate back icon",
@@ -235,16 +237,19 @@ private fun PhoneNumberVerificationContent(
 
             Column(
                 modifier = Modifier
-                    .padding( start = 16.dp, end = 16.dp),
+                    .padding(start = 16.dp, end = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
-                MessageIconBox()
+                ScreenTopIcon(
+                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                )
 
                 OtpHeader(
                     countryCode = authUIStates.countryPrefix,
-//                    phoneNumber = authUIStates.phoneNumber
+                    phoneNumber = authUIStates.phoneNumber
                 )
 
                 OTPInputTextFields(
@@ -294,25 +299,6 @@ private fun BackButton(
         }
     }
 
-}
-
-@Composable
-private fun MessageIconBox() {
-    Surface(
-        modifier = Modifier.size(85.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Outlined.ChatBubbleOutline,
-                contentDescription = "OTP message",
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-
-        }
-    }
 }
 
 
