@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
 import com.srisu.srisu.features.auth.presentation.state.RelationshipSituation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 
@@ -42,19 +43,25 @@ enum class SituationIconType {
 
 @Composable
 fun SelectRelationshipScreen(
-    authViewModel: AuthViewModel,
-    onBackClick: () -> Unit = {}
+    authViewModel: AuthViewModel
 ) {
     val authUiState by authViewModel.authUiState.collectAsState()
-
     val selectedSituation = authUiState.relationshipSituation
 
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    CommonProfileContainerCompo(
+        modifier = Modifier,
+        buttonTitle = "Looks good, let's go",
+        localFocusManager = null,
+        currentStep = authUiState.currentProgressStep,
+        isPrimaryButtonEnabled = authViewModel.isRelationshipValid(),
+        onNavBack = {
+            authViewModel.navigateBack()
+        },
+        onClickPrimaryButton = {
+            authViewModel.navigateNextScreen(isIncrease = true)
+        },
     ) {
+
 
         Text(
             text = "What's your\nsituation?",

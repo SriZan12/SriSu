@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,7 +62,7 @@ import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
-import com.srisu.srisu.components.RoundedButtonCompo
+import com.srisu.srisu.components.RoundedPrimaryButtonCompo
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
@@ -216,7 +214,7 @@ private fun PhoneNumberScreenContent(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            RoundedButtonCompo(
+            RoundedPrimaryButtonCompo(
                 modifier = Modifier,
                 title = "Send Code",
                 enabled = isButtonEnabled,

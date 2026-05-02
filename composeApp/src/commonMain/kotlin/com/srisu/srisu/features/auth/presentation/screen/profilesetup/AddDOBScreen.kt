@@ -1,24 +1,18 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cake
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -32,19 +26,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.CommonBottomSheetCompo
 import com.srisu.srisu.components.HighlightedTextComponent
-import com.srisu.srisu.components.PrimaryButtonCompo
-import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
-import com.srisu.srisu.features.auth.presentation.components.CommonAuthContainerCompo
-import com.srisu.srisu.features.auth.presentation.components.InfoText
+import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
-import com.srisu.srisu.features.auth.presentation.components.TitleText
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 import com.srisu.srisu.utils.DateTimeUtils.formatLocalDate
@@ -57,25 +46,33 @@ import network.chaintech.kmp_date_time_picker.utils.now
 
 @Composable
 fun AddDOBScreen(
-    authViewModel: AuthViewModel,
-    onBackClick: () -> Unit = {}
+    authViewModel: AuthViewModel
 ) {
     var showAgeConfirmationBottomSheet by rememberSaveable { mutableStateOf(false) }
-    val authUIStates by authViewModel.authUiState.collectAsState()
+    val authUIState by authViewModel.authUiState.collectAsState()
 
-    val startDate = remember(authUIStates.dob) {
-        if (authUIStates.dob.isEmpty()) {
+    val startDate = remember(authUIState.dob) {
+        if (authUIState.dob.isEmpty()) {
             LocalDate.now().minus(value = 15, unit = DateTimeUnit.YEAR)
         } else {
-            LocalDate.parse(authUIStates.dob)
+            LocalDate.parse(authUIState.dob)
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    CommonProfileContainerCompo(
+        modifier = Modifier,
+        buttonTitle = "Next",
+        localFocusManager = null,
+        currentStep = authUIState.currentProgressStep,
+        isPrimaryButtonEnabled = authViewModel.isDOBValid(),
+        onClickPrimaryButton = {
+            showAgeConfirmationBottomSheet = true
+        },
+        onNavBack = {
+            authViewModel.navigateBack()
+        }
     ) {
+
 
         ScreenTopIcon(
             imageVector = Icons.Outlined.Cake,
@@ -120,7 +117,7 @@ fun AddDOBScreen(
         onDismiss = {
             showAgeConfirmationBottomSheet = false
         },
-        authUIState = authUIStates,
+        authUIState = authUIState,
         showAgeConfirmation = showAgeConfirmationBottomSheet,
         onConfirmed = {
             showAgeConfirmationBottomSheet = false
