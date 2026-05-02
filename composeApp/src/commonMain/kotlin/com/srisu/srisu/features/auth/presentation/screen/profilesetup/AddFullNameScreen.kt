@@ -1,30 +1,21 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.srisu.srisu.components.LabeledTextFieldCompo
+import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
@@ -32,16 +23,23 @@ import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 @Composable
 fun AddNameScreen(
     authViewModel: AuthViewModel,
-    onBackClick: () -> Unit = {}
+    localFocusManager: FocusManager,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
 
-        val authUIStates by authViewModel.authUiState.collectAsState()
-        val validationError = authUIStates.validationError
+    val authUIState by authViewModel.authUiState.collectAsState()
+
+    CommonProfileContainerCompo(
+        modifier = Modifier,
+        buttonTitle = "Next",
+        localFocusManager = localFocusManager,
+        currentStep = authUIState.currentProgressStep,
+        isPrimaryButtonEnabled = authViewModel.isFullNameValid() && authViewModel.isUsernameValid(),
+        showNavBackIcon = false,
+        onNavBack = {},
+        onClickPrimaryButton = {
+            authViewModel.navigateNextScreen(isIncrease = true)
+        },
+    ) {
 
         ScreenTopIcon(
             imageVector = Icons.Outlined.ChatBubbleOutline,
@@ -67,9 +65,9 @@ fun AddNameScreen(
 
         LabeledTextFieldCompo(
             label = "Full name",
-            value = authUIStates.fullName,
+            value = authUIState.fullName,
             placeholder = "e.g. Thomas Shelby",
-            isError = validationError.isFullName,
+            isError = false,
             keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Next,
             onValueChange = {
@@ -80,9 +78,9 @@ fun AddNameScreen(
 
         LabeledTextFieldCompo(
             label = "Username",
-            value = authUIStates.username,
+            value = authUIState.username,
             placeholder = "@ tommy",
-            isError = validationError.isUserName,
+            isError = false,
             keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Done,
             onValueChange = {
@@ -90,8 +88,8 @@ fun AddNameScreen(
                 authViewModel.updateValidationError(Validation(isUserName = false))
             }
         )
-
     }
+
 }
 
 

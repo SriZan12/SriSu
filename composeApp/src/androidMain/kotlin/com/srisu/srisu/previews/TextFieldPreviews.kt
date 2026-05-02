@@ -64,6 +64,7 @@ fun ShowCountryCodeDropDown() {
 
     SetProfilePictureScreen(
         authViewModel = koinViewModel<AuthViewModel>(),
-        navController = rememberNavController()
+        navController = rememberNavController(),
+        onSetupComplete = {}
     )
 }

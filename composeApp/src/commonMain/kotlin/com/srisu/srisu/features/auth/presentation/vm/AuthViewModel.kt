@@ -9,7 +9,7 @@ import com.srisu.srisu.features.auth.data.remote.dto.ProfileSetupDTO
 import com.srisu.srisu.features.auth.data.local.datastore.AuthDataStore
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.auth.presentation.components.CustomAuthScreen
+import com.srisu.srisu.features.auth.presentation.components.CustomProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.components.OTPScreenMetadata
 import com.srisu.srisu.features.auth.presentation.screen.profilesetup.Gender
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
@@ -432,12 +432,6 @@ class AuthViewModel(
             return
         }
 
-        if (isPhoneNumberVerified) {
-            removeScreen(CustomAuthScreen.AddPhoneNumberScreen)
-            removeScreen(CustomAuthScreen.PhoneNumberVerificationScreen)
-            checkSession()
-            updateCurrentScreen()
-        }
     }
 
     fun sendSetupProfileRequest() {
@@ -506,17 +500,17 @@ class AuthViewModel(
     private fun initializeAuthNavigationFlow() {
         val session = currentState.session
         val isPhoneNumberVerified = session?.isPhoneVerified
-        val screenStack = ArrayDeque<CustomAuthScreen>()
+        val screenStack = ArrayDeque<CustomProfileSetupScreen>()
 
         clearAuthScreenStack()
 
         screenStack.addAll(
             listOf(
-                CustomAuthScreen.AddFullNameScreen,
-                CustomAuthScreen.AddDOBScreen,
-                CustomAuthScreen.ZodiacScreen,
-                CustomAuthScreen.SelectGenderScreen,
-                CustomAuthScreen.SetProfilePictureScreen
+                CustomProfileSetupScreen.AddFullNameScreen,
+                CustomProfileSetupScreen.AddDOBScreen,
+                CustomProfileSetupScreen.ZodiacScreen,
+                CustomProfileSetupScreen.SelectGenderScreen,
+                CustomProfileSetupScreen.SetProfilePictureScreen
             )
         )
 
@@ -532,7 +526,7 @@ class AuthViewModel(
         updateState {
             it.copy(
                 currentScreen = it.screenStack.firstOrNull()
-                    ?: CustomAuthScreen.SelectGenderScreen
+                    ?: CustomProfileSetupScreen.SelectGenderScreen
             )
         }
     }
@@ -541,7 +535,7 @@ class AuthViewModel(
         currentState.screenStack.removeFirstOrNull()
     }
 
-    private fun removeScreen(screen: CustomAuthScreen) {
+    private fun removeScreen(screen: CustomProfileSetupScreen) {
         currentState.screenStack.remove(screen)
     }
 
@@ -559,33 +553,25 @@ class AuthViewModel(
         val currentScreen = state.currentScreen
         val isPhoneNumberVerified = state.session?.isPhoneVerified
 
-        if (currentScreen == CustomAuthScreen.PhoneNumberVerificationScreen) {
-            return
-        }
 
-        if (state.screenStack.size >= CustomAuthScreen.screenOrder.size) {
+        if (state.screenStack.size >= CustomProfileSetupScreen.screenOrder.size) {
             return
         }
 
         val currentIndex = getCurrentScreenIndex(currentScreen)
         if (currentIndex <= 0) return
 
-        val previousScreen = CustomAuthScreen.screenOrder[currentIndex - 1]
+        val previousScreen = CustomProfileSetupScreen.screenOrder[currentIndex - 1]
 
-        val shouldSkipAddingPreviousScreen =
-            isPhoneNumberVerified == true &&
-                    (
-                            previousScreen == CustomAuthScreen.PhoneNumberVerificationScreen ||
-                                    previousScreen == CustomAuthScreen.AddPhoneNumberScreen
-                            )
+        val shouldSkipAddingPreviousScreen = isPhoneNumberVerified == true
 
         if (shouldSkipAddingPreviousScreen) {
             updateCurrentScreen()
             return
         }
 
-        if (previousScreen == CustomAuthScreen.AddDOBScreen) {
-            currentState.screenStack.addFirst(CustomAuthScreen.ZodiacScreen)
+        if (previousScreen == CustomProfileSetupScreen.AddDOBScreen) {
+            currentState.screenStack.addFirst(CustomProfileSetupScreen.ZodiacScreen)
             currentState.screenStack.addFirst(previousScreen)
             updateProgress(isIncrease = false)
             updateProgress(isIncrease = false)
@@ -597,14 +583,14 @@ class AuthViewModel(
         updateCurrentScreen()
     }
 
-    private fun getCurrentScreenIndex(currentScreen: CustomAuthScreen): Int {
+    private fun getCurrentScreenIndex(currentScreen: CustomProfileSetupScreen): Int {
         val isCurrentScreenGender =
-            currentState.currentScreen == CustomAuthScreen.SelectGenderScreen
+            currentState.currentScreen == CustomProfileSetupScreen.SelectGenderScreen
 
         return if (!isCurrentScreenGender) {
-            CustomAuthScreen.screenOrder.indexOf(currentScreen)
+            CustomProfileSetupScreen.screenOrder.indexOf(currentScreen)
         } else {
-            CustomAuthScreen.screenOrder.indexOf(CustomAuthScreen.ZodiacScreen)
+            CustomProfileSetupScreen.screenOrder.indexOf(CustomProfileSetupScreen.ZodiacScreen)
         }
     }
 
@@ -737,6 +723,20 @@ class AuthViewModel(
                 Validation(
                     validationMessage = "Please choose your gender!",
                     isGender = true
+                )
+            )
+            false
+        } else {
+            true
+        }
+    }
+
+    fun isRelationshipValid(): Boolean {
+        return if (currentState.relationshipSituation == RelationshipSituation.NOTHING) {
+            updateValidationError(
+                Validation(
+                    validationMessage = "Please choose your relationship status!",
+                    isRelationship = true
                 )
             )
             false

@@ -7,30 +7,39 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.srisu.srisu.components.PrimaryButtonCompo
+import com.srisu.srisu.components.RoundedPrimaryButtonCompo
 
 @Composable
 fun ProgressIndicator(
@@ -88,67 +97,84 @@ fun ProgressIndicator(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommonAuthContainerCompo(
+fun CommonProfileContainerCompo(
     modifier: Modifier = Modifier,
     buttonTitle: String = "Next",
+    localFocusManager: FocusManager?,
+    currentStep: Int,
+    isPrimaryButtonEnabled: Boolean,
+    onNavBack: () -> Unit,
+    showNavBackIcon: Boolean = true,
     onClickPrimaryButton: () -> Unit,
-    onClickScreenContent: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
-    Box(
-        modifier = modifier.fillMaxSize().clickable(
-            onClick = onClickScreenContent,
-            indication = null,
-            interactionSource = MutableInteractionSource()
-        )
-    ) {
+
+    Scaffold(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                localFocusManager?.clearFocus()
+            },
+        topBar = {
+            TopAppBar(
+                title = {},
+                modifier = Modifier.fillMaxWidth(),
+                colors = TopAppBarDefaults.topAppBarColors(Color.Transparent),
+                navigationIcon = {
+                    if (showNavBackIcon) {
+                        IconButton(onClick = onNavBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Navigate back",
+                            )
+                        }
+
+                    }
+                }
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            RoundedPrimaryButtonCompo(
+                modifier = Modifier,
+                title = buttonTitle,
+                enabled = isPrimaryButtonEnabled,
+                onClick = {
+                    localFocusManager?.clearFocus()
+                    onClickPrimaryButton()
+                }
+            )
+        }
+    ) { innerPadding ->
+
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .fillMaxSize()
+                .padding(innerPadding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
-                .align(Alignment.TopCenter),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+
+            ProgressIndicator(
+                totalSteps = 6,
+                currentStep = currentStep,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
             content()
+
         }
 
-        PrimaryButtonCompo(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 24.dp)
-                .align(Alignment.BottomCenter),
-            label = buttonTitle
-        ) {
-            onClickPrimaryButton()
-        }
     }
-}
-
-@Composable
-fun TitleText(
-    modifier: Modifier,
-    title: String
-) {
-    Text(
-        modifier = modifier,
-        text = title,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Medium,
-        color = Color.Black
-    )
-}
-
-@Composable
-fun InfoText(
-    modifier: Modifier,
-    info: String,
-) {
-    Text(
-        modifier = modifier,
-        text = info,
-        style = MaterialTheme.typography.bodyMedium,
-        color = Color.Black
-    )
 }
 
 @Composable

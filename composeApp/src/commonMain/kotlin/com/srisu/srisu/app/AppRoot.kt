@@ -81,15 +81,15 @@ private fun readSessionSafely(sessionStorage: SessionStorage): Session? {
 }
 
 private fun resolveStartDestination(session: Session?): Route {
-//    return when (session?.isPhoneVerified) {
-//        true if session.isProfileComplete == true -> {
-//            HomeNavigation.Home
-//        }
-//        true if session.isProfileComplete == false -> {
-//            AuthNavigation.ProfileSetUp
-//        }
-//        else -> AuthNavigation.PhoneNumberScreen
-//    }
+    return when (session?.isPhoneVerified) {
+        true if session.isProfileComplete == true -> {
+            HomeNavigation.Home
+        }
+        true if session.isProfileComplete == false -> {
+            AuthNavigation.ProfileSetUp
+        }
+        else -> AuthNavigation.PhoneNumberScreen
+    }
 
-    return AuthNavigation.ProfileSetUp
+//    return AuthNavigation.ProfileSetUp
 }

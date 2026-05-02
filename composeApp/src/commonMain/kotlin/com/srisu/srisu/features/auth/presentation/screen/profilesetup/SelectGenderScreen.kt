@@ -29,7 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.srisu.srisu.components.ErrorText
+import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 
@@ -39,16 +39,22 @@ enum class Gender {
 
 @Composable
 fun SelectGenderScreen(
-    authViewModel: AuthViewModel,
-    onBackClick: () -> Unit = {}
+    authViewModel: AuthViewModel
 ) {
     val authUiState by authViewModel.authUiState.collectAsState()
 
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    CommonProfileContainerCompo(
+        modifier = Modifier,
+        buttonTitle = "Next",
+        localFocusManager = null,
+        currentStep = authUiState.currentProgressStep,
+        isPrimaryButtonEnabled = authViewModel.isGenderValid(),
+        onNavBack = {
+            authViewModel.navigateBack()
+        },
+        onClickPrimaryButton = {
+            authViewModel.navigateNextScreen(isIncrease = true)
+        },
     ) {
 
         Text(

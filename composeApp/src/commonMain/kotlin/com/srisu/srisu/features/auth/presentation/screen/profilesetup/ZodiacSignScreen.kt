@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.srisu.srisu.components.RoundedButtonCompo
+import com.srisu.srisu.components.RoundedPrimaryButtonCompo
 import com.srisu.srisu.utils.ZodiacUtils
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
@@ -49,7 +49,7 @@ fun ZodiacRevealScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         bottomBar = {
-            RoundedButtonCompo(
+            RoundedPrimaryButtonCompo(
                 modifier = modifier,
                 title = "Next",
                 enabled = true,

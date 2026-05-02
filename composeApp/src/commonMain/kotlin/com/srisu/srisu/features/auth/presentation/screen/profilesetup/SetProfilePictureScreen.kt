@@ -1,32 +1,20 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,28 +38,24 @@ import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.SuccessBottomSheet
-import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.auth.presentation.components.CommonAuthContainerCompo
-import com.srisu.srisu.features.auth.presentation.components.InfoText
-import com.srisu.srisu.features.auth.presentation.components.TitleText
-import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
-import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
-import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.core.permissionmanager.PermissionCallback
 import com.srisu.srisu.core.permissionmanager.PermissionState
 import com.srisu.srisu.core.permissionmanager.PermissionType
 import com.srisu.srisu.core.permissionmanager.createPermissionsManager
+import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
+import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
+import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
+import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
-import com.srisu.srisu.theme.backgroundGray
 
 
 @Composable
 fun SetProfilePictureScreen(
     navController: NavController,
     authViewModel: AuthViewModel,
-    onBackClick: () -> Unit = {}
+    onSetupComplete: () -> Unit
 ) {
     val authUiState by authViewModel.authUiState.collectAsState()
 
@@ -81,12 +65,18 @@ fun SetProfilePictureScreen(
         authUIStates = authUiState
     )
 
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    CommonProfileContainerCompo(
+        modifier = Modifier,
+        buttonTitle = "Complete",
+        localFocusManager = null,
+        currentStep = authUiState.currentProgressStep,
+        isPrimaryButtonEnabled = true,
+        onNavBack = {
+            authViewModel.navigateBack()
+        },
+        onClickPrimaryButton = onSetupComplete,
     ) {
+
 
         Text(
             text = "Put a face to the\nname",
