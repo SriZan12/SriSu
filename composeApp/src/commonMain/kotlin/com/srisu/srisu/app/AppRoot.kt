@@ -87,6 +87,14 @@ private fun resolveStartDestination(session: Session?): Route {
             HomeNavigation.Home
         }
 
-        else -> AuthNavigation.Auth
+        true if session.isProfileComplete == false -> {
+            AuthNavigation.ProfileSetUp
+        }
+
+        else -> {
+            AppLogger.log("SESSION IS NOT VERIFIED")
+            AuthNavigation.PhoneNumberScreen
+        }
     }
+
 }

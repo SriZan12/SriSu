@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -50,17 +48,15 @@ import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.RoundedPrimaryButtonCompo
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
+import com.srisu.srisu.navigation.graph.AuthNavigation
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
-import com.srisu.srisu.navigation.graph.AuthNavigation
 import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.utils.Constants.Auth.OTP_LENGTH
 import com.srisu.srisu.utils.DateTimeUtils.CountdownTimer
 import com.srisu.srisu.utils.formatTime
 import com.srisu.srisu.utils.isInternetAvailable
-import kotlinx.coroutines.delay
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PhoneNumberVerificationScreen(
@@ -69,6 +65,10 @@ fun PhoneNumberVerificationScreen(
 ) {
     val authUIStates by authViewModel.authUiState.collectAsState()
     val localFocusManager = LocalFocusManager.current
+
+    LaunchedEffect(Unit) {
+        AppLogger.log("INSIDE PHONE NUMBER VERIFICATION SCREEN")
+    }
 
     Init(authViewModel = authViewModel)
 
@@ -90,23 +90,41 @@ fun PhoneNumberVerificationScreen(
             authViewModel.updateValidationError(Validation(isOtp = false))
         },
         onOtpComplete = {
-//            if (authViewModel.isOtpValid()) {
-//                authViewModel.verifyOtp {
-            navController.navigate(AuthNavigation.ProfileSetUp)
-//                }
-//            }
+            if (authViewModel.isOtpValid()) {
+                authViewModel.verifyOtp(
+                    onGoToHomeScreen = {
+                        navController.navigate(HomeNavigation.Home) {
+                            popUpTo(AuthNavigation.PhoneNumberScreen) { inclusive = true }
+                        }
+                    },
+                    onGoToProfileSetupScreen = {
+                        navController.navigate(AuthNavigation.ProfileSetUp) {
+                            popUpTo(AuthNavigation.PhoneNumberScreen) { inclusive = true }
+                        }
+                    }
+                )
+            }
         },
         onVerifyClick = {
             localFocusManager.clearFocus(force = true)
 
             if (authViewModel.isOtpValid()) {
-                authViewModel.verifyOtp {
-                    navController.navigate(HomeNavigation.Home)
-                }
+                authViewModel.verifyOtp(
+                    onGoToHomeScreen = {
+                        navController.navigate(HomeNavigation.Home) {
+                            popUpTo(AuthNavigation.PhoneNumberScreen) { inclusive = true }
+                        }
+                    },
+                    onGoToProfileSetupScreen = {
+                        navController.navigate(AuthNavigation.ProfileSetUp) {
+                            popUpTo(AuthNavigation.PhoneNumberScreen) { inclusive = true }
+                        }
+                    }
+                )
             }
         },
         onResendClick = {
-            authViewModel.requestOTP(isNavigateScreen = false)
+            authViewModel.requestOTP{}
             authViewModel.saveOTPTimeStamp()
         },
         onTimerFinished = {
@@ -268,7 +286,6 @@ private fun PhoneNumberVerificationContent(
                     )
                 }
 
-
                 ResendCodeSection(
                     authUIStates = authUIStates,
                     onResendClick = onResendClick,
@@ -280,30 +297,9 @@ private fun PhoneNumberVerificationContent(
 }
 
 @Composable
-private fun BackButton(
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopStart) {
-        IconButton(
-            onClick = onBackClick,
-            modifier = modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Go back",
-                tint = MaterialTheme.colorScheme.onBackground
-            )
-        }
-    }
-
-}
-
-
-@Composable
 private fun OtpHeader(
     countryCode: String,
-    phoneNumber: String = "9863938267"
+    phoneNumber: String
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -322,7 +318,7 @@ private fun OtpHeader(
         Text(
             text = "We sent a 6-digit code to $countryCode\n${phoneNumber.maskPhoneNumber()}",
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
     }
@@ -334,15 +330,6 @@ private fun ResendCodeSection(
     onResendClick: () -> Unit,
     onTimerFinished: () -> Unit
 ) {
-    var isVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        delay(1000L)
-        isVisible = true
-    }
-
-    if (!isVisible) return
-
     val remainingOTPTimestamp = authUIStates.remainingOTPTimestamp
 
     Box(
@@ -399,23 +386,4 @@ private fun String.maskPhoneNumber(): String {
     AppLogger.log("MASKED PHONE NUMER = ${start}•••••${end}")
 
     return "$start•••••$end"
-}
-
-@Preview
-@Composable
-private fun OtpVerificationScreenPreview() {
-    MaterialTheme {
-        PhoneNumberVerificationContent(
-            authUIStates = AuthUIStates(),
-            onBackClick = {},
-            onScreenClick = {},
-            onOtpChange = { _, _ ->
-
-            },
-            onOtpComplete = {},
-            onVerifyClick = {},
-            onResendClick = {},
-            onTimerFinished = {}
-        )
-    }
 }
