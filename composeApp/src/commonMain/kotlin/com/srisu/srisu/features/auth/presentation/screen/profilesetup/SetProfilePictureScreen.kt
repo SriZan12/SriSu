@@ -74,7 +74,9 @@ fun SetProfilePictureScreen(
         onNavBack = {
             authViewModel.navigateBack()
         },
-        onClickPrimaryButton = onSetupComplete,
+        onClickPrimaryButton = {
+            authViewModel.sendSetupProfileRequest()
+        },
     ) {
 
 

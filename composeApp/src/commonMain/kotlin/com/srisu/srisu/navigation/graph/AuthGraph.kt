@@ -1,8 +1,10 @@
 package com.srisu.srisu.navigation.graph
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.screen.profilesetup.ProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.screen.authscreen.PhoneNumberScreen
 import com.srisu.srisu.features.auth.presentation.screen.authscreen.PhoneNumberVerificationScreen
@@ -23,15 +25,19 @@ sealed class AuthNavigation : Route {
 }
 
 fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthViewModel) {
-
     composable<AuthNavigation.PhoneNumberScreen> {
         PhoneNumberScreen(
-            navController = navController,
-            authViewModel = authViewModel
+            authViewModel = authViewModel,
+            onNavToOTPScreen = {
+                navController.navigate(AuthNavigation.PhoneNumberVerificationScreen)
+            }
         )
     }
 
     composable<AuthNavigation.PhoneNumberVerificationScreen> {
+        LaunchedEffect(Unit) {
+            AppLogger.log("NAVIGATING TO THE PHONE NUMBER VERIFICATION SCREEN")
+        }
         PhoneNumberVerificationScreen(
             navController = navController,
             authViewModel = authViewModel
