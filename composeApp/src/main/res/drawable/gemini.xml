@@ -22,13 +22,15 @@
     <clip-path
         android:pathData="M0,0h296v296h-296z"/>
     <path
-        android:pathData="M199,44H97C69.94,44 48,65.94 48,93V195C48,222.06 69.94,244 97,244H199C226.06,244 248,222.06 248,195V93C248,65.94 226.06,44 199,44Z"
-        android:fillColor="#422A41"/>
+        android:strokeWidth="1"
+        android:pathData="M97,44.5H199C225.79,44.5 247.5,66.21 247.5,93V195C247.5,221.79 225.79,243.5 199,243.5H97C70.21,243.5 48.5,221.79 48.5,195V93C48.5,66.21 70.21,44.5 97,44.5Z"
+        android:fillColor="#DE6F79"
+        android:strokeColor="#DE6F79"/>
     <path
         android:strokeWidth="1"
         android:pathData="M199,44.5H97C70.21,44.5 48.5,66.21 48.5,93V195C48.5,221.79 70.21,243.5 97,243.5H199C225.79,243.5 247.5,221.79 247.5,195V93C247.5,66.21 225.79,44.5 199,44.5Z"
-        android:fillColor="#00000000"
-        android:strokeColor="#422A41"/>
+        android:fillColor="#DE6F79"
+        android:strokeColor="#DE6F79"/>
     <path
         android:pathData="M92.57,89.55C93.55,88.02 95.59,87.58 97.12,88.57C97.12,88.57 97.12,88.57 95.33,91.33L93.55,94.1C92.02,93.11 91.58,91.07 92.57,89.55Z"
         android:fillColor="#D4A5A0"/>
@@ -37,7 +39,7 @@
         android:fillColor="#D4A5A0"
         android:fillType="evenOdd"/>
     <path
-        android:pathData="M97.12,199.43C97.12,199.43 97.12,199.43 97.12,199.43Z"
+        android:pathData="M97.12,199.43C97.12,199.43 97.12,199.43 97.12,199.43V199.43Z"
         android:fillColor="#D4A5A0"/>
     <path
         android:pathData="M97.12,199.43C95.59,200.42 93.55,199.98 92.57,198.45C91.58,196.93 92.02,194.89 93.55,193.9L95.33,196.67C97.12,199.43 97.12,199.43 97.12,199.43Z"

@@ -101,16 +101,7 @@ fun AddDOBScreen(
                 authViewModel.updateDOB(dob = formatLocalDate(date = date))
             }
         )
-
-
-        Text(
-            text = "Your zodiac reveal is one tap away ✦",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
+        
     }
 
     AgeConfirmationBottomSheet(
