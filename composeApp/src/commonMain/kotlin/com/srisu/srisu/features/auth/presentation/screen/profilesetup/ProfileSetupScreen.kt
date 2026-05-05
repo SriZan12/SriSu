@@ -91,6 +91,12 @@ private fun ProfileScreenContent(
                 )
             }
 
+            is CustomProfileSetupScreen.SelectRelationshipScreen -> {
+                SelectRelationshipScreen(
+                    authViewModel = authViewModel
+                )
+            }
+
             CustomProfileSetupScreen.SetProfilePictureScreen -> {
                 SetProfilePictureScreen(
                     navController = navController,
@@ -100,7 +106,6 @@ private fun ProfileScreenContent(
                 }
             }
 
-            else -> {}
         }
     }
 }

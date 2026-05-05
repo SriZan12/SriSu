@@ -84,7 +84,7 @@ fun ZodiacRevealScreen(
                 Text(
                     text = "Y O U R  Z O D I A C  S I G N",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 4.sp,
                     textAlign = TextAlign.Center
@@ -100,7 +100,7 @@ fun ZodiacRevealScreen(
                 Text(
                     text = zodiacSign.name,
                     style = MaterialTheme.typography.displaySmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -117,7 +117,7 @@ fun ZodiacRevealScreen(
                 Text(
                     text = zodiacSign.description,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 34.sp,
                     textAlign = TextAlign.Center
@@ -152,7 +152,7 @@ private fun ZodiacTraitChip(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.secondaryContainer,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Visible,

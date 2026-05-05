@@ -66,9 +66,6 @@ fun PhoneNumberVerificationScreen(
     val authUIStates by authViewModel.authUiState.collectAsState()
     val localFocusManager = LocalFocusManager.current
 
-    LaunchedEffect(Unit) {
-        AppLogger.log("INSIDE PHONE NUMBER VERIFICATION SCREEN")
-    }
 
     Init(authViewModel = authViewModel)
 
@@ -260,7 +257,7 @@ private fun PhoneNumberVerificationContent(
 
                 ScreenTopIcon(
                     imageVector = Icons.Outlined.ChatBubbleOutline,
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 OtpHeader(

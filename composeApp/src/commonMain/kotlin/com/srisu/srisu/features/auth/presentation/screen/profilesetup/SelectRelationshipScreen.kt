@@ -50,7 +50,7 @@ fun SelectRelationshipScreen(
 
     CommonProfileContainerCompo(
         modifier = Modifier,
-        buttonTitle = "Looks good, let's go",
+        buttonTitle = "Next",
         localFocusManager = null,
         currentStep = authUiState.currentProgressStep,
         isPrimaryButtonEnabled = authViewModel.isRelationshipValid(),

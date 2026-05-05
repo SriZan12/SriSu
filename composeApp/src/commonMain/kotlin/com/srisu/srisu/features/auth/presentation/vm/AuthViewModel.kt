@@ -533,8 +533,9 @@ class AuthViewModel(
             listOf(
                 CustomProfileSetupScreen.AddFullNameScreen,
                 CustomProfileSetupScreen.AddDOBScreen,
-                CustomProfileSetupScreen.ZodiacScreen,
                 CustomProfileSetupScreen.SelectGenderScreen,
+                CustomProfileSetupScreen.ZodiacScreen,
+                CustomProfileSetupScreen.SelectRelationshipScreen,
                 CustomProfileSetupScreen.SetProfilePictureScreen
             )
         )
@@ -572,8 +573,6 @@ class AuthViewModel(
     fun navigateBack() {
         val state = currentState
         val currentScreen = state.currentScreen
-        val isPhoneNumberVerified = state.session?.isPhoneVerified
-
 
         if (state.screenStack.size >= CustomProfileSetupScreen.screenOrder.size) {
             return
@@ -583,13 +582,6 @@ class AuthViewModel(
         if (currentIndex <= 0) return
 
         val previousScreen = CustomProfileSetupScreen.screenOrder[currentIndex - 1]
-
-        val shouldSkipAddingPreviousScreen = isPhoneNumberVerified == true
-
-        if (shouldSkipAddingPreviousScreen) {
-            updateCurrentScreen()
-            return
-        }
 
         if (previousScreen == CustomProfileSetupScreen.AddDOBScreen) {
             currentState.screenStack.addFirst(CustomProfileSetupScreen.ZodiacScreen)

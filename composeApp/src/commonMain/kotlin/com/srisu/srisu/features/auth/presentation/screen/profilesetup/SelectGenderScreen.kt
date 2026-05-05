@@ -34,7 +34,7 @@ import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 
 enum class Gender {
-    NONE, MALE, FEMALE, OTHERS
+    NONE, MALE, FEMALE,
 }
 
 @Composable
@@ -125,7 +125,7 @@ private fun GenderCard(
         modifier = modifier.height(180.dp),
         shape = RoundedCornerShape(28.dp),
         color = if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         } else {
             MaterialTheme.colorScheme.surface
         },
