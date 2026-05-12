@@ -1,12 +1,7 @@
 package com.srisu.srisu.theme
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 
-//D04D59
-//DE6772
-//DE6F79 -- final color
-//CD6A73
 val primaryLight = Color(0xFFDE6F79)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFB55761)
@@ -226,8 +221,3 @@ val surfaceContainerHighestDarkHighContrast = Color(0xFF4F4444)
 val backgroundGray = Color(0XFFE9E9E9)
 val backgroundGraySecondary = Color(0XFFECECEC)
 val success = Color(0xFF4BB543)
-
-
-
-
-

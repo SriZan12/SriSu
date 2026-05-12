@@ -359,7 +359,7 @@ class SuggestionViewModel(
                 user = sessionId,
                 city = current.selectedCity,
                 country = current.selectedCountry?.name,
-                zodiacSign = current.selectedZodiac?.sign?.uppercase(),
+                zodiacSign = current.selectedZodiac?.name?.uppercase(),
                 minAge = current.minAge,
                 maxAge = current.maxAge
             )

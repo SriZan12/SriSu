@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.graph.Route
 import com.srisu.srisu.navigation.graph.authGraph
@@ -22,7 +23,8 @@ import com.srisu.srisu.navigation.graph.suggestionsGraph
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
-@Composable fun AppNavHost(
+@Composable
+fun AppNavHost(
     navController: NavHostController,
     startDestination: Route,
     session: Session?,
@@ -30,6 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     SharedTransitionLayout {
         val suggestionViewModel = koinViewModel<SuggestionViewModel>()
+        val authViewModel = koinViewModel<AuthViewModel>()
 
         NavHost(
             modifier = modifier,
@@ -52,7 +55,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
         ) {
-            authGraph(navController = navController)
+            authGraph(navController = navController, authViewModel = authViewModel)
 
             homeGraph()
 

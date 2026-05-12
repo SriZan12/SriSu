@@ -9,15 +9,16 @@ import com.srisu.srisu.features.auth.data.remote.dto.ProfileSetupDTO
 import com.srisu.srisu.features.auth.data.local.datastore.AuthDataStore
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.auth.presentation.components.CustomAuthScreen
+import com.srisu.srisu.features.auth.presentation.components.CustomProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.components.OTPScreenMetadata
-import com.srisu.srisu.features.auth.presentation.screen.Gender
+import com.srisu.srisu.features.auth.presentation.screen.profilesetup.Gender
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.core.session.setUserWholeCredentials
 import com.srisu.srisu.core.session.toSession
+import com.srisu.srisu.features.auth.presentation.state.RelationshipSituation
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.Auth.FULL_NAME_PROGRESS
 import com.srisu.srisu.utils.Constants.Auth.OTP_WAITING_TIME
@@ -33,10 +34,9 @@ import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.time.ExperimentalTime
 
@@ -132,19 +132,7 @@ class AuthViewModel(
             null
         }
 
-        if (session == null) {
-            updateProgress(isIncrease = true)
-            return null
-        }
-
-        when (session.isPhoneVerified) {
-            true -> updateProgress(isIncrease = true, step = FULL_NAME_PROGRESS)
-            false -> updateProgress(
-                isIncrease = true,
-                step = PHONE_NUMBER_VERIFICATION_PROGRESS
-            )
-            null -> updateProgress(isIncrease = true)
-        }
+        updateProgress(isIncrease = true)
 
         updateSession(session)
         AppLogger.log("SESSION = ${runCatching { Json.encodeToString(session) }.getOrNull()}")
@@ -262,13 +250,17 @@ class AuthViewModel(
         updateState { it.copy(gender = gender) }
     }
 
+    fun updateRelationshipSituation(situation: RelationshipSituation) {
+        updateState { it.copy(relationshipSituation = situation) }
+    }
+
     fun updateValidationError(validation: Validation) {
         updateState { it.copy(validationError = validation) }
     }
 
     // API calls and local persistence
 
-    fun requestOTP(isNavigateScreen: Boolean = true) {
+    fun requestOTP(onNavToOTPScreen: () -> Unit) {
         if (!isInternetAvailable()) {
             showNoInternetConnection(isOffline = true)
             return
@@ -292,11 +284,13 @@ class AuthViewModel(
 
             saveSession(credentials = credentials, sessionKey = SESSION_KEY)
 
-            if (isNavigateScreen) {
-                navigateNextScreen()
-            }
-
             idleScreen()
+
+            resetOTPTimeStamp()
+
+            onNavToOTPScreen()
+
+            //TODO: As of now we are out of twilio free requests, we will resume this in prodiction
 
             /*
             authRepository.sendOTPRequest(authDTO = authDTO)
@@ -326,58 +320,85 @@ class AuthViewModel(
         }
     }
 
+    fun resetOTPTimeStamp() {
+        launchSafely {
+            if (currentState.remainingOTPTimestamp != null) {
+                dataStoreRepo.deleteOTPTimeStamp()
+            } else {
+                saveOTPTimeStamp()
+            }
+        }
+    }
+
     @OptIn(ExperimentalTime::class)
     fun saveOTPTimeStamp() {
         launchSafely {
             if (currentState.remainingOTPTimestamp != null) return@launchSafely
 
-            dataStoreRepo.saveOTPTimestamp(
-                otpScreenMetadata = OTPScreenMetadata(
-                    countryCode = currentState.countryCode,
-                    countryPrefix = currentState.countryPrefix,
-                    phoneNumber = currentState.phoneNumber,
-                    saveTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
-                    totalTime = OTP_WAITING_TIME
-                )
-            )
+            persistOTPTimeStamp()
+            updateOTPRemainingTime(OTP_WAITING_TIME)
         }
+    }
+
+
+    @OptIn(ExperimentalTime::class)
+    private suspend fun persistOTPTimeStamp(
+        countryCode: String = currentState.countryCode,
+        countryPrefix: String = currentState.countryPrefix,
+        phoneNumber: String = currentState.phoneNumber,
+        saveTime: Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
+    ) {
+        dataStoreRepo.saveOTPTimestamp(
+            otpScreenMetadata = OTPScreenMetadata(
+                countryCode = countryCode,
+                countryPrefix = countryPrefix,
+                phoneNumber = phoneNumber,
+                saveTime = saveTime,
+                totalTime = OTP_WAITING_TIME
+            )
+        )
     }
 
     @OptIn(ExperimentalTime::class)
     fun getRemainingOTPTimeStamp() {
         launchSafely {
-            dataStoreRepo.getOTPTimestamp().collectLatest { otpTimestamp ->
-                val currentTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
+            val otpTimestamp = dataStoreRepo.getOTPTimestamp().first()
+            val currentTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
 
-                val timeRemaining = otpTimestamp?.let {
-                    val elapsedTime = currentTime - it.saveTime
-                    (it.totalTime - elapsedTime).coerceAtLeast(0L)
-                }
+            if (otpTimestamp == null) {
+                persistOTPTimeStamp(saveTime = currentTime)
+                updateOTPRemainingTime(OTP_WAITING_TIME)
+                return@launchSafely
+            }
 
-                updateOTPRemainingTime(timeRemaining)
+            val elapsedTime = currentTime - otpTimestamp.saveTime
+            val timeRemaining = (otpTimestamp.totalTime - elapsedTime).coerceAtLeast(0L)
+            val remainingTimeToShow = if (timeRemaining == 0L) OTP_WAITING_TIME else timeRemaining
 
-                otpTimestamp?.countryCode?.let { code ->
-                    updateCountry(
-                        code = code,
-                        prefix = otpTimestamp.countryPrefix
-                    )
-                }
+            if (timeRemaining == 0L) {
+                persistOTPTimeStamp(
+                    countryCode = otpTimestamp.countryCode,
+                    countryPrefix = otpTimestamp.countryPrefix,
+                    phoneNumber = otpTimestamp.phoneNumber,
+                    saveTime = currentTime
+                )
+            }
 
-                otpTimestamp?.phoneNumber?.let { phoneNumber ->
-                    updatePhoneNumber(
-                        phoneNumber = phoneNumber,
-                        showValidationMessage = {}
-                    )
-                }
-
-                if (timeRemaining == null || timeRemaining == 0L) {
-                    saveOTPTimeStamp()
-                }
+            updateState {
+                it.copy(
+                    remainingOTPTimestamp = remainingTimeToShow,
+                    countryCode = otpTimestamp.countryCode,
+                    countryPrefix = otpTimestamp.countryPrefix,
+                    phoneNumber = otpTimestamp.phoneNumber
+                )
             }
         }
     }
 
-    fun verifyOtp(onGoToHomeScreen: () -> Unit) {
+    fun verifyOtp(
+        onGoToHomeScreen: () -> Unit,
+        onGoToProfileSetupScreen: () -> Unit
+    ) {
         if (!isInternetAvailable()) {
             showNoInternetConnection(isOffline = true)
             return
@@ -394,6 +415,7 @@ class AuthViewModel(
                 phoneNumber = phoneNumber,
                 otp = otpCode
             ).onSuccess { response, _ ->
+
                 val session = response?.user?.toSession(
                     access = response.tokens?.access,
                     refresh = response.tokens?.refresh,
@@ -407,7 +429,8 @@ class AuthViewModel(
                 onOtpVerifiedSuccess(
                     isPhoneNumberVerified = response?.user?.isPhoneVerified == true,
                     isProfileCompleted = response?.user?.isProfileComplete == true,
-                    onGoToHomeScreen = onGoToHomeScreen
+                    onGoToHomeScreen = onGoToHomeScreen,
+                    onGoToProfileSetupScreen = onGoToProfileSetupScreen
                 )
 
                 idleScreen()
@@ -420,18 +443,17 @@ class AuthViewModel(
     private fun onOtpVerifiedSuccess(
         isPhoneNumberVerified: Boolean,
         isProfileCompleted: Boolean,
-        onGoToHomeScreen: () -> Unit
+        onGoToHomeScreen: () -> Unit,
+        onGoToProfileSetupScreen: () -> Unit
     ) {
         if (isPhoneNumberVerified && isProfileCompleted) {
             onGoToHomeScreen()
             return
         }
 
-        if (isPhoneNumberVerified) {
-            removeScreen(CustomAuthScreen.AddPhoneNumberScreen)
-            removeScreen(CustomAuthScreen.PhoneNumberVerificationScreen)
-            checkSession()
-            updateCurrentScreen()
+        if (isPhoneNumberVerified && !isProfileCompleted) {
+            onGoToProfileSetupScreen()
+            return
         }
     }
 
@@ -462,7 +484,7 @@ class AuthViewModel(
                 mood = "HAPPY",
                 country = country?.name,
                 profilePhoto = profilePicturePath,
-                zodiacSign = state.zodiacSign?.sign?.uppercase()
+                zodiacSign = state.zodiacSign?.name?.uppercase()
             )
 
             val fileManager = FileManager()
@@ -478,6 +500,11 @@ class AuthViewModel(
                 profileSetupDTO = profileDTO,
                 mediaFile = mediaFile
             ).onSuccess { response, _ ->
+
+                AppLogger.log("INSIDE SEND PROFILE REQUEST")
+                AppLogger.log("CREDENTIALS = ${currentState.session?.access}")
+                AppLogger.log("CREDENTIALS = ${currentState.session?.refresh}")
+
                 val credentials = setUserWholeCredentials(
                     access = currentState.session?.access,
                     refresh = currentState.session?.refresh,
@@ -499,52 +526,19 @@ class AuthViewModel(
     // Navigation
 
     private fun initializeAuthNavigationFlow() {
-        val session = currentState.session
-        val isPhoneNumberVerified = session?.isPhoneVerified
-        val screenStack = ArrayDeque<CustomAuthScreen>()
-
+        val screenStack = ArrayDeque<CustomProfileSetupScreen>()
         clearAuthScreenStack()
 
-        when {
-            isPhoneNumberVerified == true -> {
-                screenStack.addAll(
-                    listOf(
-                        CustomAuthScreen.AddFullNameScreen,
-                        CustomAuthScreen.AddDOBScreen,
-                        CustomAuthScreen.ZodiacScreen,
-                        CustomAuthScreen.SelectGenderScreen,
-                        CustomAuthScreen.SetProfilePictureScreen
-                    )
-                )
-            }
-
-            session != null && isPhoneNumberVerified == false -> {
-                screenStack.addAll(
-                    listOf(
-                        CustomAuthScreen.PhoneNumberVerificationScreen,
-                        CustomAuthScreen.AddFullNameScreen,
-                        CustomAuthScreen.AddDOBScreen,
-                        CustomAuthScreen.ZodiacScreen,
-                        CustomAuthScreen.SelectGenderScreen,
-                        CustomAuthScreen.SetProfilePictureScreen
-                    )
-                )
-            }
-
-            else -> {
-                screenStack.addAll(
-                    listOf(
-                        CustomAuthScreen.AddPhoneNumberScreen,
-                        CustomAuthScreen.PhoneNumberVerificationScreen,
-                        CustomAuthScreen.AddFullNameScreen,
-                        CustomAuthScreen.AddDOBScreen,
-                        CustomAuthScreen.ZodiacScreen,
-                        CustomAuthScreen.SelectGenderScreen,
-                        CustomAuthScreen.SetProfilePictureScreen
-                    )
-                )
-            }
-        }
+        screenStack.addAll(
+            listOf(
+                CustomProfileSetupScreen.AddFullNameScreen,
+                CustomProfileSetupScreen.AddDOBScreen,
+                CustomProfileSetupScreen.ZodiacScreen,
+                CustomProfileSetupScreen.SelectGenderScreen,
+                CustomProfileSetupScreen.SelectRelationshipScreen,
+                CustomProfileSetupScreen.SetProfilePictureScreen
+            )
+        )
 
         updateState { it.copy(screenStack = screenStack) }
         updateCurrentScreen()
@@ -558,17 +552,13 @@ class AuthViewModel(
         updateState {
             it.copy(
                 currentScreen = it.screenStack.firstOrNull()
-                    ?: CustomAuthScreen.SelectGenderScreen
+                    ?: CustomProfileSetupScreen.SelectGenderScreen
             )
         }
     }
 
     private fun removeCurrentScreen() {
         currentState.screenStack.removeFirstOrNull()
-    }
-
-    private fun removeScreen(screen: CustomAuthScreen) {
-        currentState.screenStack.remove(screen)
     }
 
     fun navigateNextScreen(isIncrease: Boolean = true) {
@@ -583,35 +573,18 @@ class AuthViewModel(
     fun navigateBack() {
         val state = currentState
         val currentScreen = state.currentScreen
-        val isPhoneNumberVerified = state.session?.isPhoneVerified
 
-        if (currentScreen == CustomAuthScreen.PhoneNumberVerificationScreen) {
-            return
-        }
-
-        if (state.screenStack.size >= CustomAuthScreen.screenOrder.size) {
+        if (state.screenStack.size >= CustomProfileSetupScreen.screenOrder.size) {
             return
         }
 
         val currentIndex = getCurrentScreenIndex(currentScreen)
         if (currentIndex <= 0) return
 
-        val previousScreen = CustomAuthScreen.screenOrder[currentIndex - 1]
+        val previousScreen = CustomProfileSetupScreen.screenOrder[currentIndex - 1]
 
-        val shouldSkipAddingPreviousScreen =
-            isPhoneNumberVerified == true &&
-                    (
-                            previousScreen == CustomAuthScreen.PhoneNumberVerificationScreen ||
-                                    previousScreen == CustomAuthScreen.AddPhoneNumberScreen
-                            )
-
-        if (shouldSkipAddingPreviousScreen) {
-            updateCurrentScreen()
-            return
-        }
-
-        if (previousScreen == CustomAuthScreen.AddDOBScreen) {
-            currentState.screenStack.addFirst(CustomAuthScreen.ZodiacScreen)
+        if (previousScreen == CustomProfileSetupScreen.AddDOBScreen) {
+            currentState.screenStack.addFirst(CustomProfileSetupScreen.ZodiacScreen)
             currentState.screenStack.addFirst(previousScreen)
             updateProgress(isIncrease = false)
             updateProgress(isIncrease = false)
@@ -623,14 +596,14 @@ class AuthViewModel(
         updateCurrentScreen()
     }
 
-    private fun getCurrentScreenIndex(currentScreen: CustomAuthScreen): Int {
+    private fun getCurrentScreenIndex(currentScreen: CustomProfileSetupScreen): Int {
         val isCurrentScreenGender =
-            currentState.currentScreen == CustomAuthScreen.SelectGenderScreen
+            currentState.currentScreen == CustomProfileSetupScreen.SelectGenderScreen
 
         return if (!isCurrentScreenGender) {
-            CustomAuthScreen.screenOrder.indexOf(currentScreen)
+            CustomProfileSetupScreen.screenOrder.indexOf(currentScreen)
         } else {
-            CustomAuthScreen.screenOrder.indexOf(CustomAuthScreen.ZodiacScreen)
+            CustomProfileSetupScreen.screenOrder.indexOf(CustomProfileSetupScreen.ZodiacScreen)
         }
     }
 
@@ -763,6 +736,20 @@ class AuthViewModel(
                 Validation(
                     validationMessage = "Please choose your gender!",
                     isGender = true
+                )
+            )
+            false
+        } else {
+            true
+        }
+    }
+
+    fun isRelationshipValid(): Boolean {
+        return if (currentState.relationshipSituation == RelationshipSituation.NOTHING) {
+            updateValidationError(
+                Validation(
+                    validationMessage = "Please choose your relationship status!",
+                    isRelationship = true
                 )
             )
             false
