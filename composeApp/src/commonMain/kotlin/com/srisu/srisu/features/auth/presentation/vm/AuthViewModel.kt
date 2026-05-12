@@ -533,8 +533,8 @@ class AuthViewModel(
             listOf(
                 CustomProfileSetupScreen.AddFullNameScreen,
                 CustomProfileSetupScreen.AddDOBScreen,
-                CustomProfileSetupScreen.SelectGenderScreen,
                 CustomProfileSetupScreen.ZodiacScreen,
+                CustomProfileSetupScreen.SelectGenderScreen,
                 CustomProfileSetupScreen.SelectRelationshipScreen,
                 CustomProfileSetupScreen.SetProfilePictureScreen
             )

@@ -38,6 +38,7 @@ import com.srisu.srisu.utils.ZodiacUtils
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.zodiac_bg
+import srisu.composeapp.generated.resources.zodiac_bg_copy
 
 @Composable
 fun ZodiacRevealScreen(
@@ -62,7 +63,7 @@ fun ZodiacRevealScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             Image(
-                painter = painterResource(Res.drawable.zodiac_bg),
+                painter = painterResource(Res.drawable.zodiac_bg_copy),
                 contentDescription = "Zodiac background",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
