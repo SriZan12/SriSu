@@ -46,6 +46,7 @@ import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.components.SuccessDialog
+import com.srisu.srisu.features.chat.data.remote.response.ChatRoomItemDto
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomResponse
 import com.srisu.srisu.features.chat.presentation.chat.state.ChatState
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
@@ -62,51 +63,47 @@ import kotlin.collections.orEmpty
 @Composable
 fun ChatRoomScreen(
     viewModel: ChatViewModel,
-    onNavigateToChatScreen: (ChatRoomResponse.Data.ChatRoom?) -> Unit
+    onNavigateToChatScreen: (ChatRoomItemDto) -> Unit,
 ) {
-
     val chatState by viewModel.chatState.collectAsStateWithLifecycle()
 
-    HandleUiStates(
-        chatRoomVm = viewModel,
-        chatUiState = chatState
+    HandleChatUiStates(
+        viewModel = viewModel,
+        chatState = chatState,
     )
 
     ChatRoomContent(
         chatState = chatState,
         viewModel = viewModel,
-        onClickChatRoom = onNavigateToChatScreen
+        onClickChatRoom = onNavigateToChatScreen,
     )
 }
 
 @Composable
-private fun HandleUiStates(
-    chatRoomVm: ChatViewModel,
-    chatUiState: ChatState
+private fun HandleChatUiStates(
+    viewModel: ChatViewModel,
+    chatState: ChatState,
 ) {
-
     val isConnected = isInternetAvailable()
-
     var showBottomSheet by remember { mutableStateOf(!isConnected) }
 
     LaunchedEffect(isConnected) {
         showBottomSheet = !isConnected
     }
 
-    when (val baseUIState = chatUiState.baseUIState) {
-
+    when (val baseUIState = chatState.baseUIState) {
         is BaseUIState.Error -> {
             ErrorDialog(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
-                onDismiss = { chatRoomVm.idleScreen() }
+                onDismiss = viewModel::idleScreen,
             )
         }
 
         is BaseUIState.Loading -> {
             LoadingScrim(
-                onDismissRequest = { chatRoomVm.idleScreen() }
+                onDismissRequest = viewModel::idleScreen,
             )
         }
 
@@ -114,7 +111,7 @@ private fun HandleUiStates(
             SuccessDialog(
                 successMessage = baseUIState.message,
                 show = true,
-                onDismiss = { chatRoomVm.idleScreen() }
+                onDismiss = viewModel::idleScreen,
             )
         }
 
@@ -130,8 +127,8 @@ private fun HandleUiStates(
             show = showBottomSheet,
             onDismiss = {
                 showBottomSheet = false
-                chatRoomVm.idleScreen()
-            }
+                viewModel.idleScreen()
+            },
         )
     }
 }
@@ -140,28 +137,26 @@ private fun HandleUiStates(
 private fun ChatRoomContent(
     chatState: ChatState,
     viewModel: ChatViewModel,
-    onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
+    onClickChatRoom: (ChatRoomItemDto) -> Unit,
 ) {
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             PrimaryToolBar(
                 title = "Chats",
-                onNavigate = {}
+                onNavigate = {},
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) { innerPadding ->
-
         ChatRoomListCompo(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
             chatRoomList = chatState.chatRoomList,
             me = chatState.session?.id,
-            onFetchChatRoom = viewModel::fetchNewChatRooms,
-            onClickChatRoom = onClickChatRoom
+            onFetchChatRoom = viewModel::fetchOlderChatRooms,
+            onClickChatRoom = onClickChatRoom,
         )
     }
 }
@@ -169,32 +164,26 @@ private fun ChatRoomContent(
 @Composable
 private fun ChatRoomListCompo(
     modifier: Modifier = Modifier,
-    chatRoomList: List<ChatRoomResponse.Data.ChatRoom?>,
+    chatRoomList: List<ChatRoomItemDto>,
     onFetchChatRoom: () -> Unit,
     me: Long?,
-    onClickChatRoom: (ChatRoomResponse.Data.ChatRoom?) -> Unit
+    onClickChatRoom: (ChatRoomItemDto) -> Unit,
 ) {
-
     val myId = me?.toString()
     val listState = rememberLazyListState()
-
     var isFetching by remember { mutableStateOf(false) }
 
-    LaunchedEffect(listState, chatRoomList.size) {
-
+    LaunchedEffect(listState) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
-            val lastVisibleItem =
-                layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-
-            lastVisibleItem to layoutInfo.totalItemsCount
+            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleIndex to layoutInfo.totalItemsCount
         }
             .distinctUntilChanged()
-            .collect { (lastVisible, total) ->
-
+            .collect { (lastVisibleIndex, totalCount) ->
                 val shouldFetch =
-                    lastVisible >= total - 3 &&
-                            total > 0 &&
+                    lastVisibleIndex >= totalCount - 3 &&
+                            totalCount > 0 &&
                             !isFetching
 
                 if (shouldFetch) {
@@ -210,36 +199,30 @@ private fun ChatRoomListCompo(
 
     LazyColumn(
         modifier = modifier,
-        state = listState
+        state = listState,
     ) {
-
         items(
             items = chatRoomList,
-            key = { it?.chatRoom?.id ?: it.hashCode() }
-        ) { chatRoom ->
-
-            val otherUser = chatRoom?.otherUser
-            val room = chatRoom?.chatRoom
-
-            val lastMessage =
-                if (room?.lastMessage?.messageType == IMAGE)
-                    "Photo"
-                else
-                    room?.lastMessage?.text.orEmpty()
-
-            val isTyping = isSomeOneElseTyping(
-                me = me,
-                room = room
-            )
+            key = { it.id ?: it.hashCode() },
+        ) { room ->
+            val lastMessageText = room.lastMessage?.let { message ->
+                if (message.messageType == IMAGE) "Photo" else message.text.orEmpty()
+            }.orEmpty()
 
             ChatRoomItem(
-                avatarUrl = otherUser?.profilePhoto,
-                name = otherUser?.fullName,
-                isTyping = isTyping,
-                lastMessage = lastMessage,
-                time = getChatTimestamp(room?.lastMessage?.timestamp),
-                unreadCount = getUnReadCount(myId, room),
-                onClick = { onClickChatRoom(chatRoom) }
+                avatarUrl = room.otherUser?.profilePhoto,
+                name = room.otherUser?.fullName,
+                isTyping = isSomeoneElseTyping(
+                    me = me,
+                    room = room,
+                ),
+                lastMessage = lastMessageText,
+                time = getChatTimestamp(room.updatedAt),
+                unreadCount = getUnreadCount(
+                    myId = myId,
+                    room = room,
+                ),
+                onClick = { onClickChatRoom(room) },
             )
 
             HorizontalDivider()
@@ -257,17 +240,15 @@ fun ChatRoomItem(
     unreadCount: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
-    isTyping: Boolean
+    isTyping: Boolean,
 ) {
-
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-
         AsyncImage(
             model = ImageRequest.Builder(LocalPlatformContext.current)
                 .data(avatarUrl)
@@ -277,19 +258,20 @@ fun ChatRoomItem(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(44.dp)
-                .clip(CircleShape)
+                .clip(CircleShape),
         )
 
         Spacer(Modifier.width(12.dp))
 
-        Column(Modifier.weight(1f)) {
-
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
             Text(
-                text = name ?: "",
+                text = name.orEmpty(),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(Modifier.height(2.dp))
@@ -297,47 +279,44 @@ fun ChatRoomItem(
             val isUnread = unreadCount.isNotEmpty()
 
             if (isTyping) {
-
                 Text(
                     text = "Typing...",
-                    style = MaterialTheme.typography.bodyMedium
-                        .copy(fontWeight = FontWeight.SemiBold)
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
                 )
-
             } else {
-
                 Text(
                     text = lastMessage,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight =
-                            if (isUnread) FontWeight.SemiBold
-                            else FontWeight.Normal
+                        fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Normal,
                     ),
-                    color =
-                        if (isUnread)
-                            MaterialTheme.colorScheme.onSurface
-                        else
-                            Color.Gray,
+                    color = if (isUnread) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
 
         Spacer(Modifier.width(8.dp))
 
-        Column(horizontalAlignment = Alignment.End) {
-
+        Column(
+            horizontalAlignment = Alignment.End,
+        ) {
             if (!time.isNullOrEmpty()) {
                 Text(
                     text = time,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             if (unreadCount.isNotEmpty()) {
-
                 Spacer(Modifier.height(6.dp))
 
                 Box(
@@ -345,15 +324,14 @@ fun ChatRoomItem(
                         .size(20.dp)
                         .background(
                             color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
+                            shape = CircleShape,
                         ),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
-
                     Text(
                         text = unreadCount,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
@@ -361,38 +339,25 @@ fun ChatRoomItem(
     }
 }
 
-private fun getUnReadCount(
+private fun getUnreadCount(
     myId: String?,
-    room: ChatRoomResponse.Data.ChatRoom.ChatRoom?,
-
-    ): String {
-    val unreadCount = myId
-        ?.let { room?.unreadCount?.get(it) }
+    room: ChatRoomItemDto,
+): String {
+    return myId
+        ?.let { room.unreadCount[it] }
         ?.takeIf { it > 0 }
         ?.toString()
         .orEmpty()
-
-    return unreadCount
 }
 
-private fun isSomeOneElseTyping(
+private fun isSomeoneElseTyping(
     me: Long?,
-    room: ChatRoomResponse.Data.ChatRoom.ChatRoom?
+    room: ChatRoomItemDto,
 ): Boolean {
-
-    val typingUsers = room
-        ?.isTyping
-        ?.typingData
-        ?.typingUsers
-        .orEmpty()
-
-    val isSomeoneElseTyping = typingUsers.any { (userId, isTyping) ->
-        userId != me.toString() && isTyping
+    return room.isTyping.any { (userId, typing) ->
+        userId != me?.toString() && typing
     }
-
-    return isSomeoneElseTyping
 }
-
 @Preview()
 @Composable
 private fun ChatRoomItemPreview() {

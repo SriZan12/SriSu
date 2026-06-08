@@ -133,8 +133,9 @@ import com.srisu.srisu.components.ImageViewerScreen
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.SuccessDialog
+import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.chat.data.remote.dto.ChatMessage
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.chat.data.remote.response.ChatRoomsData
 import com.srisu.srisu.features.chat.presentation.chat.state.ChatState
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.utils.Constants.ChatConstants.DELETE_FOR_EVERYONE
@@ -151,36 +152,50 @@ import kotlin.random.Random
 typealias reaction = String
 typealias messageId = Long?
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
-    onNavBack: () -> Unit
+    onNavBack: () -> Unit,
+    chatRoomData: String?,
+    session: Session?,
 ) {
-
     val chatState by viewModel.chatState.collectAsState()
+
+    Initialization(
+        chatViewModel = viewModel,
+        session = session,
+        chatRoomData = chatRoomData
+    )
 
     HandleUiStates(
         chatRoomVm = viewModel,
-        chatUiState = chatState
+        chatUiState = chatState,
     )
 
-    ChatScaffold(
+    ChatContent(
         chatState = chatState,
         viewModel = viewModel,
-        onNavBack = onNavBack
-
+        onNavBack = onNavBack,
     )
+}
 
-
+@Composable
+private fun Initialization(
+    chatViewModel: ChatViewModel,
+    session: Session?,
+    chatRoomData: String?
+) {
+    LaunchedEffect(chatViewModel) {
+        chatViewModel.updateSession(session = session)
+        chatViewModel.setChatRoomData(chatRoomData = chatRoomData)
+    }
 }
 
 @Composable
 private fun HandleUiStates(
     chatRoomVm: ChatViewModel,
-    chatUiState: ChatState
+    chatUiState: ChatState,
 ) {
-
     val isConnected = isInternetAvailable()
     var showBottomSheet by remember { mutableStateOf(!isConnected) }
 
@@ -194,19 +209,13 @@ private fun HandleUiStates(
                 title = baseUIState.errorType,
                 errorMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    chatRoomVm.idleScreen()
-                },
+                onDismiss = chatRoomVm::idleScreen,
             )
         }
 
         is BaseUIState.Loading -> {
-            AppLogger.log("I am loading....")
-
             LoadingScrim(
-                onDismissRequest = {
-                    chatRoomVm.idleScreen()
-                }
+                onDismissRequest = chatRoomVm::idleScreen,
             )
         }
 
@@ -214,9 +223,7 @@ private fun HandleUiStates(
             SuccessDialog(
                 successMessage = baseUIState.message,
                 show = true,
-                onDismiss = {
-                    chatRoomVm.idleScreen()
-                }
+                onDismiss = chatRoomVm::idleScreen,
             )
         }
 
@@ -224,9 +231,7 @@ private fun HandleUiStates(
             showBottomSheet = baseUIState.isOffline
         }
 
-        is BaseUIState.Idle -> {
-            Unit
-        }
+        is BaseUIState.Idle -> Unit
     }
 
     if (showBottomSheet) {
@@ -235,173 +240,151 @@ private fun HandleUiStates(
             onDismiss = {
                 showBottomSheet = false
                 chatRoomVm.idleScreen()
-            }
+            },
         )
     }
 }
 
 @Composable
-private fun ChatScaffold(
+private fun ChatContent(
     chatState: ChatState,
     viewModel: ChatViewModel,
-    onNavBack: () -> Unit
+    onNavBack: () -> Unit,
 ) {
     val showImageScreen = chatState.showImageScreen
 
-    if (showImageScreen.show && !showImageScreen.images.isNullOrEmpty()) {
+    if (showImageScreen.show && showImageScreen.images.isNotEmpty()) {
         ImageViewerScreen(
             images = showImageScreen.images,
-            startIndex = 0,
+            startIndex = showImageScreen.startingIndex,
             onDismiss = {
                 viewModel.updateShowImageScreen(
                     show = false,
                     images = emptyList(),
-                    startingIndex = showImageScreen.startingIndex
+                    startingIndex = 0,
                 )
-            }
+            },
         )
-    } else {
-        val listState = rememberLazyListState()
-        val inputFocusRequester = remember { FocusRequester() }
-        var openGallery by remember { mutableStateOf(false) }
+        return
+    }
 
+    val listState = rememberLazyListState()
+    val inputFocusRequester = remember { FocusRequester() }
+    var openGallery by remember { mutableStateOf(false) }
 
-        // Auto-scroll to bottom when new messages arrive
-        LaunchedEffect(key1 = chatState.chatMessages?.size) {
-            chatState.chatMessages?.let {
-                if (it.isNotEmpty()) {
-                    listState.animateScrollToItem(0)
-                    viewModel.sendMessageDeliveredRequest()
-                    viewModel.sendMessageReadRequest()
-                }
-            }
+    LaunchedEffect(chatState.chatMessages.size, chatState.chatRoomData?.id) {
+        if (chatState.chatMessages.isNotEmpty() && chatState.chatRoomData?.id != null) {
+            listState.animateScrollToItem(0)
+            viewModel.sendMessageDeliveredRequest()
+            viewModel.sendMessageReadRequest()
         }
+    }
 
-        Scaffold(
-            topBar = {
-                ChatTopBar(
-                    chatState = chatState,
-                    onBack = { onNavBack() },
-                    onCall = { },
-                    onVideoCall = { }
-                )
-            },
-            bottomBar = {
-                ChatInputBar(
-                    value = chatState.messageInput,
-                    onValueChange = { viewModel.onMessageInputChanged(it) },
-                    onSend = {
-                        if (chatState.messageInput.text.isNotBlank()) {
-                            if (chatState.isEditMessage) {
-                                viewModel.editMessage(message = chatState.selectedMessageForAction)
-                            } else {
-                                viewModel.sendTextMessage()
-                            }
+    Scaffold(
+        topBar = {
+            ChatTopBar(
+                chatState = chatState,
+                onBack = onNavBack,
+                onCall = {},
+                onVideoCall = {},
+            )
+        },
+        bottomBar = {
+            ChatInputBar(
+                value = chatState.messageInput,
+                onValueChange = viewModel::onMessageInputChanged,
+                onSend = {
+                    if (chatState.messageInput.text.isNotBlank()) {
+                        if (chatState.isEditMessage) {
+                            viewModel.editMessage(chatState.selectedMessageForAction)
+                        } else {
+                            viewModel.sendTextMessage()
                         }
-                    },
-                    onCancelEdit = {
-                        viewModel.updateIsEditMessage(isEditMessage = false)
-                        viewModel.setReplyMessage(chatMessage = null, isOn = false)
-                        inputFocusRequester.freeFocus()
-                        viewModel.onMessageInputChanged(value = TextFieldValue())
-                    },
-
-                    onClickedMedia = {
-                        if (!openGallery) {
-                            openGallery = true
-                        }
-                    },
-
-                    isEditing = chatState.isEditMessage,
-                    focusRequester = inputFocusRequester,
-                    isReplying = chatState.replyMessage,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .imePadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-        ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)) {
-
-//            FloatingHearts()
-
-                Column(
-                    modifier = Modifier
-                ) {
-
-                    ChatMessagesList(
-                        messages = chatState.chatMessages ?: emptyList(),
-                        currentUserId = chatState.session?.id,
-                        listState = listState,
-                        selectedMessageId = chatState.selectedMessageIdForActions,
-                        onMessageLongClick = { id, msg ->
-                            viewModel.showActionsForMessage(
-                                messageId = id,
-                                message = msg
-                            )
-                        },
-                        onDismissActions = viewModel::dismissActions,
-                        onEdit = { msg ->
-                            viewModel.setMessageInputText(msg.text.orEmpty())
-                            viewModel.updateIsEditMessage(true)
-                            inputFocusRequester.requestFocus()
-                        },
-                        onDelete = { deleteOption, messageId ->
-                            viewModel.deleteMessage(
-                                deleteOption = deleteOption,
-                                messageId = messageId
-                            )
-                        },
-                        onFetchOlder = viewModel::fetchOlderMessages,
-                        onReactionSelected = { reaction, messageId ->
-                            viewModel.reactToMessage(
-                                reaction = reaction,
-                                messageId = messageId
-                            )
-                        },
-                        onReplyMessage = { chatMessage ->
-                            viewModel.setReplyMessage(chatMessage = chatMessage, isOn = true)
-                            inputFocusRequester.requestFocus()
-                        },
-                        onPhotoClick = { images, startingIndex ->
-                            viewModel.updateShowImageScreen(
-                                show = true,
-                                images = images,
-                                startingIndex = startingIndex
-                            )
-                        },
-                        onMessageRepliedClicked = { id ->
-                            id?.let {
-//                                viewModel.onReplyBubbleClicked(messageId = id)
-                            }
-                        }
+                    }
+                },
+                onCancelEdit = {
+                    viewModel.updateIsEditMessage(false)
+                    viewModel.setReplyMessage(chatMessage = null, isOn = false)
+                    inputFocusRequester.freeFocus()
+                    viewModel.onMessageInputChanged(TextFieldValue())
+                },
+                onClickedMedia = {
+                    if (!openGallery) {
+                        openGallery = true
+                    }
+                },
+                isEditing = chatState.isEditMessage,
+                focusRequester = inputFocusRequester,
+                isReplying = chatState.replyMessage,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            ChatMessagesList(
+                messages = chatState.chatMessages,
+                currentUserId = chatState.session?.id,
+                listState = listState,
+                selectedMessageId = chatState.selectedMessageIdForActions,
+                onMessageLongClick = { id, message ->
+                    viewModel.showActionsForMessage(
+                        messageId = id,
+                        message = message,
                     )
-
-                }
-
-                if (openGallery) {
-                    MediaCompo(
-                        onResult = { uris ->
-
-                            viewModel.updateSelectedPhotos(
-                                photos = uris
-                            )
-
-                            viewModel.uploadMedias()
-                            openGallery = false
-
-                        },
-                        onDismiss = {
-//                            viewModel.updateSelectedPhotos(null)
-                            openGallery = false
-                        }
+                },
+                onDismissActions = viewModel::dismissActions,
+                onEdit = { message ->
+                    viewModel.setMessageInputText(message.text.orEmpty())
+                    viewModel.updateIsEditMessage(true)
+                    inputFocusRequester.requestFocus()
+                },
+                onDelete = { deleteOption, messageId ->
+                    viewModel.deleteMessage(
+                        deleteOption = deleteOption,
+                        messageId = messageId,
                     )
-                }
+                },
+                onFetchOlder = viewModel::fetchOlderMessages,
+                onReactionSelected = { reaction, messageId ->
+                    viewModel.reactToMessage(
+                        reaction = reaction,
+                        messageId = messageId,
+                    )
+                },
+                onReplyMessage = { message ->
+                    viewModel.setReplyMessage(chatMessage = message, isOn = true)
+                    inputFocusRequester.requestFocus()
+                },
+                onPhotoClick = { images, startingIndex ->
+                    viewModel.updateShowImageScreen(
+                        show = true,
+                        images = images,
+                        startingIndex = startingIndex,
+                    )
+                },
+                onMessageRepliedClicked = { /* future scroll-to-replied-message */ },
+            )
 
-
+            if (openGallery) {
+                MediaCompo(
+                    onResult = { uris ->
+                        viewModel.updateSelectedPhotos(uris)
+                        viewModel.uploadMedias()
+                        openGallery = false
+                    },
+                    onDismiss = {
+                        openGallery = false
+                    },
+                )
             }
         }
     }
@@ -409,7 +392,7 @@ private fun ChatScaffold(
 
 @Composable
 private fun ChatMessagesList(
-    messages: List<ChatMessage?>,
+    messages: List<ChatMessage>,
     currentUserId: Long?,
     listState: LazyListState,
     selectedMessageId: Long?,
@@ -418,14 +401,12 @@ private fun ChatMessagesList(
     onEdit: (ChatMessage) -> Unit,
     onDelete: (String, Long?) -> Unit,
     onFetchOlder: () -> Unit,
-    onReactionSelected: (reaction, messageId) -> Unit,
+    onReactionSelected: (String, Long?) -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit,
-    onMessageRepliedClicked: (messageId) -> Unit,
-    modifier: Modifier = Modifier
+    onPhotoClick: (List<String?>, Int) -> Unit,
+    onMessageRepliedClicked: (Long?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-
-    // Prevent multiple triggers
     var isFetchingOlder by remember { mutableStateOf(false) }
 
     LaunchedEffect(listState) {
@@ -437,21 +418,17 @@ private fun ChatMessagesList(
         }
             .distinctUntilChanged()
             .collect { (firstVisibleIndex, totalItems) ->
-
-                // We are in reverseLayout, so the oldest messages are at the top (index = last in normal list)
-                val shouldFetchOlder = firstVisibleIndex <= 2 && // small threshold
+                val shouldFetchOlder = firstVisibleIndex <= 2 &&
                         totalItems > 0 &&
                         !isFetchingOlder
 
                 if (shouldFetchOlder) {
                     isFetchingOlder = true
-                    AppLogger.log("Reached top, fetching older messages")
                     onFetchOlder()
                 }
             }
     }
 
-    // Reset flag when new messages arrive
     LaunchedEffect(messages.size) {
         isFetchingOlder = false
     }
@@ -465,25 +442,23 @@ private fun ChatMessagesList(
     ) {
         items(
             items = messages,
-            key = { it?.id ?: it.hashCode() }
+            key = { it.id ?: it.hashCode() },
         ) { message ->
-            message?.let {
-                AnimatedMessageItem(
-                    message = it,
-                    currentUserId = currentUserId,
-                    isOwn = it.senderId == currentUserId,
-                    isActionShown = selectedMessageId == it.id,
-                    onLongClick = { onMessageLongClick(it.id, it) },
-                    onDismissActions = onDismissActions,
-                    onEdit = { onEdit(it) },
-                    onDeleteForMe = { onDelete(DELETE_FOR_ME, it.id) },
-                    onDeleteForEveryone = { onDelete(DELETE_FOR_EVERYONE, it.id) },
-                    onReactionSelected = { reaction -> onReactionSelected(reaction, it.id) },
-                    onReplyMessage = onReplyMessage,
-                    onPhotoClick = onPhotoClick,
-                    onClickMessageReplied = { /* Optional: scroll to message logic */ }
-                )
-            }
+            AnimatedMessageItem(
+                message = message,
+                currentUserId = currentUserId,
+                isOwn = message.senderId == currentUserId,
+                isActionShown = selectedMessageId == message.id,
+                onLongClick = { onMessageLongClick(message.id, message) },
+                onDismissActions = onDismissActions,
+                onEdit = { onEdit(message) },
+                onDeleteForMe = { onDelete(DELETE_FOR_ME, message.id) },
+                onDeleteForEveryone = { onDelete(DELETE_FOR_EVERYONE, message.id) },
+                onReactionSelected = { reaction -> onReactionSelected(reaction, message.id) },
+                onReplyMessage = onReplyMessage,
+                onPhotoClick = onPhotoClick,
+                onClickMessageReplied = onMessageRepliedClicked,
+            )
         }
     }
 }
@@ -502,46 +477,27 @@ private fun AnimatedMessageItem(
     onDeleteForEveryone: () -> Unit,
     onReactionSelected: (String) -> Unit,
     onReplyMessage: (ChatMessage) -> Unit,
-    onClickMessageReplied: (messageId) -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit
+    onClickMessageReplied: (Long?) -> Unit,
+    onPhotoClick: (List<String?>, Int) -> Unit,
 ) {
-//    val hasAnimated = remember(message.id) { mutableStateOf(false) }
     var showReactions by remember { mutableStateOf(false) }
 
-    /**
-     * for now animations are turned off as it resulted in performance of the message loading.
-     * */
-
-
-//    LaunchedEffect(message.id) {
-//        delay(50) // Stagger animations slightly
-//        hasAnimated.value = true
-//    }
-//
-//    AnimatedVisibility(
-//        visible = hasAnimated.value,
-//        enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
-//                slideInVertically(animationSpec = tween(durationMillis = 300)) { it / 8 } +
-//                scaleIn(animationSpec = tween(durationMillis = 300), initialScale = 0.94f),
-//        exit = fadeOut(animationSpec = tween(durationMillis = 150))
-//    ) {
     Box {
-
         SwipeableMessageCompo(
             message = message,
             currentUserId = currentUserId,
             isOwn = isOwn,
             onLongClick = onLongClick,
             onReplyMessage = onReplyMessage,
-            onReactionClick = {
-                showReactions = true
-            },
+            onReactionClick = { showReactions = true },
             onPhotoClick = onPhotoClick,
-            onClickMessageReplied = onClickMessageReplied
+            onClickMessageReplied = onClickMessageReplied,
         )
 
         AnimatedMessageDropDownCompo(
-            modifier = Modifier.align(alignment = if (isOwn) Alignment.TopEnd else Alignment.TopStart),
+            modifier = Modifier.align(
+                if (isOwn) Alignment.TopEnd else Alignment.TopStart
+            ),
             isOwn = isOwn,
             isActionShown = isActionShown,
             onDismissActions = onDismissActions,
@@ -549,7 +505,7 @@ private fun AnimatedMessageItem(
             onDeleteForMe = onDeleteForMe,
             onDeleteForEveryone = onDeleteForEveryone,
             canEdit = isOwn && message.messageType != IMAGE,
-            canCopy = message.messageType == TEXT
+            canCopy = message.messageType == TEXT,
         )
 
         AnimatedReactionPickerOverlay(
@@ -557,10 +513,9 @@ private fun AnimatedMessageItem(
             isOwn = isOwn,
             showReactions = showReactions,
             onReactionSelected = onReactionSelected,
-            onDismiss = { showReactions = false }
+            onDismiss = { showReactions = false },
         )
     }
-//    }
 }
 
 @Composable
@@ -572,14 +527,12 @@ private fun SwipeableMessageCompo(
     onReplyMessage: (ChatMessage) -> Unit,
     onReactionClick: () -> Unit,
     onClickMessageReplied: (Long?) -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>, Int) -> Unit
+    onPhotoClick: (List<String?>, Int) -> Unit,
 ) {
-
     val swipeState = rememberSwipeToDismissBoxState(
         initialValue = SwipeToDismissBoxValue.Settled,
         confirmValueChange = { newValue ->
             when (newValue) {
-
                 SwipeToDismissBoxValue.StartToEnd -> {
                     if (message.deleteFor == null) {
                         onReplyMessage(message)
@@ -588,45 +541,42 @@ private fun SwipeableMessageCompo(
                 }
 
                 SwipeToDismissBoxValue.EndToStart -> false
-
                 SwipeToDismissBoxValue.Settled -> true
             }
-        }
+        },
     )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement =
-            if (isOwn) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
     ) {
-
         SwipeToDismissBox(
             state = swipeState,
             modifier = Modifier.wrapContentWidth(),
             backgroundContent = {},
         ) {
+            when (message.messageType) {
+                TEXT -> {
+                    MessageBubble(
+                        message = message,
+                        currentUserId = currentUserId,
+                        isOwn = isOwn,
+                        onLongClick = onLongClick,
+                        onReactionClick = onReactionClick,
+                        onClickMessageReplied = onClickMessageReplied,
+                    )
+                }
 
-            if (message.messageType == TEXT) {
-
-                MessageBubble(
-                    message = message,
-                    currentUserId = currentUserId,
-                    isOwn = isOwn,
-                    onLongClick = onLongClick,
-                    onReactionClick = onReactionClick,
-                    onClickMessageReplied = onClickMessageReplied
-                )
-
-            } else if (message.messageType == IMAGE) {
-
-                PhotoMessageBubble(
-                    message = message,
-                    currentUserId = currentUserId,
-                    isOwn = isOwn,
-                    onLongClick = onLongClick,
-                    onReactionClick = onReactionClick,
-                    onPhotoClick = onPhotoClick
-                )
+                IMAGE -> {
+                    PhotoMessageBubble(
+                        message = message,
+                        currentUserId = currentUserId,
+                        isOwn = isOwn,
+                        onLongClick = onLongClick,
+                        onReactionClick = onReactionClick,
+                        onPhotoClick = onPhotoClick,
+                    )
+                }
             }
         }
     }
@@ -640,25 +590,22 @@ private fun MessageBubble(
     onLongClick: () -> Unit,
     onReactionClick: () -> Unit,
     onClickMessageReplied: (Long?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
-
     var bubbleWidthPx by remember { mutableStateOf(0) }
 
-    val deleteEntry = message.deleteFor
-        ?.values
-        ?.flatten()
-        ?.firstOrNull { it.option == DELETE_FOR_EVERYONE }
-
-    val isDeletedForEveryone = deleteEntry != null
-
+    val isDeletedForEveryone =
+        message.isDeleted == true && message.deleteOption == DELETE_FOR_EVERYONE
     val finalBackground = if (isDeletedForEveryone) {
         backgroundColor(isOwn).copy(alpha = 0.7f)
     } else {
         backgroundColor(isOwn)
     }
+
+    val displayedReaction = message.reactions[currentUserId?.toString()]
+        ?: message.reactions.values.firstOrNull()
 
     Box(
         modifier = modifier
@@ -668,99 +615,82 @@ private fun MessageBubble(
                     isDeletedForEveryone = isDeletedForEveryone,
                     haptic = haptic,
                     onLongClick = onLongClick,
-                    onClick = {}
+                    onClick = {},
                 )
             )
     ) {
-
         Card(
             shape = bubbleShape(isOwn),
             colors = CardDefaults.cardColors(containerColor = finalBackground),
             modifier = Modifier
                 .widthIn(max = 240.dp)
-                .onSizeChanged { bubbleWidthPx = it.width }
+                .onSizeChanged { bubbleWidthPx = it.width },
         ) {
-
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(12.dp),
             ) {
-
                 if (!isDeletedForEveryone) {
                     message.replyTo?.let {
                         ReplyPreview(
                             reply = it,
-                            isOwn = isOwn
-                        ) { messageId ->
-                            onClickMessageReplied(messageId)
-                        }
+                            isOwn = isOwn,
+                            onClickMessageReplied = onClickMessageReplied,
+                        )
                     }
                 }
 
                 Text(
                     text = messageDisplayText(
-                        deleteEntry = deleteEntry,
+                        isOwn = isOwn,
                         isDeletedForEveryone = isDeletedForEveryone,
                         messageText = message.text,
-                        currentUserId = currentUserId
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = messageTextColor(
                         isOwn = isOwn,
-                        isDeletedForEveryone = isDeletedForEveryone
+                        isDeletedForEveryone = isDeletedForEveryone,
                     ),
-                    fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal
+                    fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal,
                 )
 
                 if (!isDeletedForEveryone) {
-
                     Row(
                         modifier = Modifier.align(Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-
-                        val formattedTime =
-                            formatTimeInHourAndMinute(message.timestamp)
+                        val formattedTime = formatTimeInHourAndMinute(message.timestamp)
 
                         if (formattedTime.isNotEmpty()) {
                             Text(
                                 text = formattedTime,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = if (isOwn)
+                                    color = if (isOwn) {
                                         MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                    else
+                                    } else {
                                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    }
                                 ),
-                                modifier = Modifier.padding(end = 4.dp)
+                                modifier = Modifier.padding(end = 4.dp),
                             )
                         }
 
                         if (isOwn) {
-
                             when {
                                 message.isRead == true -> {
                                     Icon(
                                         Icons.Default.DoneAll,
                                         contentDescription = "Read",
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(16.dp),
                                     )
                                 }
-
-//                                message.isDelivered == true -> {
-//                                    Icon(
-//                                        Icons.Default.DoneAll,
-//                                        contentDescription = "Delivered",
-//                                        tint = MaterialTheme.colorScheme.surfaceContainerLowest,
-//                                        modifier = Modifier.size(16.dp)
-//                                    )
-//                                }
 
                                 else -> {
                                     Icon(
                                         Icons.Default.Done,
                                         contentDescription = "Sent",
                                         tint = MaterialTheme.colorScheme.surfaceContainerLowest,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(16.dp),
                                     )
                                 }
                             }
@@ -770,7 +700,6 @@ private fun MessageBubble(
             }
         }
 
-        val reaction = message.reactions
         val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
 
         if (!isOwn && bubbleWidthPx > 0 && message.deleteFor == null && !isDeletedForEveryone) {
@@ -779,15 +708,15 @@ private fun MessageBubble(
                     .align(Alignment.CenterStart)
                     .offset(x = bubbleWidthDp + 6.dp),
                 onClick = onReactionClick,
-                reaction = reaction?.reaction
+                reaction = displayedReaction,
             )
-        } else if (reaction != null && isOwn && bubbleWidthPx > 0 && !isDeletedForEveryone) {
+        } else if (displayedReaction != null && isOwn && bubbleWidthPx > 0 && !isDeletedForEveryone) {
             ReactionBubble(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = -(bubbleWidthDp + 6.dp)),
                 onClick = onReactionClick,
-                reaction = reaction.reaction
+                reaction = displayedReaction,
             )
         }
     }
@@ -800,11 +729,10 @@ fun PhotoMessageBubble(
     isOwn: Boolean,
     onLongClick: () -> Unit,
     onReactionClick: () -> Unit,
-    onPhotoClick: (List<ChatMessage.Media?>, startingIndex: Int) -> Unit,
-    modifier: Modifier = Modifier
+    onPhotoClick: (List<String?>, Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-
     var bubbleWidthPx by remember { mutableStateOf(0) }
 
     val deleteEntry = message.deleteFor
@@ -813,49 +741,46 @@ fun PhotoMessageBubble(
         ?.firstOrNull { it.option == DELETE_FOR_EVERYONE }
 
     val isDeletedForEveryone = deleteEntry != null
-
-    val alignment = if (isOwn) Alignment.CenterEnd else Alignment.CenterStart
+    val displayedReaction = message.reactions[currentUserId?.toString()]
+        ?: message.reactions.values.firstOrNull()
 
     Box(
-        modifier = modifier
-            .wrapContentWidth(),
+        modifier = modifier.wrapContentWidth(),
     ) {
         Card(
             shape = bubbleShape(isOwn),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             modifier = Modifier
                 .widthIn(max = 260.dp)
-                .onSizeChanged { bubbleWidthPx = it.width }
+                .onSizeChanged { bubbleWidthPx = it.width },
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
-
-                if (message.isLocalOnly && message.uploadingPhotos != null) {
-                    UploadingPhotoGrid(
-                        message.uploadingPhotos,
-                    )
+                if (message.isLocalOnly && message.uploadingPhotos.isNotEmpty()) {
+                    UploadingPhotoGrid(message.uploadingPhotos)
                 } else {
-
                     if (!isDeletedForEveryone) {
-                        message.medias?.let {
-
+                        if (message.medias.isNotEmpty()) {
                             PhotoGrid(
                                 photos = message.medias,
-                                onPhotoClick = { onPhotoClick(message.medias, it) },
-                                onLongClickPhoto = onLongClick
+                                onPhotoClick = { index ->
+                                    onPhotoClick(
+                                        message.medias.map { it.mediaUrl },
+                                        index,
+                                    )
+                                },
+                                onLongClickPhoto = onLongClick,
                             )
                         }
-
                     } else {
                         Text(
                             text = messageDisplayText(
-                                deleteEntry = deleteEntry,
+                                isOwn = isOwn,
                                 isDeletedForEveryone = true,
                                 messageText = "",
-                                currentUserId = currentUserId
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             fontStyle = FontStyle.Italic,
-                            color = messageTextColor(isOwn, true)
+                            color = messageTextColor(isOwn, true),
                         )
                     }
 
@@ -864,16 +789,15 @@ fun PhotoMessageBubble(
 
                         Row(
                             modifier = Modifier.align(Alignment.End),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            val formattedTime =
-                                formatTimeInHourAndMinute(message.timestamp)
+                            val formattedTime = formatTimeInHourAndMinute(message.timestamp)
 
                             Text(
                                 text = formattedTime,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(end = 4.dp)
+                                modifier = Modifier.padding(end = 4.dp),
                             )
 
                             if (isOwn) {
@@ -883,7 +807,7 @@ fun PhotoMessageBubble(
                                             imageVector = Icons.Default.DoneAll,
                                             contentDescription = "Read",
                                             tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(16.dp),
                                         )
                                     }
 
@@ -891,7 +815,7 @@ fun PhotoMessageBubble(
                                         Icon(
                                             imageVector = Icons.Default.DoneAll,
                                             contentDescription = "Delivered",
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(16.dp),
                                         )
                                     }
 
@@ -899,7 +823,7 @@ fun PhotoMessageBubble(
                                         Icon(
                                             imageVector = Icons.Default.Done,
                                             contentDescription = "Sent",
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(16.dp),
                                         )
                                     }
                                 }
@@ -910,29 +834,23 @@ fun PhotoMessageBubble(
             }
         }
 
-        val reaction = message.reactions
         val bubbleWidthDp = with(density) { bubbleWidthPx.toDp() }
 
         if (!isOwn && bubbleWidthPx > 0 && message.deleteFor == null && !isDeletedForEveryone) {
-
             ReactionBubble(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .offset(
-                        x = bubbleWidthDp + 6.dp
-                    ),  // move right from start-aligned bubble,
+                    .offset(x = bubbleWidthDp + 6.dp),
                 onClick = onReactionClick,
-                reaction = reaction?.reaction
+                reaction = displayedReaction,
             )
-        } else if (reaction != null && isOwn && bubbleWidthPx > 0 && !isDeletedForEveryone) {
+        } else if (displayedReaction != null && isOwn && bubbleWidthPx > 0 && !isDeletedForEveryone) {
             ReactionBubble(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(
-                        x = -(bubbleWidthDp + 6.dp)
-                    ),
+                    .offset(x = -(bubbleWidthDp + 6.dp)),
                 onClick = onReactionClick,
-                reaction = reaction.reaction
+                reaction = displayedReaction,
             )
         }
     }
@@ -941,74 +859,71 @@ fun PhotoMessageBubble(
 
 @Composable
 private fun PhotoGrid(
-    photos: List<ChatMessage.Media?>,
+    photos: List<ChatMessage.Media>,
     modifier: Modifier = Modifier,
     onPhotoClick: (Int) -> Unit,
-    onLongClickPhoto: () -> Unit
+    onLongClickPhoto: () -> Unit,
 ) {
     when (photos.size) {
         1 -> {
             AsyncImage(
-                model = photos.first()?.mediaUrl,
+                model = photos.first().mediaUrl,
                 contentDescription = "Photo",
                 contentScale = ContentScale.Crop,
                 modifier = modifier
                     .fillMaxWidth()
-                    .height(height = 220.dp)
-                    .clip(shape = RoundedCornerShape(12.dp))
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .then(
-                        other = clickableModifier(
+                        clickableModifier(
                             isDeletedForEveryone = false,
                             haptic = LocalHapticFeedback.current,
                             onLongClick = onLongClickPhoto,
-                            onClick = { onPhotoClick(0) }
+                            onClick = { onPhotoClick(0) },
                         )
-                    )
+                    ),
             )
         }
 
         else -> {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(count = 2),
-                modifier = modifier
-                    .heightIn(max = 260.dp),
-                verticalArrangement = Arrangement.spacedBy(space = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(space = 4.dp),
-                userScrollEnabled = false
+                columns = GridCells.Fixed(2),
+                modifier = modifier.heightIn(max = 260.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                userScrollEnabled = false,
             ) {
-                itemsIndexed(items = photos.take(4)) { index, photo ->
+                itemsIndexed(photos.take(4)) { index, photo ->
                     Box {
-                        if (photo != null) {
-                            AsyncImage(
-                                model = photo.mediaUrl,
-                                contentDescription = "Photo",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .aspectRatio(ratio = 1f)
-                                    .clip(shape = RoundedCornerShape(size = 10.dp))
-                                    .then(
-                                        other = clickableModifier(
-                                            isDeletedForEveryone = false,
-                                            haptic = LocalHapticFeedback.current,
-                                            onLongClick = onLongClickPhoto,
-                                            onClick = { onPhotoClick(index) }
-                                        )
+                        AsyncImage(
+                            model = photo.mediaUrl,
+                            contentDescription = "Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .then(
+                                    clickableModifier(
+                                        isDeletedForEveryone = false,
+                                        haptic = LocalHapticFeedback.current,
+                                        onLongClick = onLongClickPhoto,
+                                        onClick = { onPhotoClick(index) },
                                     )
-                            )
+                                ),
+                        )
 
-                            if (index == 3 && photos.size > 4) {
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(Color.Black.copy(alpha = 0.45f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "+${photos.size - 4}",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                }
+                        if (index == 3 && photos.size > 4) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "+${photos.size - 4}",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
                             }
                         }
                     }
@@ -1020,45 +935,37 @@ private fun PhotoGrid(
 
 @Composable
 private fun UploadingPhotoGrid(
-    photos: List<ChatMessage.UploadingPhoto?>,
+    photos: List<ChatMessage.UploadingPhoto>,
 ) {
     when (photos.size) {
         1 -> {
-            UploadingPhotoItem(
-                photo = photos.first()
-            )
-
+            UploadingPhotoItem(photo = photos.first())
         }
 
         else -> {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .heightIn(max = 260.dp),
+                modifier = Modifier.heightIn(max = 260.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                userScrollEnabled = false
+                userScrollEnabled = false,
             ) {
-                itemsIndexed(items = photos.take(4)) { index, photo ->
+                itemsIndexed(photos.take(4)) { index, photo ->
                     Box {
-                        if (photo != null) {
-                            UploadingPhotoItem(
-                                photo = photo
-                            )
+                        UploadingPhotoItem(photo = photo)
 
-                            if (index == 3 && photos.size > 4) {
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(Color.Black.copy(alpha = 0.45f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "+${photos.size - 4}",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                }
+                        if (index == 3 && photos.size > 4) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "+${photos.size - 4}",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
                             }
                         }
                     }
@@ -1067,7 +974,6 @@ private fun UploadingPhotoGrid(
         }
     }
 }
-
 
 @Composable
 private fun UploadingPhotoItem(
@@ -1094,61 +1000,46 @@ private fun UploadingPhotoItem(
 private fun ReplyPreview(
     reply: ChatMessage.ReplyMessage,
     isOwn: Boolean,
-    onClickMessageReplied: (messageId) -> Unit
+    onClickMessageReplied: (Long?) -> Unit,
 ) {
-    val indicatorColor =
-        if (isOwn) MaterialTheme.colorScheme.secondary
-        else MaterialTheme.colorScheme.secondary
-
-    val cardColor = if (isOwn) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    else MaterialTheme.colorScheme.surfaceVariant.copy(
-        alpha = 0.5f
-    )
-
+    val cardColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
     Card(
         modifier = Modifier.padding(bottom = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = cardColor
-        ),
-        shape = RoundedCornerShape(size = 8.dp),
-        onClick = {
-            onClickMessageReplied(reply.id)
-        }
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(8.dp),
+        onClick = { onClickMessageReplied(reply.id) },
     ) {
         Row(
-            modifier = Modifier.padding(all = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Vertical indicator bar
             Box(
                 modifier = Modifier
                     .width(3.dp)
                     .height(40.dp)
                     .background(
-                        color = indicatorColor,
-                        shape = RoundedCornerShape(2.dp)
+                        color = MaterialTheme.colorScheme.secondary,
+                        shape = RoundedCornerShape(2.dp),
                     )
             )
 
             Column(
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     text = reply.messageOwnerName ?: "",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                val messageText =
-                    if (reply.messageType == IMAGE) "Photo" else reply.text.orEmpty()
                 Text(
-                    text = messageText,
+                    text = if (reply.messageType == IMAGE) "Photo" else reply.text.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -1301,42 +1192,36 @@ private fun ChatTopBar(
     chatState: ChatState,
     onBack: () -> Unit,
     onCall: () -> Unit,
-    onVideoCall: () -> Unit
+    onVideoCall: () -> Unit,
 ) {
-
-    var chatTopBarSubTitle by remember { mutableStateOf("Online") }
-    val avatarUrl = chatState.chatRoomData?.otherUser?.profilePhoto
     val isTyping = chatState.isTyping
-
-    LaunchedEffect(key1 = isTyping) {
-        chatTopBarSubTitle = if (isTyping) {
-            "Typing..."
-        } else {
-            "Online"
-        }
+    val subtitle by remember(isTyping) {
+        mutableStateOf(if (isTyping) "Typing..." else "Online")
     }
 
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
-                    model = avatarUrl,
+                    model = chatState.chatRoomData?.otherUser?.profilePhoto,
                     contentDescription = "Profile",
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
                 )
+
                 Spacer(Modifier.width(12.dp))
+
                 Column {
                     Text(
-                        text = chatState.chatRoomData?.otherUser?.fullName ?: "",
+                        text = chatState.chatRoomData?.otherUser?.fullName.orEmpty(),
                         style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = chatTopBarSubTitle,
+                        text = subtitle,
                         style = MaterialTheme.typography.labelMedium.copy(color = Color.White),
                     )
                 }
@@ -1345,31 +1230,31 @@ private fun ChatTopBar(
         navigationIcon = {
             IconButton(
                 onClick = onBack,
-                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White)
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = "Back",
                 )
             }
         },
         actions = {
             IconButton(
                 onClick = onCall,
-                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White)
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White),
             ) {
-                Icon(imageVector = Icons.Default.Call, contentDescription = "Call")
+                Icon(Icons.Default.Call, contentDescription = "Call")
             }
             IconButton(
                 onClick = onVideoCall,
-                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White)
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White),
             ) {
-                Icon(imageVector = Icons.Default.Videocam, contentDescription = "Video call")
+                Icon(Icons.Default.Videocam, contentDescription = "Video call")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        )
+            containerColor = MaterialTheme.colorScheme.primary,
+        ),
     )
 }
 
@@ -1813,12 +1698,11 @@ private fun clickableModifier(
 
 @Composable
 private fun messageDisplayText(
-    deleteEntry: ChatMessage.DeleteMessageAction??,
+    isOwn: Boolean,
     isDeletedForEveryone: Boolean,
     messageText: String?,
-    currentUserId: Long?
 ) = if (isDeletedForEveryone) {
-    if (deleteEntry?.user_id == currentUserId) {
+    if (isOwn) {
         "You deleted this message"
     } else {
         "This message was deleted"

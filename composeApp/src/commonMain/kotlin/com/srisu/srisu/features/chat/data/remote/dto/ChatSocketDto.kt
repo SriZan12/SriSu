@@ -4,13 +4,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FetchMessageDTO(
+data class ChatSocketDto<T>(
     @SerialName("action")
     val action: String,
-    @SerialName("page")
-    val page: Long?,
-    @SerialName("page_size")
-    val page_size: Int?,
-    @SerialName("chat_room_id")
-    val chatRoomId: String? = null
+
+    @SerialName("request_id")
+    val requestId: String? = null,
+
+    @SerialName("payload")
+    val payload: T,
 )

@@ -8,7 +8,7 @@ import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
 import com.srisu.srisu.features.home.suggestions.data.api.SuggestionApiService
 import com.srisu.srisu.core.data.remote.HttpClientFactory
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
-import com.srisu.srisu.features.chat.domain.repository.ChatRepository
+import com.srisu.srisu.features.chat.data.remote.api.ChatRepository
 import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
 import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient

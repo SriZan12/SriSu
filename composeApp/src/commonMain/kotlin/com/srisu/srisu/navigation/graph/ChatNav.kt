@@ -9,10 +9,8 @@ import com.srisu.srisu.features.chat.presentation.chat.screen.ChatScreen
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.screen.FindYourPartnerScreen
 import com.srisu.srisu.core.session.Session
-import com.srisu.srisu.navigation.graph.Route
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.koin.compose.viewmodel.koinViewModel
 
 sealed class ChatNav : Route {
 
@@ -30,6 +28,7 @@ sealed class ChatNav : Route {
 
 fun NavGraphBuilder.chatGraph(
     navController: NavController,
+    chatViewModel: ChatViewModel,
     session: Session?
 ) {
     composable<ChatNav.FindPartnerScreen> {
@@ -38,12 +37,10 @@ fun NavGraphBuilder.chatGraph(
 
     composable<ChatNav.ChatScreen> { backStackEntry ->
         val chatRoomData = backStackEntry.toRoute<ChatNav.ChatScreen>().chatRoomData
-        val chatViewModel: ChatViewModel = koinViewModel()
-        chatViewModel.updateSession(session = session)
-        chatViewModel.setChatRoomData(chatRoomData = chatRoomData)
-
         ChatScreen(
             viewModel = chatViewModel,
+            chatRoomData = chatRoomData,
+            session = session,
             onNavBack = {
                 navController.popBackStack()
             }
@@ -51,7 +48,6 @@ fun NavGraphBuilder.chatGraph(
     }
 
     composable<ChatNav.ChatRoomScreen> {
-        val chatViewModel: ChatViewModel = koinViewModel()
         chatViewModel.updateSession(session = session)
 
         ChatRoomScreen(
