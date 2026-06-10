@@ -3,7 +3,7 @@ package com.srisu.srisu.features.home.connection.presentation.singleconnection.s
 import app.cash.paging.PagingData
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.TabItem
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.SingleConnectionResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.SingleConnectionResponse
 import kotlinx.coroutines.flow.Flow
 
 data class ConnectionUIState(

@@ -1,14 +1,15 @@
-package com.srisu.srisu.features.home.connection.coupleconnection.domain.repository
+package com.srisu.srisu.features.home.connection.domain.repository
 
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.CoupleConnectionDTO
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.SingleConnectionDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.SingleConnectionResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.SingleConnectionResponse
 import com.srisu.srisu.features.home.suggestions.data.response.CoupleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.api.ConnectionApiService
+import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiService
+import com.srisu.srisu.features.home.connection.data.remote.response.HaveCoupleConnectionResponse
 
 class ConnectionRepository(
     private val connectionApiService: ConnectionApiService,
@@ -26,6 +27,10 @@ class ConnectionRepository(
 
     suspend fun sendFindYourPartnerRequest(partnerNumber: String): ResultHandler<FindYourPartnerResponse?> {
         return connectionApiService.sendFindYourPartnerRequest(partnerNumber = partnerNumber)
+    }
+
+    suspend fun sendHaveCoupleConnectionRequested(): ResultHandler<HaveCoupleConnectionResponse?> {
+        return connectionApiService.haveCoupleConnectionRequested()
     }
 
     suspend fun sendCoupleConnectionRequest(
@@ -91,7 +96,7 @@ class ConnectionRepository(
     }
 
     suspend fun updateLoveRequest(
-        loveRequestId: Int?,
+        loveRequestId: Long?,
         coupleConnectionDTO: CoupleConnectionDTO
     ): ResultHandler<CoupleConnectionResponse?> {
         return connectionApiService.updateCoupleConnectionRequestStatus(

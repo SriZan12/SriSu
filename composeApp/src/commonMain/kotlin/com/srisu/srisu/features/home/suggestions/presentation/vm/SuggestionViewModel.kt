@@ -9,7 +9,7 @@ import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.features.home.suggestions.data.dto.UserPreferenceDTO
 import com.srisu.srisu.core.data.remote.BasePagingSource
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.features.home.suggestions.data.response.UserPreferenceResponse
 import com.srisu.srisu.features.home.suggestions.data.response.UserSuggestionResponse
 import com.srisu.srisu.features.home.suggestions.domain.repository.SuggestionRepository

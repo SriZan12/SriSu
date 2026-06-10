@@ -31,8 +31,6 @@ fun CoupleConnectionScreen(
     val loveRequestList = coupleConnectionViewModel.loveRequests.collectAsLazyPagingItems()
     val loveRequestSentList = coupleConnectionViewModel.sentLoveRequests.collectAsLazyPagingItems()
 
-
-
     Initialization(viewModel = coupleConnectionViewModel)
 
     LoveRequestContent(

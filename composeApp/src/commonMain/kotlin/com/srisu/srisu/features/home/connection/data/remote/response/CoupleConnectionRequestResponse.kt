@@ -1,6 +1,7 @@
 package com.srisu.srisu.features.home.connection.data.remote.response
 
 
+import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -24,7 +25,7 @@ data class CoupleConnectionRequestResponse(
         @SerialName("created_at")
         val createdAt: String? = null,
         @SerialName("id")
-        val id: Int? = null,
+        val id: Long? = null,
         @SerialName("receiver_number")
         val receiverNumber: String? = null,
         @SerialName("sender_number")
@@ -73,7 +74,7 @@ data class CoupleConnectionRequestResponse(
             @SerialName("updated_date")
             val updatedDate: String? = null,
             @SerialName("user_interests")
-            val userInterests: List<UserInterest?>? = null,
+            val userInterests: List<FindYourPartnerResponse.UserInterest?>? = null,
             @SerialName("user_photos")
             val userPhotos: List<UserPhoto?>? = null,
             @SerialName("username")
@@ -81,19 +82,6 @@ data class CoupleConnectionRequestResponse(
             @SerialName("zodiac_sign")
             val zodiacSign: String? = null
         ) {
-            @Serializable
-            data class UserInterest(
-                @SerialName("id")
-                val id: Int? = null,
-                @SerialName("interest")
-                val interest: Int? = null,
-                @SerialName("name")
-                val name: String? = null,
-                @SerialName("removed")
-                val removed: Boolean? = null,
-                @SerialName("user")
-                val user: Int? = null
-            )
 
             @Serializable
             data class UserPhoto(

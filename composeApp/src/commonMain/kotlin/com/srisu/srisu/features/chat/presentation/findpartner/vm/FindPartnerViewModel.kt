@@ -5,37 +5,28 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
-import app.cash.paging.PagingData
-import app.cash.paging.filter
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.core.data.remote.BasePagingSource
-import com.srisu.srisu.core.data.remote.ResultHandler
-import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.chat.presentation.findpartner.state.FindPartnerState
-import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
+import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
+import com.srisu.srisu.features.chat.presentation.findpartner.state.FindPartnerState
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.CoupleConnectionDTO
-import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.HaveCoupleConnectionResponse
+import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
 import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import com.srisu.srisu.utils.Country
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlin.collections.contains
 
 class FindPartnerViewModel(
     val connectionRepository: ConnectionRepository,
@@ -56,6 +47,8 @@ class FindPartnerViewModel(
 
 
     init {
+        sendHaveCoupleConnectionRequested()
+        getLoveRequests()
         loadAllCountries()
         setSenderPhoneNumber()
     }
@@ -172,6 +165,11 @@ class FindPartnerViewModel(
             _findPartnerUIState.value.copy(partnerResponse = partnerResponse)
     }
 
+    private fun updateHaveCoupleConnectionRequested(haveCoupleConnectionResponse: HaveCoupleConnectionResponse?) {
+        _findPartnerUIState.value =
+            _findPartnerUIState.value.copy(haveCoupleConnectionRequestedResponse = haveCoupleConnectionResponse)
+    }
+
 
     private fun loadAllCountries() {
         viewModelScope.launch {
@@ -180,32 +178,13 @@ class FindPartnerViewModel(
         }
     }
 
-    //Paging flows
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val loveRequestPagingFlow =
-        receivedLoveRequestTrigger
-            .flatMapLatest {
-                createPagingFlow { page ->
-                    connectionRepository.getLoveRequests(pageSize = 20, page = page)
-                }
-            }
-            .cachedIn(viewModelScope)
-
-    val loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>> =
-        combine(
-            loveRequestPagingFlow,
-            _findPartnerUIState.map { it.handledRequestIds }
-        ) { pagingData, handledIds ->
-            pagingData.filter { it.id?.toLong() !in handledIds }
-        }.cachedIn(viewModelScope)
-
     fun updateLoveRequest(
-        loveRequestId: Int?,
+        loveRequestId: Long?,
         senderNumber: String?,
         receiverNumber: String?,
         connectionStatus: String?
     ) {
-        val requestId = loveRequestId?.toLong() ?: return
+        val requestId = loveRequestId ?: return
         val status = connectionStatus.orEmpty()
 
         applyOptimisticUpdate(requestId, status)
@@ -282,33 +261,38 @@ class FindPartnerViewModel(
         }
     }
 
-    private fun createPagingFlow(
-        fetch: suspend (page: Int) -> ResultHandler<CoupleConnectionRequestResponse?>
-    ): Flow<PagingData<CoupleConnectionRequestResponse.Result>> {
-        return Pager(
+    fun getLoveRequests() {
+        val pagerFlow = Pager(
             config = PagingConfig(
                 pageSize = 20,
-                prefetchDistance = 20,
+                prefetchDistance = 5,
                 enablePlaceholders = false
             ),
             pagingSourceFactory = {
                 BasePagingSource { page ->
-                    var items: List<CoupleConnectionRequestResponse.Result?> = emptyList()
+                    val resultHandler = connectionRepository.getLoveRequests(
+                        pageSize = 20,
+                        page = page
+                    )
 
-                    fetch(page)
-                        .onSuccess { response, _ ->
-                            AppLogger.log("API Response: $response")
-                            items = response?.results ?: emptyList()
-                        }
-                        .onError { error, errorType ->
-                            throw Exception("API Error: $error, Type: $errorType")
-                        }
+                    var items: List<CoupleConnectionRequestResponse.Result?>? = emptyList()
+
+                    resultHandler.onSuccess { response, _ ->
+                        items = response?.results
+                        idleScreen()
+                    }.onError { error, errorType ->
+                        idleScreen()
+                        throw Exception("API Error: $error, Type: $errorType")
+                    }
 
                     items
                 }
             }
-        ).flow
+        ).flow.cachedIn(viewModelScope)
+
+        _findPartnerUIState.value = _findPartnerUIState.value.copy(loveRequests = pagerFlow)
     }
+
 
     fun sendFindYourPartnerRequest() {
         viewModelScope.launch {
@@ -333,6 +317,20 @@ class FindPartnerViewModel(
         }
     }
 
+    fun sendHaveCoupleConnectionRequested() {
+        viewModelScope.launch {
+
+            connectionRepository.sendHaveCoupleConnectionRequested()
+                .onSuccess { response, _ ->
+                    updateHaveCoupleConnectionRequested(haveCoupleConnectionResponse = response)
+                }
+                .onError { errorMessage, errorType ->
+                    AppLogger.log("API Error: $errorMessage, Type: $errorType")
+                }
+
+        }
+    }
+
     fun sendCoupleConnectionRequest() {
         viewModelScope.launch {
             showLoading()
@@ -350,6 +348,7 @@ class FindPartnerViewModel(
                     showSuccessMessage(
                         message = message ?: "Love request sent successfully"
                     )
+                    sendHaveCoupleConnectionRequested()
                 }
                 .onError { errorMessage, errorType ->
                     showErrorMessage(
@@ -358,6 +357,32 @@ class FindPartnerViewModel(
                     )
                 }
 
+        }
+    }
+
+
+    fun cancelLoveRequest(
+        loveRequestId: Long?,
+        senderNumber: String?,
+        receiverNumber: String?
+    ) {
+        viewModelScope.launch {
+            connectionRepository.updateLoveRequest(
+                loveRequestId = loveRequestId,
+                coupleConnectionDTO = CoupleConnectionDTO(
+                    senderNumber = senderNumber,
+                    receiverNumber = receiverNumber,
+                    connectionStatus = Constants.ConnectionStatus.NOTHING
+                )
+            ).onSuccess { _, _ ->
+                updateHaveCoupleConnectionRequested(
+                    haveCoupleConnectionResponse = HaveCoupleConnectionResponse(
+                        connectionRequested = false
+                    )
+                )
+            }.onError { string, type ->
+                showErrorMessage(errorType = type.name, message = string.toString())
+            }
         }
     }
 

@@ -21,7 +21,7 @@ import com.srisu.srisu.features.home.connection.presentation.components.PagedCon
 
 typealias senderNumber = String?
 typealias receiverNumber = String?
-typealias loveRequestId = Int?
+typealias loveRequestId = Long?
 
 @Composable
 fun LoveRequestListScreen(
@@ -61,8 +61,8 @@ fun LoveRequestListScreen(
 private fun LoveRequestListContent(
     modifier: Modifier,
     onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId: Int?, senderNumber, receiverNumber) -> Unit,
-    onRejectLoveRequest: (loveRequestId: Int?, senderNumber, receiverNumber) -> Unit,
+    onAcceptLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber) -> Unit,
+    onRejectLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber) -> Unit,
     loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
 

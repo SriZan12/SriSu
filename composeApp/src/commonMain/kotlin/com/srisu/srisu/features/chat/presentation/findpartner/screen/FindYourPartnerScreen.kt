@@ -170,129 +170,191 @@ private fun FindYourPartnerContent(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) { innerPadding ->
+
+        val partnerProfile = findPartnerUIStates.partnerResponse
+        val connectionResponse = findPartnerUIStates.haveCoupleConnectionRequestedResponse
+        val requestedPartner = connectionResponse?.connection?.partner
+
         Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentAlignment = Alignment.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-
-            Row(
-                modifier = Modifier.align(alignment = Alignment.TopEnd)
-                    .clickable(
-                        interactionSource = MutableInteractionSource(),
-                        indication = null
-                    ) {
-                        onNavToRequestReceivedScreen()
-                    },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "Request Received",
-                    style = MaterialTheme.typography.titleMedium.copy(fontStyle = FontStyle.Italic),
-                )
-
-                IconButton(
-                    modifier = Modifier,
-                    onClick = {
-
+            if (connectionResponse?.connectionRequested == true && requestedPartner != null) {
+                CoupleConnectionInfo(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                        .align(Alignment.Center),
+                    name = requestedPartner.fullName.orEmpty(),
+                    phone = requestedPartner.phoneNumber.orEmpty(),
+                    zodiac = requestedPartner.zodiacSign.orEmpty(),
+                    gender = requestedPartner.gender.orEmpty(),
+                    age = DateTimeUtils.calculateAge(requestedPartner.dob).toString(),
+                    city = requestedPartner.city.orEmpty(),
+                    country = requestedPartner.country.orEmpty(),
+                    bio = requestedPartner.bio.orEmpty(),
+                    interests = requestedPartner.userInterests,
+                    profilePhotoUrl = requestedPartner.profilePhoto,
+                    onCancelClick = {
+                        findPartnerViewModel.cancelLoveRequest(
+                            loveRequestId = connectionResponse.connection?.id?.toLong()
+                                ?: return@CoupleConnectionInfo,
+                            senderNumber = findPartnerUIStates.senderPhoneNumber,
+                            receiverNumber = requestedPartner.phoneNumber
+                        )
                     }
-
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.NavigateNext,
-                        contentDescription = "Request Page",
-                        tint = Color.Black
-                    )
-                }
-
-
-            }
-
-            Column {
-
-                var showCountryList by rememberSaveable {
-                    mutableStateOf(false)
-                }
-
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Find Your Partner",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                    textAlign = TextAlign.Center
                 )
-                Text(
-                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                    text = "Enter your partner number to connect",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(36.dp))
-
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp)) {
-                    PhoneNumberCompo(
-                        findPartnerUIState = findPartnerUIStates,
-                        findPartnerViewModel = findPartnerViewModel,
-                        onShowCountryList = {
-                            showCountryList = true
-                        }
-                    )
-
-                    CountrySelectionBottomSheet(
-                        modifier = Modifier,
-                        countries = findPartnerUIStates.countryList,
-                        show = showCountryList,
-                        onCountrySelected = { countryModel ->
-                            showCountryList = false
-                            findPartnerViewModel.updateCountry(
-                                code = countryModel.code ?: "",
-                                prefix = countryModel.prefix ?: ""
-                            )
-                        }) {
-                        showCountryList = false
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(36.dp))
-
-                PrimaryButtonCompo(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
-                    label = "♡  Find Partner  ♡",
-                    onClick = {
-                        val isValid = findPartnerViewModel.validatePhoneNumber()
-
-                        if (isValid) {
-                            findPartnerViewModel.sendFindYourPartnerRequest()
-                        }
-                    }
+            } else {
+                FindPartnerFormSection(
+                    findPartnerViewModel = findPartnerViewModel,
+                    findPartnerUIStates = findPartnerUIStates,
+                    partnerProfile = partnerProfile,
+                    onNavToRequestReceivedScreen = onNavToRequestReceivedScreen
                 )
             }
-
-            val showPartnerProfile = findPartnerUIStates.showPartnerProfile
-            if (showPartnerProfile) {
-                val partnerProfile = findPartnerUIStates.partnerResponse
-                PartnerProfileDialog(
-                    name = partnerProfile?.fullName ?: "",
-                    phone = partnerProfile?.phoneNumber ?: "",
-                    zodiac = partnerProfile?.zodiacSign ?: "",
-                    gender = partnerProfile?.gender ?: "",
-                    age = DateTimeUtils.calculateAge(dateString = partnerProfile?.dob).toString(),
-                    city = partnerProfile?.city ?: "",
-                    country = partnerProfile?.country ?: "",
-                    bio = partnerProfile?.bio ?: "",
-                    interests = partnerProfile?.userInterests,
-                    profilePhotoUrl = partnerProfile?.profilePhoto,
-                    onConnectClick = {
-                        findPartnerViewModel.sendCoupleConnectionRequest()
-                        findPartnerViewModel.updateShowPartnerProfile(showPartnerProfile = false)
-                    },
-                    onDismiss = {
-                        findPartnerViewModel.updateShowPartnerProfile(showPartnerProfile = false)
-                    }
-                )
-            }
-
         }
+    }
+}
+
+
+@Composable
+private fun FindPartnerFormSection(
+    modifier: Modifier = Modifier,
+    findPartnerViewModel: FindPartnerViewModel,
+    findPartnerUIStates: FindPartnerState,
+    partnerProfile: FindYourPartnerResponse?,
+    onNavToRequestReceivedScreen: () -> Unit,
+) {
+    var showCountryList by rememberSaveable { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        RequestReceivedButton(
+            modifier = Modifier.align(Alignment.TopEnd),
+            onClick = onNavToRequestReceivedScreen
+        )
+
+        Column {
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Find Your Partner",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                text = "Enter your partner number to connect",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(36.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp)
+            ) {
+                PhoneNumberCompo(
+                    findPartnerUIState = findPartnerUIStates,
+                    findPartnerViewModel = findPartnerViewModel,
+                    onShowCountryList = {
+                        showCountryList = true
+                    }
+                )
+
+                CountrySelectionBottomSheet(
+                    modifier = modifier,
+                    countries = findPartnerUIStates.countryList,
+                    show = showCountryList,
+                    onCountrySelected = { countryModel ->
+                        showCountryList = false
+                        findPartnerViewModel.updateCountry(
+                            code = countryModel.code.orEmpty(),
+                            prefix = countryModel.prefix.orEmpty()
+                        )
+                    },
+                    onClose = {
+                        showCountryList = false
+                    },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            PrimaryButtonCompo(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp),
+                label = "♡  Find Partner  ♡",
+                onClick = {
+                    if (findPartnerViewModel.validatePhoneNumber()) {
+                        findPartnerViewModel.sendFindYourPartnerRequest()
+                    }
+                }
+            )
+        }
+
+        if (findPartnerUIStates.showPartnerProfile) {
+            PartnerProfileDialog(
+                name = partnerProfile?.fullName.orEmpty(),
+                phone = partnerProfile?.phoneNumber.orEmpty(),
+                zodiac = partnerProfile?.zodiacSign.orEmpty(),
+                gender = partnerProfile?.gender.orEmpty(),
+                age = DateTimeUtils.calculateAge(partnerProfile?.dob).toString(),
+                city = partnerProfile?.city.orEmpty(),
+                country = partnerProfile?.country.orEmpty(),
+                bio = partnerProfile?.bio.orEmpty(),
+                interests = partnerProfile?.userInterests,
+                profilePhotoUrl = partnerProfile?.profilePhoto,
+                onConnectClick = {
+                    findPartnerViewModel.sendCoupleConnectionRequest()
+                    findPartnerViewModel.updateShowPartnerProfile(false)
+                },
+                onDismiss = {
+                    findPartnerViewModel.updateShowPartnerProfile(false)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun RequestReceivedButton(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = modifier
+            .padding(top = 12.dp, end = 12.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = "Request Received",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontStyle = FontStyle.Italic
+            )
+        )
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+            contentDescription = "Request Page",
+            tint = Color.Black
+        )
     }
 }
 
@@ -332,7 +394,7 @@ private fun PhoneNumberCompo(
 }
 
 @Composable
-fun PartnerProfileDialog(
+private fun PartnerProfileDialog(
     name: String,
     phone: String,
     zodiac: String,
@@ -506,6 +568,177 @@ fun PartnerProfileDialog(
                         tint = Color.White
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoupleConnectionInfo(
+    modifier: Modifier,
+    name: String,
+    phone: String,
+    zodiac: String,
+    gender: String,
+    age: String,
+    city: String,
+    country: String,
+    bio: String,
+    interests: List<FindYourPartnerResponse.UserInterest?>?,
+    profilePhotoUrl: String?,
+    onCancelClick: () -> Unit,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Column(
+                modifier = Modifier.padding(
+                    start = 24.dp,
+                    end = 24.dp,
+                    top = 24.dp,
+                    bottom = 12.dp
+                ),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                if (
+                    profilePhotoUrl.isNullOrEmpty()
+                ) {
+                    Image(
+                        painter = painterResource(resource = Res.drawable.image_placeholder),
+                        contentDescription = "Profile photo",
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    AsyncImage(
+                        model = profilePhotoUrl,
+                        contentDescription = "Profile photo",
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TextIfNotEmpty(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+
+                TextIfNotEmpty(
+                    text = phone,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.Black)
+                )
+
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+
+                TextIfNotEmpty(
+                    text = age,
+                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                )
+
+                TextIfNotEmpty(
+                    text = "$city, $country",
+                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                )
+
+                Row(
+                    modifier = Modifier,
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val zodiacSignImage = ZodiacUtils.getZodiacSignImage(name = zodiac.trim())
+                    Image(
+                        painter = painterResource(
+                            resource = zodiacSignImage ?: Res.drawable.leo
+                        ),
+                        contentDescription = "zodiac sign",
+                        modifier = Modifier.size(32.dp)
+                    )
+
+                    Text(
+                        text = gender,
+                        style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
+                    )
+
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val trimmedBio = bio
+                    .split("\\s+".toRegex())        // split by whitespace
+                    .take(30)                       // take only first 40 words
+                    .joinToString(" ")              // join them back
+                    .let { if (it.length < bio.length) "$it..." else it } // add ellipsis if trimmed
+
+                if (trimmedBio.isNotBlank()) {
+                    Text(
+                        text = "\"$trimmedBio\"",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontStyle = FontStyle.Italic,
+                            color = Color.Black
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+
+            }
+
+            if (!interests.isNullOrEmpty()) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = "Interests",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    textAlign = TextAlign.Center
+                )
+
+                LazyRow(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp)
+                ) {
+                    items(
+                        items = interests,
+                        key = { it?.id ?: "" }
+                    ) { interest ->
+                        interest?.let {
+                            if (!interest.name.isNullOrEmpty()) {
+                                InterestChip(
+                                    label = interest.name
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            Button(
+                onClick = onCancelClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .padding(vertical = 22.dp)
+                    .height(48.dp)
+            ) {
+                Text("Cancel", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -12,7 +12,7 @@ import com.srisu.srisu.components.TabItem
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.CoupleConnectionDTO
 import com.srisu.srisu.core.data.remote.BasePagingSource
 import com.srisu.srisu.core.data.remote.ResultHandler
-import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.CoupleConnectionUiState
@@ -186,12 +186,12 @@ class CoupleConnectionViewModel(
     // ---------------------------
 
     fun updateLoveRequest(
-        loveRequestId: Int?,
+        loveRequestId: Long?,
         senderNumber: String?,
         receiverNumber: String?,
         connectionStatus: String?
     ) {
-        val requestId = loveRequestId?.toLong() ?: return
+        val requestId = loveRequestId ?: return
         val status = connectionStatus.orEmpty()
 
         applyOptimisticUpdate(requestId, status)

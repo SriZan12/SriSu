@@ -12,9 +12,8 @@ import com.srisu.srisu.components.TabItem
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.SingleConnectionDTO
 import com.srisu.srisu.core.data.remote.BasePagingSource
 import com.srisu.srisu.core.data.remote.ResultHandler
-import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
-import com.srisu.srisu.features.auth.data.remote.response.User
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.SingleConnectionResponse
+import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.connection.data.remote.response.SingleConnectionResponse
 import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
 import com.srisu.srisu.features.home.connection.presentation.singleconnection.state.ConnectionUIState
 import com.srisu.srisu.utils.ConnectivityObserver
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map

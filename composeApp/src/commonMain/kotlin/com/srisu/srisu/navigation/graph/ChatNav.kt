@@ -48,7 +48,7 @@ fun NavGraphBuilder.chatGraph(
         ReceivedLoveRequestScreen(
             findPartnerViewModel = findPartnerViewModel,
             onNavigateToProfile = {
-
+                navController.navigate(ConnectionNav.Profile(userProfileData = it))
             },
             onNavigateBack = {
                 navController.popBackStack()

@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response
+package com.srisu.srisu.features.home.connection.data.remote.response
 
 
 import kotlinx.serialization.SerialName
