@@ -34,6 +34,7 @@ fun NavGraphBuilder.suggestionsGraph(
     suggestionViewModel: SuggestionViewModel,
     sharedTransitionScope: SharedTransitionScope,
 ) {
+
     composable<SuggestionsNav.Suggestions> { backStackEntry ->
         val filterApplied by backStackEntry.savedStateHandle
             .getStateFlow(FILTER_APPLIED, false)

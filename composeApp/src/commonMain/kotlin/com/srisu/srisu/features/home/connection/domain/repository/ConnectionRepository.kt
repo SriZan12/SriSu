@@ -3,7 +3,7 @@ package com.srisu.srisu.features.home.connection.coupleconnection.domain.reposit
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.CoupleConnectionDTO
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.SingleConnectionDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.SingleConnectionResponse
 import com.srisu.srisu.features.home.suggestions.data.response.CoupleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger

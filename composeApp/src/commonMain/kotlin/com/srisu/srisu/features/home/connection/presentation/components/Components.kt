@@ -366,7 +366,7 @@ fun <T : Any> PagedConnectionContent(
 }
 
 @Composable
-private fun AnimatedEmptyState(
+fun AnimatedEmptyState(
     title: String,
     modifier: Modifier = Modifier
 ) {

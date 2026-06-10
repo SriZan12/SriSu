@@ -15,7 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import com.srisu.srisu.components.CommonTabPager
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionToolBar
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.CoupleConnectionUiState
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel

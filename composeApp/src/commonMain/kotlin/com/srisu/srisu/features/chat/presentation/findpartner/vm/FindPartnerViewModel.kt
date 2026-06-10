@@ -2,20 +2,40 @@ package com.srisu.srisu.features.chat.presentation.findpartner.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import app.cash.paging.PagingData
+import app.cash.paging.filter
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.data.remote.BasePagingSource
+import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
 import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerState
+import com.srisu.srisu.features.chat.presentation.findpartner.state.FindPartnerState
 import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
+import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.CoupleConnectionDTO
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
 import com.srisu.srisu.utils.Constants
+import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
+import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import com.srisu.srisu.utils.Country
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlin.collections.contains
 
 class FindPartnerViewModel(
     val connectionRepository: ConnectionRepository,
@@ -26,11 +46,14 @@ class FindPartnerViewModel(
         MutableStateFlow(FindPartnerState())
     val findPartnerUIState = this._findPartnerUIState.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Companion.WhileSubscribed(
+        started = SharingStarted.WhileSubscribed(
             stopTimeoutMillis = 5000
         ),
         initialValue = FindPartnerState()
     )
+
+    private val receivedLoveRequestTrigger = MutableStateFlow(0)
+
 
     init {
         loadAllCountries()
@@ -39,7 +62,12 @@ class FindPartnerViewModel(
 
     private fun showSuccessMessage(message: String) {
         this._findPartnerUIState.value =
-            this._findPartnerUIState.value.copy(baseUIState = BaseUIState.Success(data = null, message = message))
+            this._findPartnerUIState.value.copy(
+                baseUIState = BaseUIState.Success(
+                    data = null,
+                    message = message
+                )
+            )
     }
 
     private fun showLoading() {
@@ -76,7 +104,7 @@ class FindPartnerViewModel(
         val sessionData = sessionStorage.getSession(sessionKey = Constants.Auth.SESSION_KEY)
         var session: Session? = null
         if (sessionData != null) {
-            session = Json.Default.decodeFromString<Session>(sessionData)
+            session = Json.decodeFromString<Session>(sessionData)
         }
         updateSenderPhoneNumber(phoneNumber = session?.phoneNumber)
     }
@@ -103,6 +131,10 @@ class FindPartnerViewModel(
             this._findPartnerUIState.value.copy(showPartnerProfile = showPartnerProfile)
     }
 
+    fun refreshLoveRequests() {
+        receivedLoveRequestTrigger.update { it + 1 }
+    }
+
     fun validatePhoneNumber(): Boolean {
         val phone = _findPartnerUIState.value.phoneNumber
 
@@ -124,7 +156,7 @@ class FindPartnerViewModel(
 
             else -> {
                 updateValidationError("")  // clear error
-                return true
+                true
             }
         }
     }
@@ -146,6 +178,136 @@ class FindPartnerViewModel(
             val countries = Country.getAllCountriesFromJson() ?: emptyList()
             _findPartnerUIState.value = _findPartnerUIState.value.copy(countryList = countries)
         }
+    }
+
+    //Paging flows
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val loveRequestPagingFlow =
+        receivedLoveRequestTrigger
+            .flatMapLatest {
+                createPagingFlow { page ->
+                    connectionRepository.getLoveRequests(pageSize = 20, page = page)
+                }
+            }
+            .cachedIn(viewModelScope)
+
+    val loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>> =
+        combine(
+            loveRequestPagingFlow,
+            _findPartnerUIState.map { it.handledRequestIds }
+        ) { pagingData, handledIds ->
+            pagingData.filter { it.id?.toLong() !in handledIds }
+        }.cachedIn(viewModelScope)
+
+    fun updateLoveRequest(
+        loveRequestId: Int?,
+        senderNumber: String?,
+        receiverNumber: String?,
+        connectionStatus: String?
+    ) {
+        val requestId = loveRequestId?.toLong() ?: return
+        val status = connectionStatus.orEmpty()
+
+        applyOptimisticUpdate(requestId, status)
+
+        viewModelScope.launch {
+            runCatching {
+                connectionRepository.updateLoveRequest(
+                    loveRequestId = loveRequestId,
+                    coupleConnectionDTO = CoupleConnectionDTO(
+                        senderNumber = senderNumber,
+                        receiverNumber = receiverNumber,
+                        connectionStatus = connectionStatus
+                    )
+                )
+            }.onSuccess { result ->
+                result.onSuccess { _, _ ->
+//                    showSuccess("Request updated successfully")
+
+                    // refresh after action
+
+                }.onError { error, errorType ->
+                    rollback(requestId, status, error.toString(), errorType.toString())
+                }
+            }.onFailure {
+                rollback(requestId, status, it.message ?: "Unknown error", "Exception")
+            }
+        }
+    }
+
+    private fun applyOptimisticUpdate(requestId: Long, status: String) {
+        when (status) {
+            ACCEPTED, REJECTED -> {
+                _findPartnerUIState.update {
+                    it.copy(
+                        handledRequestIds = it.handledRequestIds + requestId
+                    )
+                }
+            }
+
+            else -> {
+                _findPartnerUIState.update {
+                    it.copy(
+                        handledRequestIds = it.handledRequestIds + requestId
+                    )
+                }
+            }
+        }
+    }
+
+    private fun rollback(
+        requestId: Long,
+        status: String,
+        message: String,
+        errorType: String
+    ) {
+        when (status) {
+            ACCEPTED, REJECTED -> {
+                _findPartnerUIState.update {
+                    it.copy(
+                        handledRequestIds = it.handledRequestIds - requestId,
+                        baseUIState = BaseUIState.Error(errorType, message)
+                    )
+                }
+            }
+
+            else -> {
+                _findPartnerUIState.update {
+                    it.copy(
+                        handledRequestIds = it.handledRequestIds - requestId,
+                        baseUIState = BaseUIState.Error(errorType, message)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun createPagingFlow(
+        fetch: suspend (page: Int) -> ResultHandler<CoupleConnectionRequestResponse?>
+    ): Flow<PagingData<CoupleConnectionRequestResponse.Result>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                prefetchDistance = 20,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                BasePagingSource { page ->
+                    var items: List<CoupleConnectionRequestResponse.Result?> = emptyList()
+
+                    fetch(page)
+                        .onSuccess { response, _ ->
+                            AppLogger.log("API Response: $response")
+                            items = response?.results ?: emptyList()
+                        }
+                        .onError { error, errorType ->
+                            throw Exception("API Error: $error, Type: $errorType")
+                        }
+
+                    items
+                }
+            }
+        ).flow
     }
 
     fun sendFindYourPartnerRequest() {
@@ -184,7 +346,7 @@ class FindPartnerViewModel(
                 receiverNumber = receiverNumber
             )
                 .onSuccess { _, message ->
-                    AppLogger.log("MESSAGE = ${message}")
+                    AppLogger.log("MESSAGE = $message")
                     showSuccessMessage(
                         message = message ?: "Love request sent successfully"
                     )
@@ -197,6 +359,12 @@ class FindPartnerViewModel(
                 }
 
         }
+    }
+
+    fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?): String? {
+        return runCatching {
+            Json.encodeToString(userProfile?.toUser())
+        }.getOrNull()
     }
 
 }

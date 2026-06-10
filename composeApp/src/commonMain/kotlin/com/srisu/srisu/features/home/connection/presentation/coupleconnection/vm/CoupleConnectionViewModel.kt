@@ -13,7 +13,7 @@ import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto
 import com.srisu.srisu.core.data.remote.BasePagingSource
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.features.home.connection.coupleconnection.domain.repository.ConnectionRepository
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.CoupleConnectionUiState
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED

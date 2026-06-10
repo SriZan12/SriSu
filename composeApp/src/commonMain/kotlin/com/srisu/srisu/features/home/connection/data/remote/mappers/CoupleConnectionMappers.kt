@@ -1,7 +1,7 @@
 package com.srisu.srisu.features.home.connection.data.remote.mappers
 
 import com.srisu.srisu.features.auth.data.remote.response.User
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 
 fun CoupleConnectionRequestResponse.Result.Receiver.toUser(): User {
     return User(

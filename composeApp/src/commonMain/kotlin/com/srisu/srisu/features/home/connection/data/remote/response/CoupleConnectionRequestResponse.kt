@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response
+package com.srisu.srisu.features.home.connection.data.remote.response
 
 
 import kotlinx.serialization.SerialName
@@ -31,7 +31,7 @@ data class CoupleConnectionRequestResponse(
         val senderNumber: String? = null,
         @SerialName("updated_at")
         val updatedAt: String? = null,
-        @SerialName("user")
+        @SerialName("partner")
         val receiver: Receiver? = null
     ) {
         @Serializable

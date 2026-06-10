@@ -12,6 +12,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
+import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.graph.Route
 import com.srisu.srisu.navigation.graph.authGraph
@@ -33,6 +34,7 @@ fun AppNavHost(
     SharedTransitionLayout {
         val suggestionViewModel = koinViewModel<SuggestionViewModel>()
         val chatViewModel = koinViewModel<ChatViewModel>()
+        val findPartnerViewModel = koinViewModel<FindPartnerViewModel>()
 
         NavHost(
             modifier = modifier,
@@ -72,6 +74,7 @@ fun AppNavHost(
             chatGraph(
                 session = session,
                 chatViewModel = chatViewModel,
+                findPartnerViewModel = findPartnerViewModel,
                 navController = navController
             )
         }

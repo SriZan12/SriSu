@@ -1,6 +1,8 @@
 package com.srisu.srisu.features.chat.presentation.findpartner.screen
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,12 +20,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.ArrowLeft
+import androidx.compose.material.icons.filled.ArrowRight
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.RequestPage
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -57,7 +66,7 @@ import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.RequestSentDialog
 import com.srisu.srisu.components.TextIfNotEmpty
 import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
-import com.srisu.srisu.features.chat.chatroom.couple.findpartner.FindPartnerState
+import com.srisu.srisu.features.chat.presentation.findpartner.state.FindPartnerState
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.suggestions.presentation.screen.InterestChip
 import com.srisu.srisu.utils.DateTimeUtils
@@ -72,7 +81,8 @@ import srisu.composeapp.generated.resources.leo
 
 @Composable
 fun FindYourPartnerScreen(
-    findPartnerViewModel: FindPartnerViewModel = koinViewModel<FindPartnerViewModel>()
+    findPartnerViewModel: FindPartnerViewModel,
+    onNavToRequestReceivedScreen: () -> Unit
 ) {
     val findPartnerUIStates by findPartnerViewModel.findPartnerUIState.collectAsState()
 
@@ -81,10 +91,10 @@ fun FindYourPartnerScreen(
         findPartnerUIState = findPartnerUIStates
     )
 
-
     FindYourPartnerContent(
         findPartnerViewModel = findPartnerViewModel,
-        findPartnerUIStates = findPartnerUIStates
+        findPartnerUIStates = findPartnerUIStates,
+        onNavToRequestReceivedScreen = onNavToRequestReceivedScreen
     )
 
 }
@@ -153,7 +163,8 @@ private fun HandleUiStates(
 @Composable
 private fun FindYourPartnerContent(
     findPartnerViewModel: FindPartnerViewModel,
-    findPartnerUIStates: FindPartnerState
+    findPartnerUIStates: FindPartnerState,
+    onNavToRequestReceivedScreen: () -> Unit
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -163,6 +174,39 @@ private fun FindYourPartnerContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
+
+            Row(
+                modifier = Modifier.align(alignment = Alignment.TopEnd)
+                    .clickable(
+                        interactionSource = MutableInteractionSource(),
+                        indication = null
+                    ) {
+                        onNavToRequestReceivedScreen()
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Request Received",
+                    style = MaterialTheme.typography.titleMedium.copy(fontStyle = FontStyle.Italic),
+                )
+
+                IconButton(
+                    modifier = Modifier,
+                    onClick = {
+
+                    }
+
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                        contentDescription = "Request Page",
+                        tint = Color.Black
+                    )
+                }
+
+
+            }
 
             Column {
 

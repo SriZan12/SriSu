@@ -9,6 +9,8 @@ import com.srisu.srisu.features.chat.presentation.chat.screen.ChatScreen
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.screen.FindYourPartnerScreen
 import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.features.chat.presentation.findpartner.screen.ReceivedLoveRequestScreen
+import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -23,16 +25,35 @@ sealed class ChatNav : Route {
     @Serializable
     data object ChatRoomScreen : ChatNav()
 
+    @Serializable
+    data object RequestReceivedScreen : ChatNav()
 
 }
 
 fun NavGraphBuilder.chatGraph(
     navController: NavController,
     chatViewModel: ChatViewModel,
+    findPartnerViewModel: FindPartnerViewModel,
     session: Session?
 ) {
     composable<ChatNav.FindPartnerScreen> {
-        FindYourPartnerScreen()
+        FindYourPartnerScreen(
+            findPartnerViewModel = findPartnerViewModel
+        ) {
+            navController.navigate(ChatNav.RequestReceivedScreen)
+        }
+    }
+
+    composable<ChatNav.RequestReceivedScreen> {
+        ReceivedLoveRequestScreen(
+            findPartnerViewModel = findPartnerViewModel,
+            onNavigateToProfile = {
+
+            },
+            onNavigateBack = {
+                navController.popBackStack()
+            }
+        )
     }
 
     composable<ChatNav.ChatScreen> { backStackEntry ->

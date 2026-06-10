@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.cash.paging.compose.LazyPagingItems
-import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.response.CoupleConnectionRequestResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionItem
 import com.srisu.srisu.features.home.connection.presentation.components.ConnectionShimmerCompo
 import com.srisu.srisu.features.home.connection.presentation.components.PagedConnectionContent

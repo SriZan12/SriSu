@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.chat.chatroom.couple.findpartner
+package com.srisu.srisu.features.chat.presentation.findpartner.state
 
 import androidx.compose.runtime.Stable
 import com.srisu.srisu.baseframework.BaseUIState
@@ -16,5 +16,7 @@ data class FindPartnerState(
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val showPartnerProfile: Boolean = false,
     val partnerResponse: FindYourPartnerResponse? = null,
-    val senderPhoneNumber: String = ""
-)
+    val senderPhoneNumber: String = "",
+    val isConnectionRequestSent: Boolean = false,
+    val handledRequestIds: Set<Long> = emptySet(),
+    )
