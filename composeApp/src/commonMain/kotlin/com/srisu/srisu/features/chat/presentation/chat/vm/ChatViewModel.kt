@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil3.Uri
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.data.remote.dto.ChatMessage
 import com.srisu.srisu.features.chat.data.remote.dto.UploadState
 import com.srisu.srisu.features.chat.data.remote.api.ChatRepository
@@ -24,8 +25,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -74,22 +77,27 @@ class ChatViewModel(
 
     private fun observeChatRooms() {
         viewModelScope.launch {
+
             repository.chatRoomsList.collect { chatRooms ->
-                val selectedRoomId = chatState.value.chatRoomData?.id
-                val selectedRoom = chatRooms.firstOrNull { it.id == selectedRoomId }
+//                val selectedRoomId = chatState.value.chatRoomData?.id
+                val selectedRoom = chatRooms.firstOrNull()
                 val myUserId = chatState.value.session?.id
 
                 _chatState.update { state ->
                     state.copy(
                         chatRoomList = chatRooms,
-                        chatRoomData = selectedRoom ?: state.chatRoomData,
+                        chatRoomData = selectedRoom,
                         isTyping = isSomeoneElseTyping(
                             room = selectedRoom ?: state.chatRoomData,
                             myUserId = myUserId,
                         )
                     )
                 }
+
+
             }
+
+
         }
     }
 
@@ -116,17 +124,18 @@ class ChatViewModel(
         }
     }
 
-    fun setChatRoomData(chatRoomData: String?) {
-        if (chatRoomData.isNullOrBlank()) return
+    fun setChatRoomData() {
+        AppLogger.log("ChatRoomID = ${_chatState.value.chatRoomData}")
+
+        val chatRoomData = _chatState.value.chatRoomData ?: return
 
         viewModelScope.launch(Dispatchers.Default) {
             try {
-                val room = Json.decodeFromString<ChatRoomItemDto>(chatRoomData)
 
                 withContext(Dispatchers.Main) {
                     _chatState.update { state ->
                         state.copy(
-                            chatRoomData = room,
+                            chatRoomData = chatRoomData,
                             selectedMessageForAction = null,
                             selectedMessageIdForActions = null,
                             isEditMessage = false,
@@ -137,7 +146,7 @@ class ChatViewModel(
                     }
                 }
 
-                room.id?.let { roomId ->
+                chatRoomData.id?.let { roomId ->
                     repository.fetchInitialMessages(chatRoomId = roomId)
                     repository.markDelivered(chatRoomId = roomId)
                     repository.markRead(chatRoomId = roomId)
@@ -227,7 +236,7 @@ class ChatViewModel(
     private fun scheduleStopTyping() {
         typingJob?.cancel()
         typingJob = viewModelScope.launch {
-            delay(typingTimeoutMillis)
+            delay(typingTimeoutMillis.milliseconds)
             stopTyping()
         }
     }

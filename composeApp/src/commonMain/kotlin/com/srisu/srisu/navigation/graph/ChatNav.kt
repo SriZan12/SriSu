@@ -3,7 +3,6 @@ package com.srisu.srisu.navigation.graph
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
 import com.srisu.srisu.features.chat.presentation.chat.screen.ChatRoomScreen
 import com.srisu.srisu.features.chat.presentation.chat.screen.ChatScreen
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
@@ -20,7 +19,7 @@ sealed class ChatNav : Route {
     data object FindPartnerScreen : ChatNav()
 
     @Serializable
-    data class ChatScreen(val chatRoomData: String?) : ChatNav()
+    data object ChatScreen : ChatNav()
 
     @Serializable
     data object ChatRoomScreen : ChatNav()
@@ -56,11 +55,9 @@ fun NavGraphBuilder.chatGraph(
         )
     }
 
-    composable<ChatNav.ChatScreen> { backStackEntry ->
-        val chatRoomData = backStackEntry.toRoute<ChatNav.ChatScreen>().chatRoomData
+    composable<ChatNav.ChatScreen> { _ ->
         ChatScreen(
             viewModel = chatViewModel,
-            chatRoomData = chatRoomData,
             session = session,
             onNavBack = {
                 navController.popBackStack()
@@ -74,8 +71,8 @@ fun NavGraphBuilder.chatGraph(
         ChatRoomScreen(
             viewModel = chatViewModel
         ) { chatRoom ->
-            val chatRoomData = Json.encodeToString(chatRoom)
-            navController.navigate(ChatNav.ChatScreen(chatRoomData))
+//            val chatRoomData = Json.encodeToString(chatRoom)
+//            navController.navigate(ChatNav.ChatScreen(chatRoomData))
         }
 
     }

@@ -84,7 +84,7 @@ private fun readSessionSafely(sessionStorage: SessionStorage): Session? {
 private fun resolveStartDestination(session: Session?): Route {
     return when {
         session?.isPhoneVerified == true && session.isProfileComplete == true -> {
-            ChatNav.FindPartnerScreen
+            ChatNav.ChatScreen
         }
 
         else -> AuthNavigation.Auth

@@ -156,7 +156,6 @@ typealias messageId = Long?
 fun ChatScreen(
     viewModel: ChatViewModel,
     onNavBack: () -> Unit,
-    chatRoomData: String?,
     session: Session?,
 ) {
     val chatState by viewModel.chatState.collectAsState()
@@ -164,7 +163,6 @@ fun ChatScreen(
     Initialization(
         chatViewModel = viewModel,
         session = session,
-        chatRoomData = chatRoomData
     )
 
     HandleUiStates(
@@ -183,11 +181,10 @@ fun ChatScreen(
 private fun Initialization(
     chatViewModel: ChatViewModel,
     session: Session?,
-    chatRoomData: String?
 ) {
     LaunchedEffect(chatViewModel) {
         chatViewModel.updateSession(session = session)
-        chatViewModel.setChatRoomData(chatRoomData = chatRoomData)
+//        chatViewModel.setChatRoomData()
     }
 }
 

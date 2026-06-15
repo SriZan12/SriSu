@@ -34,8 +34,7 @@ fun ReceivedLoveRequestScreen(
     onNavigateToProfile: (String?) -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    val state = findPartnerViewModel.findPartnerUIState.value
-    val loveRequests = state.loveRequests?.collectAsLazyPagingItems()
+    val loveRequests = findPartnerViewModel.loveRequests.collectAsLazyPagingItems()
 
     Initialization(findPartnerViewModel = findPartnerViewModel)
 
