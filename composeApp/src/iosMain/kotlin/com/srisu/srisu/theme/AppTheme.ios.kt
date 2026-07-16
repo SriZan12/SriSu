@@ -12,7 +12,7 @@ actual fun AppTheme(
 
     MaterialTheme(
         colorScheme = lightScheme,
-        typography = AppTypography(),
+        typography = appTypography(),
         content = content
     )
 }

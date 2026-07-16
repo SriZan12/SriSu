@@ -27,7 +27,7 @@ import srisu.composeapp.generated.resources.poppins_thin_italic
 
 
 @Composable
-fun PoppinsFontFamily() = FontFamily(
+fun poppinsFontFamily() = FontFamily(
     Font(Res.font.poppins_italic, weight = FontWeight.Thin),
     Font(Res.font.poppins_thin_italic, weight = FontWeight.Thin, style = FontStyle.Italic),
     Font(Res.font.poppins_extra_light, weight = FontWeight.ExtraLight),
@@ -57,10 +57,10 @@ fun PoppinsFontFamily() = FontFamily(
 )
 
 @Composable
-fun AppTypography() = Typography().run {
+fun appTypography() = Typography().run {
 
-    val bodyFontFamily = PoppinsFontFamily()
-    val displayFontFamily = PoppinsFontFamily()
+    val bodyFontFamily = poppinsFontFamily()
+    val displayFontFamily = poppinsFontFamily()
 
     copy(
         displayLarge = displayLarge.copy(fontFamily = displayFontFamily),

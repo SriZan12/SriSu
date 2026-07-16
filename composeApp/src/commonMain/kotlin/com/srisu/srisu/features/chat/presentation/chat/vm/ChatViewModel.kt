@@ -94,11 +94,15 @@ class ChatViewModel(
                     )
                 }
 
-
+                if (!_chatState.value.isRoomDataSet) {
+                    setChatRoomData()
+                }
             }
 
 
         }
+
+
     }
 
     private fun observeErrors() {
@@ -151,6 +155,11 @@ class ChatViewModel(
                     repository.markDelivered(chatRoomId = roomId)
                     repository.markRead(chatRoomId = roomId)
                 }
+
+                _chatState.update {
+                    it.copy(isRoomDataSet = true)
+                }
+
             } catch (_: Exception) {
                 withContext(Dispatchers.Main) {
                     showErrorMessage(

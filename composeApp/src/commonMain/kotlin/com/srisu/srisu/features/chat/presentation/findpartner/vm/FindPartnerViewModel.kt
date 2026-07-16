@@ -216,7 +216,8 @@ class FindPartnerViewModel(
         loveRequestId: Long?,
         senderNumber: String?,
         receiverNumber: String?,
-        connectionStatus: String?
+        connectionStatus: String?,
+        onNavToChatScreen: () -> Unit
     ) {
         val requestId = loveRequestId ?: return
         val status = connectionStatus.orEmpty()
@@ -235,9 +236,9 @@ class FindPartnerViewModel(
                 )
             }.onSuccess { result ->
                 result.onSuccess { _, _ ->
-//                    showSuccess("Request updated successfully")
-
-                    // refresh after action
+                    if (status == ACCEPTED) {
+                        onNavToChatScreen()
+                    }
 
                 }.onError { error, errorType ->
                     rollback(requestId, status, error.toString(), errorType.toString())

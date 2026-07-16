@@ -29,6 +29,7 @@ data class ChatState(
     val chatRoomList: List<ChatRoomItemDto> = emptyList(),
     val chatRoomLastUpdatedAt: String? = null,
     val baseUIState: BaseUIState = BaseUIState.Idle,
+    val isRoomDataSet: Boolean = false
 ) {
 
     data class Reactions(

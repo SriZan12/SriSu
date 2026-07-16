@@ -32,7 +32,8 @@ import kotlin.time.ExperimentalTime
 fun ReceivedLoveRequestScreen(
     findPartnerViewModel: FindPartnerViewModel,
     onNavigateToProfile: (String?) -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavToChatScreen: () -> Unit
 ) {
     val loveRequests = findPartnerViewModel.loveRequests.collectAsLazyPagingItems()
 
@@ -51,7 +52,9 @@ fun ReceivedLoveRequestScreen(
                 senderNumber = senderNumber,
                 receiverNumber = receiverNumber,
                 connectionStatus = Constants.ConnectionStatus.ACCEPTED
-            )
+            ) {
+                onNavToChatScreen()
+            }
         },
         onRejectLoveRequest = { loveRequestId, senderNumber, receiverNumber ->
             findPartnerViewModel.updateLoveRequest(
@@ -59,7 +62,9 @@ fun ReceivedLoveRequestScreen(
                 senderNumber = senderNumber,
                 receiverNumber = receiverNumber,
                 connectionStatus = Constants.ConnectionStatus.REJECTED
-            )
+            ) {
+
+            }
         }
     )
 }
