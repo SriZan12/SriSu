@@ -3,7 +3,7 @@ package com.srisu.srisu.features.home.profile.data.remote.api
 import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.NetworkConfig
 import com.srisu.srisu.features.home.suggestions.data.response.SingleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
@@ -18,7 +18,10 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class ProfileApiService(private val httpClient: HttpClient) {
+class ProfileApiService(
+    private val httpClient: HttpClient,
+    private val networkConfig: NetworkConfig,
+) {
 
     suspend fun sendSingleConnectionRequest(
         senderNumber: String?,
@@ -30,7 +33,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
         connectionRequest["receiver_number"] = receiverNumber ?: ""
 
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/social/connect-single/")
+            url("${networkConfig.apiBaseUrl}api/social/connect-single/")
             method = HttpMethod.Companion.Post
             setBody(connectionRequest)
         }
@@ -38,7 +41,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
 
     suspend fun getInterestList(): ResultHandler<InterestResponse?> {
         return httpClient.safeRequest<InterestResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/interests/")
+            url("${networkConfig.apiBaseUrl}api/auth/interests/")
             method = HttpMethod.Companion.Get
         }
     }
@@ -51,7 +54,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
     ): ResultHandler<ProfileResponse?> {
 
         return httpClient.safeRequest<ProfileResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/setup-profile/")
+            url("${networkConfig.apiBaseUrl}api/auth/setup-profile/")
             method = HttpMethod.Companion.Put
 
             setBody(
@@ -195,7 +198,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
 
     suspend fun getProfile(): ResultHandler<ProfileResponse?> {
         return httpClient.safeRequest<ProfileResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/setup-profile/")
+            url("${networkConfig.apiBaseUrl}api/auth/setup-profile/")
             method = HttpMethod.Companion.Get
         }
     }

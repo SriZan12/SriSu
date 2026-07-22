@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.auth.data.remote.api
 
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.NetworkConfig
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO
@@ -17,10 +17,13 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class AuthApiService(private val httpClient: HttpClient) {
+class AuthApiService(
+    private val httpClient: HttpClient,
+    private val networkConfig: NetworkConfig,
+) {
     suspend fun sendOTPRequest(authDTO: AuthDTO): ResultHandler<String?> {
         return httpClient.safeRequest<String?> {
-            url("${BaseApiService.BASE_URL}api/auth/send-otp/")
+            url("${networkConfig.apiBaseUrl}api/auth/send-otp/")
             method = HttpMethod.Post
             setBody(authDTO)
         }
@@ -36,7 +39,7 @@ class AuthApiService(private val httpClient: HttpClient) {
         otpVerificationBody["otp_code"] = otp
 
         return httpClient.safeRequest<OtpVerificationResponse> {
-            url("${BaseApiService.BASE_URL}api/auth/verify-otp/")
+            url("${networkConfig.apiBaseUrl}api/auth/verify-otp/")
             method = HttpMethod.Post
             setBody(otpVerificationBody)
         }
@@ -48,7 +51,7 @@ class AuthApiService(private val httpClient: HttpClient) {
     ): ResultHandler<ProfileResponse?> {
 
         return httpClient.safeRequest<ProfileResponse> {
-            url("${BaseApiService.BASE_URL}api/auth/setup-profile/")
+            url("${networkConfig.apiBaseUrl}api/auth/setup-profile/")
             method = HttpMethod.Put
 
             setBody(

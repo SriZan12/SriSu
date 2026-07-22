@@ -8,6 +8,7 @@ import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO
 import com.srisu.srisu.features.auth.data.remote.dto.ProfileSetupDTO
 import com.srisu.srisu.features.auth.data.local.datastore.AuthDataStore
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
+import com.srisu.srisu.core.coroutines.rethrowIfCancellation
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.components.CustomAuthScreen
 import com.srisu.srisu.features.auth.presentation.components.OTPScreenMetadata
@@ -114,6 +115,7 @@ class AuthViewModel(
             try {
                 block()
             } catch (exception: Exception) {
+                exception.rethrowIfCancellation()
                 AppLogger.log("AuthViewModel exception: ${exception.message}")
                 onError(exception.message ?: "Something went wrong.")
             }
@@ -147,7 +149,6 @@ class AuthViewModel(
         }
 
         updateSession(session)
-        AppLogger.log("SESSION = ${runCatching { Json.encodeToString(session) }.getOrNull()}")
 
         return session
     }

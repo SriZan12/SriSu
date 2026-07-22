@@ -14,7 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +41,7 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
                 contentAlignment = Alignment.Center
             ) {
 
-                val authUIStates by authViewModel.authUiState.collectAsState()
+                val authUIStates by authViewModel.authUiState.collectAsStateWithLifecycle()
                 val zodiacSign = authUIStates.zodiacSign
 
                 zodiacSign?.let {

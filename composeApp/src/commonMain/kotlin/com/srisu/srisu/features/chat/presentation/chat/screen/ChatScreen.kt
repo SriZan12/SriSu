@@ -95,7 +95,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -158,7 +158,7 @@ fun ChatScreen(
     onNavBack: () -> Unit,
     session: Session?,
 ) {
-    val chatState by viewModel.chatState.collectAsState()
+    val chatState by viewModel.chatState.collectAsStateWithLifecycle()
 
     Initialization(
         chatViewModel = viewModel,

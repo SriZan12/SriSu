@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.chat.data.remote.api
 
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.NetworkConfig
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.features.chat.data.remote.response.ChatMediaResponse
@@ -14,7 +14,10 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class ChatApiService(private val httpClient: HttpClient) {
+class ChatApiService(
+    private val httpClient: HttpClient,
+    private val networkConfig: NetworkConfig,
+) {
 
     suspend fun uploadMedias(
         medias: List<MediaFile?>?
@@ -22,7 +25,7 @@ class ChatApiService(private val httpClient: HttpClient) {
 
         return httpClient.safeRequest {
 
-            url(urlString = "${BaseApiService.Companion.BASE_URL}api/chat/media-upload/")
+            url(urlString = "${networkConfig.apiBaseUrl}api/chat/media-upload/")
             method = HttpMethod.Companion.Post
 
             setBody(

@@ -9,10 +9,10 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readReason
 import io.ktor.websocket.readText
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
@@ -20,55 +20,68 @@ import kotlin.time.Duration.Companion.seconds
 
 abstract class BaseWebSocketClient(
     private val httpClient: HttpClient,
-    private val wsUrl: String,
+    private val externalScope: CoroutineScope,
+    private val dispatcher: CoroutineDispatcher,
+    private val wsUrlProvider: () -> String,
 ) {
-
-    protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    @Volatile
-    protected var isRunning = false
+    private var connectionJob: Job? = null
 
     @Volatile
-    protected var currentSession: DefaultClientWebSocketSession? = null
+    private var isRunning = false
+
+    @Volatile
+    private var currentSession: DefaultClientWebSocketSession? = null
 
     fun connect() {
-        if (isRunning) {
+        if (connectionJob?.isActive == true) {
             AppLogger.log("WebSocket already running")
             return
         }
 
         isRunning = true
-        scope.launch {
+        connectionJob = externalScope.launch(dispatcher) {
             connectionLoop()
         }
     }
 
     fun disconnect(reason: String? = null) {
         isRunning = false
-        scope.launch {
+        connectionJob?.cancel(CancellationException(reason ?: "Client disconnected"))
+        connectionJob = null
+
+        val session = currentSession
+        currentSession = null
+
+        externalScope.launch(dispatcher) {
             try {
-                currentSession?.close(
+                session?.close(
                     CloseReason(
                         CloseReason.Codes.NORMAL,
-                        reason ?: "Client disconnected"
+                        reason ?: "Client disconnected",
                     )
                 )
-            } catch (e: Exception) {
-                AppLogger.log("Error during disconnect: ${e.message}")
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                AppLogger.log("Error during disconnect: ${exception.message}")
             } finally {
-                currentSession = null
                 onDisconnected(reason)
             }
         }
     }
 
     suspend fun send(rawPayload: String) {
+        val session = currentSession
+            ?: throw IllegalStateException("Cannot send while the WebSocket is disconnected")
+
         try {
-            currentSession?.outgoing?.send(Frame.Text(rawPayload))
-        } catch (e: Exception) {
-            AppLogger.log("Error sending message: ${e.message}")
-            onError(e)
-            throw e
+            session.outgoing.send(Frame.Text(rawPayload))
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (exception: Exception) {
+            AppLogger.log("Error sending message: ${exception.message}")
+            onError(exception)
+            throw exception
         }
     }
 
@@ -78,19 +91,20 @@ abstract class BaseWebSocketClient(
 
         while (isRunning) {
             try {
-                httpClient.webSocket(urlString = wsUrl) {
+                httpClient.webSocket(urlString = wsUrlProvider()) {
                     currentSession = this
                     backoff = 1.seconds
 
                     onConnected()
                     AppLogger.log("WebSocket connected")
-
                     onSessionStarted(this)
                     readLoop()
                 }
-            } catch (e: Exception) {
-                AppLogger.log("WebSocket error: ${e.message}")
-                onError(e)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                AppLogger.log("WebSocket error: ${exception.message}")
+                onError(exception)
             } finally {
                 currentSession = null
             }
@@ -104,55 +118,27 @@ abstract class BaseWebSocketClient(
     }
 
     private suspend fun DefaultClientWebSocketSession.readLoop() {
-        try {
-            for (frame in incoming) {
-                when (frame) {
-                    is Frame.Text -> {
-                        val raw = frame.readText()
-                        onIncoming(raw)
-                    }
-
-                    is Frame.Close -> {
-                        val reason = frame.readReason()
-                        AppLogger.log("WebSocket closed: ${reason?.message}")
-                        onDisconnected(reason?.message)
-                        break
-                    }
-
-                    else -> {
-                        // Ignore unsupported frame types for now
-                    }
+        for (frame in incoming) {
+            when (frame) {
+                is Frame.Text -> onIncoming(frame.readText())
+                is Frame.Close -> {
+                    val reason = frame.readReason()
+                    AppLogger.log("WebSocket closed: ${reason?.message}")
+                    onDisconnected(reason?.message)
+                    break
                 }
+                else -> Unit
             }
-        } catch (e: Exception) {
-            AppLogger.log("Read loop error: ${e.message}")
-            onError(e)
         }
     }
 
-    /**
-     * Called once the websocket session is connected.
-     */
-    protected open suspend fun onConnected() {}
+    protected open suspend fun onConnected() = Unit
 
-    /**
-     * Called after a session is established and before reading starts.
-     * Useful for subscriptions / initial fetches.
-     */
-    protected open suspend fun onSessionStarted(session: DefaultClientWebSocketSession) {}
+    protected open suspend fun onSessionStarted(session: DefaultClientWebSocketSession) = Unit
 
-    /**
-     * Called when text payload is received.
-     */
     protected abstract suspend fun onIncoming(raw: String)
 
-    /**
-     * Called when websocket disconnects or closes.
-     */
-    protected open suspend fun onDisconnected(reason: String?) {}
+    protected open suspend fun onDisconnected(reason: String?) = Unit
 
-    /**
-     * Called on connection/read/send errors.
-     */
-    protected open suspend fun onError(error: Throwable) {}
+    protected open suspend fun onError(error: Throwable) = Unit
 }

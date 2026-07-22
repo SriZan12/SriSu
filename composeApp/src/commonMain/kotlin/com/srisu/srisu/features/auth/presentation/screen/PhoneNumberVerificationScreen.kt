@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,7 +66,7 @@ fun PhoneNumberVerificationScreen(
 
         }) {
 
-        val authUIStates by authViewModel.authUiState.collectAsState()
+        val authUIStates by authViewModel.authUiState.collectAsStateWithLifecycle()
 
         Init(authViewModel = authViewModel)
 
