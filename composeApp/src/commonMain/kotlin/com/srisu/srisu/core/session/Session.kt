@@ -64,9 +64,11 @@ data class Session(
     val userPhotos: List<UserPhoto?>? = null,
     @SerialName("bio")
     val bio: String? = null,
+    @SerialName("is_engaged")
+    val isEngaged: Boolean? = null
 )
 
-fun User.toSession(access: String?, refresh: String?,id: Long?): Session {
+fun User.toSession(access: String?, refresh: String?, id: Long?): Session {
     return Session(
         access = access,
         refresh = refresh,
@@ -87,12 +89,13 @@ fun User.toSession(access: String?, refresh: String?,id: Long?): Session {
         country = this.country,
         city = this.city,
         userInterests = this.userInterests,
-        userPhotos = this.userPhotos
+        userPhotos = this.userPhotos,
+        isEngaged = this.isEngaged
     )
 }
 
 
-fun setUserWholeCredentials(
+fun setUserSession(
     access: String?,
     refresh: String?,
     userInfo: ProfileResponse.User?
@@ -115,7 +118,8 @@ fun setUserWholeCredentials(
         country = userInfo?.country,
         city = userInfo?.city,
         userInterests = userInfo?.userInterests,
-        userPhotos = userInfo?.userPhotos
+        userPhotos = userInfo?.userPhotos,
+        isEngaged = userInfo?.isEngaged
     )
 
     return Json.encodeToString(credentials)

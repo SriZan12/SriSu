@@ -25,7 +25,7 @@ import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.json.Json
 
 @Composable
- fun AppRoot(
+fun AppRoot(
     sessionStorage: SessionStorage
 ) {
     val navController = rememberNavController()
@@ -84,7 +84,7 @@ private fun readSessionSafely(sessionStorage: SessionStorage): Session? {
 private fun resolveStartDestination(session: Session?): Route {
     return when {
         session?.isPhoneVerified == true && session.isProfileComplete == true -> {
-            ChatNav.FindPartnerScreen
+            HomeNavigation.Home
         }
 
         else -> AuthNavigation.Auth

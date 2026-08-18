@@ -16,7 +16,7 @@ import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
-import com.srisu.srisu.core.session.setUserWholeCredentials
+import com.srisu.srisu.core.session.setUserSession
 import com.srisu.srisu.core.session.toSession
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.Auth.FULL_NAME_PROGRESS
@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlin.time.ExperimentalTime
 
@@ -478,7 +477,7 @@ class AuthViewModel(
                 profileSetupDTO = profileDTO,
                 mediaFile = mediaFile
             ).onSuccess { response, _ ->
-                val credentials = setUserWholeCredentials(
+                val credentials = setUserSession(
                     access = currentState.session?.access,
                     refresh = currentState.session?.refresh,
                     userInfo = response?.user

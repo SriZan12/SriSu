@@ -42,6 +42,8 @@ data class ProfileResponse(
         @SerialName("username")
         val username: String? = null,
         @SerialName("zodiac_sign")
-        val zodiacSign: String? = null
+        val zodiacSign: String? = null,
+        @SerialName("is_engaged")
+        val isEngaged: Boolean? = null
     )
 }

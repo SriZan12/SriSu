@@ -12,12 +12,12 @@ import io.ktor.http.contentType
 class BaseApiService(private val httpClient: HttpClient) {
 
     companion object {
-//        const val BASE_URL = "http://192.168.2.25:8000/" // office
-        const val BASE_URL = "http://192.168.1.72:8000/" // home
+        //        const val BASE_URL = "http://192.168.2.25:8000/" // office
+        const val BASE_URL = "http://192.168.1.73:8000/" // home
     }
 
     suspend fun getCitiesList(country: String?): CityResponse? {
-        return httpClient.get(SuggestionApiService.CITY_ENDPOINT) {
+        return httpClient.get(urlString = SuggestionApiService.CITY_ENDPOINT) {
             parameter("country", country)
             contentType(ContentType.Application.Json)
         }.body()

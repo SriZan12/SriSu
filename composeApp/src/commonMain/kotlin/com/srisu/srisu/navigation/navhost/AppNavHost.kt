@@ -59,7 +59,12 @@ fun AppNavHost(
         ) {
             authGraph(navController = navController)
 
-            homeGraph()
+            homeGraph(
+                navController = navController,
+                session = session,
+                chatViewModel = chatViewModel,
+                findPartnerViewModel = findPartnerViewModel
+            )
 
             suggestionsGraph(
                 navController = navController,

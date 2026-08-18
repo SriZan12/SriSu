@@ -14,7 +14,7 @@ import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.home.profile.presentation.state.toUIModel
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
-import com.srisu.srisu.core.session.setUserWholeCredentials
+import com.srisu.srisu.core.session.setUserSession
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Country
@@ -486,7 +486,7 @@ class EditProfileViewModel(
         refresh: String?,
         userInfo: ProfileResponse.User?,
     ) {
-        val credentials = setUserWholeCredentials(access, refresh, userInfo)
+        val credentials = setUserSession(access, refresh, userInfo)
         saveSession(credentials)
         setSession()
         setUserProfileData()
