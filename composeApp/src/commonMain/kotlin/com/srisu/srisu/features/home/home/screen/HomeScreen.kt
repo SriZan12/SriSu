@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.home.home.vm.HomeVM
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -43,18 +42,9 @@ fun HomeScreen(
                         onNavigateToFindYourPartner()
                     }
                 },
-                content = {
-
-                    Text("Go to Chats")
-                }
+                content = { Text("Go to Chats") }
             )
         }
-
-//        ChatScreen(
-//            session = null,
-//            navController = rememberNavController()
-//        )
     }
-
 }
 

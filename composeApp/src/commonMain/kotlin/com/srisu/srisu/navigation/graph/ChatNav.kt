@@ -11,8 +11,6 @@ import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.chat.presentation.findpartner.screen.ReceivedLoveRequestScreen
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import org.koin.compose.viewmodel.koinViewModel
 
 sealed class ChatNav : Route {
 
@@ -61,7 +59,7 @@ fun NavGraphBuilder.chatGraph(
 
     composable<ChatNav.ChatScreen> { _ ->
         ChatScreen(
-            viewModel = koinViewModel<ChatViewModel>(),
+            viewModel = chatViewModel,
             session = session,
             onNavBack = {
                 navController.popBackStack()

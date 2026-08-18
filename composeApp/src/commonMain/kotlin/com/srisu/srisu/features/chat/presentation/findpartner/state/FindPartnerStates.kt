@@ -23,5 +23,5 @@ data class FindPartnerState(
     val haveCoupleConnectionRequestedResponse: HaveCoupleConnectionResponse? = null,
     val senderPhoneNumber: String = "",
     val handledRequestIds: Set<Long> = emptySet(),
-    var loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>>? = null
+    val loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>>? = null
 )

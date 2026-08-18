@@ -43,6 +43,8 @@ class FindPartnerViewModel(
     private val sessionStorage: SessionStorage,
 ) : ViewModel() {
 
+    private var session: Session? = null
+
     private val _findPartnerUIState: MutableStateFlow<FindPartnerState> =
         MutableStateFlow(FindPartnerState())
     val findPartnerUIState = this._findPartnerUIState.stateIn(
@@ -129,9 +131,10 @@ class FindPartnerViewModel(
 
     fun setSenderPhoneNumber() {
         val sessionData = sessionStorage.getSession(sessionKey = Constants.Auth.SESSION_KEY)
-        var session: Session? = null
-        if (sessionData != null) {
-            session = Json.decodeFromString<Session>(sessionData)
+        session = sessionData?.let { serializedSession ->
+            runCatching { Json.decodeFromString<Session>(serializedSession) }
+                .onFailure { AppLogger.log("Failed to decode session: ${it.message}") }
+                .getOrNull()
         }
         updateSenderPhoneNumber(phoneNumber = session?.phoneNumber)
     }
@@ -204,6 +207,18 @@ class FindPartnerViewModel(
             _findPartnerUIState.value.copy(haveCoupleConnectionRequestedResponse = haveCoupleConnectionResponse)
     }
 
+    private fun updateSessionEngagement(isEngaged: Boolean) {
+        val currentSession = session ?: return
+        if (currentSession.isEngaged == isEngaged) return
+
+        val updatedSession = currentSession.copy(isEngaged = isEngaged)
+        sessionStorage.saveSession(
+            sessionKey = Constants.Auth.SESSION_KEY,
+            credentials = Json.encodeToString(updatedSession)
+        )
+        session = updatedSession
+    }
+
 
     private fun loadAllCountries() {
         viewModelScope.launch {
@@ -237,6 +252,7 @@ class FindPartnerViewModel(
             }.onSuccess { result ->
                 result.onSuccess { _, _ ->
                     if (status == ACCEPTED) {
+                        updateSessionEngagement(isEngaged = true)
                         onNavToChatScreen()
                     }
 
@@ -352,6 +368,9 @@ class FindPartnerViewModel(
             connectionRepository.sendHaveCoupleConnectionRequested()
                 .onSuccess { response, _ ->
                     updateHaveCoupleConnectionRequested(haveCoupleConnectionResponse = response)
+                    response?.let {
+                        updateSessionEngagement(isEngaged = it.connection != null)
+                    }
                 }
                 .onError { errorMessage, errorType ->
                     AppLogger.log("API Error: $errorMessage, Type: $errorType")
