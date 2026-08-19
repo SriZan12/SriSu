@@ -42,7 +42,12 @@ fun HomeScreen(
                         onNavigateToFindYourPartner()
                     }
                 },
-                content = { Text("Go to Chats") }
+                content = {
+                    Text(
+                        if (homeUiState.isEngaged) "View Couple Profile"
+                        else "Find Your Partner"
+                    )
+                }
             )
         }
     }

@@ -7,6 +7,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.User
+import com.srisu.srisu.features.home.coupleprofile.presentation.screen.CoupleProfileScreen
+import com.srisu.srisu.features.home.coupleprofile.presentation.state.CoupleProfileUiState
 import com.srisu.srisu.features.home.profile.presentation.screen.EditProfileScreen
 import com.srisu.srisu.features.home.profile.presentation.screen.InterestScreen
 import com.srisu.srisu.navigation.graph.Route
@@ -39,21 +41,29 @@ fun NavGraphBuilder.profileGraph(
                 editedInterest
             ) else null
 
-        EditProfileScreen(
-            onNavigateInterestScreen = { interests, currentInterestStrings ->
+//        EditProfileScreen(
+//            onNavigateInterestScreen = { interests, currentInterestStrings ->
+//
+//                val data = ScreenData.InterestScreenData(
+//                    list = interests,
+//                    currentInterests = currentInterestStrings,
+//                )
+//                navController.navigate(
+//                    ProfileNav.InterestScreen(
+//                        data = Json.encodeToString(data)
+//                    )
+//                )
+//
+//            },
+//            editedInterest = editedInterestList,
+//        )
 
-                val data = ScreenData.InterestScreenData(
-                    list = interests,
-                    currentInterests = currentInterestStrings,
-                )
-                navController.navigate(
-                    ProfileNav.InterestScreen(
-                        data = Json.encodeToString(data)
-                    )
-                )
-
-            },
-            editedInterest = editedInterestList,
+        CoupleProfileScreen(
+            onNavigateBack = {},
+            onSendMessage = {},
+            onPlanDate = {},
+            onOpenSettings = {},
+            uiState = CoupleProfileUiState(),
         )
     }
 
