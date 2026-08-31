@@ -42,6 +42,7 @@ class ChatViewModel(
     private var typingJob: Job? = null
     private val typingTimeoutMillis = 1200L
     private var isCurrentlyTyping = false
+    private var requestedPartnerId: Long? = null
 
     init {
         observeMessages()
@@ -79,14 +80,27 @@ class ChatViewModel(
         viewModelScope.launch {
 
             repository.chatRoomsList.collect { chatRooms ->
-//                val selectedRoomId = chatState.value.chatRoomData?.id
-                val selectedRoom = chatRooms.firstOrNull()
+                val currentState = chatState.value
+                val partnerRequest = requestedPartnerId
+                val selectedRoom = if (partnerRequest != null) {
+                    chatRooms.firstOrNull { room -> room.belongsToPartner(partnerRequest) }
+                } else {
+                    currentState.chatRoomData?.id?.let { selectedRoomId ->
+                        chatRooms.firstOrNull { room -> room.id == selectedRoomId }
+                    } ?: chatRooms.firstOrNull()
+                }
                 val myUserId = chatState.value.session?.id
+                val selectedRoomChanged = selectedRoom?.id != currentState.chatRoomData?.id
+
+                if (selectedRoom?.belongsToPartner(requestedPartnerId) == true) {
+                    requestedPartnerId = null
+                }
 
                 _chatState.update { state ->
                     state.copy(
                         chatRoomList = chatRooms,
                         chatRoomData = selectedRoom,
+                        isRoomDataSet = if (selectedRoomChanged) false else state.isRoomDataSet,
                         isTyping = isSomeoneElseTyping(
                             room = selectedRoom ?: state.chatRoomData,
                             myUserId = myUserId,
@@ -195,6 +209,36 @@ class ChatViewModel(
 
     suspend fun fetchInitialChatRooms() {
         repository.fetchInitialChatRooms()
+    }
+
+    /**
+     * Selects the direct chat for a known partner. If rooms have not arrived yet,
+     * the request is retained and resolved after the room list is refreshed.
+     */
+    fun openPartnerChat(partnerId: Long) {
+        requestedPartnerId = partnerId
+
+        val partnerRoom = _chatState.value.chatRoomList
+            .firstOrNull { room -> room.belongsToPartner(partnerId) }
+
+        if (partnerRoom != null) {
+            requestedPartnerId = null
+            val roomChanged = partnerRoom.id != _chatState.value.chatRoomData?.id
+            _chatState.update { state ->
+                state.copy(
+                    chatRoomData = partnerRoom,
+                    isRoomDataSet = if (roomChanged) false else state.isRoomDataSet,
+                )
+            }
+            if (!_chatState.value.isRoomDataSet) {
+                setChatRoomData()
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            repository.fetchInitialChatRooms()
+        }
     }
 
     fun fetchOlderChatRooms() {
@@ -640,4 +684,9 @@ class ChatViewModel(
             state.copy(baseUIState = BaseUIState.Idle)
         }
     }
+}
+
+private fun ChatRoomItemDto.belongsToPartner(partnerId: Long?): Boolean {
+    if (partnerId == null) return false
+    return otherUser?.id == partnerId || userOneId == partnerId || userTwoId == partnerId
 }

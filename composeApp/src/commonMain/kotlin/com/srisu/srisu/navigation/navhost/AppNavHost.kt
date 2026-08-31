@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
+import com.srisu.srisu.features.home.couple.presentation.vm.CoupleProfileViewModel
 import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 import com.srisu.srisu.navigation.graph.Route
 import com.srisu.srisu.navigation.graph.authGraph
@@ -35,6 +36,7 @@ fun AppNavHost(
         val suggestionViewModel = koinViewModel<SuggestionViewModel>()
         val chatViewModel = koinViewModel<ChatViewModel>()
         val findPartnerViewModel = koinViewModel<FindPartnerViewModel>()
+        val coupleProfileViewModel = koinViewModel<CoupleProfileViewModel>()
 
         NavHost(
             modifier = modifier,
@@ -60,7 +62,9 @@ fun AppNavHost(
             authGraph(navController = navController)
 
             homeGraph(
-                navController = navController
+                navController = navController,
+                coupleProfileViewModel = coupleProfileViewModel,
+                chatViewModel = chatViewModel,
             )
 
             suggestionsGraph(

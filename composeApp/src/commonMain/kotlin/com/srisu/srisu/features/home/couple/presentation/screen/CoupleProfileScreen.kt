@@ -52,7 +52,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.srisu.srisu.components.PrimaryToolBar
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
 import com.srisu.srisu.theme.AppTheme
 import org.jetbrains.compose.resources.painterResource
@@ -68,36 +69,67 @@ fun CoupleProfileScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     uiState: CoupleProfileUiState = CoupleProfileUiState(),
+    isLoading: Boolean = false,
+    isMissing: Boolean = false,
+    errorTitle: String? = null,
+    errorMessage: String? = null,
+    onRetry: () -> Unit = {},
+    onDismissError: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
         topBar = {
-            PrimaryToolBar(
-                title = "The Soulmates",
-                onNavigate = {},
-                showNavButton = false
+            CoupleProfileTopBar(
+                onNavigateBack = onNavigateBack,
+                onOpenSettings = onOpenSettings,
             )
         },
     ) { contentPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            CoupleHero(uiState = uiState)
-            CoupleIdentity(uiState = uiState)
-            CoupleActions(onPlanDate = onPlanDate, onSendMessage = onSendMessage)
-            RelationshipHighlights(uiState = uiState)
-            SharedInterests(interests = uiState.sharedInterests)
-            RelationshipStrength(value = uiState.relationshipStrength)
-            JourneyStory(story = uiState.journeyStory)
-            Spacer(Modifier.height(32.dp))
+        if (isMissing) {
+            MissingCoupleProfile(
+                onNavigateBack = onNavigateBack,
+                onRetry = onRetry,
+                modifier = Modifier.padding(contentPadding),
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                CoupleHero(uiState = uiState)
+                CoupleIdentity(uiState = uiState)
+                if (!uiState.profileComplete) {
+                    CompleteProfileCard(onCompleteProfile = onOpenSettings)
+                }
+                CoupleActions(onPlanDate = onPlanDate, onSendMessage = onSendMessage)
+                RelationshipHighlights(uiState = uiState)
+                if (uiState.sharedInterests.isNotEmpty()) {
+                    SharedInterests(interests = uiState.sharedInterests)
+                }
+                RelationshipStrength(value = uiState.relationshipStrength)
+                if (uiState.journeyStory.isNotBlank()) {
+                    JourneyStory(story = uiState.journeyStory)
+                }
+                Spacer(Modifier.height(32.dp))
+            }
         }
     }
+
+    if (isLoading) {
+        LoadingScrim()
+    }
+
+    ErrorDialog(
+        title = errorTitle,
+        errorMessage = errorMessage,
+        show = !errorMessage.isNullOrBlank(),
+        onDismiss = onDismissError,
+    )
 }
 
 @Composable
@@ -150,7 +182,7 @@ private fun CoupleHero(uiState: CoupleProfileUiState) {
         contentAlignment = Alignment.BottomCenter,
     ) {
         ProfileImage(
-            imageUrl = "https://www.jasminealley.com/wp-content/uploads/2024/02/kauai-road.jpg",
+            imageUrl = uiState.coverPhotoUrl,
             contentDescription = "Couple cover photo",
             modifier = Modifier
                 .fillMaxWidth()
@@ -163,12 +195,12 @@ private fun CoupleHero(uiState: CoupleProfileUiState) {
             horizontalArrangement = Arrangement.spacedBy((-14).dp),
         ) {
             PartnerPortrait(
-                imageUrl = "https://images.unsplash.com/photo-1611608822650-925c227ef4d2?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                contentDescription = "Sri profile photo",
+                imageUrl = uiState.firstPartnerPhotoUrl,
+                contentDescription = "First partner profile photo",
             )
             PartnerPortrait(
-                imageUrl = "https://img.magnific.com/free-photo/beautiful-girl-stands-park_8353-5084.jpg",
-                contentDescription = "Su profile photo",
+                imageUrl = uiState.secondPartnerPhotoUrl,
+                contentDescription = "Second partner profile photo",
             )
         }
     }
@@ -176,7 +208,7 @@ private fun CoupleHero(uiState: CoupleProfileUiState) {
 
 @Composable
 private fun PartnerPortrait(
-    imageUrl: String? = "https://images.unsplash.com/photo-1611608822650-925c227ef4d2?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    imageUrl: String?,
     contentDescription: String
 ) {
     Card(
@@ -198,7 +230,7 @@ private fun PartnerPortrait(
 
 @Composable
 private fun ProfileImage(
-    imageUrl: String? = "https://www.jasminealley.com/wp-content/uploads/2024/02/kauai-road.jpg",
+    imageUrl: String?,
     contentDescription: String,
     modifier: Modifier,
 ) {
@@ -227,25 +259,100 @@ private fun CoupleIdentity(uiState: CoupleProfileUiState) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = uiState.coupleTitle,
+            text = uiState.coupleTitle.ifBlank { "Our Story" },
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = uiState.partnerNames,
+            text = uiState.partnerNames.ifBlank { "You & your partner" },
             color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = "“${uiState.tagline}”",
+            text = "“${uiState.tagline.ifBlank { "Make this space yours." }}”",
             color = MaterialTheme.colorScheme.tertiary,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+@Composable
+private fun CompleteProfileCard(onCompleteProfile: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "Complete your couple profile",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Add your anniversary, shared interests, cover photo, and story.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            OutlinedButton(
+                onClick = onCompleteProfile,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Set up profile")
+            }
+        }
+    }
+}
+
+@Composable
+private fun MissingCoupleProfile(
+    onNavigateBack: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Favorite,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(52.dp),
+        )
+        Text(
+            text = "No couple profile yet",
+            modifier = Modifier.padding(top = 16.dp),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "Connect with your partner first, then return here to create your shared space.",
+            modifier = Modifier.padding(top = 8.dp),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+        ) {
+            Text("Try again")
+        }
+        OutlinedButton(
+            onClick = onNavigateBack,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        ) {
+            Text("Go back")
+        }
     }
 }
 
@@ -476,7 +583,7 @@ private fun CoupleProfileScreenPreview() {
             onSendMessage = {},
             onPlanDate = {},
             onOpenSettings = {},
-            uiState = CoupleProfileUiState(),
+            uiState = CoupleProfileUiState.preview(),
         )
     }
 }

@@ -1,15 +1,18 @@
 package com.srisu.srisu.navigation.graph
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
 import com.srisu.srisu.features.home.home.screen.HomeScreen
 import com.srisu.srisu.features.home.couple.presentation.screen.CoupleProfileScreen
 import com.srisu.srisu.features.home.couple.presentation.screen.EditCoupleProfileScreen
 import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
+import com.srisu.srisu.features.home.couple.presentation.vm.CoupleProfileViewModel
+import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Serializable
 sealed class HomeNavigation : Route {
@@ -20,12 +23,14 @@ sealed class HomeNavigation : Route {
     data object CoupleProfile : HomeNavigation()
 
     @Serializable
-    data class EditCoupleProfile(val profileData: String) : HomeNavigation()
+    data object EditCoupleProfile : HomeNavigation()
 
 }
 
 fun NavGraphBuilder.homeGraph(
-    navController: NavController
+    navController: NavController,
+    coupleProfileViewModel: CoupleProfileViewModel,
+    chatViewModel: ChatViewModel,
 ) {
 
     composable<HomeNavigation.Home> { _ ->
@@ -39,18 +44,25 @@ fun NavGraphBuilder.homeGraph(
         )
     }
 
-    composable<HomeNavigation.CoupleProfile> { backStackEntry ->
-        val savedProfile = backStackEntry.savedStateHandle
-            .getStateFlow("couple_profile", "")
-            .value
-        val profile = savedProfile.takeIf(String::isNotBlank)
-            ?.let { runCatching { Json.decodeFromString<CoupleProfileUiState>(it) }.getOrNull() }
-            ?: CoupleProfileUiState()
+    composable<HomeNavigation.CoupleProfile> {
+        val screenState by coupleProfileViewModel.state.collectAsStateWithLifecycle()
+
+        LaunchedEffect(Unit) {
+            coupleProfileViewModel.loadProfile()
+        }
 
         CoupleProfileScreen(
-            uiState = profile,
+            uiState = screenState.profile ?: CoupleProfileUiState(),
+            isLoading = screenState.isLoading,
+            isMissing = screenState.isMissing ||
+                (screenState.profile == null && !screenState.isLoading),
+            errorTitle = screenState.errorTitle,
+            errorMessage = screenState.errorMessage,
+            onRetry = { coupleProfileViewModel.loadProfile(forceRefresh = true) },
+            onDismissError = coupleProfileViewModel::clearError,
             onNavigateBack = navController::popBackStack,
             onSendMessage = {
+                screenState.profile?.partnerId?.let(chatViewModel::openPartnerChat)
                 navController.navigate(ChatNav.ChatScreen) {
                     launchSingleTop = true
                 }
@@ -59,34 +71,31 @@ fun NavGraphBuilder.homeGraph(
                 // UI-only extension point for the future date-planning flow.
             },
             onOpenSettings = {
-                navController.navigate(
-                    HomeNavigation.EditCoupleProfile(Json.encodeToString(profile))
-                )
+                if (screenState.profile != null) {
+                    coupleProfileViewModel.clearError()
+                    navController.navigate(HomeNavigation.EditCoupleProfile)
+                }
             },
         )
     }
 
-    composable<HomeNavigation.EditCoupleProfile> { backStackEntry ->
-        val profile = runCatching {
-            Json.decodeFromString<CoupleProfileUiState>(
-                backStackEntry.toRoute<HomeNavigation.EditCoupleProfile>().profileData
-            )
-        }.getOrDefault(CoupleProfileUiState())
+    composable<HomeNavigation.EditCoupleProfile> {
+        val screenState by coupleProfileViewModel.state.collectAsStateWithLifecycle()
+        val profile = screenState.profile ?: CoupleProfileUiState()
 
         EditCoupleProfileScreen(
             initialProfile = profile,
+            isSaving = screenState.isSaving,
+            errorTitle = screenState.errorTitle,
+            errorMessage = screenState.errorMessage,
+            onDismissError = coupleProfileViewModel::clearError,
             onNavigateBack = navController::popBackStack,
-            onSave = { updatedProfile ->
-                navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.set("couple_profile", Json.encodeToString(updatedProfile))
-                navController.popBackStack()
-            },
-            onChangeCoverPhoto = {
-                // UI extension point for the shared media picker.
-            },
-            onChangePartnerPhotos = {
-                // UI extension point for partner photo management.
+            onSave = { updatedProfile, coverPhotoPath ->
+                coupleProfileViewModel.saveProfile(
+                    profile = updatedProfile,
+                    coverPhotoPath = coverPhotoPath,
+                    onSuccess = navController::popBackStack,
+                )
             },
         )
     }

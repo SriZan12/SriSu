@@ -8,13 +8,15 @@ data class EditCoupleProfileUiState(
     val relationshipStrength: Float = 0f,
     val journeyStory: String = "",
     val coverPhotoUrl: String? = null,
+    val coverPhotoPath: String? = null,
     val firstPartnerPhotoUrl: String? = null,
     val secondPartnerPhotoUrl: String? = null,
 ) {
     fun toCoupleProfile(previous: CoupleProfileUiState) = previous.copy(
         coupleTitle = coupleTitle.trim(),
         tagline = tagline.trim(),
-        anniversary = anniversary.trim(),
+        anniversaryDate = anniversary.trim().takeIf(String::isNotEmpty),
+        anniversary = anniversary.trim().ifEmpty { "—" },
         sharedInterests = sharedInterests
             .split(',')
             .map(String::trim)
@@ -22,7 +24,7 @@ data class EditCoupleProfileUiState(
             .distinct(),
         relationshipStrength = relationshipStrength.toInt(),
         journeyStory = journeyStory.trim(),
-        coverPhotoUrl = coverPhotoUrl,
+        coverPhotoUrl = coverPhotoPath ?: coverPhotoUrl,
         firstPartnerPhotoUrl = firstPartnerPhotoUrl,
         secondPartnerPhotoUrl = secondPartnerPhotoUrl,
     )
@@ -31,7 +33,7 @@ data class EditCoupleProfileUiState(
         fun from(profile: CoupleProfileUiState) = EditCoupleProfileUiState(
             coupleTitle = profile.coupleTitle,
             tagline = profile.tagline,
-            anniversary = profile.anniversary,
+            anniversary = profile.anniversaryDate.orEmpty(),
             sharedInterests = profile.sharedInterests.joinToString(", "),
             relationshipStrength = profile.relationshipStrength.toFloat(),
             journeyStory = profile.journeyStory,

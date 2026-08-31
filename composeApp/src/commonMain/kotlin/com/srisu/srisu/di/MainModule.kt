@@ -4,6 +4,7 @@ import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel
 import com.srisu.srisu.features.home.connection.presentation.singleconnection.vm.SingleConnectionViewModel
+import com.srisu.srisu.features.home.couple.presentation.vm.CoupleProfileViewModel
 import com.srisu.srisu.features.home.home.vm.HomeVM
 import com.srisu.srisu.features.home.profile.presentation.vm.EditProfileViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel
@@ -58,6 +59,13 @@ val mainModule = module {
     viewModel {
         CoupleConnectionViewModel(
              connectionRepository = get()
+        )
+    }
+
+    viewModel {
+        CoupleProfileViewModel(
+            repository = get(),
+            connectivityObserver = get(),
         )
     }
 

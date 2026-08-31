@@ -42,10 +42,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.PrimaryToolBar
 import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
 import com.srisu.srisu.features.home.couple.presentation.state.EditCoupleProfileUiState
 import com.srisu.srisu.theme.AppTheme
+import com.srisu.srisu.utils.MediaType
+import com.srisu.srisu.utils.rememberGalleryManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import srisu.composeapp.generated.resources.Res
@@ -55,23 +59,54 @@ import srisu.composeapp.generated.resources.image_placeholder
 fun EditCoupleProfileScreen(
     initialProfile: CoupleProfileUiState,
     onNavigateBack: () -> Unit,
-    onSave: (CoupleProfileUiState) -> Unit,
-    onChangeCoverPhoto: () -> Unit,
-    onChangePartnerPhotos: () -> Unit,
+    onSave: (CoupleProfileUiState, String?) -> Unit,
     modifier: Modifier = Modifier,
+    isSaving: Boolean = false,
+    errorTitle: String? = null,
+    errorMessage: String? = null,
+    onDismissError: () -> Unit = {},
 ) {
     var uiState by remember(initialProfile) {
         mutableStateOf(EditCoupleProfileUiState.from(initialProfile))
     }
 
+    val galleryManager = rememberGalleryManager(
+        onResult = { paths ->
+            paths?.firstOrNull()?.let { path ->
+                uiState = uiState.copy(
+                    coverPhotoPath = path,
+                    coverPhotoUrl = path,
+                )
+            }
+        },
+        mediaType = MediaType.IMAGE_ONLY,
+        isMultiple = false,
+    )
+
     EditCoupleProfileContent(
         uiState = uiState,
         onUiStateChange = { uiState = it },
         onNavigateBack = onNavigateBack,
-        onSave = { onSave(uiState.toCoupleProfile(initialProfile)) },
-        onChangeCoverPhoto = onChangeCoverPhoto,
-        onChangePartnerPhotos = onChangePartnerPhotos,
+        onSave = {
+            onSave(
+                uiState.toCoupleProfile(initialProfile),
+                uiState.coverPhotoPath,
+            )
+        },
+        onChangeCoverPhoto = galleryManager::launch,
+        isSaving = isSaving,
         modifier = modifier,
+    )
+
+    if (isSaving) {
+        LoadingScrim()
+    }
+
+    ErrorDialog(
+        title = errorTitle,
+        errorMessage = errorMessage,
+        show = !errorMessage.isNullOrBlank(),
+        onDismiss = onDismissError,
     )
 }
 
@@ -83,7 +118,7 @@ private fun EditCoupleProfileContent(
     onNavigateBack: () -> Unit,
     onSave: () -> Unit,
     onChangeCoverPhoto: () -> Unit,
-    onChangePartnerPhotos: () -> Unit,
+    isSaving: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -93,9 +128,7 @@ private fun EditCoupleProfileContent(
             PrimaryToolBar(
                 title = "Edit Couple Profile",
                 showNavButton = true,
-                onNavigate = {
-
-                }
+                onNavigate = onNavigateBack,
             )
         },
     ) { contentPadding ->
@@ -111,7 +144,6 @@ private fun EditCoupleProfileContent(
             EditablePhotos(
                 uiState = uiState,
                 onChangeCoverPhoto = onChangeCoverPhoto,
-                onChangePartnerPhotos = onChangePartnerPhotos,
             )
 
             EditSectionTitle("Couple details")
@@ -131,7 +163,8 @@ private fun EditCoupleProfileContent(
                 value = uiState.anniversary,
                 onValueChange = { onUiStateChange(uiState.copy(anniversary = it)) },
                 label = "Anniversary",
-                placeholder = "Oct 12",
+                placeholder = "YYYY-MM-DD",
+                supportingText = "Use the format YYYY-MM-DD.",
             )
 
             EditSectionTitle("Shared interests")
@@ -176,7 +209,7 @@ private fun EditCoupleProfileContent(
 
             Button(
                 onClick = onSave,
-                enabled = uiState.coupleTitle.isNotBlank() && uiState.tagline.isNotBlank(),
+                enabled = !isSaving,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(12.dp),
             ) {
@@ -191,7 +224,6 @@ private fun EditCoupleProfileContent(
 private fun EditablePhotos(
     uiState: EditCoupleProfileUiState,
     onChangeCoverPhoto: () -> Unit,
-    onChangePartnerPhotos: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box {
@@ -232,9 +264,6 @@ private fun EditablePhotos(
                 contentDescription = "Second partner photo",
                 modifier = Modifier.padding(start = 8.dp).size(72.dp).clip(CircleShape),
             )
-            IconButton(onClick = onChangePartnerPhotos, modifier = Modifier.padding(start = 6.dp)) {
-                Icon(Icons.Default.CameraAlt, contentDescription = "Change partner photos")
-            }
         }
     }
 }
@@ -301,11 +330,9 @@ private fun EditSectionTitle(text: String) {
 private fun EditCoupleProfileScreenPreview() {
     AppTheme {
         EditCoupleProfileScreen(
-            initialProfile = CoupleProfileUiState(),
+            initialProfile = CoupleProfileUiState.preview(),
             onNavigateBack = {},
-            onSave = {},
-            onChangeCoverPhoto = {},
-            onChangePartnerPhotos = {},
+            onSave = { _, _ -> },
         )
     }
 }

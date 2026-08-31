@@ -10,6 +10,8 @@ import com.srisu.srisu.core.data.remote.HttpClientFactory
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
 import com.srisu.srisu.features.chat.data.remote.api.ChatRepository
 import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.couple.data.remote.api.CoupleProfileApiService
+import com.srisu.srisu.features.home.couple.domain.repository.CoupleProfileRepository
 import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
 import com.srisu.srisu.features.home.suggestions.domain.repository.SuggestionRepository
@@ -33,6 +35,9 @@ val sharedNetworkModule = module {
 
     single { ConnectionApiService(httpClient = get()) }
     single { ConnectionRepository(connectionApiService = get()) }
+
+    single { CoupleProfileApiService(httpClient = get()) }
+    single { CoupleProfileRepository(apiService = get()) }
 
     single { ChatApiService(httpClient = get()) }
     single {
