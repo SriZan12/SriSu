@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.coupleprofile.presentation.screen
+package com.srisu.srisu.features.home.couple.presentation.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +43,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.PrimaryToolBar
-import com.srisu.srisu.features.home.couple.presentation.screen.EditCoupleProfileScreen
 import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
 import com.srisu.srisu.features.home.couple.presentation.state.EditCoupleProfileUiState
 import com.srisu.srisu.theme.AppTheme

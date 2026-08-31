@@ -1,7 +1,4 @@
-package com.srisu.srisu.features.home.coupleprofile.presentation.state
-
-import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
-import com.srisu.srisu.features.home.couple.presentation.state.EditCoupleProfileUiState
+package com.srisu.srisu.features.home.couple.presentation.state
 
 data class EditCoupleProfileUiState(
     val coupleTitle: String = "",

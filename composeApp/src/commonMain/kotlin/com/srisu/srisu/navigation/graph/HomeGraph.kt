@@ -5,9 +5,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.srisu.srisu.features.home.home.screen.HomeScreen
-import com.srisu.srisu.features.home.coupleprofile.presentation.screen.CoupleProfileScreen
-import com.srisu.srisu.features.home.coupleprofile.presentation.screen.EditCoupleProfileScreen
-import com.srisu.srisu.features.home.coupleprofile.presentation.state.CoupleProfileUiState
+import com.srisu.srisu.features.home.couple.presentation.screen.CoupleProfileScreen
+import com.srisu.srisu.features.home.couple.presentation.screen.EditCoupleProfileScreen
+import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 

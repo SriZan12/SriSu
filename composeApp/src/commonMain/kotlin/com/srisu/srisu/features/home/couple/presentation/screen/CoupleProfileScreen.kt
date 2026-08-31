@@ -1,5 +1,6 @@
-package com.srisu.srisu.features.home.coupleprofile.presentation.screen
+package com.srisu.srisu.features.home.couple.presentation.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +53,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.PrimaryToolBar
-import com.srisu.srisu.features.home.couple.presentation.screen.CoupleProfileScreen
 import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiState
 import com.srisu.srisu.theme.AppTheme
 import org.jetbrains.compose.resources.painterResource
@@ -182,7 +182,7 @@ private fun PartnerPortrait(
     Card(
         modifier = Modifier.size(104.dp),
         shape = CircleShape,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             width = 5.dp,
             color = MaterialTheme.colorScheme.background,
         ),
