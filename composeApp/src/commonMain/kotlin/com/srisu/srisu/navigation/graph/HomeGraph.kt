@@ -47,7 +47,7 @@ fun NavGraphBuilder.homeGraph(
     composable<HomeNavigation.CoupleProfile> {
         val screenState by coupleProfileViewModel.state.collectAsStateWithLifecycle()
 
-        LaunchedEffect(Unit) {
+        LaunchedEffect(coupleProfileViewModel) {
             coupleProfileViewModel.loadProfile()
         }
 
@@ -100,4 +100,3 @@ fun NavGraphBuilder.homeGraph(
         )
     }
 }
-

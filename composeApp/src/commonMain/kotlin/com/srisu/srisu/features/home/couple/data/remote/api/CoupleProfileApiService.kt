@@ -3,6 +3,7 @@ package com.srisu.srisu.features.home.couple.data.remote.api
 import com.srisu.srisu.core.data.remote.BaseApiService
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.home.couple.data.remote.dto.CoupleProfileWriteRequest
 import com.srisu.srisu.features.home.couple.data.remote.response.CoupleProfileData
 import com.srisu.srisu.utils.MediaFile
@@ -23,6 +24,7 @@ class CoupleProfileApiService(
     }
 
     suspend fun getProfile(): ResultHandler<CoupleProfileData?> {
+        AppLogger.log("INSIDE GET PROFILE")
         return httpClient.safeRequest<CoupleProfileData?> {
             url("${BaseApiService.BASE_URL}$COUPLE_PROFILE_ENDPOINT")
             method = HttpMethod.Get

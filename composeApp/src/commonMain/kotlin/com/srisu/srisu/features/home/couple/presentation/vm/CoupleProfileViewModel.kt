@@ -3,6 +3,7 @@ package com.srisu.srisu.features.home.couple.presentation.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.home.couple.data.remote.dto.CoupleProfileWriteRequest
 import com.srisu.srisu.features.home.couple.data.remote.mapper.toUiState
 import com.srisu.srisu.features.home.couple.data.remote.response.CoupleProfileData
@@ -12,6 +13,7 @@ import com.srisu.srisu.features.home.couple.presentation.state.CoupleProfileUiSt
 import com.srisu.srisu.utils.ConnectivityObserver
 import com.srisu.srisu.utils.FileManager
 import com.srisu.srisu.utils.MediaFile
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -25,13 +27,24 @@ class CoupleProfileViewModel(
     val state = _state.asStateFlow()
 
     private var hasLoaded = false
+    private var loadRequested = false
+    private var loadJob: Job? = null
+
+    init {
+        observeConnectivity()
+    }
 
     fun loadProfile(forceRefresh: Boolean = false) {
+        AppLogger.log("INSIDE LOAD PROFILE 1")
         if (hasLoaded && !forceRefresh) return
+        loadRequested = true
+        if (loadJob?.isActive == true) return
         if (!connectivityObserver.isConnected.value) {
-            showError("Offline", "Check your internet connection and try again.")
+            showError(title = "Offline", message = "Check your internet connection and try again.")
             return
         }
+
+        AppLogger.log("INSIDE LOAD PROFILE 2")
 
         _state.update {
             it.copy(
@@ -42,10 +55,13 @@ class CoupleProfileViewModel(
             )
         }
 
-        viewModelScope.launch {
+        AppLogger.log("INSIDE LOAD PROFILE")
+
+        loadJob = viewModelScope.launch {
             repository.getProfile()
                 .onSuccess { data, _ ->
                     hasLoaded = true
+                    loadRequested = false
                     applyProfile(data, isSaving = false)
                 }
                 .onError { error, errorType ->
@@ -57,6 +73,22 @@ class CoupleProfileViewModel(
                             errorTitle = if (errorType == NetworkAPIResult.ErrorType.NOT_FOUND) null else errorType.name,
                             errorMessage = if (errorType == NetworkAPIResult.ErrorType.NOT_FOUND) null else error,
                         )
+                    }
+                }
+        }
+    }
+
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivityObserver.isConnected
+                .collect { isConnected ->
+                    if (
+                        isConnected &&
+                        loadRequested &&
+                        !hasLoaded &&
+                        loadJob?.isActive != true
+                    ) {
+                        loadProfile()
                     }
                 }
         }

@@ -75,7 +75,11 @@ fun AppNavHost(
 
             connectionGraph(navController = navController)
 
-            profileGraph(navController = navController)
+            profileGraph(
+                navController = navController,
+                coupleProfileViewModel = coupleProfileViewModel,
+                chatViewModel = chatViewModel,
+            )
 
             chatGraph(
                 session = session,
