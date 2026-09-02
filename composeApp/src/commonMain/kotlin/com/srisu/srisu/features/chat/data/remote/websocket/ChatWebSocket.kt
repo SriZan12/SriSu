@@ -1,6 +1,10 @@
 package com.srisu.srisu.features.chat.data.remote.websocket
 
+import com.srisu.srisu.core.coroutines.AppCoroutineDispatchers
+import com.srisu.srisu.core.coroutines.ApplicationCoroutineScope
 import com.srisu.srisu.core.data.remote.BaseWebSocketClient
+import com.srisu.srisu.core.data.remote.NetworkConfig
+import com.srisu.srisu.core.session.SessionUtils
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomItemDto
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomsData
@@ -21,6 +25,7 @@ import com.srisu.srisu.features.chat.data.remote.response.TypingData
 import com.srisu.srisu.features.chat.data.remote.response.TypingSocketResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,12 +36,15 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class ChatWebSocketClient(
     httpClient: HttpClient,
-    host: String,
-    port: Int,
-    userToken: String?,
+    networkConfig: NetworkConfig,
+    sessionUtils: SessionUtils,
+    applicationScope: ApplicationCoroutineScope,
+    dispatchers: AppCoroutineDispatchers,
 ) : BaseWebSocketClient(
     httpClient = httpClient,
-    wsUrl = "ws://$host:$port/ws/chat/?token=$userToken",
+    externalScope = applicationScope,
+    dispatcher = dispatchers.io,
+    wsUrlProvider = { networkConfig.webSocketUrl(sessionUtils.getSession()?.access) },
 ) {
 
     private val _events = MutableSharedFlow<ChatWebSocketEvent>(
@@ -248,9 +256,11 @@ class ChatWebSocketClient(
 
 
             }
-        } catch (e: Exception) {
-            AppLogger.log("Error handling incoming websocket message: ${e.message}")
-            _events.emit(ChatWebSocketEvent.Error(e))
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (exception: Exception) {
+            AppLogger.log("Error handling incoming websocket message: ${exception.message}")
+            _events.emit(ChatWebSocketEvent.Error(exception))
         }
     }
 

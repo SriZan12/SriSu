@@ -3,15 +3,13 @@ package com.srisu.srisu.core.session
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import kotlinx.serialization.json.Json
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 
-class SessionUtils : KoinComponent {
-
-    val session: SessionStorage by inject()
+class SessionUtils(
+    private val sessionStorage: SessionStorage,
+) {
 
     fun getSession(): Session? {
-        val sessionJson = session.getSession(sessionKey = SESSION_KEY)
+        val sessionJson = sessionStorage.getSession(sessionKey = SESSION_KEY)
         var sessionData: Session? = null
 
         try {

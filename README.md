@@ -1,3 +1,10 @@
+# SriSu
+
+SriSu is a Kotlin Multiplatform mobile application with shared Compose UI and application logic
+for Android and iOS. See [the architecture and refactoring decisions](docs/ARCHITECTURE.md)
+for coroutine ownership, dependency rules, network configuration, verification commands, and the
+production-readiness roadmap.
+
 This is a Kotlin Multiplatform project targeting Android, iOS.
 
 * `/composeApp` is for code that will be shared across your Compose Multiplatform applications.

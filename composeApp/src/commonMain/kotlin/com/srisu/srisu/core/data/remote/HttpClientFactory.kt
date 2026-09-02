@@ -15,6 +15,7 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.accept
 import io.ktor.client.request.bearerAuth
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
@@ -22,7 +23,10 @@ import kotlinx.serialization.json.Json
 
 object HttpClientFactory {
 
-    fun create(sessionStorage: SessionStorage): HttpClient {
+    fun create(
+        sessionStorage: SessionStorage,
+        enableNetworkLogging: Boolean = false,
+    ): HttpClient {
         return HttpClient {
             install(ContentNegotiation) {
                 json(
@@ -43,14 +47,17 @@ object HttpClientFactory {
                 requestTimeoutMillis = 120_000L
                 connectTimeoutMillis = 120_000L
             }
-            install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        AppLogger.log(message)
+            if (enableNetworkLogging) {
+                install(Logging) {
+                    logger = object : Logger {
+                        override fun log(message: String) {
+                            AppLogger.log(message)
+                        }
                     }
+                    // BODY may contain credentials, private messages, and profile data.
+                    level = LogLevel.HEADERS
+                    sanitizeHeader { header -> header == HttpHeaders.Authorization }
                 }
-                level = LogLevel.ALL
-                level = LogLevel.BODY
             }
             defaultRequest {
                 contentType(ContentType.Application.Json)
@@ -72,7 +79,6 @@ object HttpClientFactory {
     fun getBearerToken(session: String?): String? {
         if (session != null) {
             val sessionData = Json.decodeFromString<Session>(session)
-            AppLogger.log("token is ${sessionData.access}")
             return sessionData.access
         }
 

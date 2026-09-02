@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,7 +32,7 @@ fun SelectGenderCompo(authViewModel: AuthViewModel) {
         }
     }) {
 
-        val authUiState by authViewModel.authUiState.collectAsState()
+        val authUiState by authViewModel.authUiState.collectAsStateWithLifecycle()
 
         TitleText(
             modifier = Modifier.fillMaxWidth(),

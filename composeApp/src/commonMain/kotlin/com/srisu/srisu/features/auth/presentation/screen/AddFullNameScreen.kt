@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
@@ -40,7 +40,7 @@ fun AddFullNameCompo(authViewModel: AuthViewModel) {
         }
     ) {
 
-        val authUIStates by authViewModel.authUiState.collectAsState()
+        val authUIStates by authViewModel.authUiState.collectAsStateWithLifecycle()
 
         TitleText(
             modifier = Modifier.fillMaxWidth(),

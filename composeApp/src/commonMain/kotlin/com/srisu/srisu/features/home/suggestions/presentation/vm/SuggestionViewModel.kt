@@ -6,6 +6,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.cachedIn
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.coroutines.AppCoroutineDispatchers
 import com.srisu.srisu.features.home.suggestions.data.dto.UserPreferenceDTO
 import com.srisu.srisu.core.data.remote.BasePagingSource
 import com.srisu.srisu.core.logger.AppLogger
@@ -22,8 +23,6 @@ import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 import io.ktor.util.network.UnresolvedAddressException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -38,6 +37,8 @@ class SuggestionViewModel(
     private val suggestionRepository: SuggestionRepository,
     private val connectionRepository: ConnectionRepository,
     private val connectivityObserver: ConnectivityObserver,
+    private val sessionUtils: SessionUtils,
+    private val dispatchers: AppCoroutineDispatchers,
 ) : ViewModel() {
 
     companion object {
@@ -108,7 +109,7 @@ class SuggestionViewModel(
     }
 
     private fun setSession() {
-        val session = SessionUtils().getSession()
+        val session = sessionUtils.getSession()
         AppLogger.log("Setting Session = ${session}")
         updateState { it.copy(session = session) }
     }
@@ -198,7 +199,7 @@ class SuggestionViewModel(
     }
 
     private suspend fun loadAllCountries() {
-        val countries = withContext(Dispatchers.IO) {
+        val countries = withContext(dispatchers.io) {
             getAllCountriesFromJson() ?: emptyList()
         }
 
@@ -371,7 +372,7 @@ class SuggestionViewModel(
 
         viewModelScope.launch {
             val myPhoneNumber = suggestionUIStates.value.session?.phoneNumber
-                ?: SessionUtils().getPhoneNumber()
+                ?: sessionUtils.getPhoneNumber()
             val receiverNumber = suggestionUIStates.value.suggestionProfileData?.phoneNumber
 
             connectionRepository.sendSingleConnectionRequest(

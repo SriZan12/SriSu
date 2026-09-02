@@ -14,6 +14,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.serialization.JsonConvertException
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -49,9 +50,10 @@ suspend inline fun <reified T> HttpClient.safeRequest(
     return try {
         val response: HttpResponse = request { execute() }
         handleResponse<T>(response)
-    } catch (ex: Exception) {
-        AppLogger.log("INSIDE EXCEPTION")
-        handleException(exception = ex)
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (exception: Exception) {
+        handleException(exception = exception)
     }
 }
 

@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.chat.data.remote.api
 
+import com.srisu.srisu.core.coroutines.ApplicationCoroutineScope
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.features.chat.data.remote.response.ChatMediaResponse
 import com.srisu.srisu.core.logger.AppLogger
@@ -16,10 +17,6 @@ import com.srisu.srisu.features.chat.data.remote.response.ReactionData
 import com.srisu.srisu.features.chat.data.remote.response.TypingData
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.MediaFile
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,10 +31,10 @@ import kotlin.collections.emptyList
 class ChatRepository(
     private val webSocketClient: ChatWebSocketClient,
     private val chatApiService: ChatApiService,
+    private val applicationScope: ApplicationCoroutineScope,
+    sessionUtils: SessionUtils,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    private val currentUserId: Long? = SessionUtils().getCurrentUserId()
+    private val currentUserId: Long? = sessionUtils.getCurrentUserId()
 
     private val _activeChatRoomId = MutableStateFlow<String?>(null)
 //    val activeChatRoomId: StateFlow<String?> = _activeChatRoomId.asStateFlow()
@@ -59,7 +56,7 @@ class ChatRepository(
                 ?.let { cache[it]?.values?.toList() }
                 .orEmpty()
         }.stateIn(
-            scope = scope,
+            scope = applicationScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList(),
         )
@@ -116,22 +113,19 @@ class ChatRepository(
         )
     }
 
-    fun fetchOlderMessages(chatRoomId: String) {
+    suspend fun fetchOlderMessages(chatRoomId: String) {
         val activeRoomId = _activeChatRoomId.value
         if (activeRoomId != chatRoomId) return
 
         val pagination = _messagePagination.value
         if (!pagination.hasMore) return
 
-        scope.launch {
-            webSocketClient.fetchMessages(
-                chatRoomId = chatRoomId,
-                cursor = pagination.nextCursor,
-                limit = DEFAULT_MESSAGE_PAGE_SIZE,
-            )
-        }
+        webSocketClient.fetchMessages(
+            chatRoomId = chatRoomId,
+            cursor = pagination.nextCursor,
+            limit = DEFAULT_MESSAGE_PAGE_SIZE,
+        )
     }
-
     suspend fun fetchInitialChatRooms() {
         _chatRooms.value = emptyList()
         _roomPagination.value = ChatRoomPaginationState()
@@ -142,18 +136,15 @@ class ChatRepository(
         )
     }
 
-    fun fetchOlderChatRooms() {
+    suspend fun fetchOlderChatRooms() {
         val pagination = _roomPagination.value
         if (!pagination.hasMore) return
 
-        scope.launch {
-            webSocketClient.getChatRooms(
-                limit = DEFAULT_CHAT_ROOM_PAGE_SIZE,
-                lastUpdatedAt = pagination.nextCursor,
-            )
-        }
+        webSocketClient.getChatRooms(
+            limit = DEFAULT_CHAT_ROOM_PAGE_SIZE,
+            lastUpdatedAt = pagination.nextCursor,
+        )
     }
-
     suspend fun sendMessage(
         chatRoomId: String,
         text: String? = null,
@@ -257,7 +248,7 @@ class ChatRepository(
     }
 
     private fun observeSocketEvents() {
-        scope.launch {
+        applicationScope.launch {
             webSocketClient.events.collect { event ->
                 when (event) {
                     is ChatWebSocketEvent.Connected -> {

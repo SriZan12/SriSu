@@ -16,7 +16,7 @@ import com.srisu.srisu.features.chat.data.remote.response.ChatRoomItemDto
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
@@ -125,25 +124,20 @@ class ChatViewModel(
     }
 
     fun setChatRoomData() {
-        AppLogger.log("ChatRoomID = ${_chatState.value.chatRoomData}")
-
         val chatRoomData = _chatState.value.chatRoomData ?: return
 
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch {
             try {
-
-                withContext(Dispatchers.Main) {
-                    _chatState.update { state ->
-                        state.copy(
-                            chatRoomData = chatRoomData,
-                            selectedMessageForAction = null,
-                            selectedMessageIdForActions = null,
-                            isEditMessage = false,
-                            replyMessage = ChatState.ReplyMessage(),
-                            messageInput = TextFieldValue(),
-                            showImageScreen = ChatState.ShowImageScreen(),
-                        )
-                    }
+                _chatState.update { state ->
+                    state.copy(
+                        chatRoomData = chatRoomData,
+                        selectedMessageForAction = null,
+                        selectedMessageIdForActions = null,
+                        isEditMessage = false,
+                        replyMessage = ChatState.ReplyMessage(),
+                        messageInput = TextFieldValue(),
+                        showImageScreen = ChatState.ShowImageScreen(),
+                    )
                 }
 
                 chatRoomData.id?.let { roomId ->
@@ -151,17 +145,17 @@ class ChatViewModel(
                     repository.markDelivered(chatRoomId = roomId)
                     repository.markRead(chatRoomId = roomId)
                 }
-            } catch (_: Exception) {
-                withContext(Dispatchers.Main) {
-                    showErrorMessage(
-                        errorType = "Error",
-                        message = "Invalid chat room data",
-                    )
-                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                AppLogger.log("Unable to initialize chat room: ${exception.message}")
+                showErrorMessage(
+                    errorType = "Error",
+                    message = "Invalid chat room data",
+                )
             }
         }
     }
-
     /**
      * Call this when leaving ChatScreen.
      */
@@ -189,14 +183,29 @@ class ChatViewModel(
     }
 
     fun fetchOlderChatRooms() {
-        repository.fetchOlderChatRooms()
+        viewModelScope.launch {
+            try {
+                repository.fetchOlderChatRooms()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                AppLogger.log("Unable to fetch older chat rooms: ${exception.message}")
+            }
+        }
     }
 
     fun fetchOlderMessages() {
         val roomId = chatState.value.chatRoomData?.id ?: return
-        repository.fetchOlderMessages(roomId)
+        viewModelScope.launch {
+            try {
+                repository.fetchOlderMessages(roomId)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                AppLogger.log("Unable to fetch older messages: ${exception.message}")
+            }
+        }
     }
-
     // -------------------------------------------------
     // Message input / typing
     // -------------------------------------------------
@@ -259,6 +268,8 @@ class ChatViewModel(
                     chatRoomId = roomId,
                     isTyping = isTyping,
                 )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -341,6 +352,8 @@ class ChatViewModel(
 
                 onMessageInputChanged(TextFieldValue())
                 setReplyMessage(null, false)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -366,6 +379,8 @@ class ChatViewModel(
                 onMessageInputChanged(TextFieldValue())
                 updateIsEditMessage(false)
                 dismissActions()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -388,6 +403,8 @@ class ChatViewModel(
                     deleteOption = deleteOption,
                 )
                 dismissActions()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -406,6 +423,8 @@ class ChatViewModel(
                     messageId = safeMessageId,
                     reaction = reaction,
                 )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -421,6 +440,8 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 repository.markRead(roomId)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -436,6 +457,8 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 repository.markDelivered(roomId)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 showErrorMessage(
                     errorType = "Error",
@@ -516,6 +539,8 @@ class ChatViewModel(
                             message = error,
                         )
                     }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 updateIsUploadingPhoto(false)
                 showErrorMessage(
@@ -544,6 +569,8 @@ class ChatViewModel(
                 onMessageInputChanged(TextFieldValue())
                 setReplyMessage(null, false)
                 updateIsUploadingPhoto(false)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 updateIsUploadingPhoto(false)
                 showErrorMessage(

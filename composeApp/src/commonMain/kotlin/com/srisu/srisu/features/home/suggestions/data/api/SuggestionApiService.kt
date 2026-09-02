@@ -3,7 +3,7 @@ package com.srisu.srisu.features.home.suggestions.data.api
 import com.srisu.srisu.features.home.suggestions.data.dto.UserPreferenceDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.NetworkConfig
 import com.srisu.srisu.features.home.suggestions.data.response.UserPreferenceResponse
 import com.srisu.srisu.features.home.suggestions.data.response.UserSuggestionResponse
 import io.ktor.client.HttpClient
@@ -14,7 +14,10 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 
-class SuggestionApiService(private val httpClient: HttpClient) {
+class SuggestionApiService(
+    private val httpClient: HttpClient,
+    private val networkConfig: NetworkConfig,
+) {
 
     companion object {
         const val CITY_ENDPOINT = "https://countriesnow.space/api/v0.1/countries/cities/q"
@@ -25,7 +28,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         pageSize: Int
     ): ResultHandler<UserSuggestionResponse?> {
         return httpClient.safeRequest<UserSuggestionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/user-suggestions/")
+            url("${networkConfig.apiBaseUrl}api/social/user-suggestions/")
             parameter("page", page)
             parameter("page_size", pageSize)
 
@@ -35,7 +38,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
 
     suspend fun getSuggestionProfile(userId: Int?): ResultHandler<UserSuggestionResponse.Result?> {
         return httpClient.safeRequest<UserSuggestionResponse.Result?> {
-            url("${BaseApiService.BASE_URL}api/social/get-suggestion-profile/")
+            url("${networkConfig.apiBaseUrl}api/social/get-suggestion-profile/")
             parameter("user_id",userId)
             method = HttpMethod.Get
         }
@@ -44,7 +47,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
 
     suspend fun getUserPreferences(): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/social/user-preferences/me/")
+            url("${networkConfig.apiBaseUrl}api/social/user-preferences/me/")
             contentType(ContentType.Application.Json)
             method = HttpMethod.Companion.Get
         }
@@ -52,7 +55,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
 
     suspend fun setUserPreferences(userPreferenceDTO: UserPreferenceDTO): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/social/user-preferences/")
+            url("${networkConfig.apiBaseUrl}api/social/user-preferences/")
             method = HttpMethod.Companion.Post
             setBody(
                 userPreferenceDTO
@@ -65,7 +68,7 @@ class SuggestionApiService(private val httpClient: HttpClient) {
         prefId: Int?
     ): ResultHandler<UserPreferenceResponse?> {
         return httpClient.safeRequest<UserPreferenceResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/social/user-preferences/${prefId}/")
+            url("${networkConfig.apiBaseUrl}api/social/user-preferences/${prefId}/")
             method = HttpMethod.Companion.Put
             contentType(ContentType.Application.Json)
             setBody(

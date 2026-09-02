@@ -15,7 +15,7 @@ val mainModule = module {
     viewModel {
         EntertainmentViewModel(
             suggestionRepository = get(),
-            sessionStorage = get()
+            sessionStorage = get(),
         )
     }
 
@@ -24,6 +24,8 @@ val mainModule = module {
             suggestionRepository = get(),
             connectionRepository = get(),
             connectivityObserver = get(),
+            sessionUtils = get(),
+            dispatchers = get(),
         )
     }
 
@@ -31,6 +33,7 @@ val mainModule = module {
         ProfileViewModel(
             profileRepository = get(),
             connectivityObserver = get(),
+            sessionUtils = get(),
         )
     }
 
@@ -38,7 +41,8 @@ val mainModule = module {
         EditProfileViewModel(
             profileRepository = get(),
             connectivityObserver = get(),
-            sessionStorage = get()
+            sessionStorage = get(),
+            dispatchers = get(),
         )
     }
 
@@ -52,7 +56,7 @@ val mainModule = module {
     viewModel {
         FindPartnerViewModel(
             connectionRepository = get(),
-            sessionStorage = get()
+            sessionStorage = get(),
         )
     }
 

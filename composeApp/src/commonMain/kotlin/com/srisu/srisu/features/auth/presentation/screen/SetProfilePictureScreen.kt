@@ -14,7 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +55,7 @@ fun SetProfilePictureScreen(navController: NavController, authViewModel: AuthVie
         authViewModel.sendSetupProfileRequest()
     }) {
 
-        val authUiState by authViewModel.authUiState.collectAsState()
+        val authUiState by authViewModel.authUiState.collectAsStateWithLifecycle()
 
         HandleUiStateDialog(
             navController = navController,

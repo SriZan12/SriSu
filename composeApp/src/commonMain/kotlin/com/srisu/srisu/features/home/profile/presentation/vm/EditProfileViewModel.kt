@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import coil3.Uri
 import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.core.coroutines.AppCoroutineDispatchers
+import com.srisu.srisu.core.coroutines.rethrowIfCancellation
 import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
@@ -22,8 +24,6 @@ import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +33,8 @@ import kotlinx.serialization.json.Json
 class EditProfileViewModel(
     private val connectivityObserver: ConnectivityObserver,
     private val sessionStorage: SessionStorage,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val dispatchers: AppCoroutineDispatchers,
 ) : ViewModel() {
 
     private val _editProfileUIState: MutableStateFlow<com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState> =
@@ -71,7 +72,7 @@ class EditProfileViewModel(
     }
 
     private suspend fun loadCountries(): List<CountryModel> =
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             getAllCountriesFromJson() ?: emptyList()
         }
 
@@ -324,6 +325,7 @@ class EditProfileViewModel(
 
             result
         } catch (e: Exception) {
+            e.rethrowIfCancellation()
             showErrorMessage("Exception", e.message)
             null
         }
@@ -391,6 +393,7 @@ class EditProfileViewModel(
                 }
                 idleScreen()
             } catch (exception: Exception) {
+                exception.rethrowIfCancellation()
                 showErrorMessage(message = exception.message, errorType = "ERROR")
             }
 
@@ -412,6 +415,7 @@ class EditProfileViewModel(
 
             result
         } catch (e: Exception) {
+            e.rethrowIfCancellation()
             showErrorMessage("Exception", e.message)
             null
         }
@@ -443,6 +447,7 @@ class EditProfileViewModel(
                     showErrorMessage(message = error, errorType = "Profile Update Error")
                 }
             } catch (exception: Exception) {
+                exception.rethrowIfCancellation()
                 AppLogger.log("Exception = ${exception.message}")
                 showErrorMessage(message = exception.message, errorType = "Exception")
             }
@@ -498,7 +503,7 @@ class EditProfileViewModel(
     }
 
     fun setSession() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(dispatchers.io) {
             try {
                 val sessionData = sessionStorage.getSession(SESSION_KEY)
                 var session: Session? = null
@@ -508,6 +513,7 @@ class EditProfileViewModel(
                 updateSession(session)
 
             } catch (exception: Exception) {
+                exception.rethrowIfCancellation()
                 AppLogger.log("Exception = ${exception.message}")
             }
         }

@@ -15,7 +15,8 @@ import kotlinx.serialization.json.Json
 
 class ProfileViewModel(
     private val connectivityObserver: ConnectivityObserver,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val sessionUtils: SessionUtils,
 ) : ViewModel() {
 
     private val _profileUIState: MutableStateFlow<com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState> =
@@ -67,8 +68,6 @@ class ProfileViewModel(
             val profileData = Json.decodeFromString<User?>(
                 userProfileData
             )
-
-            AppLogger.log("USER PROFILE DATA: $userProfileData")
             _profileUIState.value = _profileUIState.value.copy(userProfileData = profileData)
         }
     }
@@ -82,7 +81,7 @@ class ProfileViewModel(
 
         showLoading()
         viewModelScope.launch {
-            val myPhoneNumber = SessionUtils().getPhoneNumber()
+            val myPhoneNumber = sessionUtils.getPhoneNumber()
             val receiverNumber = profileUIState.value.userProfileData?.phoneNumber
 
             profileRepository.sendSingleConnectionRequest(

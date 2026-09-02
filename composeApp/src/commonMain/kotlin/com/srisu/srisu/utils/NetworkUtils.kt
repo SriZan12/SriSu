@@ -1,7 +1,7 @@
 package com.srisu.srisu.utils
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ fun isInternetAvailable(
     connectivityObserver: ConnectivityObserver = koinInject(),
     chatWebSocket: ChatWebSocketClient = koinInject()
 ): Boolean {
-    val isConnected by connectivityObserver.isConnected.collectAsState()
+    val isConnected by connectivityObserver.isConnected.collectAsStateWithLifecycle()
 //    if (isConnected){
 //        chatWebSocket.send()
 //    }
