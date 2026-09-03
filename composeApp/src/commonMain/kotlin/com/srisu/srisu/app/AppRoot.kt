@@ -87,7 +87,7 @@ private fun resolveStartDestination(session: Session?): Route {
             HomeNavigation.Home
         }
 
-        true if session.isProfileComplete == false -> {
+        session?.isPhoneVerified == true && session.isProfileComplete == false -> {
             AuthNavigation.ProfileSetUp
         }
 

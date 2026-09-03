@@ -25,6 +25,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            binaryOption("bundleId", "com.srisu.srisu.ComposeApp")
             xcf.add(this)
         }
     }
@@ -152,4 +153,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-
