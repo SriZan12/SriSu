@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.pill
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -7,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cake
 import androidx.compose.material3.Button
@@ -26,7 +27,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -83,7 +83,7 @@ fun AddDOBScreen(
             text = "When's your\nbirthday?",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
@@ -127,7 +127,7 @@ private fun DOBWheelPickerCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             width = 1.dp,
@@ -137,7 +137,7 @@ private fun DOBWheelPickerCard(
         WheelDatePicker(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(all = 16.dp),
+                .padding(all = MaterialTheme.spacing.medium),
             height = 180.dp,
             title = "Date of Birth",
             hideHeader = true,
@@ -177,15 +177,15 @@ private fun AgeConfirmationBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 24.dp)
-                .padding(top = 8.dp, bottom = 24.dp),
+                .padding(horizontal = MaterialTheme.spacing.large)
+                .padding(top = MaterialTheme.spacing.small, bottom = MaterialTheme.spacing.large),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Confirm your age",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontFamily = FontFamily.Serif,
+
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
@@ -208,7 +208,7 @@ private fun AgeConfirmationBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
-                shape = RoundedCornerShape(30.dp),
+                shape = MaterialTheme.shapes.pill,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -228,7 +228,7 @@ private fun AgeConfirmationBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
-                shape = RoundedCornerShape(30.dp),
+                shape = MaterialTheme.shapes.pill,
                 border = BorderStroke(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.outlineVariant

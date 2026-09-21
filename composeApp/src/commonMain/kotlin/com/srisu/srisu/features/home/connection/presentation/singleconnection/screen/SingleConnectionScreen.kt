@@ -77,7 +77,7 @@ fun ConnectionScreenContent(
                 title = connectionUiState.currentTab?.title ?: "Connection"
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
 
         val tabItems = connectionUiState.connectionTabList
@@ -87,7 +87,7 @@ fun ConnectionScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues = innerPadding)
-                .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
+                .background(color = MaterialTheme.colorScheme.background)
         ) {
             CommonTabPager(
                 tabItems = tabItems,

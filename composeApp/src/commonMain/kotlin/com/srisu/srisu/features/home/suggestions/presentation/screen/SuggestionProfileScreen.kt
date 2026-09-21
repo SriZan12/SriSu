@@ -1,5 +1,8 @@
 package com.srisu.srisu.features.home.suggestions.presentation.screen
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.pill
+import com.srisu.srisu.theme.onMedia
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -28,7 +31,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -167,7 +169,7 @@ private fun SuggestionProfileContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .animateContentSize(),
     ) {
@@ -201,7 +203,7 @@ private fun SuggestionProfileContent(
             text = "Gallery",
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
         )
 
         GallerySection(
@@ -227,7 +229,7 @@ fun ProfilePictureCompo(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp),
+            .padding(bottom = MaterialTheme.spacing.extraLarge),
     ) {
         with(sharedTransitionScope) {
             AsyncImage(
@@ -260,10 +262,10 @@ fun ProfilePictureCompo(
                 Icon(
                     modifier = Modifier
                         .size(48.dp)
-                        .padding(8.dp),
+                        .padding(MaterialTheme.spacing.small),
                     imageVector = Icons.Default.Favorite,
                     contentDescription = "Like",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onMedia,
                 )
             }
         }
@@ -289,8 +291,8 @@ fun UserInfoSection(
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
         ) {
             Text(
                 text = name.orEmpty(),
@@ -314,12 +316,12 @@ fun UserInfoSection(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp),
+            modifier = Modifier.padding(start = MaterialTheme.spacing.medium),
         ) {
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = "Location",
-                tint = Color.Black,
+                tint = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = locationText,
@@ -338,19 +340,19 @@ fun InterestSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 16.dp),
+            .padding(top = MaterialTheme.spacing.medium, bottom = MaterialTheme.spacing.medium),
     ) {
         Text(
             text = "Interest",
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(start = 16.dp),
+            modifier = Modifier.padding(start = MaterialTheme.spacing.medium),
         )
 
         LazyRow(
-            modifier = Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            contentPadding = PaddingValues(start = MaterialTheme.spacing.compact, end = MaterialTheme.spacing.compact),
         ) {
             items(
                 items = interests,
@@ -368,12 +370,12 @@ fun InterestSection(
 @Composable
 fun InterestChip(
     label: String,
-    backgroundColor: Color = Color.LightGray,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier.padding(end = 8.dp),
+        shape = MaterialTheme.shapes.pill,
+        modifier = Modifier.padding(end = MaterialTheme.spacing.small),
     ) {
         Text(
             text = label,
@@ -381,7 +383,7 @@ fun InterestChip(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small)
                 .basicMarquee(iterations = 10),
             style = MaterialTheme.typography.labelMedium,
         )
@@ -395,7 +397,7 @@ private fun AboutSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = MaterialTheme.spacing.medium),
     ) {
         Text(
             text = "About",
@@ -421,8 +423,8 @@ fun GallerySection(
     if (photos.isNullOrEmpty()) return
 
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = MaterialTheme.spacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         items(
             items = photos,
@@ -435,7 +437,7 @@ fun GallerySection(
                 modifier = Modifier
                     .size(200.dp)
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(MaterialTheme.shapes.small),
             )
         }
     }

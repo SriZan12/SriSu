@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(
                 darkTheme = isSystemInDarkTheme(),
-                dynamicColor = false,
+
             )
         }
     }
@@ -28,6 +28,6 @@ class MainActivity : ComponentActivity() {
 fun AppAndroidPreview() {
     App(
         darkTheme = isSystemInDarkTheme(),
-        dynamicColor = false,
+
     )
 }

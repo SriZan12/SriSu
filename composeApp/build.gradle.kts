@@ -115,6 +115,16 @@ kotlin {
 
         }
 
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+            implementation("io.ktor:ktor-client-mock:3.2.3")
+        }
+
+        androidUnitTest.dependencies {
+            implementation(libs.kotlin.testJunit)
+        }
+
         iosMain.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)

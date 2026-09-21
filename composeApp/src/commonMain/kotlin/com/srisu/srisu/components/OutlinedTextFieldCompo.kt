@@ -1,5 +1,13 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.SriSuFieldTypography
+import com.srisu.srisu.theme.SriSuComponentTokens
+import com.srisu.srisu.theme.disabledOutline
+import androidx.compose.foundation.layout.heightIn
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.field
+import com.srisu.srisu.theme.transparent
+import com.srisu.srisu.theme.caret
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -15,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,6 +31,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,7 +58,6 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,12 +65,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.srisu.srisu.core.logger.AppLogger
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.poppins_medium
 
 
 @Composable
@@ -73,74 +78,65 @@ fun OutlinedTextFieldCompo(
     isError: Boolean = false,
     placeholder: String,
     onValueChange: (String) -> Unit,
-    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
-    shape: RoundedCornerShape = RoundedCornerShape(8.dp),
+    textStyle: TextStyle = SriSuFieldTypography(MaterialTheme.typography).bodyLarge,
+    shape: Shape = MaterialTheme.shapes.field,
     imeAction: ImeAction = ImeAction.None,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     keyboardType: KeyboardType = KeyboardType.Text,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary,
-        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        disabledContainerColor = MaterialTheme.colorScheme.surface,
+        errorContainerColor = MaterialTheme.colorScheme.surface,
+        disabledBorderColor = MaterialTheme.colorScheme.disabledOutline,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = SriSuComponentTokens.disabledAlpha),
+        cursorColor = MaterialTheme.colorScheme.caret,
         errorBorderColor = MaterialTheme.colorScheme.error
-    ).copy(focusedTextColor = Color.Black),
+    ).copy(focusedTextColor = MaterialTheme.colorScheme.onSurface),
     singleLine: Boolean = true,
     trailingImage: DrawableResource? = null,
     trailingIcon: ImageVector? = null,
+    enabled: Boolean = true,
+    leadingContent: (@Composable () -> Unit)? = null,
+    trailingIconDescription: String = "More options",
     onClickTrailingIcon: () -> Unit = {}
 ) {
 
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        isError = isError,
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = textStyle,
-                color = Color.Gray
-            )
-        },
-        modifier = modifier,
-        textStyle = textStyle,
-        shape = shape,
-        singleLine = singleLine,
-        keyboardActions = keyboardActions,
-        trailingIcon = when {
-            trailingIcon != null -> {
+    MaterialTheme(typography = SriSuFieldTypography(MaterialTheme.typography)) {
+        OutlinedTextField(
+            enabled = enabled,
+            leadingIcon = leadingContent,
+            value = value,
+            onValueChange = onValueChange,
+            isError = isError,
+            label = { Text(text = placeholder) },
+            modifier = modifier.heightIn(min = MaterialTheme.spacing.fieldHeight),
+            textStyle = textStyle,
+            shape = shape,
+            singleLine = singleLine,
+            keyboardActions = keyboardActions,
+            trailingIcon = if (trailingIcon != null || trailingImage != null) {
                 {
-                    Icon(
-                        imageVector = trailingIcon,
-                        contentDescription = "trailing_icon",
-                        modifier = Modifier.size(24.dp).clickable {
-                            onClickTrailingIcon()
-                        }
-                    )
+                    IconButton(onClick = onClickTrailingIcon, enabled = enabled) {
+                        if (trailingIcon != null) Icon(trailingIcon, trailingIconDescription,
+                            modifier = Modifier.size(MaterialTheme.spacing.chromeIcon))
+                        else if (trailingImage != null) Icon(painterResource(trailingImage), trailingIconDescription,
+                            modifier = Modifier.size(MaterialTheme.spacing.chromeIcon))
+                    }
                 }
-            }
+            } else null,
 
-            trailingImage != null -> {
-                {
-                    Icon(
-                        painter = painterResource(resource = trailingImage),
-                        contentDescription = "trailing_icon",
-                        modifier = Modifier.size(24.dp).clickable {
-                            onClickTrailingIcon()
-                        }
-                    )
-                }
-            }
-
-            else -> null
-        },
-
-        keyboardOptions = KeyboardOptions(
-            keyboardType = keyboardType,
-            imeAction = imeAction
-        ),
-        colors = colors
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                imeAction = imeAction
+            ),
+            colors = colors
 
 
-    )
+        )
+    }
 }
 
 @Composable
@@ -162,7 +158,7 @@ private fun PhoneNumberTextField(
             )
         },
         singleLine = true,
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.field,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         textStyle = MaterialTheme.typography.titleMedium.copy(
             color = MaterialTheme.colorScheme.onSurface
@@ -172,7 +168,7 @@ private fun PhoneNumberTextField(
             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            cursorColor = MaterialTheme.colorScheme.primary
+            cursorColor = MaterialTheme.colorScheme.caret
         )
     )
 }
@@ -258,19 +254,16 @@ fun OTPInputTextFields(
                         onOtpInputComplete()
                     }
                 ),
-                shape = RoundedCornerShape(32.dp),
+                shape = MaterialTheme.shapes.field,
                 isError = isError,
-                textStyle = TextStyle(
-                    textAlign = TextAlign.Center,
-                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
-                ),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     errorBorderColor = MaterialTheme.colorScheme.error
-                ).copy(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black)
+                ).copy(focusedTextColor = MaterialTheme.colorScheme.onSurface, unfocusedTextColor = MaterialTheme.colorScheme.onSurface)
             )
 
             LaunchedEffect(value) {
@@ -323,9 +316,7 @@ fun OtpVerificationBox(
                 modifier = Modifier
                     .size(52.dp)
                     .focusRequester(focusNodes[index]), // Use Modifier.focusRequester
-                textStyle = LocalTextStyle.current.copy(
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily(org.jetbrains.compose.resources.Font(Res.font.poppins_medium)),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
                     textAlign = TextAlign.Center
                 ),
                 singleLine = true,
@@ -345,10 +336,10 @@ fun OtpVerificationBox(
                         }
                     }
                 ),
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
@@ -369,8 +360,8 @@ fun SearchBar(
     isEnabled: (Boolean) = true,
     height: Dp = 48.dp,
     elevation: Dp = 4.dp,
-    cornerShape: Shape = RoundedCornerShape(8.dp),
-    backgroundColor: Color = Color.White,
+    cornerShape: Shape = MaterialTheme.shapes.small,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
     onSearchClicked: () -> Unit = {},
     onTextChange: (String) -> Unit = {},
 ) {
@@ -392,7 +383,7 @@ fun SearchBar(
                 modifier = modifier
                     .weight(1f)
                     .size(36.dp)
-                    .background(color = Color.Transparent, shape = CircleShape)
+                    .background(color = MaterialTheme.colorScheme.transparent, shape = CircleShape)
                     .clickable {
                         if (text.text.isNotEmpty()) {
                             text = TextFieldValue(text = "")
@@ -406,7 +397,7 @@ fun SearchBar(
                         .padding(10.dp).size(24.dp),
                     imageVector = Icons.Filled.Search,
                     contentDescription = "Search_icon",
-                    tint = if (text.text.isNotEmpty()) Color.Black else Color.Gray
+                    tint = if (text.text.isNotEmpty()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -414,7 +405,7 @@ fun SearchBar(
                 modifier = modifier
                     .weight(8f)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = MaterialTheme.spacing.small),
                 value = text,
                 onValueChange = {
                     text = it
@@ -449,14 +440,14 @@ fun PhoneNumberCompo(
     countryCode: String,
     countryPrefix: String,
     phoneNumber: String,
-    backgroundColor: Color = Color.Transparent,
+    backgroundColor: Color = MaterialTheme.colorScheme.transparent,
     updatePhoneNumber: (String) -> Unit,
     onShowCountryList: () -> Unit
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
 
         CountryCodeDropDown(
@@ -519,7 +510,7 @@ fun LabeledTextFieldCompo(
             },
             singleLine = true,
             isError = isError,
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.field,
             textStyle = MaterialTheme.typography.titleMedium.copy(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
@@ -535,7 +526,7 @@ fun LabeledTextFieldCompo(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                 errorBorderColor = MaterialTheme.colorScheme.error,
-                cursorColor = MaterialTheme.colorScheme.primary
+                cursorColor = MaterialTheme.colorScheme.caret
             )
         )
     }
