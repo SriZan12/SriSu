@@ -46,6 +46,7 @@ fun FindYourPartnerScreen(
         focusManager.clearFocus()
         findPartnerViewModel.sendFindYourPartnerRequest()
     }
+
     LaunchedEffect(key1 = findPartnerViewModel) { findPartnerViewModel.onScreenEntered() }
 
     LaunchedEffect(key1 = state.navigateToInviteSent) {

@@ -16,10 +16,11 @@ class PartnerInvitationsPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CoupleConnectionRequestResponse.Result> {
         val page = params.key ?: 1
         return try {
-            when (val result = fetch(page).result.also { currentCoroutineContext().ensureActive() }) {
+            when (val result =
+                fetch(page).result.also { currentCoroutineContext().ensureActive() }) {
                 is NetworkAPIResult.Success -> {
                     val response = result.response ?: return LoadResult.Error(
-                        IllegalStateException("Invitations could not be loaded. Please try again.")
+                        throwable = IllegalStateException("Invitations could not be loaded. Please try again.")
                     )
                     LoadResult.Page(
                         data = response.results.orEmpty().filterNotNull(),
@@ -27,8 +28,11 @@ class PartnerInvitationsPagingSource(
                         nextKey = if (response.next.isNullOrBlank()) null else page + 1,
                     )
                 }
+
                 is NetworkAPIResult.Error -> LoadResult.Error(
-                    IllegalStateException(result.error ?: "Invitations could not be loaded. Please try again.")
+                    throwable = IllegalStateException(
+                        result.error ?: "Invitations could not be loaded. Please try again."
+                    )
                 )
             }
         } catch (cancelled: CancellationException) {

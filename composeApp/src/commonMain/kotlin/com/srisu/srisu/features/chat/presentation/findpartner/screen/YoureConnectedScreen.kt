@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
@@ -93,8 +94,8 @@ fun YouAreConnectedScreen(state: FindPartnerState, onViewOurSpace: () -> Unit) {
                                     Modifier.weight(1f)
                                 )
                                 Icon(
-                                    imageVector = Icons.Default.Favorite, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.secondary,
+                                    imageVector = Icons.Default.Add, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.padding(top = MaterialTheme.spacing.large)
                                         .size(MaterialTheme.spacing.icon)
                                 )
