@@ -1,5 +1,10 @@
 package com.srisu.srisu.features.chat.presentation.chat.screen
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.field
+import com.srisu.srisu.theme.transparent
+import com.srisu.srisu.theme.onMedia
+import com.srisu.srisu.theme.sheetScrim
 // ChatScreen.kt
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -52,7 +57,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -95,7 +99,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,7 +127,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.Uri
 import coil3.compose.AsyncImage
 import coil3.toUri
@@ -158,7 +161,7 @@ fun ChatScreen(
     onNavBack: () -> Unit,
     session: Session?,
 ) {
-    val chatState by viewModel.chatState.collectAsState()
+    val chatState by viewModel.chatState.collectAsStateWithLifecycle()
 
     Initialization(
         chatViewModel = viewModel,
@@ -279,12 +282,24 @@ private fun ChatContent(
 
     Scaffold(
         topBar = {
+            Column {
             ChatTopBar(
                 chatState = chatState,
                 onBack = onNavBack,
                 onCall = {},
                 onVideoCall = {},
             )
+            val connection by viewModel.connectionState.collectAsStateWithLifecycle()
+            when (val value = connection) {
+                is com.srisu.srisu.core.data.remote.SocketState.Terminal -> {
+                    if (value.code == "unauthenticated") Text("Session expired. Sign in to reconnect.", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
+                    else TextButton(onClick = viewModel::retryConnection) { Text("Chat disconnected · Retry") }
+                }
+                is com.srisu.srisu.core.data.remote.SocketState.Connecting,
+                is com.srisu.srisu.core.data.remote.SocketState.Reconnecting -> Text("Connecting to chat…", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
+                else -> Unit
+            }
+            }
         },
         bottomBar = {
             ChatInputBar(
@@ -317,10 +332,10 @@ private fun ChatContent(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -433,8 +448,8 @@ private fun ChatMessagesList(
     LazyColumn(
         state = listState,
         reverseLayout = true,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(MaterialTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
         modifier = modifier.fillMaxSize(),
     ) {
         items(
@@ -624,7 +639,7 @@ private fun MessageBubble(
                 .onSizeChanged { bubbleWidthPx = it.width },
         ) {
             Column(
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier.padding(MaterialTheme.spacing.compact),
             ) {
                 if (!isDeletedForEveryone) {
                     message.replyTo?.let {
@@ -667,7 +682,7 @@ private fun MessageBubble(
                                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     }
                                 ),
-                                modifier = Modifier.padding(end = 4.dp),
+                                modifier = Modifier.padding(end = MaterialTheme.spacing.tiny),
                             )
                         }
 
@@ -746,12 +761,12 @@ fun PhotoMessageBubble(
     ) {
         Card(
             shape = bubbleShape(isOwn),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.transparent),
             modifier = Modifier
                 .widthIn(max = 260.dp)
                 .onSizeChanged { bubbleWidthPx = it.width },
         ) {
-            Column(modifier = Modifier.padding(8.dp)) {
+            Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
                 if (message.isLocalOnly && message.uploadingPhotos.isNotEmpty()) {
                     UploadingPhotoGrid(message.uploadingPhotos)
                 } else {
@@ -794,7 +809,7 @@ fun PhotoMessageBubble(
                                 text = formattedTime,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(end = 4.dp),
+                                modifier = Modifier.padding(end = MaterialTheme.spacing.tiny),
                             )
 
                             if (isOwn) {
@@ -870,7 +885,7 @@ private fun PhotoGrid(
                 modifier = modifier
                     .fillMaxWidth()
                     .height(220.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.field)
                     .then(
                         clickableModifier(
                             isDeletedForEveryone = false,
@@ -886,8 +901,8 @@ private fun PhotoGrid(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = modifier.heightIn(max = 260.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
                 userScrollEnabled = false,
             ) {
                 itemsIndexed(photos.take(4)) { index, photo ->
@@ -898,7 +913,7 @@ private fun PhotoGrid(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(MaterialTheme.shapes.field)
                                 .then(
                                     clickableModifier(
                                         isDeletedForEveryone = false,
@@ -913,12 +928,12 @@ private fun PhotoGrid(
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
-                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                    .background(MaterialTheme.colorScheme.sheetScrim),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     text = "+${photos.size - 4}",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onMedia,
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                             }
@@ -943,8 +958,8 @@ private fun UploadingPhotoGrid(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.heightIn(max = 260.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
                 userScrollEnabled = false,
             ) {
                 itemsIndexed(photos.take(4)) { index, photo ->
@@ -955,12 +970,12 @@ private fun UploadingPhotoGrid(
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
-                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                    .background(MaterialTheme.colorScheme.sheetScrim),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     text = "+${photos.size - 4}",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onMedia,
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                             }
@@ -1002,14 +1017,14 @@ private fun ReplyPreview(
     val cardColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
     Card(
-        modifier = Modifier.padding(bottom = 4.dp),
+        modifier = Modifier.padding(bottom = MaterialTheme.spacing.tiny),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.small,
         onClick = { onClickMessageReplied(reply.id) },
     ) {
         Row(
-            modifier = Modifier.padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
             Box(
                 modifier = Modifier
@@ -1017,7 +1032,7 @@ private fun ReplyPreview(
                     .height(40.dp)
                     .background(
                         color = MaterialTheme.colorScheme.secondary,
-                        shape = RoundedCornerShape(2.dp),
+                        shape = MaterialTheme.shapes.extraSmall,
                     )
             )
 
@@ -1054,7 +1069,7 @@ private fun ReactionBubble(
         modifier = modifier.size(28.dp),
         shape = CircleShape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            containerColor = MaterialTheme.colorScheme.background,
         ),
         border = BorderStroke(
             width = 1.dp,
@@ -1071,8 +1086,7 @@ private fun ReactionBubble(
             if (reaction != null) {
                 Text(
                     text = reaction,
-                    fontSize = 14.sp,           // tuned for 28dp bubble
-                    lineHeight = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
             } else {
@@ -1123,7 +1137,7 @@ private fun ReactionPickerOverlay(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -1131,8 +1145,8 @@ private fun ReactionPickerOverlay(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = MaterialTheme.spacing.compact),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
             verticalAlignment = Alignment.CenterVertically
         ) {
             reactions.forEach { emoji ->
@@ -1175,7 +1189,7 @@ fun AnimatedEmojiItem(
 
     Text(
         text = emoji,
-        fontSize = 24.sp,
+        style = MaterialTheme.typography.headlineMedium,
         modifier = Modifier
             .scale(scale.value)
             .clickable { onClick() }
@@ -1213,13 +1227,13 @@ private fun ChatTopBar(
                 Column {
                     Text(
                         text = chatState.chatRoomData?.otherUser?.fullName.orEmpty(),
-                        style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                        style = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onPrimary),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.labelMedium.copy(color = Color.White),
+                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onPrimary),
                     )
                 }
             }
@@ -1227,7 +1241,7 @@ private fun ChatTopBar(
         navigationIcon = {
             IconButton(
                 onClick = onBack,
-                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White),
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -1238,13 +1252,13 @@ private fun ChatTopBar(
         actions = {
             IconButton(
                 onClick = onCall,
-                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White),
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary),
             ) {
                 Icon(Icons.Default.Call, contentDescription = "Call")
             }
             IconButton(
                 onClick = onVideoCall,
-                colors = IconButtonDefaults.filledIconButtonColors(contentColor = Color.White),
+                colors = IconButtonDefaults.filledIconButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary),
             ) {
                 Icon(Icons.Default.Videocam, contentDescription = "Video call")
             }
@@ -1331,17 +1345,17 @@ private fun ChatInputBar(
                 onValueChange = onValueChange,
                 placeholder = { Text("Type a message") },
                 maxLines = 5,
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { onSend() }),
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 8.dp)
+                    .padding(end = MaterialTheme.spacing.small)
                     .focusRequester(focusRequester),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    unfocusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.transparent,
                     cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 trailingIcon = {
@@ -1391,7 +1405,7 @@ private fun ErrorBanner(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(MaterialTheme.spacing.medium),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1462,7 +1476,7 @@ private fun MessageActionsDropdown(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .width(220.dp)
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)
     ) {
 
         if (canCopy) {
@@ -1666,11 +1680,9 @@ else
     MaterialTheme.colorScheme.surfaceContainerHigh
 
 @Composable
-private fun bubbleShape(isOwn: Boolean) = RoundedCornerShape(
-    topStart = 20.dp,
-    topEnd = 20.dp,
-    bottomStart = if (isOwn) 20.dp else 4.dp,
-    bottomEnd = if (isOwn) 4.dp else 20.dp
+private fun bubbleShape(isOwn: Boolean) = MaterialTheme.shapes.medium.copy(
+    bottomStart = if (isOwn) MaterialTheme.shapes.medium.bottomStart else MaterialTheme.shapes.extraSmall.bottomStart,
+    bottomEnd = if (isOwn) MaterialTheme.shapes.extraSmall.bottomEnd else MaterialTheme.shapes.medium.bottomEnd,
 )
 
 @Composable

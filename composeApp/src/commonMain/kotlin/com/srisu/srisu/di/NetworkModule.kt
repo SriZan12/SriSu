@@ -15,10 +15,17 @@ import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
 import com.srisu.srisu.features.home.suggestions.domain.repository.SuggestionRepository
 import com.srisu.srisu.core.session.SessionUtils
 import org.koin.core.module.Module
+import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
-    single { HttpClientFactory.create(sessionStorage = get()) }
+    single { com.srisu.srisu.core.config.ApiEnvironment.configured() }
+    single { com.srisu.srisu.core.lifecycle.ApplicationLifetime() } onClose { it?.close() }
+    single { com.srisu.srisu.core.session.SessionCoordinator(get(org.koin.core.qualifier.named("platformSessionStorage"))) }
+    single<com.srisu.srisu.core.session.SessionStorage> { get<com.srisu.srisu.core.session.SessionCoordinator>() }
+    single { HttpClientFactory.create(sessions = get(), environment = get(), engine = get()) } onClose { it?.close() }
+    single { get<com.srisu.srisu.core.data.local.CatalogueDatabase>().catalogue() }
+    single { com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository(get(), get(), get(), get()) }
 
     single { BaseApiService(httpClient = get()) }
 
@@ -28,22 +35,17 @@ val sharedNetworkModule = module {
     single { SuggestionApiService(httpClient = get()) }
     single { SuggestionRepository(suggestionApiService = get(), baseApiService = get()) }
 
-    single { ProfileApiService(httpClient = get()) }
-    single { ProfileRepository(profileApiService = get(), baseApiService = get()) }
+    single { ProfileApiService(httpClient = get(), environment = get()) }
+    single { ProfileRepository(profileApiService = get(), baseApiService = get(), catalogue = get()) }
 
     single { ConnectionApiService(httpClient = get()) }
     single { ConnectionRepository(connectionApiService = get()) }
 
-    single { ChatApiService(httpClient = get()) }
-    single {
-        ChatWebSocketClient(
-            httpClient = get(),
-            host = "192.168.1.72",
-            port = 8000,
-            userToken = SessionUtils().getSession()?.access
-        )
-    }
-    single { ChatRepository(webSocketClient = get(), chatApiService = get()) }
+    single { ChatApiService(httpClient = get(), environment = get()) }
+    single<com.srisu.srisu.core.data.remote.SocketConnector> { com.srisu.srisu.core.data.remote.KtorSocketConnector(get(), get()) }
+    single { ChatWebSocketClient(connector = get(), sessions = get(), lifetime = get()) } onClose { it?.close() }
+
+    single { ChatRepository(webSocketClient = get(), chatApiService = get(), sessions = get(), lifetime = get()) } onClose { it?.close() }
 
 }
 

@@ -15,10 +15,10 @@ sealed class HomeNavigation : Route {
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
-fun NavGraphBuilder.homeGraph() {
+fun NavGraphBuilder.homeGraph(onFindPartner: () -> Unit) {
 
     composable<HomeNavigation.Home> { _ ->
-        HomeScreen()
+        HomeScreen(onFindPartner = onFindPartner)
     }
 
 }

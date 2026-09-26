@@ -113,6 +113,7 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 block()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
             } catch (exception: Exception) {
                 AppLogger.log("AuthViewModel exception: ${exception.message}")
                 onError(exception.message ?: "Something went wrong.")
@@ -127,7 +128,8 @@ class AuthViewModel(
 
         val session = try {
             sessionJson?.let { Json.decodeFromString<Session>(it) }
-        } catch (exception: Exception) {
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (exception: Exception) {
             AppLogger.log("Session deserialization failed: ${exception.message}")
             null
         }
@@ -141,17 +143,14 @@ class AuthViewModel(
     }
 
     private fun saveSession(credentials: String, sessionKey: String) {
-        runCatching {
-            sessionStorage.saveSession(credentials, sessionKey)
-        }.onFailure {
-            AppLogger.log("Failed to save session: ${it.message}")
-        }
+        sessionStorage.saveSession(credentials, sessionKey)
     }
 
     private fun getSession(sessionKey: String): String? {
         return try {
             sessionStorage.getSession(sessionKey)
-        } catch (exception: Exception) {
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (exception: Exception) {
             AppLogger.log("Failed to get session: ${exception.message}")
             null
         }

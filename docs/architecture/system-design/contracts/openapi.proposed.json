@@ -1,0 +1,131 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SriSu proposed refresh and chat recovery subset",
+    "version": "0.1.0-proposed",
+    "description": "Design documentation only. New v2 routes are not implemented. Existing v1 remains unchanged. Canonical executable contracts move to the backend repository during approved implementation."
+  },
+  "security": [{"bearerAuth": []}],
+  "paths": {
+    "/api/v2/auth/refresh/": {
+      "post": {
+        "operationId": "refreshDeviceSession",
+        "security": [],
+        "description": "Consume refresh generation once under a device-session lock. Lost response after rotation requires reauthentication in the initial design; do not blindly replay.",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {
+            "type": "object", "additionalProperties": false, "required": ["refresh"],
+            "properties": {"refresh": {"type": "string", "minLength": 1, "maxLength": 8192, "writeOnly": true}}
+          }}}
+        },
+        "responses": {
+          "200": {"description": "Committed rotation. Credentials are sensitive and must not be logged or cached by intermediaries.", "headers": {"Cache-Control": {"schema": {"const": "no-store"}}}, "content": {"application/json": {"schema": {
+            "type": "object", "required": ["data", "request_id", "server_time"],
+            "properties": {
+              "data": {"type": "object", "required": ["access", "refresh", "access_expires_at", "session_expires_at", "session_id"], "properties": {
+                "access": {"type": "string", "minLength": 1},
+                "refresh": {"type": "string", "minLength": 1},
+                "access_expires_at": {"type": "string", "format": "date-time"},
+                "session_expires_at": {"type": "string", "format": "date-time"},
+                "session_id": {"type": "string", "minLength": 1}
+              }},
+              "request_id": {"type": "string"}, "server_time": {"type": "string", "format": "date-time"}
+            }
+          }}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "429": {"$ref": "#/components/responses/RateLimited"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    },
+    "/api/v2/chat/rooms/{room_id}/messages/": {
+      "parameters": [{"$ref": "#/components/parameters/RoomId"}],
+      "get": {
+        "operationId": "getRoomHistory",
+        "description": "Authorized snapshot/history ordered by descending message sequence. Snapshot checkpoint and cursor fix a high-water mark; current visibility still rechecked at delivery.",
+        "parameters": [
+          {"name": "cursor", "in": "query", "schema": {"type": "string", "maxLength": 4096}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 50, "default": 50}}
+        ],
+        "responses": {
+          "200": {"description": "Scoped history page, including empty state.", "content": {"application/json": {"schema": {"allOf": [
+            {"$ref": "#/components/schemas/ResponseMeta"},
+            {"type": "object", "required": ["data"], "properties": {"data": {"$ref": "chat.proposed.schema.json#/$defs/History"}}}
+          ]}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "410": {"$ref": "#/components/responses/Resync"},
+          "429": {"$ref": "#/components/responses/RateLimited"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      },
+      "post": {
+        "operationId": "sendRoomMessage",
+        "description": "Reauthorize first, require path/body room match, bind media ownership and membership epoch. Same actor/operation ID/intent returns same message; changed intent conflicts. Ack only after DB commit, independent of socket publication.",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "chat.proposed.schema.json#/$defs/SendCommand"}}}},
+        "responses": {
+          "201": {"$ref": "#/components/responses/SendResult"},
+          "200": {"$ref": "#/components/responses/SendResult"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "429": {"$ref": "#/components/responses/RateLimited"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    },
+    "/api/v2/chat/rooms/{room_id}/changes/": {
+      "parameters": [{"$ref": "#/components/parameters/RoomId"}],
+      "get": {
+        "operationId": "getRoomChanges",
+        "description": "Ascending room changes after a signed scoped checkpoint. Seven-day proposed horizon; older/invalidated cursor needs a new authorized snapshot. Commit local merges and next_cursor together.",
+        "parameters": [
+          {"name": "cursor", "in": "query", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 4096}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 100}}
+        ],
+        "responses": {
+          "200": {"description": "Authorized changes; no events is a valid response with a checkpoint.", "content": {"application/json": {"schema": {"allOf": [
+            {"$ref": "#/components/schemas/ResponseMeta"},
+            {"type": "object", "required": ["data"], "properties": {"data": {"$ref": "chat.proposed.schema.json#/$defs/Changes"}}}
+          ]}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "410": {"$ref": "#/components/responses/Resync"},
+          "429": {"$ref": "#/components/responses/RateLimited"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}},
+    "parameters": {"RoomId": {"name": "room_id", "in": "path", "required": true, "schema": {"type": "string", "minLength": 1, "maxLength": 128}}},
+    "schemas": {
+      "Error": {"$ref": "chat.proposed.schema.json#/$defs/ErrorEnvelope"},
+      "ResponseMeta": {"type": "object", "required": ["request_id", "server_time"], "properties": {
+        "request_id": {"type": "string", "minLength": 1}, "server_time": {"type": "string", "format": "date-time"}
+      }}
+    },
+    "responses": {
+      "SendResult": {"description": "201 for initial creation; 200 for authorized idempotent replay. Same entity identity; current authorized projection may have a later revision.", "content": {"application/json": {"schema": {"allOf": [
+        {"$ref": "#/components/schemas/ResponseMeta"},
+        {"type": "object", "required": ["data"], "properties": {"data": {"$ref": "chat.proposed.schema.json#/$defs/SendResult"}}}
+      ]}}}},
+      "BadRequest": {"description": "validation_failed; keep input and show safe field codes.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Unauthorized": {"description": "session_expired, invalid or revoked. Refresh only under coordinated policy; refresh failure requires login.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Forbidden": {"description": "Disallowed action on a known permitted object; unrelated object existence remains hidden.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "NotFound": {"description": "Object absent or not visible to caller.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Conflict": {"description": "operation_key_reused, revision_conflict or membership_changed; reconcile original target, never reroute to new couple.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Resync": {"description": "resync_required or cursor_expired; take snapshot and preserve pending operations.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "RateLimited": {"description": "rate_limited; honor Retry-After.", "headers": {"Retry-After": {"schema": {"type": "string"}}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Unavailable": {"description": "temporarily_unavailable; outcome of a mutation can be unknown. Replay only when safe under operation/refresh policy.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+    }
+  }
+}

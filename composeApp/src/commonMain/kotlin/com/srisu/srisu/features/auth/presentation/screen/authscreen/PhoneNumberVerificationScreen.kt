@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.auth.presentation.screen.authscreen
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.transparent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -29,11 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -226,7 +226,7 @@ private fun PhoneNumberVerificationContent(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.transparent)
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -250,9 +250,9 @@ private fun PhoneNumberVerificationContent(
 
             Column(
                 modifier = Modifier
-                    .padding(start = 16.dp, end = 16.dp),
+                    .padding(start = MaterialTheme.spacing.medium, end = MaterialTheme.spacing.medium),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
 
                 ScreenTopIcon(
@@ -278,7 +278,7 @@ private fun PhoneNumberVerificationContent(
                     ErrorText(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp),
+                            .padding(top = MaterialTheme.spacing.compact),
                         text = authUIStates.validationError.validationMessage
                     )
                 }
@@ -299,15 +299,15 @@ private fun OtpHeader(
     phoneNumber: String
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)
     ) {
         Text(
             text = "Check your messages",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )

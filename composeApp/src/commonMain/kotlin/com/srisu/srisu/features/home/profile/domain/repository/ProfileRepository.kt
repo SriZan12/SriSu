@@ -12,7 +12,8 @@ import com.srisu.srisu.utils.MediaFile
 
 class ProfileRepository(
     private val profileApiService: ProfileApiService,
-    private val baseApiService: BaseApiService
+    private val baseApiService: BaseApiService,
+    private val catalogue: com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 ) {
 
     @Throws(Exception::class)
@@ -30,6 +31,8 @@ class ProfileRepository(
     suspend fun getCityList(country: String?): CityResponse? {
         return baseApiService.getCitiesList(country)
     }
+
+    suspend fun loadCatalogue(force: Boolean = false) = catalogue.load(force)
 
     @Throws(Exception::class)
     suspend fun getInterestList(): ResultHandler<InterestResponse?> {

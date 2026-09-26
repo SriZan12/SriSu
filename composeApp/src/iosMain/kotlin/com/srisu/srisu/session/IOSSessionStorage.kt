@@ -8,8 +8,7 @@ import platform.Foundation.NSUserDefaults
 
 class IOSSessionStorage(private val kvault: KVault) : SessionStorage {
     override fun saveSession(credentials: String, sessionKey: String) {
-        val session  = kvault.set(key = sessionKey, stringValue = credentials)
-        AppLogger.log("session saved ios $session")
+        check(kvault.set(key = sessionKey, stringValue = credentials)) { "Secure session storage failed" }
     }
 
     override fun getSession(sessionKey: String): String? {

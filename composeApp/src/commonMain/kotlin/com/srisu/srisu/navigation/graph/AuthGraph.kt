@@ -45,7 +45,7 @@ fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthV
     }
 
     composable<AuthNavigation.ProfileSetUp> { _ ->
-        ProfileSetupScreen(navController = navController)
+        ProfileSetupScreen(navController = navController, authViewModel = authViewModel)
     }
 
 }
