@@ -99,7 +99,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -161,7 +161,7 @@ fun ChatScreen(
     onNavBack: () -> Unit,
     session: Session?,
 ) {
-    val chatState by viewModel.chatState.collectAsState()
+    val chatState by viewModel.chatState.collectAsStateWithLifecycle()
 
     Initialization(
         chatViewModel = viewModel,
@@ -282,12 +282,24 @@ private fun ChatContent(
 
     Scaffold(
         topBar = {
+            Column {
             ChatTopBar(
                 chatState = chatState,
                 onBack = onNavBack,
                 onCall = {},
                 onVideoCall = {},
             )
+            val connection by viewModel.connectionState.collectAsStateWithLifecycle()
+            when (val value = connection) {
+                is com.srisu.srisu.core.data.remote.SocketState.Terminal -> {
+                    if (value.code == "unauthenticated") Text("Session expired. Sign in to reconnect.", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
+                    else TextButton(onClick = viewModel::retryConnection) { Text("Chat disconnected · Retry") }
+                }
+                is com.srisu.srisu.core.data.remote.SocketState.Connecting,
+                is com.srisu.srisu.core.data.remote.SocketState.Reconnecting -> Text("Connecting to chat…", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
+                else -> Unit
+            }
+            }
         },
         bottomBar = {
             ChatInputBar(

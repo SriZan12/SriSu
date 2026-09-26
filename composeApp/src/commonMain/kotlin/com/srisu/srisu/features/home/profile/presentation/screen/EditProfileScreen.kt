@@ -249,6 +249,16 @@ fun EditProfileScreenContent(
                         ?.map { it?.name }
                 }
 
+                val catalogue by editProfileViewModel.catalogueState.collectAsStateWithLifecycle()
+                when {
+                    catalogue.loading -> Text("Loading interests…", style = MaterialTheme.typography.bodySmall)
+                    catalogue.offline -> Text("Showing saved interests while offline.", style = MaterialTheme.typography.bodySmall)
+                    catalogue.error != null -> {
+                        Text(catalogue.error?.message.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                        androidx.compose.material3.TextButton(onClick = editProfileViewModel::refreshCatalogue) { Text("Retry interests") }
+                    }
+                    catalogue.loaded && catalogue.items.isEmpty() -> Text("No interests available yet.", style = MaterialTheme.typography.bodySmall)
+                }
                 InterestCompo(
                     allInterests = allInterests
                 ) {

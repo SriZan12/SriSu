@@ -1,158 +1,163 @@
 package com.srisu.srisu.core.data.remote
 
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.core.config.ApiEnvironment
+import com.srisu.srisu.core.lifecycle.ApplicationLifetime
+import com.srisu.srisu.core.session.SessionCoordinator
+import com.srisu.srisu.core.session.SessionStamp
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
-import io.ktor.client.plugins.websocket.webSocket
-import io.ktor.websocket.CloseReason
-import io.ktor.websocket.Frame
-import io.ktor.websocket.close
-import io.ktor.websocket.readReason
-import io.ktor.websocket.readText
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.concurrent.Volatile
-import kotlin.time.Duration.Companion.seconds
+import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.client.request.url
+import io.ktor.websocket.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.random.Random
 
+val SocketHandshakeKey = io.ktor.util.AttributeKey<Boolean>("SriSuSocketHandshake")
+class SocketProtocolFailure : Exception("Socket protocol limit exceeded")
+class SocketAccessDenied(val status: Int) : Exception("Socket access denied")
+
+sealed interface SocketState {
+    data object Disconnected : SocketState
+    data object Connecting : SocketState
+    data object Connected : SocketState
+    data class Reconnecting(val attempt: Int) : SocketState
+    data class Terminal(val code: String) : SocketState
+}
+
+interface SocketConnection {
+    suspend fun receive(): String?
+    suspend fun send(text: String)
+    suspend fun close()
+    suspend fun closeCode(): Int?
+}
+fun interface SocketConnector { suspend fun open(): SocketConnection }
+
+class KtorSocketConnector(private val client: HttpClient, private val environment: ApiEnvironment) : SocketConnector {
+    override suspend fun open(): SocketConnection {
+        val socket = client.webSocketSession { url(environment.socketUrl); attributes.put(SocketHandshakeKey, true) }
+        return object : SocketConnection {
+            override suspend fun receive(): String? {
+                while (true) {
+                    val frame = socket.incoming.receiveCatching().getOrNull() ?: return null
+                    if (frame.data.size > 1_048_576) {
+                        socket.close(CloseReason(CloseReason.Codes.TOO_BIG, "Frame exceeds client limit"))
+                        throw SocketProtocolFailure()
+                    }
+                    if (frame is Frame.Text) return frame.readText()
+                    if (frame is Frame.Close) return null
+                }
+            }
+            override suspend fun send(text: String) { socket.send(Frame.Text(text)) }
+            override suspend fun close() { socket.close(CloseReason(CloseReason.Codes.NORMAL, "Client closed")); socket.cancel() }
+            override suspend fun closeCode(): Int? = socket.closeReason.await()?.code?.toInt()
+        }
+    }
+}
+
+class SocketUnavailable : Exception("Chat is disconnected. Reconnect before sending.")
+
+/** One owned connection, no offline write queue, and no automatic command replay. */
 abstract class BaseWebSocketClient(
-    private val httpClient: HttpClient,
-    private val wsUrl: String,
+    private val connector: SocketConnector,
+    protected val sessions: SessionCoordinator,
+    lifetime: ApplicationLifetime,
+    private val jitter: () -> Double = { Random.nextDouble(0.8, 1.2) },
 ) {
+    protected val scope = CoroutineScope(lifetime.scope.coroutineContext + SupervisorJob(lifetime.scope.coroutineContext[Job]))
+    private val wanted = MutableStateFlow(false)
+    private val retry = MutableStateFlow(0)
+    private val _state = MutableStateFlow<SocketState>(SocketState.Disconnected)
+    val connectionState = _state.asStateFlow()
+    private var connection: SocketConnection? = null
+    private var connectionStamp: SessionStamp? = null
+    private val sends = Mutex()
 
-    protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    @Volatile
-    protected var isRunning = false
-
-    @Volatile
-    protected var currentSession: DefaultClientWebSocketSession? = null
-
-    fun connect() {
-        if (isRunning) {
-            AppLogger.log("WebSocket already running")
-            return
-        }
-
-        isRunning = true
+    init {
         scope.launch {
-            connectionLoop()
-        }
-    }
-
-    fun disconnect(reason: String? = null) {
-        isRunning = false
-        scope.launch {
-            try {
-                currentSession?.close(
-                    CloseReason(
-                        CloseReason.Codes.NORMAL,
-                        reason ?: "Client disconnected"
-                    )
-                )
-            } catch (e: Exception) {
-                AppLogger.log("Error during disconnect: ${e.message}")
-            } finally {
-                currentSession = null
-                onDisconnected(reason)
+            combine(sessions.state, lifetime.foreground, wanted, retry) { session, foreground, desired, revision ->
+                Triple(session, foreground && desired && session.accountId != null, revision)
+            }.collectLatest { (stamp, enabled, _) ->
+                if (!enabled) { _state.value = SocketState.Disconnected; return@collectLatest }
+                runConnection(stamp)
             }
         }
     }
 
-    suspend fun send(rawPayload: String) {
+    fun connect() { wanted.value = true }
+    fun retryConnection() { retry.value += 1 }
+    fun disconnect(reason: String? = null) { wanted.value = false }
+    fun close() { scope.cancel() }
+
+    private suspend fun runConnection(stamp: SessionStamp) {
         try {
-            currentSession?.outgoing?.send(Frame.Text(rawPayload))
-        } catch (e: Exception) {
-            AppLogger.log("Error sending message: ${e.message}")
-            onError(e)
-            throw e
-        }
-    }
-
-    private suspend fun connectionLoop() {
-        var backoff = 1.seconds
-        val maxBackoff = 30.seconds
-
-        while (isRunning) {
-            try {
-                httpClient.webSocket(urlString = wsUrl) {
-                    currentSession = this
-                    backoff = 1.seconds
-
-                    onConnected()
-                    AppLogger.log("WebSocket connected")
-
-                    onSessionStarted(this)
-                    readLoop()
-                }
-            } catch (e: Exception) {
-                AppLogger.log("WebSocket error: ${e.message}")
-                onError(e)
-            } finally {
-                currentSession = null
-            }
-
-            if (!isRunning) break
-
-            AppLogger.log("Reconnecting in $backoff...")
-            delay(backoff)
-            backoff = (backoff * 2).coerceAtMost(maxBackoff)
-        }
-    }
-
-    private suspend fun DefaultClientWebSocketSession.readLoop() {
-        try {
-            for (frame in incoming) {
-                when (frame) {
-                    is Frame.Text -> {
-                        val raw = frame.readText()
-                        onIncoming(raw)
+            for (attempt in 0..MAX_RECONNECTS) {
+                sessions.ensureCurrent(stamp)
+                _state.value = if (attempt == 0) SocketState.Connecting else SocketState.Reconnecting(attempt)
+                if (attempt > 0) delay(backoffMillis(attempt, jitter()))
+                var current: SocketConnection? = null
+                try {
+                    current = withTimeout(10_000) { connector.open() }
+                    sessions.ensureCurrent(stamp)
+                    connection = current
+                    connectionStamp = stamp
+                    _state.value = SocketState.Connected
+                    com.srisu.srisu.core.logger.AppLogger.socket(com.srisu.srisu.core.logger.SocketDiagnostic.CONNECTED)
+                    onConnected(stamp)
+                    while (currentCoroutineContext().isActive) {
+                        val raw = current.receive() ?: break
+                        sessions.ensureCurrent(stamp)
+                        onIncoming(raw, stamp)
                     }
-
-                    is Frame.Close -> {
-                        val reason = frame.readReason()
-                        AppLogger.log("WebSocket closed: ${reason?.message}")
-                        onDisconnected(reason?.message)
-                        break
+                    val code = withTimeoutOrNull(1_000) { current.closeCode() }
+                    if (code in listOf(4401, 4403, 1008)) {
+                        _state.value = SocketState.Terminal(if (code == 4401) "unauthenticated" else "forbidden")
+                        return
                     }
-
-                    else -> {
-                        // Ignore unsupported frame types for now
-                    }
+                } catch (cancelled: CancellationException) {
+                    // Our connection timeout is recoverable; owner cancellation always propagates.
+                    if (cancelled !is TimeoutCancellationException) throw cancelled
+                    currentCoroutineContext().ensureActive()
+                } catch (_: SocketProtocolFailure) {
+                    _state.value = SocketState.Terminal("protocol_failure")
+                    return
+                } catch (denied: SocketAccessDenied) {
+                    _state.value = SocketState.Terminal(if (denied.status == 401) "unauthenticated" else "forbidden")
+                    return
+                } catch (_: Exception) {
+                    // No exception text: engines may include the authenticated request URL.
+                } finally {
+                    com.srisu.srisu.core.logger.AppLogger.socket(com.srisu.srisu.core.logger.SocketDiagnostic.DISCONNECTED)
+                    connection = null
+                    connectionStamp = null
+                    onDisconnected(stamp)
+                    withContext(NonCancellable) { withTimeoutOrNull(1_000) { current?.close() } }
                 }
             }
-        } catch (e: Exception) {
-            AppLogger.log("Read loop error: ${e.message}")
-            onError(e)
+            _state.value = SocketState.Terminal("reconnect_exhausted")
+        } finally {
+            if (_state.value !is SocketState.Terminal) _state.value = SocketState.Disconnected
         }
     }
 
-    /**
-     * Called once the websocket session is connected.
-     */
-    protected open suspend fun onConnected() {}
+    protected suspend fun send(rawPayload: String) = sends.withLock {
+        require(rawPayload.encodeToByteArray().size <= 65_536) { "Command is too large" }
+        val current = connection ?: throw SocketUnavailable()
+        val stamp = connectionStamp ?: throw SocketUnavailable()
+        sessions.ensureCurrent(stamp)
+        // An accepted write is not an acknowledgment; the feature protocol handles that.
+        withTimeout(2_000) { current.send(rawPayload) }
+        sessions.ensureCurrent(stamp)
+    }
 
-    /**
-     * Called after a session is established and before reading starts.
-     * Useful for subscriptions / initial fetches.
-     */
-    protected open suspend fun onSessionStarted(session: DefaultClientWebSocketSession) {}
+    protected abstract suspend fun onIncoming(raw: String, stamp: SessionStamp)
+    protected open suspend fun onConnected(stamp: SessionStamp) {}
+    protected open suspend fun onDisconnected(stamp: SessionStamp) {}
 
-    /**
-     * Called when text payload is received.
-     */
-    protected abstract suspend fun onIncoming(raw: String)
-
-    /**
-     * Called when websocket disconnects or closes.
-     */
-    protected open suspend fun onDisconnected(reason: String?) {}
-
-    /**
-     * Called on connection/read/send errors.
-     */
-    protected open suspend fun onError(error: Throwable) {}
+    companion object {
+        const val MAX_RECONNECTS = 5
+        fun backoffMillis(attempt: Int, jitter: Double): Long =
+            ((250L * (1L shl (attempt - 1).coerceIn(0, 5))).coerceAtMost(8_000) * jitter.coerceIn(0.8, 1.2)).toLong()
+    }
 }

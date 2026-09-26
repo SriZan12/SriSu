@@ -31,6 +31,9 @@ koin-bom = "4.1.0"
 lifecycleViewmodel = "2.9.3"
 datastore = "1.1.7"
 atomicfu = "0.29.0"
+room = "2.7.2"
+sqlite = "2.5.2"
+ksp = "2.2.0-2.0.2"
 kmpDateTimePicker = "1.1.1"
 accompanistPlaceholderMaterial3 = "0.36.0"
 accompanistPermissions = "0.37.3"
@@ -39,6 +42,9 @@ swipeableKmp = "1.0.3"
 
 
 [libraries]
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
@@ -100,6 +106,8 @@ paging-compose-common = { module = "app.cash.paging:paging-compose-common", vers
 #swipeable-kmp = { module = "com.stevdza-san:swipeable-kmp", version.ref = "swipeableKmp" }
 
 [plugins]
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

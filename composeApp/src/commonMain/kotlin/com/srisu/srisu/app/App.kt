@@ -1,34 +1,46 @@
 package com.srisu.srisu.app
 
-import androidx.compose.runtime.Composable
-import com.srisu.srisu.di.createKoinConfiguration
-import com.srisu.srisu.core.session.SessionStorage
-import com.srisu.srisu.theme.SriSuTheme
+import androidx.compose.runtime.*
 import androidx.compose.foundation.isSystemInDarkTheme
-import com.srisu.srisu.utils.Constants.Auth.FIRST_INSTALL_FLAG
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.srisu.srisu.di.createKoinConfiguration
+import com.srisu.srisu.core.session.SessionCoordinator
+import com.srisu.srisu.core.lifecycle.ApplicationLifetime
+import com.srisu.srisu.theme.SriSuTheme
 import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
 import org.koin.core.annotation.KoinExperimentalAPI
-import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
-fun App(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-) {
-    KoinMultiplatformApplication(
-        config = createKoinConfiguration()
-    ) {
-        val sessionStorage: SessionStorage = koinInject()
-
-        SriSuTheme(
-            darkTheme = darkTheme
-        ) {
-            LaunchedEffect(Unit) {
-                sessionStorage.clearOnReinstall(key = FIRST_INSTALL_FLAG)
+fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
+    KoinMultiplatformApplication(config = createKoinConfiguration()) {
+        val sessions: SessionCoordinator = koinInject()
+        val lifetime: ApplicationLifetime = koinInject()
+        val session by sessions.state.collectAsState()
+        val owner = LocalLifecycleOwner.current
+        DisposableEffect(owner, lifetime) {
+            lifetime.setForeground(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
+            val observer = LifecycleEventObserver { _, _ ->
+                lifetime.setForeground(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))
             }
-
-            AppRoot(sessionStorage = sessionStorage)
+            owner.lifecycle.addObserver(observer)
+            onDispose { owner.lifecycle.removeObserver(observer); lifetime.setForeground(false) }
+        }
+        SriSuTheme(darkTheme = darkTheme) {
+            key(session.accountId) {
+                // The entire navigation/view-model store is owned by this account.
+                val accountOwner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
+                DisposableEffect(accountOwner) { onDispose { accountOwner.viewModelStore.clear() } }
+                CompositionLocalProvider(LocalViewModelStoreOwner provides accountOwner) {
+                    AppRoot(sessionStorage = sessions)
+                }
+            }
         }
     }
 }

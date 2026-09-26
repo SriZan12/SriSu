@@ -14,7 +14,22 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class ChatApiService(private val httpClient: HttpClient) {
+class ChatApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = com.srisu.srisu.core.config.ApiEnvironment.configured()) {
+
+    suspend fun rooms(cursor: String? = null): ResultHandler<com.srisu.srisu.features.chat.data.remote.response.ChatRoomPage?> = httpClient.safeRequest(readRetries = 1) {
+        url("${environment.baseUrl}api/chat/rooms/")
+        method = HttpMethod.Get
+        url.parameters.append("limit", "20")
+        cursor?.let { url.parameters.append("cursor", it) }
+    }
+
+    suspend fun history(roomId: String, cursor: Long? = null): ResultHandler<com.srisu.srisu.features.chat.data.remote.response.ChatHistoryPage?> = httpClient.safeRequest(readRetries = 1) {
+        require(roomId.matches(Regex("[0-9a-fA-F-]{36}")))
+        url("${environment.baseUrl}api/chat/rooms/$roomId/messages/")
+        method = HttpMethod.Get
+        url.parameters.append("limit", "20")
+        cursor?.let { url.parameters.append("cursor", it.toString()) }
+    }
 
     suspend fun uploadMedias(
         medias: List<MediaFile?>?
@@ -22,7 +37,7 @@ class ChatApiService(private val httpClient: HttpClient) {
 
         return httpClient.safeRequest {
 
-            url(urlString = "${BaseApiService.Companion.BASE_URL}api/chat/media-upload/")
+            url(urlString = "${environment.baseUrl}api/chat/media-upload/")
             method = HttpMethod.Companion.Post
 
             setBody(

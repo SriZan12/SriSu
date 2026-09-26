@@ -15,6 +15,8 @@ import com.srisu.srisu.features.chat.data.remote.response.TypingData
 import com.srisu.srisu.features.chat.data.remote.response.TypingResponse
 
 sealed interface ChatWebSocketEvent {
+    data object Resync : ChatWebSocketEvent
+    data class AccessRevoked(val roomId: String) : ChatWebSocketEvent
     data object Connected : ChatWebSocketEvent
     data class Disconnected(val reason: String?) : ChatWebSocketEvent
     data class FetchMessages(val data: FetchMessagesData) : ChatWebSocketEvent
