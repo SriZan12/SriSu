@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
@@ -70,7 +71,7 @@ fun InterestScreen(
                 PrimaryButtonCompo(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(MaterialTheme.spacing.medium)
                         .navigationBarsPadding(),
                     label = "Save",
                     onClick = {
@@ -138,16 +139,16 @@ fun CategorizedInterestListCompo(
         state = lazyGridState,
         modifier = Modifier.fillMaxWidth(),
         columns = GridCells.Fixed(3),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(all = 16.dp)
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        contentPadding = PaddingValues(all = MaterialTheme.spacing.medium)
     ) {
         if (interestList.isEmpty()) {
             item(span = { GridItemSpan(3) }) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(vertical = 32.dp),
+                        .padding(vertical = MaterialTheme.spacing.extraLarge),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(

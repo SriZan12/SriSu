@@ -75,8 +75,7 @@ private fun readSessionSafely(sessionStorage: SessionStorage): Session? {
         sessionStorage
             .getSession(sessionKey = SESSION_KEY)
             ?.let { Json.decodeFromString<Session>(it) }
-    } catch (exception: Exception) {
-        AppLogger.log("Failed to decode session: ${exception.message}")
+    } catch (_: Exception) {
         null
     }
 }
@@ -92,7 +91,6 @@ private fun resolveStartDestination(session: Session?): Route {
         }
 
         else -> {
-            AppLogger.log("SESSION IS NOT VERIFIED")
             AuthNavigation.PhoneNumberScreen
         }
     }

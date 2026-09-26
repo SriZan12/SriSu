@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -22,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -209,15 +209,15 @@ fun EditProfileScreenContent(
                 }
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.medium)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)
             ) {
                 ProfilePictureCompo(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -328,7 +328,7 @@ fun EditProfileScreenContent(
                 }
 
                 PrimaryButtonCompo(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
                     label = "Update Profile",
                     onClick = {
                         editProfileViewModel.updateProfile()
@@ -364,7 +364,7 @@ private fun ProfilePictureCompo(
     )
 
     Box(
-        modifier = modifier.padding(horizontal = 16.dp)
+        modifier = modifier.padding(horizontal = MaterialTheme.spacing.medium)
             .size(180.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceDim)
@@ -425,8 +425,8 @@ private fun GeneralInfoCompo(
     onUpdateCity: (com.srisu.srisu.features.home.profile.presentation.screen.city) -> Unit,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         FormFieldCompo(
             label = "Full Name",
@@ -541,7 +541,7 @@ private fun InterestCompo(
     Column(modifier = Modifier.fillMaxWidth()) {
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -566,8 +566,8 @@ private fun InterestCompo(
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp)
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            contentPadding = PaddingValues(horizontal = MaterialTheme.spacing.medium)
         ) {
             items(items = allInterests ?: emptyList(), key = { it ?: "" }) { interest ->
                 if (!interest.isNullOrEmpty()) {
@@ -594,14 +594,14 @@ fun InterestChip(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         onClick = onChipClick
     ) {
         Text(
             text = label,
             maxLines = 1,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small)
                 .basicMarquee(iterations = iterations),
             style = MaterialTheme.typography.labelMedium
         )
@@ -623,7 +623,7 @@ fun GalleryCompo(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+            .padding(start = MaterialTheme.spacing.medium, end = MaterialTheme.spacing.medium, bottom = MaterialTheme.spacing.medium)
     ) {
         Text(
             text = "Gallery",
@@ -639,7 +639,7 @@ fun GalleryCompo(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)
         ) {
             val sortedLargePhotos = remember(largePhotos) {
                 largePhotos?.sortedBy { it?.index }
@@ -674,7 +674,7 @@ fun GalleryCompo(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)
         ) {
             val sortedSmallPhotos = remember(smallPhotos) {
                 smallPhotos?.sortedBy { it?.index }
@@ -716,15 +716,15 @@ fun GalleryAddCard(
 
         Card(
             modifier = Modifier
-                .shadow(6.dp, shape = RoundedCornerShape(16.dp))
+                .shadow(6.dp, shape = MaterialTheme.shapes.medium)
                 .clickable { onClick() },
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
                 if (photoUri == null) {
                     Box(
@@ -738,7 +738,7 @@ fun GalleryAddCard(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add Image",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -771,8 +771,8 @@ fun GalleryAddCard(
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "Close",
-                    tint = Color.White,
-                    modifier = Modifier.padding(all = 4.dp)
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(all = MaterialTheme.spacing.tiny)
                 )
             }
         }

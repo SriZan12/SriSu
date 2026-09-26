@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.auth.presentation.screen.authscreen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -33,9 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -223,9 +222,9 @@ private fun PhoneNumberScreenContent(
                     })
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = MaterialTheme.spacing.extraLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraLarge)
         ) {
             SriSuHeader()
 
@@ -262,13 +261,13 @@ private fun PhoneNumberConfirmationBottomSheet(
         onDismiss()
     }, show = showPhoneNumberConfirmation) {
 
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium)) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = "Confirm your Phone Number",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Medium,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 ),
                 textAlign = TextAlign.Center
             )
@@ -280,7 +279,7 @@ private fun PhoneNumberConfirmationBottomSheet(
             val highlightedText = authUIState.phoneNumber
 
             Box(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small),
                 contentAlignment = Alignment.Center
             ) {
                 HighlightedTextComponent(
@@ -292,7 +291,7 @@ private fun PhoneNumberConfirmationBottomSheet(
 
             PrimaryButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(intrinsicSize = IntrinsicSize.Max)
-                    .padding(top = 24.dp, bottom = 12.dp),
+                    .padding(top = MaterialTheme.spacing.large, bottom = MaterialTheme.spacing.compact),
                 label = "Yes, looks good"
             ) {
                 onConfirmed()
@@ -301,7 +300,7 @@ private fun PhoneNumberConfirmationBottomSheet(
 
             PrimaryOutlinedButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(intrinsicSize = IntrinsicSize.Max)
-                    .padding(bottom = 24.dp),
+                    .padding(bottom = MaterialTheme.spacing.large),
                 label = "Edit Number"
             ) {
                 onDeclined()
@@ -322,7 +321,7 @@ fun SriSuHeader() {
             text = "SriSu",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold
         )
 
@@ -356,13 +355,13 @@ fun SriSuHeader() {
 fun PhoneNumberTitle() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)
     ) {
         Text(
             text = "What's your number?",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
