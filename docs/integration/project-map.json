@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "repositories": {
+    "frontend": {
+      "path": ".",
+      "github": "SriZan12/SriSu",
+      "integration_branch": "dev-new-theme",
+      "workflow_branch": "codex/workspace-integration"
+    },
+    "backend": {
+      "path": "../SriSu-backend",
+      "github": "SrizanKhadka/SriSu",
+      "integration_branch": "dev",
+      "workflow_branch": "codex/workspace-integration"
+    }
+  },
+  "figma": {
+    "file_key": "LztysD1YvINX7RwZpnhhTt",
+    "nodes": {
+      "design_system": "0:1",
+      "find_partner": "14:220",
+      "invite_sent": "5:974",
+      "connected_confirmation": "5:1118"
+    }
+  }
+}
