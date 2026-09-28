@@ -115,6 +115,7 @@ fun CommonProfileContainerCompo(
 
     Scaffold(
         modifier = modifier
+            .imePadding()
             .fillMaxSize()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -166,7 +167,7 @@ fun CommonProfileContainerCompo(
         ) {
 
             ProgressIndicator(
-                totalSteps = 6,
+                totalSteps = 2,
                 currentStep = currentStep,
                 modifier = Modifier.fillMaxWidth()
             )

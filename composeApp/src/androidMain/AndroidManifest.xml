@@ -28,6 +28,7 @@
         android:usesCleartextTraffic="${srisuCleartext}">
         <activity
             android:name=".MainActivity"
+            android:theme="@style/Theme.SriSu.Starting"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|mnc|colorMode|density|fontScale|fontWeightAdjustment|keyboard|layoutDirection|locale|mcc|navigation|smallestScreenSize|touchscreen|uiMode"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">

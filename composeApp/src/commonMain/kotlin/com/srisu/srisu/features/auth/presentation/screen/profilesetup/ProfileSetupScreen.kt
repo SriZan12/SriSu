@@ -21,7 +21,7 @@ import com.srisu.srisu.navigation.graph.HomeNavigation
 import org.koin.compose.viewmodel.koinViewModel
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun ProfileSetupScreen(
     navController: NavController,
@@ -31,6 +31,9 @@ fun ProfileSetupScreen(
     val localFocusManager: FocusManager = LocalFocusManager.current
     val authUIState by authViewModel.authUiState.collectAsState()
 
+    androidx.compose.ui.backhandler.BackHandler {
+        if (authUIState.currentScreen == CustomProfileSetupScreen.SetProfilePictureScreen) authViewModel.showNameStep()
+    }
     ProfileScreenContent(
         navController = navController,
         authViewModel = authViewModel,
@@ -38,10 +41,6 @@ fun ProfileSetupScreen(
         localFocusManager = localFocusManager
     )
 
-    ShowZodiacSignScreen( // This is conditional
-        authViewModel = authViewModel,
-        authUIState = authUIState
-    )
 
 }
 
@@ -67,76 +66,8 @@ private fun ProfileScreenContent(
         label = "AuthScreenTransition"
     ) { currentScreen ->
         when (currentScreen) {
-
-            is CustomProfileSetupScreen.AddFullNameScreen -> {
-                AddNameScreen(
-                    authViewModel = authViewModel,
-                    localFocusManager = localFocusManager
-                )
-            }
-
-            is CustomProfileSetupScreen.AddDOBScreen -> {
-                AddDOBScreen(
-                    authViewModel = authViewModel
-                )
-            }
-
-            is CustomProfileSetupScreen.ZodiacScreen -> {
-                // This will be handled automatically.
-            }
-
-            is CustomProfileSetupScreen.SelectGenderScreen -> {
-                SelectGenderScreen(
-                    authViewModel = authViewModel
-                )
-            }
-
-            is CustomProfileSetupScreen.SelectRelationshipScreen -> {
-                SelectRelationshipScreen(
-                    authViewModel = authViewModel
-                )
-            }
-
-            CustomProfileSetupScreen.SetProfilePictureScreen -> {
-                SetProfilePictureScreen(
-                    navController = navController,
-                    authViewModel = authViewModel
-                ) {
-                    navController.navigate(HomeNavigation.Home)
-                }
-            }
-
-        }
-    }
-}
-
-@Composable
-private fun ShowZodiacSignScreen(
-    authViewModel: AuthViewModel,
-    authUIState: AuthUIStates
-) {
-    AnimatedContent(
-        targetState = authUIState.currentScreen,
-        transitionSpec = {
-            if (targetState > initialState) {
-                (slideInHorizontally { it } + fadeIn()).togetherWith(slideOutHorizontally { -it } + fadeOut())
-            } else {
-                (slideInHorizontally { -it } + fadeIn()).togetherWith(slideOutHorizontally { it } + fadeOut())
-            }
-        },
-
-        label = "AuthScreenTransition"
-    ) { currentScreen ->
-        if (currentScreen is CustomProfileSetupScreen.ZodiacScreen) {
-            authUIState.zodiacSign?.let {
-                ZodiacRevealScreen(
-                    zodiacSign = authUIState.zodiacSign,
-                    onContinueClick = {
-                        authViewModel.navigateNextScreen(isIncrease = true)
-                    },
-                    modifier = Modifier
-                )
-            }
+            CustomProfileSetupScreen.SetProfilePictureScreen -> SetProfilePictureScreen(authViewModel)
+            else -> AddNameScreen(authViewModel, localFocusManager)
         }
     }
 }

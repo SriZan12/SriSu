@@ -32,6 +32,11 @@ import com.srisu.srisu.utils.DateTimeUtils.getDayAndMonthIndividually
 import com.srisu.srisu.utils.FileManager
 import com.srisu.srisu.utils.ZodiacUtils
 import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import com.srisu.srisu.core.data.remote.NetworkAPIResult
+import com.srisu.srisu.core.data.remote.ApiError
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
@@ -42,23 +47,35 @@ import kotlin.time.ExperimentalTime
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
-    private val sessionStorage: SessionStorage,
-    private val connectivityObserver: ConnectivityObserver,
-    private val dataStoreRepo: AuthDataStore
+    private val sessionStorage: com.srisu.srisu.core.session.SessionCoordinator,
+    private val dataStoreRepo: AuthDataStore,
+    private val startup: com.srisu.srisu.features.auth.domain.StartupCoordinator
 ) : ViewModel() {
 
     private val _authUiState = MutableStateFlow(AuthUIStates())
-    val authUiState = _authUiState.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-        initialValue = AuthUIStates()
-    )
+    val authUiState = _authUiState.asStateFlow()
+    private var operation: Job? = null
+    private var busy = false
+    private var flowVersion = 0L
+    private var requestId: String? = null
 
     init {
         checkSession()
         initializeAuthNavigationFlow()
         setZodiacSign()
         loadAllCountries()
+        getRemainingOTPTimeStamp()
+        viewModelScope.launch {
+            startup.state.collect { access ->
+                if (access is com.srisu.srisu.features.auth.domain.StartupState.Available) {
+                    when (access.destination) {
+                        com.srisu.srisu.features.auth.domain.AccessDestination.NAME -> updateState { it.copy(currentScreen = CustomProfileSetupScreen.AddFullNameScreen, currentProgressStep = 1) }
+                        com.srisu.srisu.features.auth.domain.AccessDestination.PHOTO -> updateState { it.copy(currentScreen = CustomProfileSetupScreen.SetProfilePictureScreen, currentProgressStep = 2) }
+                        else -> Unit
+                    }
+                }
+            }
+        }
     }
 
     private val currentState: AuthUIStates
@@ -100,10 +117,6 @@ class AuthViewModel(
         setBaseUiState(BaseUIState.NoInternetConnection(isOffline = isOffline))
     }
 
-    private fun isInternetAvailable(): Boolean {
-        return connectivityObserver.isConnected.value
-    }
-
     private inline fun launchSafely(
         crossinline onError: (String) -> Unit = { message ->
             showErrorMessage(error = message)
@@ -115,8 +128,8 @@ class AuthViewModel(
                 block()
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
             } catch (exception: Exception) {
-                AppLogger.log("AuthViewModel exception: ${exception.message}")
-                onError(exception.message ?: "Something went wrong.")
+                AppLogger.log("AuthViewModel operation failed: ${exception::class.simpleName}")
+                onError("Unable to complete this action. Please retry.")
             }
         }
     }
@@ -130,14 +143,14 @@ class AuthViewModel(
             sessionJson?.let { Json.decodeFromString<Session>(it) }
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
             } catch (exception: Exception) {
-            AppLogger.log("Session deserialization failed: ${exception.message}")
+            AppLogger.log("Session deserialization failed")
             null
         }
 
         updateProgress(isIncrease = true)
 
         updateSession(session)
-        AppLogger.log("SESSION = ${runCatching { Json.encodeToString(session) }.getOrNull()}")
+        updateState { it.copy(fullName = session?.fullName.orEmpty(), username = session?.username.orEmpty()) }
 
         return session
     }
@@ -151,7 +164,7 @@ class AuthViewModel(
             sessionStorage.getSession(sessionKey)
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
             } catch (exception: Exception) {
-            AppLogger.log("Failed to get session: ${exception.message}")
+            AppLogger.log("Failed to read secure session storage")
             null
         }
     }
@@ -184,24 +197,24 @@ class AuthViewModel(
 
     // UI updates
 
-    fun updatePhoneNumber(
-        phoneNumber: String,
-        showValidationMessage: () -> Unit
-    ) {
-        if (phoneNumber.length <= 10) {
-            updateState { it.copy(phoneNumber = phoneNumber) }
-        } else {
-            showValidationMessage()
-        }
+    fun abandonChallenge() {
+        flowVersion++
+        operation?.cancel()
+        busy = false
+        requestId = null
+        updateState { it.copy(challengeId = null, optValues = List(6) { "" }, baseUIState = BaseUIState.Idle, resendAt = 0, expiresAt = 0) }
+        viewModelScope.launch { dataStoreRepo.deleteOTPTimeStamp() }
+    }
+
+    fun updatePhoneNumber(phoneNumber: String, showValidationMessage: () -> Unit) {
+        val digits = phoneNumber.trim().removePrefix(currentState.countryPrefix).filter { it in '0'..'9' }.take(14)
+        if (digits != currentState.phoneNumber) abandonChallenge()
+        updateState { it.copy(phoneNumber = digits) }
     }
 
     fun updateCountry(code: String, prefix: String) {
-        updateState {
-            it.copy(
-                countryCode = code,
-                countryPrefix = prefix
-            )
-        }
+        if (prefix != currentState.countryPrefix) abandonChallenge()
+        updateState { it.copy(countryCode = code, countryPrefix = prefix) }
     }
 
     fun updateOtpValues(index: Int, value: String) {
@@ -242,7 +255,12 @@ class AuthViewModel(
     }
 
     fun updateProfilePictureUri(uri: Uri?) {
-        updateState { it.copy(profilePictureUri = uri) }
+        if (uri == null) return
+        runOperation { _ ->
+            val photo = FileManager().createProfilePhotoFromPath(uri.toString())
+            if (photo?.fileBytes == null) showErrorMessage("Unable to use this photo. Choose an image under 5 MB and 20 megapixels.")
+            else updateState { it.copy(profilePictureUri = uri) }
+        }
     }
 
     fun updateGender(gender: Gender) {
@@ -259,268 +277,156 @@ class AuthViewModel(
 
     // API calls and local persistence
 
-    fun requestOTP(onNavToOTPScreen: () -> Unit) {
-        if (!isInternetAvailable()) {
-            showNoInternetConnection(isOffline = true)
-            return
+    private fun failure(error: ApiError) {
+        val message = when {
+            error.fields["username"]?.contains("unique") == true -> "This username is taken. Choose another."
+            error.fields["otp_code"]?.contains("expired") == true -> "This code has expired. Request a new code."
+            error.fields["otp_code"]?.contains("attempts_exhausted") == true -> "Too many attempts. Request a new code when available."
+            error.fields.containsKey("otp_code") -> "This code is invalid or already used. Check it or request a new code."
+            error.fields.containsKey("profile_photo") -> "Choose a JPEG, PNG or WebP image under 5 MB and 20 megapixels."
+            else -> error.message
         }
-
-        launchSafely {
-            showLoading()
-
-            val state = currentState
-            val authDTO = AuthDTO(
-                fullName = state.fullName,
-                dob = state.dob,
-                gender = state.gender.name,
-                phoneNumber = "${state.countryPrefix}${state.phoneNumber}"
-            )
-
-            // Preserved current behavior:
-            // local session is saved and navigation proceeds even though API call is currently disabled.
-            val session = Session(isPhoneVerified = false)
-            val credentials = Json.encodeToString(session)
-
-            saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-
-            idleScreen()
-
-            resetOTPTimeStamp()
-
-            onNavToOTPScreen()
-
-            //TODO: As of now we are out of twilio free requests, we will resume this in prodiction
-
-            /*
-            authRepository.sendOTPRequest(authDTO = authDTO)
-                .onSuccess { _, _ ->
-                    val credentials = setCredentials(
-                        tokens = null,
-                        isPhoneVerified = false
-                    )
-                    saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-
-                    if (isNavigateScreen) {
-                        navigateNextScreen()
-                    }
-
-                    idleScreen()
-                }
-                .onError { error, errorType ->
-                    AppLogger.log("OTP request errorType = ${errorType.name}")
-                    AppLogger.log("OTP request error = ${error.toString()}")
-
-                    showErrorMessage(
-                        errorType = "${errorType.name} ERROR",
-                        error = error.toString()
-                    )
-                }
-            */
-        }
+        showErrorMessage(message)
     }
 
-    fun resetOTPTimeStamp() {
-        launchSafely {
-            if (currentState.remainingOTPTimestamp != null) {
-                dataStoreRepo.deleteOTPTimeStamp()
-            } else {
-                saveOTPTimeStamp()
+    private fun runOperation(block: suspend (Long) -> Unit) {
+        if (busy) return
+        busy = true
+        val version = flowVersion
+        showLoading()
+        operation = viewModelScope.launch {
+            try { block(version)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (_: Exception) { if (version == flowVersion) showErrorMessage("Unable to complete this action. Please retry.")
+            } finally {
+                if (version == flowVersion) {
+                    busy = false
+                    if (currentState.baseUIState is BaseUIState.Loading) idleScreen()
+                }
             }
         }
     }
 
-    @OptIn(ExperimentalTime::class)
-    fun saveOTPTimeStamp() {
-        launchSafely {
-            if (currentState.remainingOTPTimestamp != null) return@launchSafely
-
-            persistOTPTimeStamp()
-            updateOTPRemainingTime(OTP_WAITING_TIME)
+    @OptIn(kotlin.uuid.ExperimentalUuidApi::class, ExperimentalTime::class)
+    fun requestOTP(onNavToOTPScreen: () -> Unit) {
+        if (!isPhoneNumberValid() || currentState.resendAt > kotlin.time.Clock.System.now().toEpochMilliseconds()) return
+        runOperation { version ->
+            val state = currentState
+            val id = requestId ?: kotlin.uuid.Uuid.random().toString().also { requestId = it }
+            val response = authRepository.sendOTPRequest(AuthDTO(phoneNumber = state.countryPrefix + state.phoneNumber, requestId = id)).result
+            if (version != flowVersion) return@runOperation
+            when (response) {
+                is NetworkAPIResult.Success -> {
+                    val challenge = requireNotNull(response.response)
+                    val at = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                    val lifetime = (kotlin.time.Instant.parse(challenge.expiresAt) - kotlin.time.Instant.parse(challenge.serverTime)).inWholeMilliseconds.coerceAtLeast(0)
+                    dataStoreRepo.saveOTPTimestamp(OTPScreenMetadata(state.countryCode, state.countryPrefix, state.phoneNumber,
+                        at, challenge.retryAfterSeconds * 1000, challenge.challengeId, at + lifetime))
+                    if (version != flowVersion) return@runOperation
+                    updateState { it.copy(challengeId = challenge.challengeId, resendAt = at + challenge.retryAfterSeconds * 1000,
+                        expiresAt = at + lifetime, optValues = List(6) { "" }, remainingOTPTimestamp = challenge.retryAfterSeconds * 1000) }
+                    requestId = null
+                    // AuthGraph observes durable challenge state. No callback navigation race.
+                }
+                is NetworkAPIResult.Error -> {
+                    if (response.failure.status != null && response.failure.status != 409) requestId = null
+                    response.failure.retryAfterSeconds?.let { wait -> updateState { it.copy(resendAt = kotlin.time.Clock.System.now().toEpochMilliseconds() + wait * 1000) } }
+                    failure(response.failure)
+                }
+            }
         }
     }
 
-
-    @OptIn(ExperimentalTime::class)
-    private suspend fun persistOTPTimeStamp(
-        countryCode: String = currentState.countryCode,
-        countryPrefix: String = currentState.countryPrefix,
-        phoneNumber: String = currentState.phoneNumber,
-        saveTime: Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
-    ) {
-        dataStoreRepo.saveOTPTimestamp(
-            otpScreenMetadata = OTPScreenMetadata(
-                countryCode = countryCode,
-                countryPrefix = countryPrefix,
-                phoneNumber = phoneNumber,
-                saveTime = saveTime,
-                totalTime = OTP_WAITING_TIME
-            )
-        )
-    }
+    fun resetOTPTimeStamp() = abandonChallenge()
 
     @OptIn(ExperimentalTime::class)
     fun getRemainingOTPTimeStamp() {
-        launchSafely {
-            val otpTimestamp = dataStoreRepo.getOTPTimestamp().first()
-            val currentTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
-
-            if (otpTimestamp == null) {
-                persistOTPTimeStamp(saveTime = currentTime)
-                updateOTPRemainingTime(OTP_WAITING_TIME)
-                return@launchSafely
+        val restoringVersion = flowVersion
+        viewModelScope.launch {
+            val metadata = dataStoreRepo.getOTPTimestamp().first()
+            if (restoringVersion == flowVersion && metadata?.challengeId != null && sessionStorage.currentSession()?.access == null && currentState.challengeId == null) {
+                val at = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                if (metadata.expiresAt > at) updateState { it.copy(challengeId = metadata.challengeId,
+                    countryCode = metadata.countryCode, countryPrefix = metadata.countryPrefix, phoneNumber = metadata.phoneNumber,
+                    resendAt = metadata.saveTime + metadata.totalTime, expiresAt = metadata.expiresAt) }
+                else dataStoreRepo.deleteOTPTimeStamp()
             }
-
-            val elapsedTime = currentTime - otpTimestamp.saveTime
-            val timeRemaining = (otpTimestamp.totalTime - elapsedTime).coerceAtLeast(0L)
-            val remainingTimeToShow = if (timeRemaining == 0L) OTP_WAITING_TIME else timeRemaining
-
-            if (timeRemaining == 0L) {
-                persistOTPTimeStamp(
-                    countryCode = otpTimestamp.countryCode,
-                    countryPrefix = otpTimestamp.countryPrefix,
-                    phoneNumber = otpTimestamp.phoneNumber,
-                    saveTime = currentTime
-                )
-            }
-
-            updateState {
-                it.copy(
-                    remainingOTPTimestamp = remainingTimeToShow,
-                    countryCode = otpTimestamp.countryCode,
-                    countryPrefix = otpTimestamp.countryPrefix,
-                    phoneNumber = otpTimestamp.phoneNumber
-                )
+            while (true) {
+                val remaining = (currentState.resendAt - kotlin.time.Clock.System.now().toEpochMilliseconds()).coerceAtLeast(0)
+                updateState { it.copy(remainingOTPTimestamp = remaining.takeIf { value -> value > 0 }) }
+                delay(1000)
             }
         }
     }
 
-    fun verifyOtp(
-        onGoToHomeScreen: () -> Unit,
-        onGoToProfileSetupScreen: () -> Unit
-    ) {
-        if (!isInternetAvailable()) {
-            showNoInternetConnection(isOffline = true)
-            return
-        }
-
-        launchSafely {
-            showLoading()
-
+    fun verifyOtp(onGoToHomeScreen: () -> Unit, onGoToProfileSetupScreen: () -> Unit) {
+        if (!isOtpValid() || currentState.challengeId == null) return
+        runOperation { version ->
+            val stamp = sessionStorage.stamp()
             val state = currentState
-            val otpCode = state.optValues.joinToString("")
-            val phoneNumber = "${state.countryPrefix}${state.phoneNumber}"
-
-            authRepository.sendVerifyOtpRequest(
-                phoneNumber = phoneNumber,
-                otp = otpCode
-            ).onSuccess { response, _ ->
-
-                val session = response?.user?.toSession(
-                    access = response.tokens?.access,
-                    refresh = response.tokens?.refresh,
-                    id = response.user.id
-                )
-
-                val credentials = Json.encodeToString(session)
-                saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-                dataStoreRepo.deleteOTPTimeStamp()
-
-                onOtpVerifiedSuccess(
-                    isPhoneNumberVerified = response?.user?.isPhoneVerified == true,
-                    isProfileCompleted = response?.user?.isProfileComplete == true,
-                    onGoToHomeScreen = onGoToHomeScreen,
-                    onGoToProfileSetupScreen = onGoToProfileSetupScreen
-                )
-
-                idleScreen()
-            }.onError { error, _ ->
-                showErrorMessage(error = error.toString())
+            val response = authRepository.sendVerifyOtpRequest(state.countryPrefix + state.phoneNumber,
+                state.optValues.joinToString(""), state.challengeId).result
+            if (version != flowVersion) return@runOperation
+            sessionStorage.ensureCurrent(stamp)
+            when (response) {
+                is NetworkAPIResult.Success -> {
+                    val result = requireNotNull(response.response)
+                    val user = requireNotNull(result.user)
+                    require(user.id != null && user.isPhoneVerified == true)
+                    val access = requireNotNull(result.tokens?.access)
+                    val refresh = requireNotNull(result.tokens?.refresh)
+                    dataStoreRepo.deleteOTPTimeStamp()
+                    if (version != flowVersion) return@runOperation
+                    sessionStorage.ensureCurrent(stamp)
+                    updateState { it.copy(optValues = List(6) { "" }, challengeId = null) }
+                    sessionStorage.saveIfCurrent(Json.encodeToString(user.toSession(access, refresh, user.id)), stamp)
+                    // The root coordinator restores server state for the new account.
+                }
+                is NetworkAPIResult.Error -> failure(response.failure)
             }
         }
     }
 
-    private fun onOtpVerifiedSuccess(
-        isPhoneNumberVerified: Boolean,
-        isProfileCompleted: Boolean,
-        onGoToHomeScreen: () -> Unit,
-        onGoToProfileSetupScreen: () -> Unit
-    ) {
-        if (isPhoneNumberVerified && isProfileCompleted) {
-            onGoToHomeScreen()
-            return
-        }
-
-        if (isPhoneNumberVerified && !isProfileCompleted) {
-            onGoToProfileSetupScreen()
-            return
+    fun saveName() {
+        if (!isFullNameValid() || !isUsernameValid()) return
+        runOperation { _ ->
+            val stamp = sessionStorage.stamp()
+            val result = authRepository.updateName(currentState.fullName.trim(), currentState.username.trim()).result
+            sessionStorage.ensureCurrent(stamp)
+            when (result) {
+                is NetworkAPIResult.Success -> {
+                    val profile = requireNotNull(result.response)
+                    startup.accept(profile, stamp)
+                    if (profile.progress?.nextStep == "photo") updateState { it.copy(currentScreen = CustomProfileSetupScreen.SetProfilePictureScreen, currentProgressStep = 2) }
+                }
+                is NetworkAPIResult.Error -> failure(result.failure)
+            }
         }
     }
 
     fun sendSetupProfileRequest() {
-        if (!isInternetAvailable()) {
-            showNoInternetConnection(isOffline = true)
-            return
-        }
-
-        launchSafely {
-            showLoading()
-
-            val state = currentState
-            val session = state.session
-
-            val phoneNumber = session?.phoneNumber
-                ?: "${state.countryPrefix}${state.phoneNumber}"
-
-            val country = getCountryModelFromPrefix(prefix = state.countryPrefix)
-            val profilePicturePath = state.profilePictureUri?.toString()
-
-            val profileDTO = ProfileSetupDTO(
-                phoneNumber = phoneNumber,
-                dob = state.dob,
-                fullName = state.fullName,
-                username = state.username,
-                gender = state.gender.name.uppercase(),
-                mood = "HAPPY",
-                country = country?.name,
-                profilePhoto = profilePicturePath,
-                zodiacSign = state.zodiacSign?.name?.uppercase()
-            )
-
-            val fileManager = FileManager()
-            val mediaFile = profilePicturePath?.let { path ->
-                fileManager.createMediaFileFromPath(
-                    path = path,
-                    id = null,
-                    removed = null
-                )
+        runOperation { _ ->
+            val stamp = sessionStorage.stamp()
+            val path = currentState.profilePictureUri?.toString()
+            val media = path?.let { FileManager().createProfilePhotoFromPath(it) }
+            if (path != null && media?.fileBytes == null) {
+                showErrorMessage("Unable to read this photo. Choose a JPEG, PNG or WebP under 5 MB and 20 megapixels.")
+                return@runOperation
             }
-
-            authRepository.sendProfileSetupRequest(
-                profileSetupDTO = profileDTO,
-                mediaFile = mediaFile
-            ).onSuccess { response, _ ->
-
-                AppLogger.log("INSIDE SEND PROFILE REQUEST")
-                AppLogger.log("CREDENTIALS = ${currentState.session?.access}")
-                AppLogger.log("CREDENTIALS = ${currentState.session?.refresh}")
-
-                val credentials = setUserWholeCredentials(
-                    access = currentState.session?.access,
-                    refresh = currentState.session?.refresh,
-                    userInfo = response?.user
-                )
-
-                saveSession(credentials = credentials, sessionKey = SESSION_KEY)
-                idleScreen()
-                showSuccessMessage(message = "")
-            }.onError { error, errorType ->
-                showErrorMessage(
-                    error = error.toString(),
-                    errorType = "${errorType.name} ERROR"
-                )
+            val result = authRepository.sendProfileSetupRequest(ProfileSetupDTO(), media).result
+            sessionStorage.ensureCurrent(stamp)
+            when (result) {
+                is NetworkAPIResult.Success -> {
+                    val profile = requireNotNull(result.response)
+                    startup.accept(profile, stamp)
+                    if (profile.progress?.nextStep == "photo") updateState { it.copy(currentScreen = CustomProfileSetupScreen.SetProfilePictureScreen, currentProgressStep = 2) }
+                }
+                is NetworkAPIResult.Error -> failure(result.failure)
             }
         }
     }
+
+    fun showNameStep() { updateState { it.copy(currentScreen = CustomProfileSetupScreen.AddFullNameScreen, currentProgressStep = 1) } }
 
     // Navigation
 
@@ -531,10 +437,6 @@ class AuthViewModel(
         screenStack.addAll(
             listOf(
                 CustomProfileSetupScreen.AddFullNameScreen,
-                CustomProfileSetupScreen.AddDOBScreen,
-                CustomProfileSetupScreen.ZodiacScreen,
-                CustomProfileSetupScreen.SelectGenderScreen,
-                CustomProfileSetupScreen.SelectRelationshipScreen,
                 CustomProfileSetupScreen.SetProfilePictureScreen
             )
         )
@@ -649,7 +551,7 @@ class AuthViewModel(
 
     fun isPhoneNumberValid(): Boolean {
         return when {
-            currentState.phoneNumber.isBlank() || currentState.phoneNumber.length < 10 -> {
+            !com.srisu.srisu.features.auth.domain.isInternationalPhoneValid(currentState.countryPrefix, currentState.phoneNumber) -> {
                 updateValidationError(
                     Validation(
                         validationMessage = "Invalid phone number format!",

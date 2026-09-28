@@ -1,6 +1,6 @@
 package com.srisu.srisu.navigation.graph
 
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -24,10 +24,15 @@ sealed class AuthNavigation : Route {
     data object ProfileSetUp : AuthNavigation()
 }
 
-fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthViewModel) {
+fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthViewModel, onLeaveAuthentication: () -> Unit = {}) {
     composable<AuthNavigation.PhoneNumberScreen> {
+        val state by authViewModel.authUiState.collectAsState()
+        LaunchedEffect(state.challengeId) {
+            if (state.challengeId != null) navController.navigate(AuthNavigation.PhoneNumberVerificationScreen) { launchSingleTop = true }
+        }
         PhoneNumberScreen(
             authViewModel = authViewModel,
+            onBack = { authViewModel.abandonChallenge(); onLeaveAuthentication() },
             onNavToOTPScreen = {
                 navController.navigate(AuthNavigation.PhoneNumberVerificationScreen)
             }
@@ -35,8 +40,9 @@ fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthV
     }
 
     composable<AuthNavigation.PhoneNumberVerificationScreen> {
-        LaunchedEffect(Unit) {
-            AppLogger.log("NAVIGATING TO THE PHONE NUMBER VERIFICATION SCREEN")
+        val state by authViewModel.authUiState.collectAsState()
+        LaunchedEffect(state.challengeId) {
+            if (state.challengeId == null) navController.popBackStack()
         }
         PhoneNumberVerificationScreen(
             navController = navController,

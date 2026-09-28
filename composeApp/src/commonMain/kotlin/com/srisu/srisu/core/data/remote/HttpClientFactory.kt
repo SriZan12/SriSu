@@ -20,6 +20,8 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 val ApiJson = Json { ignoreUnknownKeys = true; explicitNulls = true }
+val ApiEnvironmentKey = AttributeKey<ApiEnvironment>("SriSuApiEnvironment")
+val PublicAuthRequestKey = AttributeKey<Boolean>("SriSuPublicAuth")
 val SessionCoordinatorKey = AttributeKey<SessionCoordinator>("SriSuSessionCoordinator")
 val RequestScopeKey = AttributeKey<RequestScope>("SriSuRequestScope")
 data class RequestScope(val coordinator: SessionCoordinator, val stamp: SessionStamp) {
@@ -39,8 +41,11 @@ object HttpClientFactory {
                 }
                 request.headers.remove(HttpHeaders.Authorization)
                 if (environment.owns(request.url.build())) {
-                    sessions.authorization(scope.stamp)?.let { request.headers.append(HttpHeaders.Authorization, "Bearer $it") }
+                    if (request.attributes.getOrNull(PublicAuthRequestKey) != true) {
+                        sessions.authorization(scope.stamp)?.let { request.headers.append(HttpHeaders.Authorization, "Bearer $it") }
+                    }
                     request.headers["X-SriSu-Contract"] = "core-1"
+                    request.headers["X-SriSu-Auth"] = "auth-1"
                     request.headers["X-Request-ID"] = Uuid.random().toString()
                 }
             }
@@ -57,6 +62,7 @@ object HttpClientFactory {
             install(ContentNegotiation) { json(ApiJson) }
             // OkHttp 3.2.3 rejects the plugin's maxFrameSize setter. Enforce our
             // decode bound in KtorSocketConnector; native engine owns wire buffering.
+            // Body/header logging is intentionally disabled: auth payloads contain proofs.
             install(WebSockets) { pingIntervalMillis = 25_000 }
             install(HttpTimeout) {
                 connectTimeoutMillis = 10_000
@@ -65,6 +71,6 @@ object HttpClientFactory {
             }
             install(sessionPlugin)
             defaultRequest { accept(ContentType.Application.Json) }
-        }.also { it.attributes.put(SessionCoordinatorKey, sessions) }
+        }.also { it.attributes.put(SessionCoordinatorKey, sessions); it.attributes.put(ApiEnvironmentKey, environment) }
     }
 }

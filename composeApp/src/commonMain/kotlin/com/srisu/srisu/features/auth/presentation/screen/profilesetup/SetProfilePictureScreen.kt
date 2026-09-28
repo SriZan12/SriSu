@@ -1,5 +1,8 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
+import org.jetbrains.compose.resources.stringResource
+import srisu.composeapp.generated.resources.*
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -29,22 +32,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.toUri
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
-import com.srisu.srisu.components.SuccessBottomSheet
-import com.srisu.srisu.core.permissionmanager.PermissionCallback
-import com.srisu.srisu.core.permissionmanager.PermissionState
-import com.srisu.srisu.core.permissionmanager.PermissionType
-import com.srisu.srisu.core.permissionmanager.createPermissionsManager
 import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
-import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.utils.MediaType
 import com.srisu.srisu.utils.isInternetAvailable
 import com.srisu.srisu.utils.rememberGalleryManager
@@ -52,26 +48,23 @@ import com.srisu.srisu.utils.rememberGalleryManager
 
 @Composable
 fun SetProfilePictureScreen(
-    navController: NavController,
-    authViewModel: AuthViewModel,
-    onSetupComplete: () -> Unit
+    authViewModel: AuthViewModel
 ) {
     val authUiState by authViewModel.authUiState.collectAsState()
 
     HandleUiStateDialog(
-        navController = navController,
         authViewModel = authViewModel,
         authUIStates = authUiState
     )
 
     CommonProfileContainerCompo(
         modifier = Modifier,
-        buttonTitle = "Complete",
+        buttonTitle = if (authUiState.profilePictureUri == null) stringResource(Res.string.auth_skip_photo) else stringResource(Res.string.auth_complete),
         localFocusManager = null,
         currentStep = authUiState.currentProgressStep,
-        isPrimaryButtonEnabled = true,
+        isPrimaryButtonEnabled = authUiState.baseUIState !is BaseUIState.Loading,
         onNavBack = {
-            authViewModel.navigateBack()
+            authViewModel.showNameStep()
         },
         onClickPrimaryButton = {
             authViewModel.sendSetupProfileRequest()
@@ -80,7 +73,7 @@ fun SetProfilePictureScreen(
 
 
         Text(
-            text = "Put a face to the\nname",
+            text = stringResource(Res.string.auth_photo_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
 
@@ -90,7 +83,7 @@ fun SetProfilePictureScreen(
 
 
         Text(
-            text = "A photo helps people feel closer before\nthey even say hello.",
+            text = stringResource(Res.string.auth_photo_subtitle),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -108,7 +101,6 @@ fun SetProfilePictureScreen(
 
 @Composable
 private fun HandleUiStateDialog(
-    navController: NavController,
     authViewModel: AuthViewModel,
     authUIStates: AuthUIStates
 ) {
@@ -136,23 +128,7 @@ private fun HandleUiStateDialog(
             LoadingScrim()
         }
 
-        is BaseUIState.Success<*> -> {
-
-            SuccessBottomSheet(
-                show = true,
-                onDismiss = {
-                    authViewModel.idleScreen()
-                },
-                onSecondButton = {
-                    authViewModel.idleScreen()
-
-                },
-                onFirstButton = {
-                    authViewModel.idleScreen()
-                    navController.navigate(HomeNavigation.Home)
-                }
-            )
-        }
+        is BaseUIState.Success<*> -> Unit // Root coordinator observes confirmed progress.
 
         is BaseUIState.NoInternetConnection -> {
             showBottomSheet = baseUIState.isOffline
@@ -180,19 +156,6 @@ private fun ProfilePicturePickerSection(
 ) {
     val profilePictureUri = authUIStates.profilePictureUri
     var shouldOpenGallery by remember { mutableStateOf(false) }
-    var permissionState by remember { mutableStateOf(PermissionState.NOT_ASKED_YET) }
-
-    val permissionManager = createPermissionsManager(
-        object : PermissionCallback {
-            override fun onPermissionStatus(
-                permissionType: PermissionType,
-                status: PermissionState
-            ) {
-                permissionState = status
-            }
-        }
-    )
-
     val galleryManager = rememberGalleryManager(
         onResult = { uris ->
             if (!uris.isNullOrEmpty()) {
@@ -232,7 +195,7 @@ private fun ProfilePicturePickerSection(
                 if (profilePictureUri != null) {
                     AsyncImage(
                         model = profilePictureUri,
-                        contentDescription = "Selected profile picture",
+                        contentDescription = stringResource(Res.string.auth_photo_preview),
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(CircleShape),
@@ -241,7 +204,7 @@ private fun ProfilePicturePickerSection(
                 } else {
                     Icon(
                         imageVector = Icons.Outlined.PhotoCamera,
-                        contentDescription = "Add profile picture",
+                        contentDescription = stringResource(Res.string.auth_add_photo),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(56.dp)
                     )
@@ -266,7 +229,7 @@ private fun ProfilePicturePickerSection(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Rounded.Add,
-                    contentDescription = "Add photo",
+                    contentDescription = stringResource(Res.string.auth_add_photo_action),
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(28.dp)
                 )
@@ -274,21 +237,10 @@ private fun ProfilePicturePickerSection(
         }
     }
 
-    if (shouldOpenGallery) {
-        if (!permissionManager.isPermissionGranted(PermissionType.STORAGE)) {
-            permissionManager.askPermission(PermissionType.STORAGE)
-        } else {
-            galleryManager.launch()
-        }
-
-        shouldOpenGallery = false
-    }
-
-    LaunchedEffect(permissionState) {
-        if (permissionState == PermissionState.GRANTED) {
+    LaunchedEffect(shouldOpenGallery) {
+        if (shouldOpenGallery) {
+            shouldOpenGallery = false
             galleryManager.launch()
         }
     }
 }
-
-

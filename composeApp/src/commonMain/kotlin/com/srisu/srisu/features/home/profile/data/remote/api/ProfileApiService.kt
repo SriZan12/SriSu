@@ -39,6 +39,7 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
     suspend fun getInterestList(): ResultHandler<InterestResponse?> {
         return httpClient.safeRequest<InterestResponse?> {
             url("${environment.baseUrl}api/auth/interests/")
+            attributes.put(com.srisu.srisu.core.data.remote.PublicAuthRequestKey, true)
             method = HttpMethod.Companion.Get
         }
     }

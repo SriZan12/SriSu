@@ -4,6 +4,8 @@ import com.srisu.srisu.core.config.ApiEnvironment
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.session.SessionStamp
+import com.srisu.srisu.core.session.accessExpiry
+import com.srisu.srisu.core.session.refreshSessionIfNeeded
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.client.request.url
@@ -36,6 +38,11 @@ fun interface SocketConnector { suspend fun open(): SocketConnection }
 
 class KtorSocketConnector(private val client: HttpClient, private val environment: ApiEnvironment) : SocketConnector {
     override suspend fun open(): SocketConnection {
+        // Socket handshakes share the HTTP refresh mutex and secure credential owner.
+        client.refreshSessionIfNeeded()?.let { error ->
+            if (error.status == 401 || error.status == 403) throw SocketAccessDenied(error.status)
+            throw SocketUnavailable()
+        }
         val socket = client.webSocketSession { url(environment.socketUrl); attributes.put(SocketHandshakeKey, true) }
         return object : SocketConnection {
             override suspend fun receive(): String? {
@@ -76,8 +83,8 @@ abstract class BaseWebSocketClient(
 
     init {
         scope.launch {
-            combine(sessions.state, lifetime.foreground, wanted, retry) { session, foreground, desired, revision ->
-                Triple(session, foreground && desired && session.accountId != null, revision)
+            combine(sessions.state, sessions.credentialRevision, lifetime.foreground, wanted, retry) { session, credentialRevision, foreground, desired, revision ->
+                Triple(session, foreground && desired && session.accountId != null, revision to credentialRevision)
             }.collectLatest { (stamp, enabled, _) ->
                 if (!enabled) { _state.value = SocketState.Disconnected; return@collectLatest }
                 runConnection(stamp)
@@ -111,7 +118,9 @@ abstract class BaseWebSocketClient(
                         onIncoming(raw, stamp)
                     }
                     val code = withTimeoutOrNull(1_000) { current.closeCode() }
+                    if (code == 4401 && hasExpiringRefreshableAccess()) continue
                     if (code in listOf(4401, 4403, 1008)) {
+                        if (code == 4401) sessions.clearIfCurrent(stamp)
                         _state.value = SocketState.Terminal(if (code == 4401) "unauthenticated" else "forbidden")
                         return
                     }
@@ -123,6 +132,8 @@ abstract class BaseWebSocketClient(
                     _state.value = SocketState.Terminal("protocol_failure")
                     return
                 } catch (denied: SocketAccessDenied) {
+                    if (denied.status == 401 && hasExpiringRefreshableAccess()) continue
+                    if (denied.status == 401) sessions.clearIfCurrent(stamp)
                     _state.value = SocketState.Terminal(if (denied.status == 401) "unauthenticated" else "forbidden")
                     return
                 } catch (_: Exception) {
@@ -140,6 +151,10 @@ abstract class BaseWebSocketClient(
             if (_state.value !is SocketState.Terminal) _state.value = SocketState.Disconnected
         }
     }
+
+    private fun hasExpiringRefreshableAccess(): Boolean =
+        sessions.currentSession()?.refresh != null &&
+            accessExpiry(sessions.accessToken())?.let { it <= sessions.epochSeconds() + 30 } == true
 
     protected suspend fun send(rawPayload: String) = sends.withLock {
         require(rawPayload.encodeToByteArray().size <= 65_536) { "Command is too large" }

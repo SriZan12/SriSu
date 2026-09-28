@@ -220,3 +220,11 @@ separate review pass grounded in the diff, requirements, and test evidence.
 Model names/settings and tool availability vary by product; see
 [official model selection guidance](https://learn.chatgpt.com/docs/model-selection).
 Avoid treating any model choice as proof of correctness or security.
+
+## Authentication phase 1 work
+
+See [authentication, introductory screens and guest access](flows/authentication.md)
+for the paired `dev-core-architecture` changes, auth-1 session/profile contract,
+server deployment order, supplied Onboarding/Space exports and validation evidence.
+Figma page `1:2` was supplied; child-frame inspection remains quota-limited. Guest
+entry uses only the public interests catalogue and keeps private navigation gated.

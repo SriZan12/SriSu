@@ -3,6 +3,8 @@ package com.srisu.srisu.core
 
 import com.srisu.srisu.core.data.remote.*
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
+import com.srisu.srisu.core.session.*
+import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.features.chat.data.remote.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -46,10 +48,30 @@ class SocketFoundationTest {
         client.close(); lifetime.close()
         val terminalLifetime = ApplicationLifetime(); terminalLifetime.setForeground(true)
         val socket = FakeSocket().apply { code = 4401; incoming.close() }; opens = 0
-        val terminal = ChatWebSocketClient(SocketConnector { opens++; socket }, session(), terminalLifetime)
+        val deniedSession = session()
+        val terminal = ChatWebSocketClient(SocketConnector { opens++; socket }, deniedSession, terminalLifetime)
         terminal.connect(); advanceUntilIdle()
-        assertEquals(1, opens); assertEquals(SocketState.Terminal("unauthenticated"), terminal.connectionState.value)
+        assertEquals(1, opens); assertNull(deniedSession.accessToken())
+        assertEquals(SocketState.Disconnected, terminal.connectionState.value)
         terminal.close(); terminalLifetime.close()
+    }
+
+    @Test fun expiredSocketReopensThroughTheSharedRefreshBoundary() = runTest(dispatcher) {
+        val encoded = kotlin.io.encoding.Base64.UrlSafe.withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT)
+            .encode("""{"exp":1,"sid":"synthetic"}""".encodeToByteArray())
+        val sessions = SessionCoordinator(MemorySession(), epochSeconds = { 1000 }).apply {
+            saveSession(ApiJson.encodeToString(Session(id = 1, access = "test.$encoded.synthetic", refresh = "synthetic")), SESSION_KEY)
+        }
+        val lifetime = ApplicationLifetime().apply { setForeground(true) }
+        val expired = FakeSocket().apply { code = 4401; incoming.close() }
+        val renewed = FakeSocket()
+        var opens = 0
+        val client = ChatWebSocketClient(SocketConnector { if (++opens == 1) expired else renewed }, sessions, lifetime)
+        client.connect(); advanceUntilIdle()
+        assertEquals(2, opens)
+        assertEquals(SocketState.Connected, client.connectionState.value)
+        assertNotNull(sessions.accessToken())
+        client.close(); lifetime.close()
     }
 
     @Test fun writeWaitsForAckAndLossDoesNotReplay() = runTest(dispatcher) {

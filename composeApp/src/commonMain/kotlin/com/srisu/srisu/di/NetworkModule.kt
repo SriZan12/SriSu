@@ -29,7 +29,7 @@ val sharedNetworkModule = module {
 
     single { BaseApiService(httpClient = get()) }
 
-    single { AuthApiService(httpClient = get()) } //apiService
+    single { AuthApiService(httpClient = get(), environment = get()) } //apiService
     single { AuthRepository(authApiService = get()) } // Repo
 
     single { SuggestionApiService(httpClient = get()) }

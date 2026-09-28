@@ -35,7 +35,7 @@ class HttpFoundationTest {
         )
         var index = 0
         val client = HttpClientFactory.create(session(), environment, MockEngine { request ->
-            assertEquals("Bearer synthetic-1", request.headers[HttpHeaders.Authorization])
+            assertEquals(if (index <= 5) "Bearer synthetic-1" else null, request.headers[HttpHeaders.Authorization])
             assertEquals("core-1", request.headers["X-SriSu-Contract"])
             assertNotNull(request.headers["X-Request-ID"])
             val (status, body) = responses[index++]

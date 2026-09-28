@@ -41,5 +41,7 @@ data class OTPScreenMetadata(
     val countryPrefix: String,
     val phoneNumber: String,
     val saveTime: Long,
-    val totalTime: Long
+    val totalTime: Long,
+    val challengeId: String? = null,
+    val expiresAt: Long = 0
 )

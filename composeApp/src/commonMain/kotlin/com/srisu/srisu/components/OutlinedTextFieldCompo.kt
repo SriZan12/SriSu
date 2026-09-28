@@ -182,7 +182,7 @@ fun OTPInputTextFields(
     otpValues: List<String> = List(otpLength) { "" }, // Pass this as default for future reference
     isError: Boolean = false,
 ) {
-    val focusRequesters = List(otpLength) { FocusRequester() }
+    val focusRequesters = remember(otpLength) { List(otpLength) { FocusRequester() } }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -192,7 +192,7 @@ fun OTPInputTextFields(
     ) {
         otpValues.forEachIndexed { index, value ->
             OutlinedTextField(
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.weight(1f).padding(horizontal = MaterialTheme.spacing.tiny).heightIn(min = 56.dp)
                     .focusRequester(focusRequesters[index])
                     .onKeyEvent { keyEvent ->
                         if (keyEvent.key == Key.Backspace) {
@@ -266,13 +266,14 @@ fun OTPInputTextFields(
                 ).copy(focusedTextColor = MaterialTheme.colorScheme.onSurface, unfocusedTextColor = MaterialTheme.colorScheme.onSurface)
             )
 
-            LaunchedEffect(value) {
-                if (otpValues.all { it.isNotEmpty() }) {
-                    focusManager.clearFocus()
-                    AppLogger.log("TRIGGERED FROM LAUNCHED EFFECT.")
-                    onOtpInputComplete()
-                }
-            }
+
+        }
+    }
+
+    LaunchedEffect(otpValues.joinToString("")) {
+        if (otpValues.size == otpLength && otpValues.all { it.length == 1 }) {
+            focusManager.clearFocus()
+            onOtpInputComplete()
         }
     }
 

@@ -1,6 +1,7 @@
 package com.srisu.srisu.core.data.remote
 
 import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.core.session.refreshSessionIfNeeded
 import io.ktor.client.HttpClient
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
@@ -50,11 +51,18 @@ suspend inline fun <reified T> HttpClient.safeRequest(
 ): ResultHandler<T?> {
     require(readRetries in 0..2)
     val builder = HttpRequestBuilder().apply(execute)
+    if (builder.attributes.getOrNull(PublicAuthRequestKey) != true) {
+        val refreshError = try { refreshSessionIfNeeded() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { return handleException<T>(failure) }
+        refreshError?.let { return ResultHandler(NetworkAPIResult.Error(it)) }
+    }
     val scope = attributes.getOrNull(SessionCoordinatorKey)?.let { RequestScope(it, it.stamp()) }
     scope?.let { builder.attributes.put(RequestScopeKey, it) }
     val retryLimit = if (builder.method == HttpMethod.Get || builder.method == HttpMethod.Head) readRetries else 0
     for (attempt in 0..retryLimit) {
         scope?.ensureCurrent()
+        val requestAccess = scope?.coordinator?.accessToken()
         val started = TimeSource.Monotonic.markNow()
         val result = try {
             val response = request(builder)
@@ -69,6 +77,26 @@ suspend inline fun <reified T> HttpClient.safeRequest(
         }
         scope?.ensureCurrent()
         val error = (result.result as? NetworkAPIResult.Error)?.failure
+        if (error?.status == 401 && builder.attributes.getOrNull(PublicAuthRequestKey) != true) {
+            if (scope?.coordinator?.currentSession()?.refresh != null) {
+                val refreshError = refreshSessionIfNeeded(force = true, rejectedAccess = requestAccess)
+                if (refreshError != null) return ResultHandler(NetworkAPIResult.Error(refreshError))
+                scope.ensureCurrent()
+                if (builder.method == HttpMethod.Get || builder.method == HttpMethod.Head) {
+                    // Exactly one authenticated read retry; never recurse or replay writes.
+                    val retryResult = try { handleResponse<T>(request(builder), shape) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (failure: Exception) { handleException<T>(failure) }
+                    scope.ensureCurrent()
+                    if ((retryResult.result as? NetworkAPIResult.Error)?.failure?.status == 401) scope.coordinator.clearIfCurrent(scope.stamp)
+                    return retryResult
+                }
+                return ResultHandler(NetworkAPIResult.Error(ApiError(NetworkAPIResult.ErrorType.CONFLICT,
+                    "session_refreshed", "Your session was renewed. Please retry this action.", retryable = true)))
+            }
+            scope?.coordinator?.clearIfCurrent(scope.stamp)
+            return result
+        }
         if (attempt == retryLimit || error == null || !error.retryable || error.kind == NetworkAPIResult.ErrorType.RATE_LIMITED) return result
         delay(150L * (attempt + 1))
     }

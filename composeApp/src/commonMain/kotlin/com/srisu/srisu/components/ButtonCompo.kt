@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +39,7 @@ fun SriSuButton(
     variant: SriSuButtonVariant = SriSuButtonVariant.Primary,
     size: SriSuButtonSize = SriSuButtonSize.Medium,
     textStyle: TextStyle? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val container = when (variant) {
@@ -76,6 +79,10 @@ fun SriSuButton(
     ) {
         Text(label, style = textStyle ?: if (size == SriSuButtonSize.Large)
             MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium)
+        if (trailingIcon != null) {
+            Spacer(Modifier.width(MaterialTheme.spacing.small))
+            trailingIcon()
+        }
     }
 }
 

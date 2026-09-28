@@ -76,6 +76,7 @@ kotlin {
         commonMain { kotlin.srcDir(environmentSources) }
         
         androidMain.dependencies {
+            implementation(libs.androidx.core.splashscreen)
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)

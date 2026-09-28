@@ -29,13 +29,15 @@ import org.koin.compose.viewmodel.koinViewModel
     navController: NavHostController,
     startDestination: Route,
     session: Session?,
+    protectedAccess: Boolean = false,
+    onLeaveAuthentication: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     SharedTransitionLayout {
-        val suggestionViewModel = koinViewModel<SuggestionViewModel>()
+        val suggestionViewModel = if (protectedAccess) koinViewModel<SuggestionViewModel>() else null
         val authViewModel = koinViewModel<AuthViewModel>()
-        val chatViewModel = koinViewModel<ChatViewModel>()
-        val findPartnerViewModel = koinViewModel<FindPartnerViewModel>()
+        val chatViewModel = if (protectedAccess) koinViewModel<ChatViewModel>() else null
+        val findPartnerViewModel = if (protectedAccess) koinViewModel<FindPartnerViewModel>() else null
 
         NavHost(
             modifier = modifier,
@@ -58,13 +60,15 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
         ) {
-            authGraph(navController = navController, authViewModel = authViewModel)
+            if (!protectedAccess) {
+                authGraph(navController = navController, authViewModel = authViewModel, onLeaveAuthentication = onLeaveAuthentication)
+            } else {
 
             homeGraph(onFindPartner = { navController.navigate(com.srisu.srisu.navigation.graph.ChatNav.FindPartnerScreen) { launchSingleTop = true } })
 
             suggestionsGraph(
                 navController = navController,
-                suggestionViewModel = suggestionViewModel,
+                suggestionViewModel = requireNotNull(suggestionViewModel),
                 sharedTransitionScope = this@SharedTransitionLayout
             )
 
@@ -74,10 +78,11 @@ import org.koin.compose.viewmodel.koinViewModel
 
             chatGraph(
                 session = session,
-                chatViewModel = chatViewModel,
-                findPartnerViewModel = findPartnerViewModel,
+                chatViewModel = requireNotNull(chatViewModel),
+                findPartnerViewModel = requireNotNull(findPartnerViewModel),
                 navController = navController
             )
+            }
         }
     }
 }
