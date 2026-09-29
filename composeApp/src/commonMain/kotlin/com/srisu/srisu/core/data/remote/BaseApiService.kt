@@ -11,10 +11,6 @@ import io.ktor.http.contentType
 
 class BaseApiService(private val httpClient: HttpClient) {
 
-    companion object {
-        val BASE_URL: String get() = com.srisu.srisu.core.config.ApiEnvironment.configured().baseUrl
-    }
-
     suspend fun getCitiesList(country: String?): CityResponse? {
         return httpClient.get(SuggestionApiService.CITY_ENDPOINT) {
             parameter("country", country)

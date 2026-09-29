@@ -4,7 +4,7 @@ import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.SingleConnectionDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.data.remote.response.SingleConnectionResponse
 import com.srisu.srisu.features.home.suggestions.data.response.CoupleConnectionResponse
@@ -18,6 +18,8 @@ import io.ktor.http.HttpMethod
 
 class ConnectionApiService(private val httpClient: HttpClient) {
 
+    private val environment = httpClient.attributes[ApiEnvironmentKey]
+
     suspend fun sendSingleConnectionRequest(
         senderNumber: String?,
         receiverNumber: String?
@@ -28,7 +30,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         connectionRequest["receiver_number"] = receiverNumber ?: ""
 
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/connect-single/")
+            url("${environment.baseUrl}api/social/connect-single/")
             method = HttpMethod.Post
             setBody(connectionRequest)
         }
@@ -36,7 +38,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
 
     suspend fun sendFindYourPartnerRequest(partnerNumber: String): ResultHandler<FindYourPartnerResponse?> {
         return httpClient.safeRequest<FindYourPartnerResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/find-partner/")
+            url("${environment.baseUrl}api/social/find-partner/")
             parameter("phone_number", partnerNumber)
             method = HttpMethod.Get
         }
@@ -52,7 +54,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         connectionRequest["receiver_number"] = receiverNumber ?: ""
 
         return httpClient.safeRequest<CoupleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/connect-couple/")
+            url("${environment.baseUrl}api/social/connect-couple/")
             method = HttpMethod.Post
             setBody(connectionRequest)
         }
@@ -63,7 +65,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         coupleConnectionDTO: CoupleConnectionDTO
     ): ResultHandler<CoupleConnectionResponse?> {
         return httpClient.safeRequest<CoupleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/connect-couple/${connectionId}/")
+            url("${environment.baseUrl}api/social/connect-couple/${connectionId}/")
             method = HttpMethod.Put
             setBody(coupleConnectionDTO)
         }
@@ -75,7 +77,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
     ): ResultHandler<SingleConnectionResponse?> {
 
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/connect-single/${connectionId}/")
+            url("${environment.baseUrl}api/social/connect-single/${connectionId}/")
             method = HttpMethod.Put
             setBody(singleConnectionDTO)
         }
@@ -87,7 +89,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
     ): ResultHandler<CoupleConnectionRequestResponse?> {
 
         return httpClient.safeRequest<CoupleConnectionRequestResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/couple-connection/sent-requests/")
+            url("${environment.baseUrl}api/social/couple-connection/sent-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)
             method = HttpMethod.Get
@@ -100,7 +102,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
     ): ResultHandler<CoupleConnectionRequestResponse?> {
 
         return httpClient.safeRequest<CoupleConnectionRequestResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/couple-connection/received-requests/")
+            url("${environment.baseUrl}api/social/couple-connection/received-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)
             method = HttpMethod.Get
@@ -112,7 +114,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         pageSize: Int
     ): ResultHandler<SingleConnectionResponse?> {
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/single-connection/sent-requests/")
+            url("${environment.baseUrl}api/social/single-connection/sent-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)
 
@@ -125,7 +127,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         pageSize: Int
     ): ResultHandler<SingleConnectionResponse?> {
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/single-connection/received-requests/")
+            url("${environment.baseUrl}api/social/single-connection/received-requests/")
             parameter("page", page)
             parameter("page_size", pageSize)
 
@@ -138,7 +140,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         singleConnectionDTO: SingleConnectionDTO
     ): ResultHandler<SingleConnectionResponse?> {
         return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/connect-single/${crushRequestId}/")
+            url("${environment.baseUrl}api/social/connect-single/${crushRequestId}/")
             setBody(singleConnectionDTO)
             method = HttpMethod.Put
         }
@@ -146,7 +148,7 @@ class ConnectionApiService(private val httpClient: HttpClient) {
 
     suspend fun haveCoupleConnectionRequested(): ResultHandler<HaveCoupleConnectionResponse?> {
         return httpClient.safeRequest<HaveCoupleConnectionResponse?> {
-            url("${BaseApiService.BASE_URL}api/social/have-couple-connection-requested/")
+            url("${environment.baseUrl}api/social/have-couple-connection-requested/")
             method = HttpMethod.Get
         }
     }

@@ -228,3 +228,7 @@ for the paired `dev-core-architecture` changes, auth-1 session/profile contract,
 server deployment order, supplied Onboarding/Space exports and validation evidence.
 Figma page `1:2` was supplied; child-frame inspection remains quota-limited. Guest
 entry uses only the public interests catalogue and keeps private navigation gated.
+
+For Docker LAN errors and the complete mobile HTTP route inventory, read the
+[API connectivity audit](integration/api-connectivity.md). It distinguishes
+pre-routing host rejection, backend version mismatch and record-level 404s.

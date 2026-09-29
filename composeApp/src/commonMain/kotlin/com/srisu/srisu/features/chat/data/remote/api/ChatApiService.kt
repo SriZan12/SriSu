@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.chat.data.remote.api
 
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.features.chat.data.remote.response.ChatMediaResponse
@@ -14,7 +14,7 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class ChatApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = com.srisu.srisu.core.config.ApiEnvironment.configured()) {
+class ChatApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = httpClient.attributes[ApiEnvironmentKey]) {
 
     suspend fun rooms(cursor: String? = null): ResultHandler<com.srisu.srisu.features.chat.data.remote.response.ChatRoomPage?> = httpClient.safeRequest(readRetries = 1) {
         url("${environment.baseUrl}api/chat/rooms/")

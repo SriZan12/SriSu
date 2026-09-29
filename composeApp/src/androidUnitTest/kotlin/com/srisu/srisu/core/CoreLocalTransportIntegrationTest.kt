@@ -12,6 +12,9 @@ import com.srisu.srisu.features.chat.data.remote.api.*
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
 import com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
+import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
+import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiService
+import com.srisu.srisu.features.home.suggestions.data.api.SuggestionApiService
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.*
@@ -61,6 +64,20 @@ class CoreLocalTransportIntegrationTest {
                 val catalogue = InterestCatalogueRepository(database.catalogue(), ProfileApiService(client, environment), environment, sessions)
                 assertEquals("Synthetic hiking", catalogue.load(force = true).value?.interests?.single()?.name)
                 assertNotNull(database.catalogue().read("interests:1:${environment.baseUrl}"))
+                // Real service calls (including the formerly global-URL services)
+                // must reach this disposable backend and decode its wire responses.
+                val profile = assertIs<NetworkAPIResult.Success<*>>(AuthApiService(client).getProfile().result)
+                assertNotNull(profile.response)
+                val suggestions = SuggestionApiService(client)
+                assertIs<NetworkAPIResult.Success<*>>(suggestions.getUserSuggestions(1, 20).result)
+                assertNull(assertIs<NetworkAPIResult.Success<*>>(suggestions.getUserPreferences().result).response)
+                val connections = ConnectionApiService(client)
+                assertIs<NetworkAPIResult.Success<*>>(connections.getSentLoveRequests(20, 1).result)
+                assertIs<NetworkAPIResult.Success<*>>(connections.getLoveRequests(1, 20).result)
+                assertIs<NetworkAPIResult.Success<*>>(connections.getMyCrushList(1, 20).result)
+                assertIs<NetworkAPIResult.Success<*>>(connections.getCrushOnMeList(1, 20).result)
+                assertIs<NetworkAPIResult.Success<*>>(connections.haveCoupleConnectionRequested().result)
+                assertIs<NetworkAPIResult.Success<*>>(connections.sendFindYourPartnerRequest("+15005550102").result)
                 withContext(dispatcher) { lifetime.setForeground(true); repository.connect() }
                 val connected = withTimeoutOrNull(12_000) { socket.connectionState.first { it == SocketState.Connected } }
                 assertNotNull(connected, "Socket state=${socket.connectionState.value}; failure=${lastFailure.get()}")

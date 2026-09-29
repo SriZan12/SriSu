@@ -3,7 +3,7 @@ package com.srisu.srisu.features.home.profile.data.remote.api
 import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.features.home.suggestions.data.response.SingleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
@@ -18,7 +18,7 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class ProfileApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = com.srisu.srisu.core.config.ApiEnvironment.configured()) {
+class ProfileApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = httpClient.attributes[ApiEnvironmentKey]) {
 
     suspend fun sendSingleConnectionRequest(
         senderNumber: String?,

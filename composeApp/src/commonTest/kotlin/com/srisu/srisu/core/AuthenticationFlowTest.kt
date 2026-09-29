@@ -206,6 +206,27 @@ class AuthenticationFlowTest {
         assertEquals(1, calls); assertNotNull(sessions.accessToken()); client.close()
     }
 
+    @Test fun missingRefreshRouteReportsBackendMismatchWithoutSendingProtectedRequest() = runTest {
+        val sessions = SessionCoordinator(MemorySession(), epochSeconds = { 1000 }).apply {
+            saveSession(ApiJson.encodeToString(Session(id = 1, access = token(1), refresh = "synthetic")), SESSION_KEY)
+        }
+        var calls = 0
+        val client = HttpClientFactory.create(sessions, environment, engine { request ->
+            calls++
+            assertEquals("/api/auth/refresh/", request.url.encodedPath)
+            respond("<html>Not Found</html>", HttpStatusCode.NotFound)
+        })
+        try {
+            val error = assertIs<NetworkAPIResult.Error<*>>(client.safeRequest<JsonObject> {
+                url("https://example.test/api/auth/setup-profile/")
+            }.result).failure
+            assertEquals("backend_upgrade_required", error.code)
+            assertEquals(404, error.status)
+            assertEquals(1, calls)
+            assertNotNull(sessions.accessToken())
+        } finally { client.close() }
+    }
+
     @Test fun socketHandshakeRenewsCredentialsBeforeConnecting() = runTest {
         val sessions = SessionCoordinator(MemorySession(), epochSeconds = { 1000 }).apply {
             saveSession(ApiJson.encodeToString(Session(id = 1, access = token(1), refresh = "synthetic")), SESSION_KEY)

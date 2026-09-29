@@ -189,9 +189,20 @@ fun decodeApiError(status: Int, body: String, requestId: String? = null, retryAf
     )
 }
 
-suspend fun <T> handleErrorResponse(response: HttpResponse): ResultHandler<T?> = ResultHandler(
-    NetworkAPIResult.Error(decodeApiError(response.status.value, response.bodyAsText(), response.headers["X-Request-ID"], response.headers["Retry-After"]))
-)
+suspend fun <T> handleErrorResponse(response: HttpResponse): ResultHandler<T?> {
+    // Django/proxy host rejection happens before DRF and returns HTML, not field
+    // validation JSON. Do not ask the user to edit a valid phone number for this.
+    if (response.status.value == 400 && response.headers["Content-Type"]?.substringBefore(';')?.trim() == "text/html") {
+        return ResultHandler(NetworkAPIResult.Error(ApiError(
+            kind = NetworkAPIResult.ErrorType.SERVER,
+            code = "server_configuration",
+            message = "The server rejected this request. Check the API address and server host configuration.",
+            status = 400,
+            requestId = response.headers["X-Request-ID"],
+        )))
+    }
+    return ResultHandler(NetworkAPIResult.Error(decodeApiError(response.status.value, response.bodyAsText(), response.headers["X-Request-ID"], response.headers["Retry-After"])))
+}
 
 class ResultHandler<T>(val result: NetworkAPIResult<T>) {
     inline fun onSuccess(action: (T, String?) -> Unit): ResultHandler<T> {

@@ -54,7 +54,11 @@ suspend fun HttpClient.refreshSessionIfNeeded(force: Boolean = false, rejectedAc
             }
             is NetworkAPIResult.Error -> {
                 if (result.failure.status == 401) sessions.clearIfCurrent(observed)
-                result.failure
+                if (result.failure.status == 404) result.failure.copy(
+                    kind = NetworkAPIResult.ErrorType.SERVER,
+                    code = "backend_upgrade_required",
+                    message = "This server does not support session renewal. Update the backend before using this app version.",
+                ) else result.failure
             }
         }
     }

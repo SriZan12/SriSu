@@ -2,7 +2,7 @@ package com.srisu.srisu.features.auth.data.remote.api
 
 import com.srisu.srisu.features.auth.data.remote.response.OtpChallenge
 import com.srisu.srisu.core.data.remote.PublicAuthRequestKey
-import com.srisu.srisu.core.data.remote.BaseApiService
+import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO
@@ -19,7 +19,7 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class AuthApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = com.srisu.srisu.core.config.ApiEnvironment.configured()) {
+class AuthApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = httpClient.attributes[ApiEnvironmentKey]) {
     suspend fun sendOTPRequest(authDTO: AuthDTO): ResultHandler<OtpChallenge?> {
         return httpClient.safeRequest<OtpChallenge> {
             url("${environment.baseUrl}api/auth/send-otp/")

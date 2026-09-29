@@ -26,6 +26,29 @@ fun session(account: Long = 1) = SessionCoordinator(MemorySession()).apply {
 val environment = ApiEnvironment("https://example.test/")
 
 class HttpFoundationTest {
+    @Test fun htmlHostRejectionIsNotPhoneValidationAndDoesNotRetry() = runTest {
+        var calls = 0
+        val sessions = session()
+        val client = HttpClientFactory.create(sessions, environment, MockEngine {
+            calls++
+            respond("<html><h1>Bad Request (400)</h1></html>", HttpStatusCode.BadRequest,
+                headersOf(HttpHeaders.ContentType, "text/html; charset=utf-8"))
+        })
+        try {
+            val error = assertIs<NetworkAPIResult.Error<*>>(client.safeRequest<Unit>(readRetries = 2) {
+                url("https://example.test/api/auth/send-otp/")
+                method = HttpMethod.Post
+                attributes.put(PublicAuthRequestKey, true)
+                setBody(mapOf("phone_number" to "+15005550123"))
+            }.result).failure
+            assertEquals("server_configuration", error.code)
+            assertEquals(NetworkAPIResult.ErrorType.SERVER, error.kind)
+            assertEquals(400, error.status)
+            assertEquals(1, calls)
+            assertNotNull(sessions.accessToken())
+        } finally { client.close() }
+    }
+
     @Test fun bodiesAndStatusMapping() = runTest {
         val responses = listOf(
             200 to """{"data":{"items":[]},"message":"ok","future":true}""",

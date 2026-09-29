@@ -1,6 +1,8 @@
 package com.srisu.srisu.features.chat
 
 import androidx.lifecycle.viewModelScope
+import com.srisu.srisu.core.config.ApiEnvironment
+import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.features.chat.presentation.findpartner.state.PartnerSearchStatus
@@ -71,6 +73,7 @@ class FindPartnerViewModelTest {
                 headers.append("Content-Type", "application/json")
             }
         }
+        client.attributes.put(ApiEnvironmentKey, ApiEnvironment("https://example.test/"))
         vm = FindPartnerViewModel(ConnectionRepository(ConnectionApiService(client)), object : SessionStorage {
             override fun getSession(sessionKey: String) = Json.encodeToString(Session(phoneNumber = "+9779800000000"))
             override fun saveSession(credentials: String, sessionKey: String) = Unit
