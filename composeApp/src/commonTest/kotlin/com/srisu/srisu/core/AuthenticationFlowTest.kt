@@ -95,10 +95,10 @@ class AuthenticationFlowTest {
         val vm = AuthViewModel(repo, sessions, AuthDataStore(MemoryPreferences()), startup)
         val owner = ViewModelStore().apply { put("auth", vm) }
         try {
-            vm.updateCountry("US", "+1"); vm.updatePhoneNumber("5005550101") {}
-            repeat(5) { vm.requestOTP { fail("Navigation must observe accepted state") } }
+            vm.updateCountry("US", "+1"); vm.updatePhoneNumber("5005550101")
+            repeat(5) { vm.requestOTP() }
             runCurrent(); entered.await(); assertEquals(1, sends)
-            vm.updatePhoneNumber("5005550102") {}
+            vm.updatePhoneNumber("5005550102")
             release.complete(Unit); runCurrent()
             assertNull(vm.authUiState.value.challengeId)
             assertNull(sessions.accessToken())
@@ -123,12 +123,12 @@ class AuthenticationFlowTest {
         val vm = AuthViewModel(repo, sessions, AuthDataStore(MemoryPreferences()), startup)
         val owner = ViewModelStore().apply { put("auth", vm) }
         try {
-            vm.updateCountry("US", "+1"); vm.updatePhoneNumber("5005550101") {}
-            vm.requestOTP {}; vm.authUiState.first { it.challengeId != null }
+            vm.updateCountry("US", "+1"); vm.updatePhoneNumber("5005550101")
+            vm.requestOTP(); vm.authUiState.first { it.challengeId != null }
             repeat(6) { vm.updateOtpValues(it, "1") }
             repeat(4) { vm.verifyOtp({}, {}) }
             entered.await(); assertEquals(1, verifications)
-            vm.updatePhoneNumber("5005550102") {}
+            vm.updatePhoneNumber("5005550102")
             release.complete(Unit); runCurrent()
             assertNull(sessions.accessToken())
             assertTrue(vm.authUiState.value.optValues.all { it.isEmpty() })

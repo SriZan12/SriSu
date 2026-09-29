@@ -4,7 +4,6 @@ import androidx.compose.runtime.*
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.screen.profilesetup.ProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.screen.authscreen.PhoneNumberScreen
 import com.srisu.srisu.features.auth.presentation.screen.authscreen.PhoneNumberVerificationScreen
@@ -32,10 +31,7 @@ fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthV
         }
         PhoneNumberScreen(
             authViewModel = authViewModel,
-            onBack = { authViewModel.abandonChallenge(); onLeaveAuthentication() },
-            onNavToOTPScreen = {
-                navController.navigate(AuthNavigation.PhoneNumberVerificationScreen)
-            }
+            onBack = { authViewModel.abandonChallenge(); onLeaveAuthentication() }
         )
     }
 

@@ -19,18 +19,11 @@ import com.srisu.srisu.features.auth.presentation.screen.profilesetup.Gender
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.core.session.Session
-import com.srisu.srisu.core.session.SessionStorage
-import com.srisu.srisu.core.session.setUserWholeCredentials
 import com.srisu.srisu.core.session.toSession
 import com.srisu.srisu.features.auth.presentation.state.RelationshipSituation
-import com.srisu.srisu.utils.ConnectivityObserver
-import com.srisu.srisu.utils.Constants.Auth.FULL_NAME_PROGRESS
-import com.srisu.srisu.utils.Constants.Auth.OTP_WAITING_TIME
-import com.srisu.srisu.utils.Constants.Auth.PHONE_NUMBER_VERIFICATION_PROGRESS
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import com.srisu.srisu.utils.Constants.Auth.TOTAL_PROGRESS
 import com.srisu.srisu.utils.Country.getAllCountriesFromJson
-import com.srisu.srisu.utils.Country.getCountryModelFromPrefix
 import com.srisu.srisu.utils.DateTimeUtils.calculateAge
 import com.srisu.srisu.utils.DateTimeUtils.getDayAndMonthIndividually
 import com.srisu.srisu.utils.FileManager
@@ -41,10 +34,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
 import com.srisu.srisu.core.data.remote.ApiError
+import com.srisu.srisu.features.auth.domain.StartupCoordinator
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.time.ExperimentalTime
@@ -53,7 +45,7 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val sessionStorage: com.srisu.srisu.core.session.SessionCoordinator,
     private val dataStoreRepo: AuthDataStore,
-    private val startup: com.srisu.srisu.features.auth.domain.StartupCoordinator
+    private val startup: StartupCoordinator
 ) : ViewModel() {
 
     private val _authUiState = MutableStateFlow(AuthUIStates())
@@ -124,7 +116,8 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 block()
-            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (exception: Exception) {
                 AppLogger.log("AuthViewModel operation failed: ${exception::class.simpleName}")
                 onError("Unable to complete this action. Please retry.")
@@ -139,8 +132,9 @@ class AuthViewModel(
 
         val session = try {
             sessionJson?.let { Json.decodeFromString<Session>(it) }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
-            } catch (exception: Exception) {
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (exception: Exception) {
             AppLogger.log("Session deserialization failed")
             null
         }
@@ -148,7 +142,12 @@ class AuthViewModel(
         updateProgress(isIncrease = true)
 
         updateSession(session)
-        updateState { it.copy(fullName = session?.fullName.orEmpty(), username = session?.username.orEmpty()) }
+        updateState {
+            it.copy(
+                fullName = session?.fullName.orEmpty(),
+                username = session?.username.orEmpty()
+            )
+        }
 
         return session
     }
@@ -160,8 +159,9 @@ class AuthViewModel(
     private fun getSession(sessionKey: String): String? {
         return try {
             sessionStorage.getSession(sessionKey)
-        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
-            } catch (exception: Exception) {
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (exception: Exception) {
             AppLogger.log("Failed to read secure session storage")
             null
         }
@@ -200,12 +200,22 @@ class AuthViewModel(
         operation?.cancel()
         busy = false
         requestId = null
-        updateState { it.copy(challengeId = null, optValues = List(6) { "" }, baseUIState = BaseUIState.Idle, resendAt = 0, expiresAt = 0) }
+        updateState {
+            it.copy(
+                challengeId = null,
+                optValues = List(6) { "" },
+                baseUIState = BaseUIState.Idle,
+                resendAt = 0,
+                expiresAt = 0
+            )
+        }
         viewModelScope.launch { dataStoreRepo.deleteOTPTimeStamp() }
     }
 
-    fun updatePhoneNumber(phoneNumber: String, showValidationMessage: () -> Unit) {
-        val digits = phoneNumber.trim().removePrefix(currentState.countryPrefix).filter { it in '0'..'9' }.take(14)
+    fun updatePhoneNumber(phoneNumber: String) {
+        val digits =
+            phoneNumber.trim().removePrefix(currentState.countryPrefix).filter { it in '0'..'9' }
+                .take(14)
         if (digits != currentState.phoneNumber) abandonChallenge()
         updateState { it.copy(phoneNumber = digits) }
     }
@@ -295,9 +305,12 @@ class AuthViewModel(
         val version = flowVersion
         showLoading()
         operation = viewModelScope.launch {
-            try { block(version)
-            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
-            } catch (_: Exception) { if (version == flowVersion) showErrorMessage("Unable to complete this action. Please retry.")
+            try {
+                block(version)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (version == flowVersion) showErrorMessage("Unable to complete this action. Please retry.")
             } finally {
                 if (version == flowVersion) {
                     busy = false
@@ -308,29 +321,64 @@ class AuthViewModel(
     }
 
     @OptIn(kotlin.uuid.ExperimentalUuidApi::class, ExperimentalTime::class)
-    fun requestOTP(onNavToOTPScreen: () -> Unit) {
-        if (!isPhoneNumberValid() || currentState.resendAt > kotlin.time.Clock.System.now().toEpochMilliseconds()) return
+    fun requestOTP() {
+        if (!isPhoneNumberValid() || currentState.resendAt > kotlin.time.Clock.System.now()
+                .toEpochMilliseconds()
+        ) return
         runOperation { version ->
             val state = currentState
             val id = requestId ?: kotlin.uuid.Uuid.random().toString().also { requestId = it }
-            val response = authRepository.sendOTPRequest(AuthDTO(phoneNumber = state.countryPrefix + state.phoneNumber, requestId = id)).result
+            val response = authRepository.sendOTPRequest(
+                AuthDTO(
+                    phoneNumber = state.countryPrefix + state.phoneNumber,
+                    requestId = id
+                )
+            ).result
             if (version != flowVersion) return@runOperation
             when (response) {
                 is NetworkAPIResult.Success -> {
                     val challenge = requireNotNull(response.response)
                     val at = kotlin.time.Clock.System.now().toEpochMilliseconds()
-                    val lifetime = (kotlin.time.Instant.parse(challenge.expiresAt) - kotlin.time.Instant.parse(challenge.serverTime)).inWholeMilliseconds.coerceAtLeast(0)
-                    dataStoreRepo.saveOTPTimestamp(OTPScreenMetadata(state.countryCode, state.countryPrefix, state.phoneNumber,
-                        at, challenge.retryAfterSeconds * 1000, challenge.challengeId, at + lifetime))
+                    val lifetime =
+                        (kotlin.time.Instant.parse(challenge.expiresAt) - kotlin.time.Instant.parse(
+                            challenge.serverTime
+                        )).inWholeMilliseconds.coerceAtLeast(0)
+                    dataStoreRepo.saveOTPTimestamp(
+                        OTPScreenMetadata(
+                            state.countryCode,
+                            state.countryPrefix,
+                            state.phoneNumber,
+                            at,
+                            challenge.retryAfterSeconds * 1000,
+                            challenge.challengeId,
+                            at + lifetime
+                        )
+                    )
                     if (version != flowVersion) return@runOperation
-                    updateState { it.copy(challengeId = challenge.challengeId, resendAt = at + challenge.retryAfterSeconds * 1000,
-                        expiresAt = at + lifetime, optValues = List(6) { "" }, remainingOTPTimestamp = challenge.retryAfterSeconds * 1000) }
+                    updateState {
+                        it.copy(
+                            challengeId = challenge.challengeId,
+                            resendAt = at + challenge.retryAfterSeconds * 1000,
+                            expiresAt = at + lifetime,
+                            optValues = List(6) { "" },
+                            remainingOTPTimestamp = challenge.retryAfterSeconds * 1000
+                        )
+                    }
                     requestId = null
                     // AuthGraph observes durable challenge state. No callback navigation race.
                 }
+
                 is NetworkAPIResult.Error -> {
-                    if (response.failure.status != null && response.failure.status != 409) requestId = null
-                    response.failure.retryAfterSeconds?.let { wait -> updateState { it.copy(resendAt = kotlin.time.Clock.System.now().toEpochMilliseconds() + wait * 1000) } }
+                    if (response.failure.status != null && response.failure.status != 409) requestId =
+                        null
+                    response.failure.retryAfterSeconds?.let { wait ->
+                        updateState {
+                            it.copy(
+                                resendAt = kotlin.time.Clock.System.now()
+                                    .toEpochMilliseconds() + wait * 1000
+                            )
+                        }
+                    }
                     failure(response.failure)
                 }
             }
@@ -346,13 +394,21 @@ class AuthViewModel(
             val metadata = dataStoreRepo.getOTPTimestamp().first()
             if (restoringVersion == flowVersion && metadata?.challengeId != null && sessionStorage.currentSession()?.access == null && currentState.challengeId == null) {
                 val at = kotlin.time.Clock.System.now().toEpochMilliseconds()
-                if (metadata.expiresAt > at) updateState { it.copy(challengeId = metadata.challengeId,
-                    countryCode = metadata.countryCode, countryPrefix = metadata.countryPrefix, phoneNumber = metadata.phoneNumber,
-                    resendAt = metadata.saveTime + metadata.totalTime, expiresAt = metadata.expiresAt) }
+                if (metadata.expiresAt > at) updateState {
+                    it.copy(
+                        challengeId = metadata.challengeId,
+                        countryCode = metadata.countryCode,
+                        countryPrefix = metadata.countryPrefix,
+                        phoneNumber = metadata.phoneNumber,
+                        resendAt = metadata.saveTime + metadata.totalTime,
+                        expiresAt = metadata.expiresAt
+                    )
+                }
                 else dataStoreRepo.deleteOTPTimeStamp()
             }
             while (true) {
-                val remaining = (currentState.resendAt - kotlin.time.Clock.System.now().toEpochMilliseconds()).coerceAtLeast(0)
+                val remaining = (currentState.resendAt - kotlin.time.Clock.System.now()
+                    .toEpochMilliseconds()).coerceAtLeast(0)
                 updateState { it.copy(remainingOTPTimestamp = remaining.takeIf { value -> value > 0 }) }
                 delay(1000)
             }
@@ -364,8 +420,10 @@ class AuthViewModel(
         runOperation { version ->
             val stamp = sessionStorage.stamp()
             val state = currentState
-            val response = authRepository.sendVerifyOtpRequest(state.countryPrefix + state.phoneNumber,
-                state.optValues.joinToString(""), state.challengeId).result
+            val response = authRepository.sendVerifyOtpRequest(
+                state.countryPrefix + state.phoneNumber,
+                state.optValues.joinToString(""), state.challengeId
+            ).result
             if (version != flowVersion) return@runOperation
             sessionStorage.ensureCurrent(stamp)
             when (response) {
@@ -379,9 +437,18 @@ class AuthViewModel(
                     if (version != flowVersion) return@runOperation
                     sessionStorage.ensureCurrent(stamp)
                     updateState { it.copy(optValues = List(6) { "" }, challengeId = null) }
-                    sessionStorage.saveIfCurrent(Json.encodeToString(user.toSession(access, refresh, user.id)), stamp)
+                    sessionStorage.saveIfCurrent(
+                        Json.encodeToString(
+                            user.toSession(
+                                access,
+                                refresh,
+                                user.id
+                            )
+                        ), stamp
+                    )
                     // The root coordinator restores server state for the new account.
                 }
+
                 is NetworkAPIResult.Error -> failure(response.failure)
             }
         }
@@ -391,12 +458,16 @@ class AuthViewModel(
         if (!isFullNameValid() || !isUsernameValid()) return
         runOperation { _ ->
             val stamp = sessionStorage.stamp()
-            val result = authRepository.updateName(currentState.fullName.trim(), currentState.username.trim()).result
+            val result = authRepository.updateName(
+                currentState.fullName.trim(),
+                currentState.username.trim()
+            ).result
             sessionStorage.ensureCurrent(stamp)
             when (result) {
                 is NetworkAPIResult.Success -> {
                     acceptProfile(requireNotNull(result.response), stamp)
                 }
+
                 is NetworkAPIResult.Error -> failure(result.failure)
             }
         }
@@ -431,6 +502,7 @@ class AuthViewModel(
                 is NetworkAPIResult.Success -> {
                     acceptProfile(requireNotNull(result.response), stamp)
                 }
+
                 is NetworkAPIResult.Error -> failure(result.failure)
             }
         }
@@ -450,21 +522,27 @@ class AuthViewModel(
             AccessDestination.PHOTO -> CustomProfileSetupScreen.SetProfilePictureScreen
             else -> return
         }
-        updateState { it.copy(
-            session = access.session,
-            fullName = access.session?.fullName.orEmpty(),
-            username = access.session?.username.orEmpty(),
-            gender = Gender.entries.firstOrNull { gender -> gender.name == access.session?.gender }
-                ?: it.gender.takeIf { _ -> it.session?.id != null && it.session.id == access.session?.id }
-                ?: Gender.NONE,
-        ) }
+        updateState {
+            it.copy(
+                session = access.session,
+                fullName = access.session?.fullName.orEmpty(),
+                username = access.session?.username.orEmpty(),
+                gender = Gender.entries.firstOrNull { gender -> gender.name == access.session?.gender }
+                    ?: it.gender.takeIf { _ -> it.session?.id != null && it.session.id == access.session?.id }
+                    ?: Gender.NONE,
+            )
+        }
         showProfileStep(screen)
     }
 
     private fun showProfileStep(screen: CustomProfileSetupScreen) {
         val step = CustomProfileSetupScreen.registrationOrder.indexOf(screen) + 1
-        updateState { it.copy(currentScreen = screen, currentProgressStep = step,
-            progress = step.toFloat() / CustomProfileSetupScreen.registrationOrder.size) }
+        updateState {
+            it.copy(
+                currentScreen = screen, currentProgressStep = step,
+                progress = step.toFloat() / CustomProfileSetupScreen.registrationOrder.size
+            )
+        }
     }
 
     fun navigateProfileBack() {
@@ -595,7 +673,10 @@ class AuthViewModel(
 
     fun isPhoneNumberValid(): Boolean {
         return when {
-            !com.srisu.srisu.features.auth.domain.isInternationalPhoneValid(currentState.countryPrefix, currentState.phoneNumber) -> {
+            !com.srisu.srisu.features.auth.domain.isInternationalPhoneValid(
+                currentState.countryPrefix,
+                currentState.phoneNumber
+            ) -> {
                 updateValidationError(
                     Validation(
                         validationMessage = "Invalid phone number format!",

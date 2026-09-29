@@ -12,7 +12,7 @@ plugins {
     alias(libs.plugins.room)
 }
 
-val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://127.0.0.1:8000/")
+val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.73:8000/")
 val apiEnvironment = providers.gradleProperty("srisu.environment").orElse("development")
 val environmentSources = layout.buildDirectory.dir("generated/srisuEnvironment/commonMain")
 abstract class GenerateEnvironment : DefaultTask() {

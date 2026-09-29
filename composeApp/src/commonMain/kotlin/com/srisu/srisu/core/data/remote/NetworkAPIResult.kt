@@ -143,7 +143,7 @@ fun safeMessage(kind: NetworkAPIResult.ErrorType): String = when (kind) {
     NetworkAPIResult.ErrorType.NOT_FOUND -> "This resource is unavailable."
     NetworkAPIResult.ErrorType.CONFLICT -> "This item changed. Refresh before trying again."
     NetworkAPIResult.ErrorType.RATE_LIMITED -> "Please wait before trying again."
-    NetworkAPIResult.ErrorType.BAD_REQUEST -> "Check the supplied fields."
+    NetworkAPIResult.ErrorType.BAD_REQUEST -> "Couldn't complete the request"
     NetworkAPIResult.ErrorType.NETWORK -> "Unable to connect. Check your connection."
     NetworkAPIResult.ErrorType.TIMEOUT -> "The request timed out."
     NetworkAPIResult.ErrorType.SERIALIZATION -> "The service returned an unexpected response."

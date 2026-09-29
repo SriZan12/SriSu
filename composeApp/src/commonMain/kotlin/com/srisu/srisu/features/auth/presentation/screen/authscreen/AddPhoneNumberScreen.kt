@@ -40,11 +40,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.CommonBottomSheetCompo
 import com.srisu.srisu.components.CountrySelectionBottomSheet
@@ -56,20 +56,18 @@ import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
 import com.srisu.srisu.components.RoundedPrimaryButtonCompo
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.auth.domain.isInternationalPhoneValid
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 import com.srisu.srisu.utils.isInternetAvailable
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PhoneNumberScreen(
     authViewModel: AuthViewModel,
-    onNavToOTPScreen: () -> Unit,
     onBack: () -> Unit = {},
 ) {
-    androidx.compose.ui.backhandler.BackHandler(onBack = onBack)
+    BackHandler(onBack = onBack)
     val authUIState by authViewModel.authUiState.collectAsState()
     var showCountryList by rememberSaveable {
         mutableStateOf(false)
@@ -85,7 +83,7 @@ fun PhoneNumberScreen(
         phoneNumber = authUIState.phoneNumber,
         countryPrefix = authUIState.countryPrefix,
         onPhoneNumberChange = {
-            authViewModel.updatePhoneNumber(phoneNumber = it, showValidationMessage = {})
+            authViewModel.updatePhoneNumber(phoneNumber = it)
         },
         onCountryClick = {
             showCountryList = true
@@ -124,8 +122,7 @@ fun PhoneNumberScreen(
             showPhoneNumberConfirmation = false
 
             if (authViewModel.isPhoneNumberValid()) {
-                authViewModel.requestOTP {
-                    }
+                authViewModel.requestOTP()
             }
 
         },
@@ -203,7 +200,7 @@ private fun PhoneNumberScreenContent(
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isButtonEnabled = com.srisu.srisu.features.auth.domain.isInternationalPhoneValid(countryPrefix, phoneNumber)
+    val isButtonEnabled = isInternationalPhoneValid(countryPrefix, phoneNumber)
     val localFocusManager = LocalFocusManager.current
 
     Scaffold(
@@ -234,9 +231,7 @@ private fun PhoneNumberScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraLarge)
         ) {
-            androidx.compose.material3.TextButton(onClick = onBack, modifier = Modifier.align(Alignment.Start)) {
-                Text(stringResource(Res.string.intro_back))
-            }
+
             SriSuHeader()
 
             ScreenTopIcon(
@@ -272,7 +267,9 @@ private fun PhoneNumberConfirmationBottomSheet(
         onDismiss()
     }, show = showPhoneNumberConfirmation) {
 
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium)
+        ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
                 text = stringResource(Res.string.auth_confirm_phone),
@@ -302,7 +299,10 @@ private fun PhoneNumberConfirmationBottomSheet(
 
             PrimaryButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(intrinsicSize = IntrinsicSize.Max)
-                    .padding(top = MaterialTheme.spacing.large, bottom = MaterialTheme.spacing.compact),
+                    .padding(
+                        top = MaterialTheme.spacing.large,
+                        bottom = MaterialTheme.spacing.compact
+                    ),
                 label = stringResource(Res.string.auth_confirm)
             ) {
                 onConfirmed()

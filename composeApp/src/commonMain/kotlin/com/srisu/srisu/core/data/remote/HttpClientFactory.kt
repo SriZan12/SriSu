@@ -1,14 +1,19 @@
 package com.srisu.srisu.core.data.remote
 
 import com.srisu.srisu.core.config.ApiEnvironment
+import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.session.SessionStamp
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.accept
 import io.ktor.http.ContentType
@@ -24,25 +29,51 @@ val ApiEnvironmentKey = AttributeKey<ApiEnvironment>("SriSuApiEnvironment")
 val PublicAuthRequestKey = AttributeKey<Boolean>("SriSuPublicAuth")
 val SessionCoordinatorKey = AttributeKey<SessionCoordinator>("SriSuSessionCoordinator")
 val RequestScopeKey = AttributeKey<RequestScope>("SriSuRequestScope")
+
 data class RequestScope(val coordinator: SessionCoordinator, val stamp: SessionStamp) {
     fun ensureCurrent() = coordinator.ensureCurrent(stamp)
 }
 
 object HttpClientFactory {
+
+    private val httpLogger = object : Logger {
+        override fun log(message: String) {
+            Napier.d(message)
+        }
+    }
+
     @OptIn(ExperimentalUuidApi::class)
-    fun create(sessions: SessionCoordinator, environment: ApiEnvironment, engine: HttpClientEngine): HttpClient {
+    fun create(
+        sessions: SessionCoordinator,
+        environment: ApiEnvironment,
+        engine: HttpClientEngine
+    ): HttpClient {
         val sessionPlugin = createClientPlugin("SriSuSessionBoundary") {
             onRequest { request, body ->
-                val scope = request.attributes.getOrNull(RequestScopeKey) ?: RequestScope(sessions, sessions.stamp())
+                val scope = request.attributes.getOrNull(RequestScopeKey) ?: RequestScope(
+                    sessions,
+                    sessions.stamp()
+                )
                 scope.ensureCurrent()
                 request.attributes.put(RequestScopeKey, scope)
-                if (body !is io.ktor.http.content.OutgoingContent && request.method !in listOf(io.ktor.http.HttpMethod.Get, io.ktor.http.HttpMethod.Head)) {
-                    request.headers[HttpHeaders.ContentType] = ContentType.Application.Json.toString()
+                if (body !is io.ktor.http.content.OutgoingContent && request.method !in listOf(
+                        io.ktor.http.HttpMethod.Get,
+                        io.ktor.http.HttpMethod.Head
+                    )
+                ) {
+                    request.headers[HttpHeaders.ContentType] =
+                        ContentType.Application.Json.toString()
                 }
                 request.headers.remove(HttpHeaders.Authorization)
                 if (environment.owns(request.url.build())) {
                     if (request.attributes.getOrNull(PublicAuthRequestKey) != true) {
-                        sessions.authorization(scope.stamp)?.let { request.headers.append(HttpHeaders.Authorization, "Bearer $it") }
+                        sessions.authorization(scope.stamp)
+                            ?.let {
+                                request.headers.append(
+                                    HttpHeaders.Authorization,
+                                    "Bearer $it"
+                                )
+                            }
                     }
                     request.headers["X-SriSu-Contract"] = "core-1"
                     request.headers["X-SriSu-Auth"] = "auth-1"
@@ -51,7 +82,11 @@ object HttpClientFactory {
             }
             onResponse { response ->
                 response.call.request.attributes.getOrNull(RequestScopeKey)?.ensureCurrent()
-                if (response.call.request.attributes.getOrNull(SocketHandshakeKey) == true && response.status.value in listOf(401, 403)) {
+                if (response.call.request.attributes.getOrNull(SocketHandshakeKey) == true && response.status.value in listOf(
+                        401,
+                        403
+                    )
+                ) {
                     throw SocketAccessDenied(response.status.value)
                 }
             }
@@ -63,6 +98,11 @@ object HttpClientFactory {
             // OkHttp 3.2.3 rejects the plugin's maxFrameSize setter. Enforce our
             // decode bound in KtorSocketConnector; native engine owns wire buffering.
             // Body/header logging is intentionally disabled: auth payloads contain proofs.
+
+            install(Logging) {
+                logger = httpLogger
+                level = LogLevel.ALL
+            }
             install(WebSockets) { pingIntervalMillis = 25_000 }
             install(HttpTimeout) {
                 connectTimeoutMillis = 10_000
@@ -71,6 +111,12 @@ object HttpClientFactory {
             }
             install(sessionPlugin)
             defaultRequest { accept(ContentType.Application.Json) }
-        }.also { it.attributes.put(SessionCoordinatorKey, sessions); it.attributes.put(ApiEnvironmentKey, environment) }
+        }.also {
+            it.attributes.put(
+                SessionCoordinatorKey,
+                sessions
+            ); it.attributes.put(ApiEnvironmentKey, environment)
+        }
     }
 }
+

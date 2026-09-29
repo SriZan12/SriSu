@@ -43,7 +43,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
@@ -54,13 +53,10 @@ import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.RoundedPrimaryButtonCompo
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
-import com.srisu.srisu.navigation.graph.AuthNavigation
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
-import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.utils.Constants.Auth.OTP_LENGTH
-import com.srisu.srisu.utils.DateTimeUtils.CountdownTimer
 import com.srisu.srisu.utils.formatTime
 import com.srisu.srisu.utils.isInternetAvailable
 
@@ -107,7 +103,7 @@ fun PhoneNumberVerificationScreen(
             }
         },
         onResendClick = {
-            authViewModel.requestOTP{}
+            authViewModel.requestOTP()
 
         },
         onTimerFinished = {
