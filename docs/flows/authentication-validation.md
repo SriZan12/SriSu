@@ -152,3 +152,30 @@ are compared byte-for-byte by Git tree SHA with the tested local content. Featur
 branch pointers are aligned only after that equality check; original local commits
 are retained under `refs/codex/auth-local-before-publication`. No working-tree edits
 are reset or discarded, and no force-push is used.
+
+## Gender step — 2026-09-29
+
+* `python3 tools/workspace.py verify all` passed: contract/fixture consistency,
+  theme validation, Android unit tests and Kotlin compilation, iOS simulator Kotlin
+  compilation, Django checks and the isolated backend suite (126 passed, ten
+  PostgreSQL-only skips). The real transport test is skipped in the ordinary unit
+  run and exercised separately below.
+* Six new `GenderOnboardingTest` cases cover name → gender → photo → Home,
+  missing selection, duplicate writes, loading/back guards, saved gender restore,
+  unchanged saves after Back, selection retention, validation/permission/server
+  failures with retry, expired sessions and logout racing a late response.
+  Existing bootstrap tests also retain coverage for completed accounts without gender.
+* `JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home'
+  python3 tools/core_integration.py` passed against the unchanged backend commit
+  `c622e7fdb85806d2e5d279aad7a537b0d2cc8a73`, using a disposable database and synthetic
+  accounts. Real Ktor PATCH saves `FEMALE` and `MALE`, GET restores each, and `NONE`
+  is rejected with 400. Existing HTTP/socket/database/logout checks still pass.
+* The first run caught eager Kotlin object initialization in the new step list;
+  lazy initialization fixes it. Two old bootstrap expectations were updated for
+  the inserted gender destination. The subsequent full run passed.
+* Native interactive verification remains unverified. An iPhone 17 Pro/iOS 26.5
+  simulator is booted, but computer-use access to Xcode's Device Hub timed out.
+  A physical Android device is connected; no install/session replacement was
+  performed on it. No claim of native tap-through or visual verification is made.
+* The three pre-existing local frontend edits (Gradle, HTTP logging, phone UI) are
+  preserved and excluded from publication. Backend production source is unchanged.

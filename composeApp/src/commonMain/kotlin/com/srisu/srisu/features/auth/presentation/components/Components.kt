@@ -167,7 +167,7 @@ fun CommonProfileContainerCompo(
         ) {
 
             ProgressIndicator(
-                totalSteps = 2,
+                totalSteps = CustomProfileSetupScreen.registrationOrder.size,
                 currentStep = currentStep,
                 modifier = Modifier.fillMaxWidth()
             )

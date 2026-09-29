@@ -3,6 +3,7 @@ package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,10 +28,18 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.srisu.srisu.baseframework.BaseUIState
+import com.srisu.srisu.components.ErrorDialog
+import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.features.auth.presentation.components.CommonProfileContainerCompo
-import com.srisu.srisu.features.auth.presentation.state.Validation
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
+import org.jetbrains.compose.resources.stringResource
+import srisu.composeapp.generated.resources.*
 
 enum class Gender {
     NONE, MALE, FEMALE,
@@ -41,23 +50,31 @@ fun SelectGenderScreen(
     authViewModel: AuthViewModel
 ) {
     val authUiState by authViewModel.authUiState.collectAsState()
+    val loading = authUiState.baseUIState is BaseUIState.Loading
+
+    when (val state = authUiState.baseUIState) {
+        is BaseUIState.Error -> ErrorDialog(title = state.errorType, errorMessage = state.message,
+            show = true, onDismiss = authViewModel::idleScreen)
+        is BaseUIState.Loading -> LoadingScrim()
+        else -> Unit
+    }
 
     CommonProfileContainerCompo(
         modifier = Modifier,
-        buttonTitle = "Next",
+        buttonTitle = stringResource(Res.string.auth_next),
         localFocusManager = null,
         currentStep = authUiState.currentProgressStep,
-        isPrimaryButtonEnabled = authViewModel.isGenderValid(),
+        isPrimaryButtonEnabled = authUiState.gender != Gender.NONE && !loading,
         onNavBack = {
-            authViewModel.navigateBack()
+            authViewModel.navigateProfileBack()
         },
         onClickPrimaryButton = {
-            authViewModel.navigateNextScreen(isIncrease = true)
+            authViewModel.saveGender()
         },
     ) {
 
         Text(
-            text = "How do you identify?",
+            text = stringResource(Res.string.auth_gender_title),
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onBackground,
 
@@ -66,7 +83,7 @@ fun SelectGenderScreen(
         )
 
         Text(
-            text = "No boxes here — just helping us\npersonalise things for you.",
+            text = stringResource(Res.string.auth_gender_subtitle),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -75,11 +92,9 @@ fun SelectGenderScreen(
         Spacer(modifier = Modifier.height(16.dp))
         GenderPrimaryOptions(
             selectedGender = authUiState.gender,
+            enabled = !loading,
             onGenderSelected = { gender ->
                 authViewModel.updateGender(gender)
-                authViewModel.updateValidationError(
-                    validation = Validation(isGender = false)
-                )
             }
         )
     }
@@ -89,22 +104,25 @@ fun SelectGenderScreen(
 @Composable
 private fun GenderPrimaryOptions(
     selectedGender: Gender?,
+    enabled: Boolean,
     onGenderSelected: (Gender) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
         verticalAlignment = Alignment.CenterVertically
     ) {
         GenderCard(
-            title = "Woman",
+            title = stringResource(Res.string.auth_gender_woman),
+            enabled = enabled,
             isSelected = selectedGender == Gender.FEMALE,
             onClick = { onGenderSelected(Gender.FEMALE) },
             modifier = Modifier.weight(1f)
         )
 
         GenderCard(
-            title = "Man",
+            title = stringResource(Res.string.auth_gender_man),
+            enabled = enabled,
             isSelected = selectedGender == Gender.MALE,
             onClick = { onGenderSelected(Gender.MALE) },
             modifier = Modifier.weight(1f)
@@ -116,12 +134,17 @@ private fun GenderPrimaryOptions(
 private fun GenderCard(
     title: String,
     isSelected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(180.dp),
+        enabled = enabled,
+        modifier = modifier.height(180.dp).semantics {
+            selected = isSelected
+            role = Role.RadioButton
+        },
         shape = MaterialTheme.shapes.extraLarge,
         color = if (isSelected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)

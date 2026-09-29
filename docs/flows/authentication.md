@@ -77,8 +77,11 @@ flowchart TD
   Phone -->|Accepted challenge| OTP[Verify OTP]
   OTP -->|Verified and securely stored| Bootstrap
   Profile -->|Name incomplete| Name[Full name and username]
-  Name -->|Confirmed persistence| Photo[Photo upload or explicit skip]
-  Profile -->|Photo unresolved| Photo
+  Name -->|Confirmed name, gender missing| Gender[Choose gender]
+  Profile -->|Name saved, gender missing| Gender
+  Gender -->|Confirmed persistence| Photo[Photo upload or explicit skip]
+  Name -->|Gender already saved| Photo
+  Profile -->|Gender saved, photo unresolved| Photo
   Photo -->|Confirmed completion| Main[Existing Home and partner-linking entry]
   Profile -->|Already complete| Main
   Main -->|Local logout and best-effort revocation| Phone
@@ -92,9 +95,10 @@ including guest entry after process restart. Known accounts mark the introductio
 passed; logout and invalid credentials return to Phone. Preference failures expose
 retry; duplicate taps and stale guest callbacks cannot grant protected access.
 
-The five segments on Space are retained as the supplied screen's progress marker
-(Space, Phone, OTP, Name, Photo), not a new five-screen carousel. No extra onboarding
-pages or mandatory profile fields are introduced.
+The five segments on Space retain the supplied introductory artwork; they are not
+a screen count or a five-screen carousel. Profile setup has its own three-step
+indicator: Name, Gender, Photo. DOB, zodiac and relationship questions remain
+outside this registration flow.
 
 Guest home, public interest search and an account prompt are derived additions,
 authorized by the user's guest clarification. The only existing public content API
@@ -112,7 +116,7 @@ Missing/unknown progress is a recovery state. Network/503 errors keep credential
 and do not mount protected navigation. Profile saves feed their confirmed response
 back to the coordinator without another bootstrap request. Authentication and
 protected graphs are separate; account changes destroy the account ViewModel store.
-Consumed OTP routes disappear after authentication. Name and photo are the only
+Consumed OTP routes disappear after authentication. Name, gender and photo are the
 registration steps reachable from the profile flow.
 
 Refresh runs in the existing SessionCoordinator's mutex before expiry and once
@@ -154,6 +158,10 @@ responses. See backend `docs/authentication.md` for full endpoint/deployment det
 * Name saves and upload/skip are separate actor-bound writes. Exact nonempty
   username uniqueness is enforced in the database without case-folding existing
   accounts. Display names preserve Unicode and spaces, trimmed only at edges.
+* Gender uses the existing actor-bound PATCH setup-profile with only
+  `{"gender":"FEMALE"}` or `{"gender":"MALE"}`. The server's existing `photo`
+  phase opens Gender first when that incomplete user's returned gender is missing;
+  no new wire `next_step` value or backend completion requirement is introduced.
 * Profile images: maximum 5 MiB, 20 megapixels, dimension 8192, JPEG/PNG/WebP;
   bounded client reads, server validation, metadata-stripping re-encode and random
   server filename. A preview is never completion. System pickers require no broad
@@ -225,6 +233,33 @@ Known limits/release gates:
 
 Publication remains on the existing feature branches; no integration branch merge
 or deployment is part of this change. Unrelated local frontend edits are preserved.
+
+## Gender step — 2026-09-29
+
+The existing `SelectGenderScreen` is now between Name and Photo. Next is disabled
+until a choice is made and while saving; the screen advances only on the confirmed
+profile response. Failed saves keep the choice and allow explicit retry. Back and
+system Back follow Photo → Gender → Name, retaining the selection in the current
+flow, and are ignored while a write is pending. The cards expose radio selection
+semantics. Saved gender restores from the server after restart; an incomplete
+profile with no saved gender resumes on Gender. Completed accounts, including older
+accounts without gender, keep their normal Home destination. Guest access is unchanged.
+
+This is a client onboarding question, not a server authorization rule. Existing
+auth-1 clients, server progress values and profile-completion semantics remain
+compatible. The backend already validates the two supported values and persists
+gender through GET/PATCH `/api/auth/setup-profile/`; no backend change or migration
+is needed. The real KMP-to-Django check writes both values, reads them back, and
+checks rejection of `NONE`. Backend source: `SrizanKhadka/SriSu` feature commit
+`c622e7fdb85806d2e5d279aad7a537b0d2cc8a73`; frontend base:
+`c20d65252fb309b132120331401c81a8b7562777`. The frontend commit containing this
+handoff is the implementation revision on `dev-core-architecture`.
+
+Figma page `1:2` metadata was readable on this pass; the next call hit the Starter
+quota before the gender frame/design context could be verified. This change reuses
+the existing screen's layout, artwork, labels and theme tokens. The three-step
+profile indicator is derived from the updated flow. See the
+[validation record](authentication-validation.md#gender-step--2026-09-29).
 
 ## Important implementation files
 

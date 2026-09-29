@@ -8,6 +8,10 @@ import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO
 import com.srisu.srisu.features.auth.data.remote.dto.ProfileSetupDTO
 import com.srisu.srisu.features.auth.data.local.datastore.AuthDataStore
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
+import com.srisu.srisu.features.auth.domain.AccessDestination
+import com.srisu.srisu.features.auth.domain.StartupState
+import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
+import com.srisu.srisu.core.session.SessionStamp
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.components.CustomProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.components.OTPScreenMetadata
@@ -67,13 +71,7 @@ class AuthViewModel(
         getRemainingOTPTimeStamp()
         viewModelScope.launch {
             startup.state.collect { access ->
-                if (access is com.srisu.srisu.features.auth.domain.StartupState.Available) {
-                    when (access.destination) {
-                        com.srisu.srisu.features.auth.domain.AccessDestination.NAME -> updateState { it.copy(currentScreen = CustomProfileSetupScreen.AddFullNameScreen, currentProgressStep = 1) }
-                        com.srisu.srisu.features.auth.domain.AccessDestination.PHOTO -> updateState { it.copy(currentScreen = CustomProfileSetupScreen.SetProfilePictureScreen, currentProgressStep = 2) }
-                        else -> Unit
-                    }
-                }
+                if (access is StartupState.Available) restoreProfileStep(access)
             }
         }
     }
@@ -264,7 +262,8 @@ class AuthViewModel(
     }
 
     fun updateGender(gender: Gender) {
-        updateState { it.copy(gender = gender) }
+        if (busy) return
+        updateState { it.copy(gender = gender, validationError = Validation()) }
     }
 
     fun updateRelationshipSituation(situation: RelationshipSituation) {
@@ -284,6 +283,7 @@ class AuthViewModel(
             error.fields["otp_code"]?.contains("attempts_exhausted") == true -> "Too many attempts. Request a new code when available."
             error.fields.containsKey("otp_code") -> "This code is invalid or already used. Check it or request a new code."
             error.fields.containsKey("profile_photo") -> "Choose a JPEG, PNG or WebP image under 5 MB and 20 megapixels."
+            error.fields.containsKey("gender") -> "Please choose one of the available gender options."
             else -> error.message
         }
         showErrorMessage(message)
@@ -395,10 +395,22 @@ class AuthViewModel(
             sessionStorage.ensureCurrent(stamp)
             when (result) {
                 is NetworkAPIResult.Success -> {
-                    val profile = requireNotNull(result.response)
-                    startup.accept(profile, stamp)
-                    if (profile.progress?.nextStep == "photo") updateState { it.copy(currentScreen = CustomProfileSetupScreen.SetProfilePictureScreen, currentProgressStep = 2) }
+                    acceptProfile(requireNotNull(result.response), stamp)
                 }
+                is NetworkAPIResult.Error -> failure(result.failure)
+            }
+        }
+    }
+
+    fun saveGender() {
+        if (!isGenderValid()) return
+        val gender = currentState.gender
+        runOperation { _ ->
+            val stamp = sessionStorage.stamp()
+            val result = authRepository.updateGender(gender.name).result
+            sessionStorage.ensureCurrent(stamp)
+            when (result) {
+                is NetworkAPIResult.Success -> acceptProfile(requireNotNull(result.response), stamp)
                 is NetworkAPIResult.Error -> failure(result.failure)
             }
         }
@@ -417,16 +429,53 @@ class AuthViewModel(
             sessionStorage.ensureCurrent(stamp)
             when (result) {
                 is NetworkAPIResult.Success -> {
-                    val profile = requireNotNull(result.response)
-                    startup.accept(profile, stamp)
-                    if (profile.progress?.nextStep == "photo") updateState { it.copy(currentScreen = CustomProfileSetupScreen.SetProfilePictureScreen, currentProgressStep = 2) }
+                    acceptProfile(requireNotNull(result.response), stamp)
                 }
                 is NetworkAPIResult.Error -> failure(result.failure)
             }
         }
     }
 
-    fun showNameStep() { updateState { it.copy(currentScreen = CustomProfileSetupScreen.AddFullNameScreen, currentProgressStep = 1) } }
+    private fun acceptProfile(profile: ProfileResponse, stamp: SessionStamp) {
+        startup.accept(profile, stamp)
+        // Also restore on an identical response, which StateFlow will not emit
+        // again (for example, saving unchanged details after navigating Back).
+        (startup.state.value as? StartupState.Available)?.let(::restoreProfileStep)
+    }
+
+    private fun restoreProfileStep(access: StartupState.Available) {
+        val screen = when (access.destination) {
+            AccessDestination.NAME -> CustomProfileSetupScreen.AddFullNameScreen
+            AccessDestination.GENDER -> CustomProfileSetupScreen.SelectGenderScreen
+            AccessDestination.PHOTO -> CustomProfileSetupScreen.SetProfilePictureScreen
+            else -> return
+        }
+        updateState { it.copy(
+            session = access.session,
+            fullName = access.session?.fullName.orEmpty(),
+            username = access.session?.username.orEmpty(),
+            gender = Gender.entries.firstOrNull { gender -> gender.name == access.session?.gender }
+                ?: it.gender.takeIf { _ -> it.session?.id != null && it.session.id == access.session?.id }
+                ?: Gender.NONE,
+        ) }
+        showProfileStep(screen)
+    }
+
+    private fun showProfileStep(screen: CustomProfileSetupScreen) {
+        val step = CustomProfileSetupScreen.registrationOrder.indexOf(screen) + 1
+        updateState { it.copy(currentScreen = screen, currentProgressStep = step,
+            progress = step.toFloat() / CustomProfileSetupScreen.registrationOrder.size) }
+    }
+
+    fun navigateProfileBack() {
+        if (busy) return
+        val order = CustomProfileSetupScreen.registrationOrder
+        val index = order.indexOf(currentState.currentScreen)
+        if (index > 0) {
+            idleScreen()
+            showProfileStep(order[index - 1])
+        }
+    }
 
     // Navigation
 
@@ -434,12 +483,7 @@ class AuthViewModel(
         val screenStack = ArrayDeque<CustomProfileSetupScreen>()
         clearAuthScreenStack()
 
-        screenStack.addAll(
-            listOf(
-                CustomProfileSetupScreen.AddFullNameScreen,
-                CustomProfileSetupScreen.SetProfilePictureScreen
-            )
-        )
+        screenStack.addAll(CustomProfileSetupScreen.registrationOrder)
 
         updateState { it.copy(screenStack = screenStack) }
         updateCurrentScreen()
@@ -631,19 +675,7 @@ class AuthViewModel(
         }
     }
 
-    fun isGenderValid(): Boolean {
-        return if (currentState.gender == Gender.NONE) {
-            updateValidationError(
-                Validation(
-                    validationMessage = "Please choose your gender!",
-                    isGender = true
-                )
-            )
-            false
-        } else {
-            true
-        }
-    }
+    fun isGenderValid(): Boolean = currentState.gender != Gender.NONE
 
     fun isRelationshipValid(): Boolean {
         return if (currentState.relationshipSituation == RelationshipSituation.NOTHING) {

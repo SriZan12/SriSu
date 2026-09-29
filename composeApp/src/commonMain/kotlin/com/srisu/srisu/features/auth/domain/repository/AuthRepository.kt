@@ -14,6 +14,7 @@ class AuthRepository(
 
     suspend fun getProfile() = authApiService.getProfile()
     suspend fun updateName(name: String, username: String) = authApiService.updateName(name, username)
+    suspend fun updateGender(gender: String) = authApiService.updateGender(gender)
     suspend fun revoke(refresh: String) = authApiService.revoke(refresh)
 
     @Throws(Exception::class)

@@ -106,9 +106,9 @@ class IntroductionFlowTest {
         }
         val startup = StartupCoordinator(sessions, AuthRepository(AuthApiService(client, environment)), backgroundScope, preferences)
         runCurrent()
-        assertEquals(AccessDestination.PHOTO, destination(startup))
+        assertEquals(AccessDestination.GENDER, destination(startup))
         startup.enterGuest(); startup.showWelcome(); runCurrent()
-        assertEquals(AccessDestination.PHOTO, destination(startup))
+        assertEquals(AccessDestination.GENDER, destination(startup))
         assertEquals(IntroductionStep.PHONE, preferences.introductionStep())
         sessions.clearSession(); runCurrent()
         assertEquals(AccessDestination.PHONE, destination(startup)); client.close()

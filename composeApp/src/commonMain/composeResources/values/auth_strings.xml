@@ -16,6 +16,10 @@
     <string name="auth_add_photo">Add profile picture</string>
     <string name="auth_add_photo_action">Add photo</string>
     <string name="auth_next">Next</string>
+    <string name="auth_gender_title">How do you identify?</string>
+    <string name="auth_gender_subtitle">No boxes here — just helping us\npersonalise things for you.</string>
+    <string name="auth_gender_woman">Woman</string>
+    <string name="auth_gender_man">Man</string>
     <string name="auth_name_title">What do we call you?</string>
     <string name="auth_name_subtitle">Your name is yours — your username is\nyour vibe.</string>
     <string name="auth_full_name">Full name</string>

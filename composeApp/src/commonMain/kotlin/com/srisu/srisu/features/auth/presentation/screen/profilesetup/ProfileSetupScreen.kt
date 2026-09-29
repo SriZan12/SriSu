@@ -32,7 +32,7 @@ fun ProfileSetupScreen(
     val authUIState by authViewModel.authUiState.collectAsState()
 
     androidx.compose.ui.backhandler.BackHandler {
-        if (authUIState.currentScreen == CustomProfileSetupScreen.SetProfilePictureScreen) authViewModel.showNameStep()
+        authViewModel.navigateProfileBack()
     }
     ProfileScreenContent(
         navController = navController,
@@ -67,6 +67,7 @@ private fun ProfileScreenContent(
     ) { currentScreen ->
         when (currentScreen) {
             CustomProfileSetupScreen.SetProfilePictureScreen -> SetProfilePictureScreen(authViewModel)
+            CustomProfileSetupScreen.SelectGenderScreen -> SelectGenderScreen(authViewModel)
             else -> AddNameScreen(authViewModel, localFocusManager)
         }
     }

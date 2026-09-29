@@ -64,7 +64,7 @@ fun SetProfilePictureScreen(
         currentStep = authUiState.currentProgressStep,
         isPrimaryButtonEnabled = authUiState.baseUIState !is BaseUIState.Loading,
         onNavBack = {
-            authViewModel.showNameStep()
+            authViewModel.navigateProfileBack()
         },
         onClickPrimaryButton = {
             authViewModel.sendSetupProfileRequest()

@@ -68,6 +68,15 @@ class CoreLocalTransportIntegrationTest {
                 // must reach this disposable backend and decode its wire responses.
                 val profile = assertIs<NetworkAPIResult.Success<*>>(AuthApiService(client).getProfile().result)
                 assertNotNull(profile.response)
+                val auth = AuthApiService(client)
+                for (gender in listOf("FEMALE", "MALE")) {
+                    val saved = assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.auth.data.remote.response.ProfileResponse?>>(auth.updateGender(gender).result)
+                    assertEquals(gender, saved.response?.user?.gender)
+                    val restored = assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.auth.data.remote.response.ProfileResponse?>>(auth.getProfile().result)
+                    assertEquals(gender, restored.response?.user?.gender)
+                    assertEquals("complete", restored.response?.progress?.nextStep)
+                }
+                assertEquals(400, assertIs<NetworkAPIResult.Error<*>>(auth.updateGender("NONE").result).failure.status)
                 val suggestions = SuggestionApiService(client)
                 assertIs<NetworkAPIResult.Success<*>>(suggestions.getUserSuggestions(1, 20).result)
                 assertNull(assertIs<NetworkAPIResult.Success<*>>(suggestions.getUserPreferences().result).response)

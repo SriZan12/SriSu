@@ -9,7 +9,7 @@ import com.srisu.srisu.features.auth.data.local.datastore.IntroductionStep
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-enum class AccessDestination { ONBOARDING, SPACE, GUEST, PHONE, NAME, PHOTO, MAIN }
+enum class AccessDestination { ONBOARDING, SPACE, GUEST, PHONE, NAME, GENDER, PHOTO, MAIN }
 sealed interface StartupState {
     data object Loading : StartupState
     data class Available(val destination: AccessDestination, val stamp: SessionStamp, val session: Session?) : StartupState
@@ -112,7 +112,10 @@ class StartupCoordinator(
         val destination = when {
             progress.profileComplete && progress.nextStep == "complete" -> AccessDestination.MAIN
             !progress.profileComplete && progress.nextStep == "name" -> AccessDestination.NAME
-            !progress.profileComplete && progress.nextStep == "photo" -> AccessDestination.PHOTO
+            // Gender is a mobile onboarding step within the existing server photo
+            // phase. Keep the auth-1 wire contract and completed accounts compatible.
+            !progress.profileComplete && progress.nextStep == "photo" ->
+                if (user.gender in setOf("MALE", "FEMALE")) AccessDestination.PHOTO else AccessDestination.GENDER
             else -> error("Unsupported profile state")
         }
         // Existing Home supports both linked users and its unlinked Find Partner action.

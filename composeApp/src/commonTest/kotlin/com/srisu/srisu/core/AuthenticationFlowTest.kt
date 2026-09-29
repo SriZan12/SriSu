@@ -35,7 +35,7 @@ class AuthenticationFlowTest {
     private fun profile(step: String) = """{"data":{"user":{"id":1,"full_name":"Test User","username":"test","is_phone_verified":true,"is_profile_complete":${step == "complete"}},"progress":{"phone_verified":true,"profile_complete":${step == "complete"},"next_step":"$step","photo_skipped":${step == "complete"},"couple_id":null,"membership":"unlinked"}}}"""
 
     @Test fun bootstrapUsesServerProgressAndDeduplicates() = runTest {
-        for ((step, destination) in listOf("name" to AccessDestination.NAME, "photo" to AccessDestination.PHOTO, "complete" to AccessDestination.MAIN)) {
+        for ((step, destination) in listOf("name" to AccessDestination.NAME, "photo" to AccessDestination.GENDER, "complete" to AccessDestination.MAIN)) {
             var reads = 0
             val sessions = session()
             val client = HttpClientFactory.create(sessions, environment, engine { reads++; respond(profile(step), headers = headers) })

@@ -19,6 +19,8 @@ sealed class CustomProfileSetupScreen(val title: String) : Comparable<CustomProf
     }
 
     companion object {
+        val registrationOrder by lazy { listOf(AddFullNameScreen, SelectGenderScreen, SetProfilePictureScreen) }
+
         val screenOrder: ArrayDeque<CustomProfileSetupScreen> by lazy {
             ArrayDeque(
                 listOf(

@@ -59,6 +59,12 @@ class AuthApiService(private val httpClient: HttpClient, private val environment
         setBody(mapOf("full_name" to name, "username" to username))
     }
 
+    suspend fun updateGender(gender: String): ResultHandler<ProfileResponse?> = httpClient.safeRequest {
+        url("${environment.baseUrl}api/auth/setup-profile/")
+        method = HttpMethod.Patch
+        setBody(mapOf("gender" to gender))
+    }
+
     suspend fun revoke(refresh: String): ResultHandler<Unit?> = httpClient.safeRequest {
         url("${environment.baseUrl}api/auth/logout/")
         method = HttpMethod.Post
