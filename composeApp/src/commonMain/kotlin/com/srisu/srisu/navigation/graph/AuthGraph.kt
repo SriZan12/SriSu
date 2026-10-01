@@ -1,10 +1,9 @@
 package com.srisu.srisu.navigation.graph
 
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.presentation.screen.profilesetup.ProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.screen.authscreen.PhoneNumberScreen
 import com.srisu.srisu.features.auth.presentation.screen.authscreen.PhoneNumberVerificationScreen
@@ -24,19 +23,22 @@ sealed class AuthNavigation : Route {
     data object ProfileSetUp : AuthNavigation()
 }
 
-fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthViewModel) {
+fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthViewModel, onLeaveAuthentication: () -> Unit = {}) {
     composable<AuthNavigation.PhoneNumberScreen> {
+        val state by authViewModel.authUiState.collectAsState()
+        LaunchedEffect(state.challengeId) {
+            if (state.challengeId != null) navController.navigate(AuthNavigation.PhoneNumberVerificationScreen) { launchSingleTop = true }
+        }
         PhoneNumberScreen(
             authViewModel = authViewModel,
-            onNavToOTPScreen = {
-                navController.navigate(AuthNavigation.PhoneNumberVerificationScreen)
-            }
+            onBack = { authViewModel.abandonChallenge(); onLeaveAuthentication() }
         )
     }
 
     composable<AuthNavigation.PhoneNumberVerificationScreen> {
-        LaunchedEffect(Unit) {
-            AppLogger.log("NAVIGATING TO THE PHONE NUMBER VERIFICATION SCREEN")
+        val state by authViewModel.authUiState.collectAsState()
+        LaunchedEffect(state.challengeId) {
+            if (state.challengeId == null) navController.popBackStack()
         }
         PhoneNumberVerificationScreen(
             navController = navController,
@@ -45,7 +47,7 @@ fun NavGraphBuilder.authGraph(navController: NavController, authViewModel: AuthV
     }
 
     composable<AuthNavigation.ProfileSetUp> { _ ->
-        ProfileSetupScreen(navController = navController)
+        ProfileSetupScreen(navController = navController, authViewModel = authViewModel)
     }
 
 }

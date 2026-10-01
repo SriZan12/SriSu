@@ -70,12 +70,12 @@ private fun LoveRequestContent(
                 title = coupleConnectionUiState.currentTab?.title ?: "Connection"
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                    color = MaterialTheme.colorScheme.background
                 )
         ) {
 

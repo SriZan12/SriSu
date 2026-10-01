@@ -1,0 +1,34 @@
+<resources>
+    <string name="auth_back">Navigate back icon</string>
+    <string name="auth_verify">Verify</string>
+    <string name="auth_check_messages">Check your messages</string>
+    <string name="auth_send_code">Send Code</string>
+    <string name="auth_confirm_phone">Confirm your Phone Number</string>
+    <string name="auth_confirm">Yes, looks good</string>
+    <string name="auth_edit_phone">Edit Number</string>
+    <string name="auth_brand">SriSu</string>
+    <string name="auth_devotion">D E V O T I O N</string>
+    <string name="auth_phone_title">What&apos;s your number?</string>
+    <string name="auth_phone_subtitle">We&apos;ll send you a quick code — no\npasswords, no hassle.</string>
+    <string name="auth_photo_title">Put a face to the\nname</string>
+    <string name="auth_photo_subtitle">A photo helps people feel closer before\nthey even say hello.</string>
+    <string name="auth_photo_preview">Selected profile picture</string>
+    <string name="auth_add_photo">Add profile picture</string>
+    <string name="auth_add_photo_action">Add photo</string>
+    <string name="auth_next">Next</string>
+    <string name="auth_gender_title">How do you identify?</string>
+    <string name="auth_gender_subtitle">No boxes here — just helping us\npersonalise things for you.</string>
+    <string name="auth_gender_woman">Woman</string>
+    <string name="auth_gender_man">Man</string>
+    <string name="auth_name_title">What do we call you?</string>
+    <string name="auth_name_subtitle">Your name is yours — your username is\nyour vibe.</string>
+    <string name="auth_full_name">Full name</string>
+    <string name="auth_name_placeholder">e.g. Thomas Shelby</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_username_placeholder">@ tommy</string>
+    <string name="auth_skip_photo">Skip for now</string>
+    <string name="auth_complete">Complete</string>
+    <string name="auth_retry">Retry</string>
+    <string name="auth_otp_destination">We sent a 6-digit code to %1$s\n%2$s</string>
+    <string name="auth_resend_countdown">Resend code in %1$s</string>
+</resources>

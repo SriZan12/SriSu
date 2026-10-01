@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.pill
+import com.srisu.srisu.theme.transparent
+import com.srisu.srisu.theme.onMedia
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -25,14 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.srisu.srisu.components.RoundedPrimaryButtonCompo
 import com.srisu.srisu.utils.ZodiacUtils
 import org.jetbrains.compose.resources.painterResource
@@ -48,7 +48,7 @@ fun ZodiacRevealScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.transparent,
         bottomBar = {
             RoundedPrimaryButtonCompo(
                 modifier = modifier,
@@ -76,18 +76,18 @@ fun ZodiacRevealScreen(
                     .statusBarsPadding()
                     .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = MaterialTheme.spacing.large),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
 
                 Text(
-                    text = "Y O U R  Z O D I A C  S I G N",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    text = "YOUR ZODIAC SIGN",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onMedia,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 4.sp,
+
                     textAlign = TextAlign.Center
                 )
 
@@ -101,8 +101,7 @@ fun ZodiacRevealScreen(
                 Text(
                     text = zodiacSign.name,
                     style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    fontFamily = FontFamily.Serif,
+                    color = MaterialTheme.colorScheme.onMedia,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
@@ -111,16 +110,16 @@ fun ZodiacRevealScreen(
                 HorizontalDivider(
                     modifier = Modifier.width(300.dp),
                     thickness = 1.dp,
-                    color = Color.White.copy(alpha = 0.24f)
+                    color = MaterialTheme.colorScheme.onMedia.copy(alpha = 0.24f)
                 )
 
 
                 Text(
                     text = zodiacSign.description,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    color = MaterialTheme.colorScheme.onMedia,
                     fontWeight = FontWeight.SemiBold,
-                    lineHeight = 34.sp,
+
                     textAlign = TextAlign.Center
                 )
 
@@ -142,18 +141,18 @@ private fun ZodiacTraitChip(
 ) {
     Surface(
         modifier = modifier.height(50.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = Color.White.copy(alpha = 0.08f),
+        shape = MaterialTheme.shapes.pill,
+        color = MaterialTheme.colorScheme.onMedia.copy(alpha = 0.08f),
         border = BorderStroke(
             width = 1.dp,
-            color = Color.White.copy(alpha = 0.25f)
+            color = MaterialTheme.colorScheme.onMedia.copy(alpha = 0.25f)
         )
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp)) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = MaterialTheme.spacing.tiny)) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                color = MaterialTheme.colorScheme.onMedia,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Visible,
@@ -171,7 +170,7 @@ private fun ZodiacTraitRow(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(
-            space = 12.dp,
+            space = MaterialTheme.spacing.compact,
             alignment = Alignment.CenterHorizontally
         ),
         verticalAlignment = Alignment.CenterVertically

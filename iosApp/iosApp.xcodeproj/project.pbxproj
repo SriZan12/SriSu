@@ -303,7 +303,7 @@
 					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_FILE = iosApp/Info.Debug.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Srisu needs access to your camera to take photos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Your app needs permission to save photos to your library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Srisu needs access to your photos to upload and share pictures.";

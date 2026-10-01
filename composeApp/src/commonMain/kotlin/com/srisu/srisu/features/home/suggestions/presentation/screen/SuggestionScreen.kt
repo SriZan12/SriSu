@@ -1,5 +1,8 @@
 package com.srisu.srisu.features.home.suggestions.presentation.screen
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.field
+import com.srisu.srisu.theme.onMedia
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -26,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -46,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -92,7 +93,7 @@ fun SuggestionScreen(
     )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -185,7 +186,7 @@ private fun SuggestionTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -229,11 +230,11 @@ private fun SuggestionContent(
 
         else -> {
             LazyVerticalStaggeredGrid(
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.compact),
                 columns = StaggeredGridCells.Fixed(2),
-                contentPadding = PaddingValues(8.dp),
+                contentPadding = PaddingValues(MaterialTheme.spacing.small),
                 verticalItemSpacing = 12.dp,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
             ) {
                 items(
                     count = suggestions.itemCount,
@@ -273,11 +274,11 @@ private fun SuggestionContent(
 @Composable
 private fun SuggestionShimmerGrid() {
     LazyVerticalStaggeredGrid(
-        modifier = Modifier.padding(horizontal = 12.dp),
+        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.compact),
         columns = StaggeredGridCells.Fixed(2),
-        contentPadding = PaddingValues(8.dp),
+        contentPadding = PaddingValues(MaterialTheme.spacing.small),
         verticalItemSpacing = 12.dp,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
     ) {
         items(10) { index ->
             val itemHeight = if (index % 2 == 0) 188.dp else 252.dp
@@ -312,7 +313,7 @@ private fun SuggestionCard(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.small,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = { onClick(suggestionItem) },
     ) {
@@ -335,7 +336,7 @@ private fun SuggestionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomStart)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
                 ) {
                     Text(
                         modifier = Modifier
@@ -346,7 +347,7 @@ private fun SuggestionCard(
                             ),
                         text = displayName,
                         textAlign = TextAlign.Start,
-                        style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                        style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onMedia),
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                     )
@@ -375,7 +376,7 @@ private fun SuggestionCard(
                                     animatedVisibilityScope = animatedContentScope,
                                 ),
                                 text = age.toString(),
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onMedia),
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                             )
@@ -396,7 +397,7 @@ fun SuggestionCardShimmerCompo(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.small,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -411,13 +412,13 @@ fun SuggestionCardShimmerCompo(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomStart)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.compact),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.5f)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(brush = brush)
                 )
 
@@ -440,7 +441,7 @@ fun SuggestionCardShimmerCompo(
                         modifier = Modifier
                             .width(40.dp)
                             .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(brush = brush)
                     )
                 }
@@ -452,10 +453,10 @@ fun SuggestionCardShimmerCompo(
 @Composable
 private fun rememberSuggestionShimmerBrush(): Brush {
     val shimmerColors = listOf(
-        Color.White.copy(alpha = 0.7f),
-        Color.LightGray.copy(alpha = 0.7f),
-        Color.White.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.7f),
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
     )
 
     val transition = rememberInfiniteTransition()
@@ -485,13 +486,13 @@ private fun NoSuggestionComp(
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
         ) {
             Text(
                 text = "No Suggestions",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Image(
@@ -506,8 +507,8 @@ private fun NoSuggestionComp(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.primary,
                 ),
-                contentPadding = PaddingValues(vertical = 4.dp, horizontal = 24.dp),
-                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(vertical = MaterialTheme.spacing.tiny, horizontal = MaterialTheme.spacing.large),
+                shape = MaterialTheme.shapes.field,
             ) {
                 Text(
                     text = "Retry",

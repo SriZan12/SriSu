@@ -77,6 +77,9 @@ data class ChatMessage(
     @SerialName("timestamp")
     val timestamp: String? = null,
 
+    @SerialName("profile_action")
+    val profileAction: com.srisu.srisu.features.coupleprofile.data.ProfileChatAction? = null,
+
     // Local-only UI fields
     val uploadingPhotos: List<UploadingPhoto> = emptyList(),
     val isLocalOnly: Boolean = false,

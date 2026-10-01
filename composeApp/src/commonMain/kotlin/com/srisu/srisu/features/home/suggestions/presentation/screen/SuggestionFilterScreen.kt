@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.home.suggestions.presentation.screen
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.field
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -43,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -163,7 +163,7 @@ private fun FilterSuggestionScaffold(
     onFilterApplied: () -> Unit,
 ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             FilterSuggestionTopBar(
                 onNavigateBack = onNavigateBack,
@@ -174,7 +174,7 @@ private fun FilterSuggestionScaffold(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(12.dp),
+                    .padding(MaterialTheme.spacing.compact),
                 label = "Apply Filter",
                 onClick = {
                     if (suggestionUIStates.userPreferences == null) {
@@ -232,7 +232,7 @@ private fun FilterSuggestionTopBar(
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            containerColor = MaterialTheme.colorScheme.background,
         ),
         title = {
             Text(
@@ -271,13 +271,13 @@ private fun FilterSuggestionContent(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.small,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 14.dp, vertical = MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
         ) {
             AgeFilterSection(
                 onClearFilter = onClearFilterClicked,
@@ -354,7 +354,7 @@ fun AgeFilterSection(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraLarge),
         ) {
             AgeFilterDropdownCard(
                 modifier = Modifier.weight(1f),
@@ -407,18 +407,18 @@ fun AgeFilterDropdownCard(
             textStyle = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.field,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color.Black,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
             ),
         )
 
         ExposedDropdownMenu(
             modifier = Modifier.height(300.dp),
             expanded = expanded,
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.field,
             onDismissRequest = { expanded = false },
         ) {
             ageOptions.forEach { age ->
@@ -510,21 +510,21 @@ private fun ZodiacFilterSection(
 
         Card(
             modifier = modifier,
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.field,
             onClick = { expanded = true },
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            border = BorderStroke(1.dp, Color.Gray),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                    .padding(vertical = 14.dp, horizontal = MaterialTheme.spacing.compact),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 ) {
                     Text(
                         text = selectedZodiac?.name ?: "Select Zodiac Sign",

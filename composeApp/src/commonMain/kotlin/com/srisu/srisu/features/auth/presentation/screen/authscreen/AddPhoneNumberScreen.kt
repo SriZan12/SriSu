@@ -1,7 +1,14 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.srisu.srisu.features.auth.presentation.screen.authscreen
 
+import org.jetbrains.compose.resources.stringResource
+import srisu.composeapp.generated.resources.*
+
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,13 +40,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.CommonBottomSheetCompo
 import com.srisu.srisu.components.CountrySelectionBottomSheet
@@ -51,18 +56,18 @@ import com.srisu.srisu.components.PhoneNumberCompo
 import com.srisu.srisu.components.PrimaryButtonCompo
 import com.srisu.srisu.components.PrimaryOutlinedButtonCompo
 import com.srisu.srisu.components.RoundedPrimaryButtonCompo
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.features.auth.domain.isInternationalPhoneValid
 import com.srisu.srisu.features.auth.presentation.components.ScreenTopIcon
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 import com.srisu.srisu.utils.isInternetAvailable
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PhoneNumberScreen(
     authViewModel: AuthViewModel,
-    onNavToOTPScreen: () -> Unit
+    onBack: () -> Unit = {},
 ) {
+    BackHandler(onBack = onBack)
     val authUIState by authViewModel.authUiState.collectAsState()
     var showCountryList by rememberSaveable {
         mutableStateOf(false)
@@ -73,11 +78,12 @@ fun PhoneNumberScreen(
 
     PhoneNumberScreenContent(
         modifier = Modifier,
+        onBack = onBack,
         countryCode = authUIState.countryCode,
         phoneNumber = authUIState.phoneNumber,
         countryPrefix = authUIState.countryPrefix,
         onPhoneNumberChange = {
-            authViewModel.updatePhoneNumber(phoneNumber = it, showValidationMessage = {})
+            authViewModel.updatePhoneNumber(phoneNumber = it)
         },
         onCountryClick = {
             showCountryList = true
@@ -116,10 +122,7 @@ fun PhoneNumberScreen(
             showPhoneNumberConfirmation = false
 
             if (authViewModel.isPhoneNumberValid()) {
-                authViewModel.requestOTP {
-                    onNavToOTPScreen()
-                }
-                onNavToOTPScreen()
+                authViewModel.requestOTP()
             }
 
         },
@@ -194,18 +197,19 @@ private fun PhoneNumberScreenContent(
     onPhoneNumberChange: (String) -> Unit,
     onCountryClick: () -> Unit,
     onSendCodeClick: () -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val isButtonEnabled = phoneNumber.length >= 10
+    val isButtonEnabled = isInternationalPhoneValid(countryPrefix, phoneNumber)
     val localFocusManager = LocalFocusManager.current
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.imePadding().fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             RoundedPrimaryButtonCompo(
                 modifier = Modifier,
-                title = "Send Code",
+                title = stringResource(Res.string.auth_send_code),
                 enabled = isButtonEnabled,
                 onClick = onSendCodeClick
             )
@@ -223,10 +227,11 @@ private fun PhoneNumberScreenContent(
                     })
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = MaterialTheme.spacing.extraLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraLarge)
         ) {
+
             SriSuHeader()
 
             ScreenTopIcon(
@@ -262,13 +267,15 @@ private fun PhoneNumberConfirmationBottomSheet(
         onDismiss()
     }, show = showPhoneNumberConfirmation) {
 
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium)
+        ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Confirm your Phone Number",
+                text = stringResource(Res.string.auth_confirm_phone),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Medium,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 ),
                 textAlign = TextAlign.Center
             )
@@ -280,7 +287,7 @@ private fun PhoneNumberConfirmationBottomSheet(
             val highlightedText = authUIState.phoneNumber
 
             Box(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small),
                 contentAlignment = Alignment.Center
             ) {
                 HighlightedTextComponent(
@@ -292,8 +299,11 @@ private fun PhoneNumberConfirmationBottomSheet(
 
             PrimaryButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(intrinsicSize = IntrinsicSize.Max)
-                    .padding(top = 24.dp, bottom = 12.dp),
-                label = "Yes, looks good"
+                    .padding(
+                        top = MaterialTheme.spacing.large,
+                        bottom = MaterialTheme.spacing.compact
+                    ),
+                label = stringResource(Res.string.auth_confirm)
             ) {
                 onConfirmed()
             }
@@ -301,8 +311,8 @@ private fun PhoneNumberConfirmationBottomSheet(
 
             PrimaryOutlinedButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(intrinsicSize = IntrinsicSize.Max)
-                    .padding(bottom = 24.dp),
-                label = "Edit Number"
+                    .padding(bottom = MaterialTheme.spacing.large),
+                label = stringResource(Res.string.auth_edit_phone)
             ) {
                 onDeclined()
             }
@@ -319,10 +329,10 @@ fun SriSuHeader() {
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "SriSu",
+            text = stringResource(Res.string.auth_brand),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold
         )
 
@@ -337,7 +347,7 @@ fun SriSuHeader() {
             )
 
             Text(
-                text = "D E V O T I O N",
+                text = stringResource(Res.string.auth_devotion),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.tertiary,
                 fontWeight = FontWeight.SemiBold
@@ -356,19 +366,19 @@ fun SriSuHeader() {
 fun PhoneNumberTitle() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)
     ) {
         Text(
-            text = "What's your number?",
+            text = stringResource(Res.string.auth_phone_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
 
         Text(
-            text = "We'll send you a quick code — no\npasswords, no hassle.",
+            text = stringResource(Res.string.auth_phone_subtitle),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

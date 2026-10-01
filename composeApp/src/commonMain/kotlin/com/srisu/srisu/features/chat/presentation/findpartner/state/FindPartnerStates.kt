@@ -1,27 +1,42 @@
 package com.srisu.srisu.features.chat.presentation.findpartner.state
 
-import androidx.compose.runtime.Stable
-import app.cash.paging.PagingData
-import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
-import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
-import com.srisu.srisu.features.home.connection.data.remote.response.HaveCoupleConnectionResponse
 import com.srisu.srisu.utils.CountryModel
-import kotlinx.coroutines.flow.Flow
 
-@Stable
+enum class PartnerSearchStatus { Idle, Loading, Found, NotFound, Error }
+
+data class SentPartnerInvitation(
+    val requestId: Long? = null,
+    val name: String,
+    val phoneNumber: String,
+    val photoUrl: String? = null,
+)
+
+/** Search, outgoing invitation and received-request mutations load independently. */
 data class FindPartnerState(
     val phoneNumber: String = "",
     val countryList: List<CountryModel> = emptyList(),
     val countryCode: String = "NP",
     val countryPrefix: String = "+977",
-    val isPhoneNumberInvalid: Boolean = false,
     val validationErrorMsg: String = "",
-    val baseUIState: BaseUIState = BaseUIState.Idle,
-    val showPartnerProfile: Boolean = false,
+    val searchStatus: PartnerSearchStatus = PartnerSearchStatus.Idle,
+    val searchError: String? = null,
     val partnerResponse: FindYourPartnerResponse? = null,
-    val haveCoupleConnectionRequestedResponse: HaveCoupleConnectionResponse? = null,
+    val senderName: String = "You",
+    val senderPhotoUrl: String? = null,
+    val acceptedPartnerPhotoUrl: String? = null,
+    val connectedSince: String? = null,
     val senderPhoneNumber: String = "",
+    val isSendingInvitation: Boolean = false,
+    val invitationError: String? = null,
+    val sentInvitation: SentPartnerInvitation? = null,
+    val navigateToInviteSent: Boolean = false,
+    val isCheckingInvitation: Boolean = false,
+    val invitationStatusChecked: Boolean = false,
+    val invitationStatusError: String? = null,
+    val isCancellingInvitation: Boolean = false,
     val handledRequestIds: Set<Long> = emptySet(),
-    var loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>>? = null
+    val updatingRequestIds: Set<Long> = emptySet(),
+    val requestErrors: Map<Long, String> = emptyMap(),
+    val acceptedPartnerName: String? = null,
 )

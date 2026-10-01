@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -41,11 +42,19 @@ class EditProfileViewModel(
 
     val editProfileUIState = _editProfileUIState.asStateFlow()
 
+    private val catalogue = com.srisu.srisu.features.home.profile.presentation.state.InterestCatalogueStateHolder(viewModelScope) { force -> profileRepository.loadCatalogue(force) }
+    val catalogueState = catalogue.state
+    fun refreshCatalogue() = catalogue.refresh(force = true)
+
     init {
+        catalogue.refresh()
+        viewModelScope.launch { catalogue.state.collect { value ->
+            _editProfileUIState.update { it.copy(interestList = value.items) }
+        } }
         viewModelScope.launch {
             val session = loadSession()
             val countries = loadCountries()
-            val interests = loadInterest()
+            val interests = catalogue.state.value.items
             val profile = loadProfile()
 
             val mergedState = buildInitialState(
@@ -55,7 +64,7 @@ class EditProfileViewModel(
                 interests = interests
             )
 
-            _editProfileUIState.value = mergedState
+            _editProfileUIState.value = mergedState.copy(interestList = catalogue.state.value.items)
 
         }
     }
@@ -65,6 +74,7 @@ class EditProfileViewModel(
         return try {
             sessionStorage.getSession(SESSION_KEY)
                 ?.let { Json.decodeFromString<Session>(it) }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
         } catch (_: Exception) {
             null
         }
@@ -323,6 +333,7 @@ class EditProfileViewModel(
                 }
 
             result
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
         } catch (e: Exception) {
             showErrorMessage("Exception", e.message)
             null
@@ -390,7 +401,8 @@ class EditProfileViewModel(
                     setCities(cities = cities.data)
                 }
                 idleScreen()
-            } catch (exception: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+        } catch (exception: Exception) {
                 showErrorMessage(message = exception.message, errorType = "ERROR")
             }
 
@@ -398,27 +410,9 @@ class EditProfileViewModel(
         }
     }
 
-    private suspend fun loadInterest(): List<InterestResponse.Interest?>? {
-        return try {
-            var result: List<InterestResponse.Interest?>? = null
-
-            profileRepository.getInterestList()
-                .onSuccess { interestResponse, _ ->
-                    result = interestResponse?.interests
-                }
-                .onError { error, errorType ->
-                    showErrorMessage(errorType.name, error)
-                }
-
-            result
-        } catch (e: Exception) {
-            showErrorMessage("Exception", e.message)
-            null
-        }
-    }
-
     fun updateProfile() {
         showLoading()
+        val stamp = (sessionStorage as? com.srisu.srisu.core.session.SessionCoordinator)?.stamp()
         viewModelScope.launch {
             try {
                 val dto = buildProfileUpdateDTO()
@@ -432,6 +426,7 @@ class EditProfileViewModel(
                     gallery = gallery
                 ).onSuccess { profileResponse, _ ->
                     AppLogger.log("Profile Updated Successfully")
+                    stamp?.let { (sessionStorage as com.srisu.srisu.core.session.SessionCoordinator).ensureCurrent(it) }
                     updateProfileResponse(profileResponse = profileResponse)
                     updateSessionWithCredentials(
                         access = _editProfileUIState.value.session?.access,
@@ -442,7 +437,8 @@ class EditProfileViewModel(
                     AppLogger.log("Profile Update Error = $error")
                     showErrorMessage(message = error, errorType = "Profile Update Error")
                 }
-            } catch (exception: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+        } catch (exception: Exception) {
                 AppLogger.log("Exception = ${exception.message}")
                 showErrorMessage(message = exception.message, errorType = "Exception")
             }
@@ -507,7 +503,8 @@ class EditProfileViewModel(
                 }
                 updateSession(session)
 
-            } catch (exception: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+        } catch (exception: Exception) {
                 AppLogger.log("Exception = ${exception.message}")
             }
         }

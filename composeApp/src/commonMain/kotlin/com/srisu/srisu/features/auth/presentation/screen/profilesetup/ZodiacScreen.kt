@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -19,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,7 +44,7 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
                 val zodiacSign = authUIStates.zodiacSign
 
                 zodiacSign?.let {
-                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium)) {
 
                         Image(
                             painter = painterResource(resource = it.logo),
@@ -55,7 +54,7 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
 
                         Text(
                             text = it.title,
-                            modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.extraLarge),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.primary
@@ -63,21 +62,21 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
 
                         Text(
                             text = "Did you know?",
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             ),
                         )
 
                         Text(
                             text = it.description,
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.tiny),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             ),
                         )
@@ -86,7 +85,7 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
                 }
 
                 PrimaryButtonCompo(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.large)
                         .align(Alignment.BottomCenter),
                     label = "Continue",
                     onClick = {
@@ -102,22 +101,23 @@ fun ZodiacScreen(authViewModel: AuthViewModel) {
 fun GlowingRedIcon(
 
 ) {
-    val primaryLight = Color(0xFFDE6F79)
-    val darker = Color(0xFFE45A68)
+    val primaryLight = MaterialTheme.colorScheme.secondaryContainer
+    val darker = MaterialTheme.colorScheme.tertiaryContainer
+    val glowShape = MaterialTheme.shapes.medium
 
     Box(
         modifier = Modifier
             .size(64.dp)
             .graphicsLayer {
                 shadowElevation = 24f
-                shape = RoundedCornerShape(16.dp)
+                shape = glowShape
                 clip = true
             }
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(primaryLight, darker)
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = glowShape
             ),
         contentAlignment = Alignment.Center
     ) {

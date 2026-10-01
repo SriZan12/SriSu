@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -36,10 +37,14 @@ class ChatViewModel(
     private val repository: ChatRepository,
 ) : ViewModel() {
 
+    val connectionState = repository.connectionState
+    fun retryConnection() = repository.retry()
+
     private val _chatState = MutableStateFlow(ChatState())
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
     private var typingJob: Job? = null
+    private var sendTextJob: Job? = null
     private val typingTimeoutMillis = 1200L
     private var isCurrentlyTyping = false
 
@@ -57,8 +62,7 @@ class ChatViewModel(
     override fun onCleared() {
         super.onCleared()
         typingJob?.cancel()
-        repository.clearActiveChatRoom()
-        repository.disconnect("ChatViewModel cleared")
+        // Application/session lifetime owns the shared repository and socket.
     }
 
     // -------------------------------------------------
@@ -69,7 +73,7 @@ class ChatViewModel(
         viewModelScope.launch {
             repository.messages.collect { messages ->
                 _chatState.update { state ->
-                    state.copy(chatMessages = messages)
+                    state.copy(chatMessages = messages.filter { it.chatRoomId == state.chatRoomData?.id })
                 }
             }
         }
@@ -78,15 +82,19 @@ class ChatViewModel(
     private fun observeChatRooms() {
         viewModelScope.launch {
 
-            repository.chatRoomsList.collect { chatRooms ->
+            combine(repository.chatRoomsList, repository.activeChatRoomId) { rooms, active -> rooms to active }.collect { (chatRooms, activeRoomId) ->
 //                val selectedRoomId = chatState.value.chatRoomData?.id
-                val selectedRoom = chatRooms.firstOrNull()
+                val selectedRoom = if (activeRoomId != null) {
+                    chatRooms.firstOrNull { it.id == activeRoomId }
+                        ?: chatState.value.chatRoomData?.takeIf { it.id == activeRoomId }
+                } else chatRooms.firstOrNull()
                 val myUserId = chatState.value.session?.id
 
                 _chatState.update { state ->
                     state.copy(
                         chatRoomList = chatRooms,
                         chatRoomData = selectedRoom,
+                        chatMessages = state.chatMessages.filter { it.chatRoomId == selectedRoom?.id },
                         isTyping = isSomeoneElseTyping(
                             room = selectedRoom ?: state.chatRoomData,
                             myUserId = myUserId,
@@ -151,7 +159,8 @@ class ChatViewModel(
                     repository.markDelivered(chatRoomId = roomId)
                     repository.markRead(chatRoomId = roomId)
                 }
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 withContext(Dispatchers.Main) {
                     showErrorMessage(
                         errorType = "Error",
@@ -259,7 +268,8 @@ class ChatViewModel(
                     chatRoomId = roomId,
                     isTyping = isTyping,
                 )
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
                     message = "Failed to update typing state",
@@ -328,9 +338,9 @@ class ChatViewModel(
         val roomId = chatState.value.chatRoomData?.id ?: return
         val text = chatState.value.messageInput.text.trim()
 
-        if (text.isBlank()) return
+        if (text.isBlank() || sendTextJob?.isActive == true) return
 
-        viewModelScope.launch {
+        sendTextJob = viewModelScope.launch {
             try {
                 repository.sendMessage(
                     chatRoomId = roomId,
@@ -339,12 +349,20 @@ class ChatViewModel(
                     replyToId = chatState.value.replyMessage.message?.id,
                 )
 
-                onMessageInputChanged(TextFieldValue())
-                setReplyMessage(null, false)
-            } catch (_: Exception) {
+                if (chatState.value.chatRoomData?.id == roomId && chatState.value.messageInput.text.trim() == text) {
+                    onMessageInputChanged(TextFieldValue())
+                    setReplyMessage(null, false)
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -366,10 +384,16 @@ class ChatViewModel(
                 onMessageInputChanged(TextFieldValue())
                 updateIsEditMessage(false)
                 dismissActions()
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -388,10 +412,16 @@ class ChatViewModel(
                     deleteOption = deleteOption,
                 )
                 dismissActions()
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -406,10 +436,16 @@ class ChatViewModel(
                     messageId = safeMessageId,
                     reaction = reaction,
                 )
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -421,10 +457,16 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 repository.markRead(roomId)
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -436,10 +478,16 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 repository.markDelivered(roomId)
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -516,11 +564,17 @@ class ChatViewModel(
                             message = error,
                         )
                     }
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 updateIsUploadingPhoto(false)
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }
@@ -544,11 +598,17 @@ class ChatViewModel(
                 onMessageInputChanged(TextFieldValue())
                 setReplyMessage(null, false)
                 updateIsUploadingPhoto(false)
-            } catch (_: Exception) {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (failure: Exception) {
                 updateIsUploadingPhoto(false)
                 showErrorMessage(
                     errorType = "Error",
-                    message = "Something went wrong",
+                    message = when (failure) {
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatAcknowledgmentUnknown,
+                        is com.srisu.srisu.features.chat.data.remote.websocket.ChatCommandFailure,
+                        is com.srisu.srisu.core.data.remote.SocketUnavailable -> failure.message
+                        else -> "Unable to complete this action."
+                    },
                 )
             }
         }

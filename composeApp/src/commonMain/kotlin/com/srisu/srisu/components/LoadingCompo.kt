@@ -1,5 +1,6 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -37,7 +38,7 @@ fun LoadingScrim(
             contentAlignment = Alignment.Center
         ) {
             TwoDotsLoadingAnimation(
-                firstDotColor = Color.White
+                firstDotColor = MaterialTheme.colorScheme.onPrimary
             )
         }
     }
@@ -71,7 +72,7 @@ fun TwoDotsLoadingAnimation(
     )
 
     Row(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier.padding(MaterialTheme.spacing.medium),
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Circle(scale = scale1, color = firstDotColor)

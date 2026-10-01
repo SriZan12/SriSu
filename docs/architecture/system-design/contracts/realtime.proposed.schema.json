@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SriSu proposed v2 socket subset",
+  "$comment": "PROPOSED 0.1. Known C1 events only; production decoder must handle unknown additive event types safely.",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["version", "type", "request_id", "payload"],
+      "properties": {
+        "version": {"const": 2},
+        "type": {"const": "message.send"},
+        "request_id": {"type": "string", "minLength": 1},
+        "payload": {"$ref": "chat.proposed.schema.json#/$defs/SendCommand"}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["version", "type", "request_id", "payload", "server_time"],
+      "properties": {
+        "version": {"const": 2},
+        "type": {"const": "message.ack"},
+        "request_id": {"type": "string", "minLength": 1},
+        "payload": {"$ref": "chat.proposed.schema.json#/$defs/SendResult"},
+        "server_time": {"type": "string", "format": "date-time"}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["version", "type", "payload", "server_time"],
+      "properties": {
+        "version": {"const": 2},
+        "type": {"const": "message.changed"},
+        "payload": {"$ref": "chat.proposed.schema.json#/$defs/MessageChange"},
+        "server_time": {"type": "string", "format": "date-time"}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["version", "type", "payload"],
+      "properties": {
+        "version": {"const": 2},
+        "type": {"const": "command.error"},
+        "payload": {"$ref": "chat.proposed.schema.json#/$defs/ErrorEnvelope"}
+      }
+    }
+  ]
+}

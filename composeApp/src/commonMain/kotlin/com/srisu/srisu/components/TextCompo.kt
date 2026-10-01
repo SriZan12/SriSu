@@ -1,5 +1,6 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -27,8 +27,8 @@ fun StyledAnnotatedText(
     modifier: Modifier = Modifier,
     title: String,
     subTitle: String,
-    titleStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = Color.Black),
-    subTitleStyle: TextStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.Black)
+    titleStyle: TextStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+    subTitleStyle: TextStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
 ) {
     Text(
         text = buildAnnotatedString {
@@ -48,7 +48,7 @@ fun StyledAnnotatedText(
 fun HighlightedTextComponent(
     fullText: String,
     highlightedText: String,
-    textStyle: TextStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.Black),
+    textStyle: TextStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
     highlightedTextStyle: TextStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary)
 ) {
 
@@ -116,7 +116,7 @@ fun ReadMoreText(
 
             Text(
                 text = if (expandedState) "Read Less" else "Read More...",
-                modifier = Modifier.padding(top = 4.dp).wrapContentWidth().clickable(
+                modifier = Modifier.padding(top = MaterialTheme.spacing.tiny).wrapContentWidth().clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {

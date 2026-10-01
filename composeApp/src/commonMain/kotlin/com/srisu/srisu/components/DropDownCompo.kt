@@ -1,5 +1,7 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.field
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -50,13 +51,13 @@ fun DropDownIcon(
     onClick: () -> Unit
 ) {
     IconButton(
-        modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
+        modifier = Modifier.size(24.dp).clip(shape = MaterialTheme.shapes.small),
         onClick = {
             onClick()
         },
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceDim,
-            contentColor = Color.Black
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
     ) {
 
@@ -86,7 +87,7 @@ fun CountryCodeDropDown(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = BorderStroke(
             width = 1.dp,
@@ -147,7 +148,7 @@ fun CountryDropDown(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.field,
         onClick = {
             onShowCountryBottomSheetChange()
         },
@@ -156,17 +157,17 @@ fun CountryDropDown(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(
-            1.dp, color = Color.Gray
+            1.dp, color = MaterialTheme.colorScheme.outlineVariant
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = MaterialTheme.spacing.compact),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier,
                 verticalAlignment = CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
                 if (visibleLeadingIcon) {
                     if (flag == null) {
@@ -229,19 +230,19 @@ fun CityDropDown(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.field,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         onClick = {
             onExpandedChange()
         },
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        border = BorderStroke(1.dp, color = Color.Gray)
+        border = BorderStroke(1.dp, color = MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                    .padding(vertical = 14.dp, horizontal = MaterialTheme.spacing.compact),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = CenterVertically
             ) {

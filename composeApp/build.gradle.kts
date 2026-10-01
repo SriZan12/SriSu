@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -7,7 +8,48 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     kotlin("plugin.serialization")
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
+
+val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.73:8000/")
+val apiEnvironment = providers.gradleProperty("srisu.environment").orElse("development")
+val environmentSources = layout.buildDirectory.dir("generated/srisuEnvironment/commonMain")
+abstract class GenerateEnvironment : DefaultTask() {
+    @get:Input abstract val baseUrl: Property<String>
+    @get:Input abstract val environment: Property<String>
+    @get:OutputDirectory abstract val destination: DirectoryProperty
+    @TaskAction fun generate() {
+        val url = URI(baseUrl.get())
+        require(url.scheme in listOf("http", "https") && url.host != null && url.userInfo == null && url.query == null && url.fragment == null)
+        require(url.path == "/") { "srisu.apiBaseUrl must be an origin ending in /" }
+        require(environment.get() in listOf("development", "staging", "production"))
+        require(environment.get() == "development" || url.scheme == "https")
+        val file = destination.get().file("com/srisu/srisu/core/config/BuildEnvironment.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText("package com.srisu.srisu.core.config\ninternal object BuildEnvironment { const val baseUrl = \"${url.toASCIIString()}\"; const val development = ${environment.get() == "development"} }\n")
+    }
+}
+abstract class ValidateReleaseEnvironment : DefaultTask() {
+    @get:Input abstract val baseUrl: Property<String>
+    @get:Input abstract val environment: Property<String>
+    @TaskAction fun validate() {
+        require(environment.get() != "development" && baseUrl.get().startsWith("https://")) {
+            "Release requires -Psrisu.environment=staging|production and an HTTPS -Psrisu.apiBaseUrl."
+        }
+    }
+}
+val generateEnvironment by tasks.registering(GenerateEnvironment::class) {
+    baseUrl.set(apiBaseUrl)
+    environment.set(apiEnvironment)
+    destination.set(environmentSources)
+}
+val validateReleaseEnvironment by tasks.registering(ValidateReleaseEnvironment::class) {
+    baseUrl.set(apiBaseUrl)
+    environment.set(apiEnvironment)
+}
+
+room { schemaDirectory("$projectDir/schemas") }
 
 kotlin {
     val xcf = XCFramework()
@@ -31,8 +73,10 @@ kotlin {
     }
     
     sourceSets {
+        commonMain { kotlin.srcDir(environmentSources) }
         
         androidMain.dependencies {
+            implementation(libs.androidx.core.splashscreen)
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
@@ -47,6 +91,8 @@ kotlin {
 
         }
         commonMain.dependencies {
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.sqlite.bundled)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -115,6 +161,18 @@ kotlin {
 
         }
 
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+            implementation("io.ktor:ktor-client-mock:3.2.3")
+        }
+
+        androidUnitTest.dependencies {
+            implementation(libs.kotlin.testJunit)
+            implementation("org.robolectric:robolectric:4.16.1")
+            implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
+        }
+
         iosMain.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)
@@ -124,6 +182,7 @@ kotlin {
 }
 
 android {
+    testOptions { unitTests.isIncludeAndroidResources = true }
     namespace = "com.srisu.srisu"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
@@ -140,7 +199,9 @@ android {
         }
     }
     buildTypes {
+        getByName("debug") { manifestPlaceholders["srisuCleartext"] = "true" }
         getByName("release") {
+            manifestPlaceholders["srisuCleartext"] = "false"
             isMinifyEnabled = false
         }
     }
@@ -151,5 +212,22 @@ android {
 }
 
 dependencies {
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspIosX64", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     debugImplementation(compose.uiTooling)
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.9.0")
+}
+
+tasks.configureEach {
+    if (name.startsWith("compile") || name.startsWith("ksp")) dependsOn(generateEnvironment)
+    if ((name.startsWith("assemble") || name.startsWith("bundle") || name.startsWith("link")) && name.contains("Release")) {
+        dependsOn(validateReleaseEnvironment)
+    }
+}
+
+val integrationRun = providers.gradleProperty("srisu.coreIntegrationRun")
+tasks.withType<Test>().configureEach {
+    inputs.property("coreIntegrationRun", integrationRun.orElse("disabled"))
 }

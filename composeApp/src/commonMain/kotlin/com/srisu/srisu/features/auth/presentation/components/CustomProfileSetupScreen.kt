@@ -19,6 +19,8 @@ sealed class CustomProfileSetupScreen(val title: String) : Comparable<CustomProf
     }
 
     companion object {
+        val registrationOrder by lazy { listOf(AddFullNameScreen, SelectGenderScreen, SetProfilePictureScreen) }
+
         val screenOrder: ArrayDeque<CustomProfileSetupScreen> by lazy {
             ArrayDeque(
                 listOf(
@@ -41,5 +43,7 @@ data class OTPScreenMetadata(
     val countryPrefix: String,
     val phoneNumber: String,
     val saveTime: Long,
-    val totalTime: Long
+    val totalTime: Long,
+    val challengeId: String? = null,
+    val expiresAt: Long = 0
 )

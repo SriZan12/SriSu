@@ -1,6 +1,7 @@
 package com.srisu.srisu
 
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,13 +12,14 @@ import com.srisu.srisu.app.App
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         setContent {
             App(
                 darkTheme = isSystemInDarkTheme(),
-                dynamicColor = false,
+
             )
         }
     }
@@ -28,6 +30,6 @@ class MainActivity : ComponentActivity() {
 fun AppAndroidPreview() {
     App(
         darkTheme = isSystemInDarkTheme(),
-        dynamicColor = false,
+
     )
 }

@@ -11,6 +11,9 @@ import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 
 @Stable
 data class AuthUIStates(
+    val challengeId: String? = null,
+    val resendAt: Long = 0,
+    val expiresAt: Long = 0,
     val phoneNumber: String = "",
     val fullName: String = "",
     val username: String = "",

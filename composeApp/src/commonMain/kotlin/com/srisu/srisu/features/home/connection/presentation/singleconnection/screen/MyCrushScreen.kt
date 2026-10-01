@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.connection.presentation.singleconnection.screen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -45,7 +46,7 @@ fun MyCrushScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         PagedConnectionContent(
             items = crushList,
@@ -75,13 +76,13 @@ private fun MyCrushListContent(
         state = listState,
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
+            start = MaterialTheme.spacing.medium,
+            end = MaterialTheme.spacing.medium,
+            top = MaterialTheme.spacing.medium,
             bottom = 80.dp
         ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         items(
             count = myCrushList.itemCount,
@@ -122,9 +123,9 @@ private fun MyCrushListCompo(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(300)), // smooth expand/shrink animation
-        contentPadding = PaddingValues(all = 16.dp),
+        contentPadding = PaddingValues(all = MaterialTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         items(
             count = myCrushList.itemCount,
@@ -179,7 +180,7 @@ private fun MyCrushListCompo(
                      item {
                          CircularProgressIndicator(
                              modifier = Modifier
-                                 .padding(8.dp)
+                                 .padding(MaterialTheme.spacing.small)
                                  .size(28.dp)
                          )
                      }
@@ -190,8 +191,8 @@ private fun MyCrushListCompo(
                      item {
                          Text(
                              text = e.error.message ?: "Error loading more",
-                             color = Color.Red,
-                             modifier = Modifier.padding(8.dp)
+                             color = MaterialTheme.colorScheme.error,
+                             modifier = Modifier.padding(MaterialTheme.spacing.small)
                          )
                      }
                  }
