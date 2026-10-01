@@ -64,7 +64,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 authGraph(navController = navController, authViewModel = authViewModel, onLeaveAuthentication = onLeaveAuthentication)
             } else {
 
-            homeGraph(onFindPartner = { navController.navigate(com.srisu.srisu.navigation.graph.ChatNav.FindPartnerScreen) { launchSingleTop = true } })
+            homeGraph(navController = navController, onFindPartner = { navController.navigate(com.srisu.srisu.navigation.graph.ChatNav.FindPartnerScreen) { launchSingleTop = true } })
 
             suggestionsGraph(
                 navController = navController,

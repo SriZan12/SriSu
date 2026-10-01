@@ -101,7 +101,7 @@ object HttpClientFactory {
 
             install(Logging) {
                 logger = httpLogger
-                level = LogLevel.ALL
+                level = LogLevel.NONE
             }
             install(WebSockets) { pingIntervalMillis = 25_000 }
             install(HttpTimeout) {

@@ -87,6 +87,41 @@ class CoreLocalTransportIntegrationTest {
                 assertIs<NetworkAPIResult.Success<*>>(connections.getCrushOnMeList(1, 20).result)
                 assertIs<NetworkAPIResult.Success<*>>(connections.haveCoupleConnectionRequested().result)
                 assertIs<NetworkAPIResult.Success<*>>(connections.sendFindYourPartnerRequest("+15005550102").result)
+                // Couple Profile uses real HTTP bodies, migrations and guarded media.
+                val couple = com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(client, environment, sessions)
+                val current = assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(couple.load(null)).response)
+                val song = assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(couple.save(current.id,"song",buildJsonObject { put("expected_revision",current.revisions.getValue("song"));put("title","Synthetic song") })).response)
+                assertEquals("Synthetic song",song.song?.title)
+                assertEquals(409,assertIs<NetworkAPIResult.Error<*>>(couple.save(current.id,"song",buildJsonObject{put("expected_revision",current.revisions.getValue("song"));put("title","Stale") })).failure.status)
+                val bitmap=android.graphics.Bitmap.createBitmap(8,8,android.graphics.Bitmap.Config.ARGB_8888)
+                val imageBytes=java.io.ByteArrayOutputStream().also { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }.toByteArray()
+                bitmap.recycle()
+                val cover=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(couple.cover(current.id,song.revisions.getValue("cover"),.3f,com.srisu.srisu.utils.MediaFile(id=null,fileName="synthetic.png",mimeType="image/png",fileBytes=imageBytes),null)).response)
+                assertNotNull(couple.image(requireNotNull(cover.cover?.url)))
+                val partnerSessions=SessionCoordinator(MemorySession()).apply{saveSession(ApiJson.encodeToString(Session(id=fixture.getValue("partner_id").jsonPrimitive.long,access=fixture.getValue("partner_access").jsonPrimitive.content)),SESSION_KEY)}
+                val visitorSessions=SessionCoordinator(MemorySession()).apply{saveSession(ApiJson.encodeToString(Session(id=fixture.getValue("visitor_id").jsonPrimitive.long,access=fixture.getValue("visitor_access").jsonPrimitive.content)),SESSION_KEY)}
+                val partnerClient=HttpClientFactory.create(partnerSessions,environment,OkHttp.create())
+                val visitorClient=HttpClientFactory.create(visitorSessions,environment,OkHttp.create())
+                try {
+                    val partner=com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(partnerClient,environment,partnerSessions)
+                    val visitor=com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(visitorClient,environment,visitorSessions)
+                    val hidden=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(visitor.load(current.id)).response)
+                    assertNull(hidden.song);assertNull(hidden.cover);assertFalse(hidden.canEdit)
+                    assertNull(visitor.image(requireNotNull(cover.cover?.url)))
+                    assertIs<NetworkAPIResult.Success<*>>(couple.save(current.id,"sharing",buildJsonObject{put("expected_revision",cover.revisions.getValue("sharing"));put("action","propose");put("sections",JsonArray(listOf(JsonPrimitive("song"),JsonPrimitive("cover"))))}))
+                    val review=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(partner.load(current.id)).response)
+                    assertIs<NetworkAPIResult.Success<*>>(partner.save(current.id,"sharing",buildJsonObject{put("expected_revision",review.revisions.getValue("sharing"));put("action","approve")}))
+                    val visible=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(visitor.load(current.id)).response)
+                    assertEquals("Synthetic song",visible.song?.title);assertNull(visible.members)
+                    assertNotNull(visitor.image(requireNotNull(visible.cover?.url)))
+                    assertIs<NetworkAPIResult.Success<*>>(couple.save(current.id,"sharing",buildJsonObject{put("expected_revision",cover.revisions.getValue("sharing"));put("action","revoke")}))
+                    assertNull(visitor.image(requireNotNull(cover.cover?.url)))
+                    assertIs<NetworkAPIResult.Success<*>>(couple.invite(current.id,"how_met",java.util.UUID.randomUUID().toString()))
+                    val planned=assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CouplePlan?>>(couple.createPlan(current.id,buildJsonObject{put("request_id",java.util.UUID.randomUUID().toString());put("title","Synthetic walk");put("starts_at",java.time.Instant.now().plusSeconds(3600).toString())})).response
+                    assertNotNull(planned)
+                    assertIs<NetworkAPIResult.Success<*>>(partner.respond(current.id,planned.id,buildJsonObject{put("expected_revision",planned.revision);put("response","yes")}))
+                    assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(visitor.plan(current.id,planned.id)).failure.status)
+                } finally {partnerClient.close();visitorClient.close()}
                 withContext(dispatcher) { lifetime.setForeground(true); repository.connect() }
                 val connected = withTimeoutOrNull(12_000) { socket.connectionState.first { it == SocketState.Connected } }
                 assertNotNull(connected, "Socket state=${socket.connectionState.value}; failure=${lastFailure.get()}")

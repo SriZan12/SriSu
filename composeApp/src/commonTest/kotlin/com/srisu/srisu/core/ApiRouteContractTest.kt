@@ -85,6 +85,23 @@ class ApiRouteContractTest {
             check("single-received") { connections.getCrushOnMeList(1, 20) }
             check("find-partner") { connections.sendFindYourPartnerRequest("+15005550123") }
             check("connection-requested") { connections.haveCoupleConnectionRequested() }
+            val couple = com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(client, environment, sessions)
+            check("couple-profile-discovery") { ResultHandler(couple.discovery("synthetic-cursor")) }
+            check("couple-profile-self") { ResultHandler(couple.load(null)) }
+            check("couple-profile-detail") { ResultHandler(couple.load(1)) }
+            for(section in listOf("story", "song", "date", "interests", "sharing")) check("couple-profile-$section") { ResultHandler(couple.save(1,section,buildJsonObject {})) }
+            check("couple-profile-cover-save") { ResultHandler(couple.cover(1,"0".repeat(64),.5f,null,null)) }
+            check("couple-profile-history") { ResultHandler(couple.history(1,1)) }
+            check("couple-profile-cover-choices") { ResultHandler(couple.covers(1,1)) }
+            check("couple-profile-plans") { ResultHandler(couple.plans(1,false,1)) }
+            check("couple-profile-plan-create") { ResultHandler(couple.createPlan(1,buildJsonObject {})) }
+            check("couple-profile-plan") { ResultHandler(couple.plan(1,1)) }
+            check("couple-profile-plan-respond") { ResultHandler(couple.respond(1,1,buildJsonObject {})) }
+            check("couple-profile-invite") { ResultHandler(couple.invite(1,"how_met",room)) }
+            check("couple-fave-add") { ResultHandler(couple.fave(1,true)) }
+            check("couple-fave-remove") { ResultHandler(couple.fave(1,false)) }
+            expected = "couple-profile-cover-read"; couple.image(environment.baseUrl + "api/social/profiles/1/cover/")
+            expected = "couple-profile-member-photo"; couple.image(environment.baseUrl + "api/social/profiles/1/members/1/photo/")
             val expired = "synthetic." + Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
                 .encode("""{"exp":1,"sid":"synthetic"}""".encodeToByteArray()) + ".synthetic"
             sessions.saveSession(ApiJson.encodeToString(Session(id = 1, access = expired, refresh = "synthetic-refresh")), SESSION_KEY)

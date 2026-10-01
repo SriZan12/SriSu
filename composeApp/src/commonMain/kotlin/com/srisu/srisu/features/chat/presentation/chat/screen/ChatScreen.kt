@@ -665,6 +665,7 @@ private fun MessageBubble(
                     fontStyle = if (isDeletedForEveryone) FontStyle.Italic else FontStyle.Normal,
                 )
 
+                if (!isDeletedForEveryone) message.profileAction?.let { com.srisu.srisu.features.coupleprofile.presentation.ProfileChatActionButton(it) }
                 if (!isDeletedForEveryone) {
                     Row(
                         modifier = Modifier.align(Alignment.End),

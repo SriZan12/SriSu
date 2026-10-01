@@ -170,6 +170,7 @@ kotlin {
         androidUnitTest.dependencies {
             implementation(libs.kotlin.testJunit)
             implementation("org.robolectric:robolectric:4.16.1")
+            implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
         }
 
         iosMain.dependencies {
@@ -216,6 +217,7 @@ dependencies {
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     debugImplementation(compose.uiTooling)
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.9.0")
 }
 
 tasks.configureEach {

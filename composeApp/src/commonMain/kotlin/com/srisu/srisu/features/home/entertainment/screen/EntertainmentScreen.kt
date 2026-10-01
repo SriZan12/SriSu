@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.home.entertainment.screen
 
+import srisu.composeapp.generated.resources.cp_profile
+import srisu.composeapp.generated.resources.cp_explore
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import com.srisu.srisu.components.SriSuButton
@@ -22,6 +24,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Preview
 fun HomeScreen(
     onFindPartner: () -> Unit = {},
+    onCoupleProfile: () -> Unit = {},
+    onExplore: () -> Unit = {},
     entertainmentViewModel: EntertainmentViewModel = koinViewModel<EntertainmentViewModel>()
 ) {
     Scaffold(
@@ -35,7 +39,8 @@ fun HomeScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-                Text("HOME SCREEN")
+                SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_profile), onCoupleProfile)
+                SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_explore), onExplore)
                 SriSuButton("Find your partner", onFindPartner)
             }
         }

@@ -27,6 +27,7 @@ val sharedNetworkModule = module {
     single { get<com.srisu.srisu.core.data.local.CatalogueDatabase>().catalogue() }
     single { com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository(get(), get(), get(), get()) }
 
+    single { com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(get(), get(), get()) }
     single { BaseApiService(httpClient = get()) }
 
     single { AuthApiService(httpClient = get(), environment = get()) } //apiService

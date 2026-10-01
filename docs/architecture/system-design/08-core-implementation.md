@@ -241,3 +241,12 @@ the client's disabled-request bypass, protect already verified identities at
 request time, store only protected proof material, atomically consume a proof,
 bound attempts/resend/spend, and test replay/concurrent verification. Keep session
 lifetimes unchanged until the device-session/legacy-client cutoff decision is made.
+
+## Couple Profile extension
+
+[Couple Profile](../../flows/couple-profile.md) adds route-scoped profile/draft state,
+current-viewer backend projections and content-bound two-member publication consent.
+It reuses the shared Ktor/session/Koin boundaries, existing private chat transport,
+image validation and contract synchronization. Private profile/media snapshots are
+not persisted in Room; foreground/re-entry invalidation and scoped revisions handle
+external edits. See the feature record for compatibility and verification limits.

@@ -232,3 +232,11 @@ entry uses only the public interests catalogue and keeps private navigation gate
 For Docker LAN errors and the complete mobile HTTP route inventory, read the
 [API connectivity audit](integration/api-connectivity.md). It distinguishes
 pre-routing host rejection, backend version mismatch and record-level 404s.
+
+## Couple Profile
+
+See [the Couple Profile implementation and validation record](flows/couple-profile.md)
+for Figma page1:4, the supplied complete board, separate editors, current-member
+permissions and both-partner publication consent. The paired implementation is on
+`dev-core-architecture` in both repositories; integration branches are unchanged.
+The backend's `docs/couple-profile.md` owns the domain/API/rollout detail.

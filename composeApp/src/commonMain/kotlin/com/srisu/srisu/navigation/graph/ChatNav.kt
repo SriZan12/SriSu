@@ -98,6 +98,9 @@ fun NavGraphBuilder.chatGraph(
     }
 
     composable<ChatNav.ChatScreen> { _ ->
+        androidx.compose.runtime.CompositionLocalProvider(com.srisu.srisu.features.coupleprofile.presentation.LocalProfileNavigation provides { action ->
+            navController.navigate(HomeNavigation.CoupleProfile(action.coupleId, if(action.kind == "story") "STORY_EDIT" else "PLAN", action.planId))
+        }) {
         ChatScreen(
             viewModel = chatViewModel,
             session = session,
@@ -105,6 +108,8 @@ fun NavGraphBuilder.chatGraph(
                 navController.popBackStack()
             }
         )
+    }
+
     }
 
     composable<ChatNav.ChatRoomScreen> {
