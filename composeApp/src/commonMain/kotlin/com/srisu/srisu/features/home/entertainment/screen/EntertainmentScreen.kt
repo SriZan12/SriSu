@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.home.entertainment.screen
 
-import srisu.composeapp.generated.resources.cp_profile
+import srisu.composeapp.generated.resources.cp_view_profile
 import srisu.composeapp.generated.resources.cp_explore
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +39,7 @@ fun HomeScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-                SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_profile), onCoupleProfile)
+                SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_view_profile), onCoupleProfile)
                 SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_explore), onExplore)
                 SriSuButton("Find your partner", onFindPartner)
             }

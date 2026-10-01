@@ -209,3 +209,26 @@ HTTPS credentials, so the connected GitHub integration performed a normal
 (non-force) fast-forward publication. This frontend change requires that backend
 commit or a descendant containing its migrations/API contract. Neither integration
 branch was modified. The final delivery records the frontend publication SHA.
+
+## Interest visibility and profile preview follow-up (2026-10-01)
+
+The original overview rendered only `interests.shared`, which is the intersection
+of both partners' selections. A correctly saved individual selection therefore
+looked missing until the partner selected the same interest. The member overview
+now also renders `interests.mine` under Your interests and `interests.partner`
+under the partner's interests. The You both love section retains its shared meaning.
+Visitor rendering still excludes both personal lists; publication consent and the
+backend response contract are unchanged.
+
+Home now labels the entry View profile. Inside the member profile, View profile
+opens a read-only overview with cover/date/section-edit/sharing controls hidden.
+It retains the member's permitted content and plan summary; it is a private member
+preview, not a simulation of an unrelated viewer or an action that publishes data.
+Back returns to the normal member profile. No duplicated profile snapshot, new API,
+persistence layer or fake preview content was added.
+
+Regression rendering checks assert that a selected interest appears with an empty
+shared list, and that the real View profile button opens an overview without Edit
+or Save controls. Android tests/build, iOS simulator Kotlin compilation, paired
+contract consistency and theme checks passed for this frontend-only change. Native
+physical-device verification was not run; no backend migration is needed.

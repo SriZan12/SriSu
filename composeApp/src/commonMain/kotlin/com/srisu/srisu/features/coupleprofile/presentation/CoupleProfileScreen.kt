@@ -50,6 +50,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                     if (state.draft != null && state.page != ProfilePage.SHARING) TextButton(onClick = { vm.save() }, enabled = !state.saving && state.draft?.dirty==true) { Text(stringResource(if (state.saving) Res.string.cp_saving else Res.string.cp_save)) }
                     else if (state.page == ProfilePage.PROFILE) {
                         if(state.profile?.canEdit == true) {
+                            TextButton(onClick = { vm.open(ProfilePage.PREVIEW) }) { Text(stringResource(Res.string.cp_view_profile)) }
                             IconButton(onClick = { profileMenu = true }) { Icon(Icons.Default.Edit, stringResource(Res.string.cp_edit)) }
                             DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}) {
                                 listOf(ProfilePage.COVER to Res.string.cp_cover,ProfilePage.DATE to Res.string.cp_date,ProfilePage.SHARING to Res.string.cp_sharing).forEach { (page,label) -> DropdownMenuItem(text={Text(stringResource(label))},onClick={profileMenu=false;vm.open(page)}) }
@@ -90,6 +91,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                 }
                 if (profile != null) when (state.page) {
                     ProfilePage.DISCOVER -> Unit
+                    ProfilePage.PREVIEW -> ProfileOverview(state, vm, preview = true)
                     ProfilePage.PROFILE, ProfilePage.ANSWER -> ProfileOverview(state, vm)
                     ProfilePage.STORY -> StoryRead(state, vm)
                     ProfilePage.STORY_EDIT -> StoryEditor(state, vm)
@@ -124,6 +126,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
 }
 
 @Composable private fun pageTitle(page: ProfilePage, owner: Boolean): String = stringResource(when(page) {
+    ProfilePage.PREVIEW -> Res.string.cp_view_profile
     ProfilePage.DISCOVER -> Res.string.cp_explore
     ProfilePage.PROFILE -> if (owner) Res.string.cp_profile else Res.string.cp_visitor
     ProfilePage.STORY, ProfilePage.STORY_EDIT, ProfilePage.ANSWER -> Res.string.cp_story
@@ -142,13 +145,13 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
     else Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) { Icon(Icons.Default.Image, description, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
 }
 
-@Composable private fun ProfileHero(state: CoupleProfileState, vm: CoupleProfileViewModel) {
+@Composable private fun ProfileHero(state: CoupleProfileState, vm: CoupleProfileViewModel, editable: Boolean) {
     val profile = state.profile ?: return
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().aspectRatio(1.9f).clip(MaterialTheme.shapes.large)) {
             if (profile.cover?.url != null) ProtectedImage(state.images[profile.cover.url], stringResource(Res.string.cp_cover_description), Modifier.fillMaxSize(), BiasAlignment(0f, profile.cover.focalY * 2 - 1))
             else Image(painterResource(Res.drawable.onboarding_landscape), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillWidth, alignment = Alignment.BottomCenter)
-            if (profile.canEdit) Surface(shape=MaterialTheme.shapes.pill,color=MaterialTheme.colorScheme.background.copy(alpha=.9f),modifier=Modifier.align(Alignment.TopCenter).padding(top=MaterialTheme.spacing.medium)) {
+            if (editable) Surface(shape=MaterialTheme.shapes.pill,color=MaterialTheme.colorScheme.background.copy(alpha=.9f),modifier=Modifier.align(Alignment.TopCenter).padding(top=MaterialTheme.spacing.medium)) {
                 TextButton(onClick={vm.open(ProfilePage.COVER)}) { Icon(Icons.Default.AddPhotoAlternate,null,Modifier.size(MaterialTheme.spacing.icon));Spacer(Modifier.width(MaterialTheme.spacing.tiny));Text(stringResource(if(profile.cover?.url==null)Res.string.cp_add_cover else Res.string.cp_change),style=MaterialTheme.typography.bodySmall) }
             }
         }
@@ -159,14 +162,15 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
         }
         profile.members?.let { Text(it.joinToString(" & ") { m -> m.name }, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center) }
         profile.anniversaryDate?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        if (profile.canEdit) TextButton(onClick = { vm.open(ProfilePage.DATE) }) { Text(stringResource(Res.string.cp_date),style=MaterialTheme.typography.bodySmall) }
+        if (editable) TextButton(onClick = { vm.open(ProfilePage.DATE) }) { Text(stringResource(Res.string.cp_date),style=MaterialTheme.typography.bodySmall) }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel) {
+@Composable private fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, preview: Boolean = false) {
     val profile = state.profile ?: return
-    if (profile.canEdit || profile.members != null || profile.cover != null) ProfileHero(state, vm)
+    val editable = profile.canEdit && !preview
+    if (profile.canEdit || profile.members != null || profile.cover != null) ProfileHero(state, vm, editable)
     if (!profile.canEdit && profile.publishedSections.isEmpty()) Text(stringResource(Res.string.cp_private))
     if (profile.canFave) SriSuButton(stringResource(if (profile.isFaved) Res.string.cp_unfave else Res.string.cp_fave), vm::fave, enabled = !state.saving, variant = SriSuButtonVariant.Outline)
     Surface(shape = MaterialTheme.shapes.medium, color = CoupleProfileTokens.sectionSurface(MaterialTheme.colorScheme)) {
@@ -177,12 +181,12 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
         }
     }
     if (profile.story != null || profile.canEdit) {
-        SectionHeader(Res.string.cp_story, if (profile.story.isNullOrEmpty()) Res.string.cp_write else Res.string.cp_read) { vm.open(if (profile.story.isNullOrEmpty() && profile.canEdit) ProfilePage.STORY_EDIT else ProfilePage.STORY) }
-        if (profile.story.isNullOrEmpty()) SectionCard { Text(stringResource(Res.string.cp_story_hint)); if (profile.canEdit) TextButton(onClick = { vm.open(ProfilePage.STORY_EDIT) }) { Text(stringResource(Res.string.cp_write)) } }
-        else SectionCard { StoryAnswers(profile, vm.accountId, vm::openAnswer) }
+        SectionHeader(Res.string.cp_story, if(preview) null else if (profile.story.isNullOrEmpty()) Res.string.cp_write else Res.string.cp_read) { vm.open(if (profile.story.isNullOrEmpty() && profile.canEdit) ProfilePage.STORY_EDIT else ProfilePage.STORY) }
+        if (profile.story.isNullOrEmpty()) SectionCard { Text(stringResource(Res.string.cp_story_hint)); if (editable) TextButton(onClick = { vm.open(ProfilePage.STORY_EDIT) }) { Text(stringResource(Res.string.cp_write)) } }
+        else SectionCard { StoryAnswers(profile, vm.accountId, vm::openAnswer, editable) }
     }
     if (profile.canEdit || "song" in profile.publishedSections) {
-        SectionHeader(Res.string.cp_song, if (profile.canEdit) if (profile.song == null) Res.string.cp_pick else Res.string.cp_change else null) { vm.open(ProfilePage.SONG) }
+        SectionHeader(Res.string.cp_song, if (editable) if (profile.song == null) Res.string.cp_pick else Res.string.cp_change else null) { vm.open(ProfilePage.SONG) }
         SectionCard {
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
                 Icon(Icons.Default.MusicNote, null)
@@ -195,17 +199,32 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
         }
     }
     if (profile.interests != null) {
-        SectionHeader(Res.string.cp_interests, if (profile.canEdit) Res.string.cp_edit else null) { vm.open(ProfilePage.INTERESTS) }
+        SectionHeader(Res.string.cp_interests, if (editable) Res.string.cp_edit else null) { vm.open(ProfilePage.INTERESTS) }
         if (profile.interests.shared.isEmpty()) SectionCard { Text(stringResource(Res.string.cp_interests_empty)); Text(stringResource(Res.string.cp_interests_hint),style = MaterialTheme.typography.bodySmall) }
-        else FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) { profile.interests.shared.forEach { SuggestionChip(onClick = { if (profile.canEdit) vm.open(ProfilePage.INTERESTS) }, label = { Text(it) }, enabled = profile.canEdit) } }
+        else FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) { profile.interests.shared.forEach { SuggestionChip(onClick = { if (editable) vm.open(ProfilePage.INTERESTS) }, label = { Text(it) }, enabled = editable) } }
+        if(profile.canEdit) {
+            InterestSelections(Res.string.cp_your_interests, profile.interests.mine.orEmpty())
+            InterestSelections(Res.string.cp_partner_likes, profile.interests.partner.orEmpty())
+        }
     }
     if (profile.canEdit) {
         SectionHeader(Res.string.cp_together)
-        OutlinedButton(onClick = { vm.open(ProfilePage.PLANS) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.CalendarMonth,null); Spacer(Modifier.width(MaterialTheme.spacing.small)); Column { Text(stringResource(Res.string.cp_plans)); Text(stringResource(Res.string.cp_plans_summary, profile.plansDone ?: 0, profile.plansUpcoming ?: 0),style=MaterialTheme.typography.bodySmall) }; Spacer(Modifier.weight(1f)); Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,null) }
-        TextButton(onClick = { vm.open(ProfilePage.SHARING) }) { Icon(Icons.Default.Lock,null); Spacer(Modifier.width(MaterialTheme.spacing.small)); Text(stringResource(Res.string.cp_sharing)) }
+        if(preview) SectionCard { Text(stringResource(Res.string.cp_plans)); Text(stringResource(Res.string.cp_plans_summary, profile.plansDone ?: 0, profile.plansUpcoming ?: 0)) }
+        else OutlinedButton(onClick = { vm.open(ProfilePage.PLANS) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.CalendarMonth,null); Spacer(Modifier.width(MaterialTheme.spacing.small)); Column { Text(stringResource(Res.string.cp_plans)); Text(stringResource(Res.string.cp_plans_summary, profile.plansDone ?: 0, profile.plansUpcoming ?: 0),style=MaterialTheme.typography.bodySmall) }; Spacer(Modifier.weight(1f)); Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,null) }
+        if(editable) TextButton(onClick = { vm.open(ProfilePage.SHARING) }) { Icon(Icons.Default.Lock,null); Spacer(Modifier.width(MaterialTheme.spacing.small)); Text(stringResource(Res.string.cp_sharing)) }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun InterestSelections(label: StringResource, names: List<String>) {
+    Text(stringResource(label), style = MaterialTheme.typography.titleSmall)
+    if(names.isEmpty()) Text(stringResource(Res.string.cp_no_selections), style = MaterialTheme.typography.bodySmall)
+    else FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        names.forEach { name -> Surface(shape = MaterialTheme.shapes.small, color = CoupleProfileTokens.sectionSurface(MaterialTheme.colorScheme)) {
+            Text(name, Modifier.padding(MaterialTheme.spacing.small), style = MaterialTheme.typography.bodyMedium)
+        } }
+    }
+}
 @Composable private fun Metric(value: String, label: StringResource, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(max = 110.dp)) { Icon(icon,null,Modifier.size(MaterialTheme.spacing.icon),tint = if(icon==Icons.Default.CalendarMonth) IntroductionTokens.plans else if(icon==Icons.Default.AutoAwesome) IntroductionTokens.moments else IntroductionTokens.memories); Text(value,style=MaterialTheme.typography.titleMedium); Text(stringResource(label),style=MaterialTheme.typography.bodySmall,textAlign=TextAlign.Center) }
 }
@@ -214,12 +233,12 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
 }
 @Composable private fun SectionCard(content: @Composable ColumnScope.() -> Unit) { Surface(shape=MaterialTheme.shapes.large,color=CoupleProfileTokens.sectionSurface(MaterialTheme.colorScheme)) { Column(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium),verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small),content=content) } }
 @Composable private fun promptTitle(prompt: String) = stringResource(when(prompt) { "how_met" -> Res.string.cp_how_met; "first_move" -> Res.string.cp_first_move; else -> Res.string.cp_first_impression })
-@Composable private fun StoryAnswers(profile: CoupleProfile, account: Long?, onEdit: (String) -> Unit) {
+@Composable private fun StoryAnswers(profile: CoupleProfile, account: Long?, onEdit: (String) -> Unit, editable: Boolean = profile.canEdit) {
     CoupleProfileViewModel.PROMPTS.forEach { prompt ->
         Text(promptTitle(prompt),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         val answers=profile.story.orEmpty().filter { it.prompt==prompt }
         if(answers.isEmpty()) Text(stringResource(Res.string.cp_partner_side),style=MaterialTheme.typography.bodySmall)
-        answers.forEach { answer -> Row(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) { Icon(Icons.Default.Person,null,Modifier.size(MaterialTheme.spacing.icon)); Column { Text(answer.answer,style=MaterialTheme.typography.bodyMedium);if(profile.canEdit && answer.authorId==account) TextButton(onClick={onEdit(prompt)}) { Text(stringResource(Res.string.cp_edit)) }; profile.members?.firstOrNull { it.id==answer.authorId }?.let { Text(it.name,style=MaterialTheme.typography.bodySmall) } } } }
+        answers.forEach { answer -> Row(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) { Icon(Icons.Default.Person,null,Modifier.size(MaterialTheme.spacing.icon)); Column { Text(answer.answer,style=MaterialTheme.typography.bodyMedium);if(editable && answer.authorId==account) TextButton(onClick={onEdit(prompt)}) { Text(stringResource(Res.string.cp_edit)) }; profile.members?.firstOrNull { it.id==answer.authorId }?.let { Text(it.name,style=MaterialTheme.typography.bodySmall) } } } }
     }
 }
 @Composable private fun sectionLabel(section: String) = stringResource(when(section) {

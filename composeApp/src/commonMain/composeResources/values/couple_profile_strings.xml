@@ -121,6 +121,8 @@
     <string name="cp_plans_summary">%1$d done · %2$d coming up</string>
     <string name="cp_explore">Explore couples</string>
     <string name="cp_shared_moment">A shared Moment</string>
-    <string name="cp_view_profile">View couple profile</string>
+    <string name="cp_view_profile">View profile</string>
     <string name="cp_history_updated">Updated %1$s</string>
+    <string name="cp_your_interests">Your interests</string>
+    <string name="cp_no_selections">No interests selected yet.</string>
 </resources>

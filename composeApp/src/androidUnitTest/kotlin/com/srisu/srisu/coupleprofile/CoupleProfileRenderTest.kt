@@ -33,7 +33,7 @@ import java.io.File
 class CoupleProfileRenderTest {
     @get:Rule val compose=createAndroidComposeRule<androidx.activity.ComponentActivity>()
     @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
-    private fun render(page: ProfilePage, name: String, dark: Boolean=false, largeText: Boolean=false, visitor: Boolean=false, populated: Boolean=false) {
+    private fun render(page: ProfilePage, name: String, dark: Boolean=false, largeText: Boolean=false, visitor: Boolean=false, populated: Boolean=false, mineOnly: Boolean=false) {
         val sessions=session();val lifetime=ApplicationLifetime();val store=ViewModelStore()
         val headers=headersOf(HttpHeaders.ContentType,"application/json")
         val client=HttpClientFactory.create(sessions,environment,MockEngine { request ->
@@ -43,12 +43,17 @@ class CoupleProfileRenderTest {
                 request.url.encodedPath.endsWith("plans/") -> """{"data":{"results":[],"next_before":null}}"""
                 request.url.encodedPath.endsWith("interests/") -> CoreContractFixtures.INTEREST
                 visitor -> CoreContractFixtures.COUPLE_PROFILE_VISITOR
-                else -> if(!populated) CoreContractFixtures.COUPLE_PROFILE_MEMBER else {
+                else -> if(!populated && !mineOnly) CoreContractFixtures.COUPLE_PROFILE_MEMBER else {
                     val envelope=ApiJson.parseToJsonElement(CoreContractFixtures.COUPLE_PROFILE_MEMBER).jsonObject
                     val data=envelope.getValue("data").jsonObject.toMutableMap()
                     data["story"]=buildJsonArray { add(buildJsonObject{put("author_id",1);put("prompt","how_met");put("answer","We met at a community library.")});add(buildJsonObject{put("author_id",2);put("prompt","how_met");put("answer","Choosing the same book.")}) }
                     data["song"]=buildJsonObject{put("title","Our song");put("artist","A favourite artist");put("note","A little reminder of our first trip.")}
                     data["interests"]=buildJsonObject{put("shared",buildJsonArray{add("Reading");add("Travel")});put("mine",buildJsonArray{add("Reading");add("Travel")});put("partner",buildJsonArray{add("Reading");add("Travel")})}
+                    if(mineOnly) data["interests"]=buildJsonObject {
+                        put("shared",buildJsonArray{})
+                        put("mine",buildJsonArray{add("Pottery")})
+                        put("partner",buildJsonArray{add("Cycling")})
+                    }
                     JsonObject(envelope+("data" to JsonObject(data))).toString()
                 }
             }
@@ -67,9 +72,20 @@ class CoupleProfileRenderTest {
                 }
             }
             compose.waitUntil(10000){vm.state.value.profile!=null}
-            compose.runOnIdle { if(page==ProfilePage.ANSWER) vm.openAnswer("how_met") else if(page!=ProfilePage.PROFILE) vm.open(page) }
+            compose.runOnIdle { if(page==ProfilePage.ANSWER) vm.openAnswer("how_met") else if(page!=ProfilePage.PROFILE && page!=ProfilePage.PREVIEW) vm.open(page) }
             compose.waitUntil(10000){org.robolectric.shadows.ShadowLooper.idleMainLooper(); !vm.state.value.listLoading}
             compose.waitForIdle()
+            if(mineOnly) {
+                compose.onNodeWithText("Your interests").performScrollTo().assertIsDisplayed()
+                compose.onNodeWithText("Pottery").performScrollTo().assertIsDisplayed()
+                compose.onNodeWithText("Cycling").assertExists()
+            }
+            if(page == ProfilePage.PREVIEW) {
+                compose.onNodeWithText("View profile").performClick()
+                compose.onAllNodesWithText("Edit").assertCountEquals(0)
+                compose.onAllNodesWithText("Save").assertCountEquals(0)
+                compose.onNodeWithText("View profile").assertExists()
+            }
             val output=File("build/reports/couple-profile/$name.png").apply{parentFile?.mkdirs()}
             check(compose.onAllNodes(isRoot()).fetchSemanticsNodes().isNotEmpty())
             compose.runOnIdle {
@@ -90,6 +106,8 @@ class CoupleProfileRenderTest {
     @Test fun sharingEditor()=render(ProfilePage.SHARING,"android-sharing-editor")
     @Test fun plans()=render(ProfilePage.PLANS,"android-plans")
     @Test fun newPlan()=render(ProfilePage.NEW_PLAN,"android-new-plan")
+    @Test fun individualInterestsAreVisibleWithoutSharedMatches()=render(ProfilePage.PROFILE,"android-individual-interests",mineOnly=true)
+    @Test fun readOnlyPreview()=render(ProfilePage.PREVIEW,"android-profile-preview",populated=true)
     @Test fun populatedProfile()=render(ProfilePage.PROFILE,"android-owner-populated",populated=true)
     @Test fun answerSheet()=render(ProfilePage.ANSWER,"android-answer-sheet",populated=true)
     @Test @Config(qualifiers="w320dp-h640dp-xhdpi") fun smallSongEditor()=render(ProfilePage.SONG,"android-song-small")

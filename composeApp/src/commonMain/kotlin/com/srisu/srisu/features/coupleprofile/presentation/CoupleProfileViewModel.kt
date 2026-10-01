@@ -17,7 +17,7 @@ import kotlin.uuid.Uuid
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-enum class ProfilePage { PROFILE, STORY, STORY_EDIT, SONG, INTERESTS, COVER, POSITION, DATE, SHARING, PLANS, NEW_PLAN, PLAN, ANSWER, DISCOVER }
+enum class ProfilePage { PROFILE, PREVIEW, STORY, STORY_EDIT, SONG, INTERESTS, COVER, POSITION, DATE, SHARING, PLANS, NEW_PLAN, PLAN, ANSWER, DISCOVER }
 
 data class ProfileDraft(
     val section: String, val revision: String, val original: Map<String, String>,
