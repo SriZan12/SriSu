@@ -257,8 +257,17 @@ class FindPartnerViewModel(
         }
     }
 
-    fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?): String? =
-        runCatching { Json.encodeToString(userProfile?.toUser()) }.getOrNull()
+    private var preview: com.srisu.srisu.features.auth.data.remote.response.User? = null
+    fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?): Long? {
+        preview = userProfile?.toUser()
+        return preview?.id
+    }
+    fun previewUser(id: Long) = preview?.takeIf { it.id == id }
+    fun rememberPreview(user: com.srisu.srisu.features.auth.data.remote.response.User): Long? {
+        preview = user
+        return user.id
+    }
+
 
     private suspend fun <T> request(block: suspend () -> ResultHandler<T>): NetworkAPIResult<T> = try {
         block().result.also { currentCoroutineContext().ensureActive() }

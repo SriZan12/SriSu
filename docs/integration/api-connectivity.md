@@ -106,3 +106,11 @@ device runtime, real SMS delivery, PostgreSQL concurrency and a successful reque
 after the remote host-setting change were not verified in this task. These results
 were recorded before publication; publishing the fixes does not update the other
 laptop's environment or restart its Docker containers.
+
+### Superseding retirement inventory (2026-10-01)
+
+Historical suggestions/Crushes checks in the table above describe the earlier client.
+The [navigation migration](../flows/navigation.md) removes those calls and retires the
+backend dating endpoints with authenticated 410 responses. The authoritative route
+bundle separates current calls from retired and preserved legacy preference endpoints.
+Phone-based sent/received partner invitations remain active and tested.

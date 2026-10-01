@@ -1,4 +1,4 @@
-package com.srisu.srisu.features.home.suggestions.data.response
+package com.srisu.srisu.core.data.remote
 
 
 import kotlinx.serialization.SerialName

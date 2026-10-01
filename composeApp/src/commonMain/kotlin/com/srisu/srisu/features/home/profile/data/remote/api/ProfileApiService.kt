@@ -4,7 +4,6 @@ import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
-import com.srisu.srisu.features.home.suggestions.data.response.SingleConnectionResponse
 import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
@@ -20,21 +19,7 @@ import io.ktor.http.HttpMethod
 
 class ProfileApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = httpClient.attributes[ApiEnvironmentKey]) {
 
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String?,
-        receiverNumber: String?
-    ): ResultHandler<SingleConnectionResponse?> {
 
-        val connectionRequest: HashMap<String, String> = HashMap()
-        connectionRequest["sender_number"] = senderNumber ?: ""
-        connectionRequest["receiver_number"] = receiverNumber ?: ""
-
-        return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${environment.baseUrl}api/social/connect-single/")
-            method = HttpMethod.Companion.Post
-            setBody(connectionRequest)
-        }
-    }
 
     suspend fun getInterestList(): ResultHandler<InterestResponse?> {
         return httpClient.safeRequest<InterestResponse?> {

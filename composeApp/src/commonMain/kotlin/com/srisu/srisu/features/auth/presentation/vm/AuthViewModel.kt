@@ -57,7 +57,7 @@ class AuthViewModel(
 
     init {
         checkSession()
-        initializeAuthNavigationFlow()
+        showProfileStep(CustomProfileSetupScreen.AddFullNameScreen)
         setZodiacSign()
         loadAllCountries()
         getRemainingOTPTimeStamp()
@@ -552,81 +552,6 @@ class AuthViewModel(
         if (index > 0) {
             idleScreen()
             showProfileStep(order[index - 1])
-        }
-    }
-
-    // Navigation
-
-    private fun initializeAuthNavigationFlow() {
-        val screenStack = ArrayDeque<CustomProfileSetupScreen>()
-        clearAuthScreenStack()
-
-        screenStack.addAll(CustomProfileSetupScreen.registrationOrder)
-
-        updateState { it.copy(screenStack = screenStack) }
-        updateCurrentScreen()
-    }
-
-    private fun clearAuthScreenStack() {
-        updateState { it.copy(screenStack = ArrayDeque()) }
-    }
-
-    private fun updateCurrentScreen() {
-        updateState {
-            it.copy(
-                currentScreen = it.screenStack.firstOrNull()
-                    ?: CustomProfileSetupScreen.SelectGenderScreen
-            )
-        }
-    }
-
-    private fun removeCurrentScreen() {
-        currentState.screenStack.removeFirstOrNull()
-    }
-
-    fun navigateNextScreen(isIncrease: Boolean = true) {
-        val stack = currentState.screenStack
-        if (stack.isEmpty()) return
-
-        removeCurrentScreen()
-        updateCurrentScreen()
-        updateProgress(isIncrease = isIncrease)
-    }
-
-    fun navigateBack() {
-        val state = currentState
-        val currentScreen = state.currentScreen
-
-        if (state.screenStack.size >= CustomProfileSetupScreen.screenOrder.size) {
-            return
-        }
-
-        val currentIndex = getCurrentScreenIndex(currentScreen)
-        if (currentIndex <= 0) return
-
-        val previousScreen = CustomProfileSetupScreen.screenOrder[currentIndex - 1]
-
-        if (previousScreen == CustomProfileSetupScreen.AddDOBScreen) {
-            currentState.screenStack.addFirst(CustomProfileSetupScreen.ZodiacScreen)
-            currentState.screenStack.addFirst(previousScreen)
-            updateProgress(isIncrease = false)
-            updateProgress(isIncrease = false)
-        } else {
-            currentState.screenStack.addFirst(previousScreen)
-            updateProgress(isIncrease = false)
-        }
-
-        updateCurrentScreen()
-    }
-
-    private fun getCurrentScreenIndex(currentScreen: CustomProfileSetupScreen): Int {
-        val isCurrentScreenGender =
-            currentState.currentScreen == CustomProfileSetupScreen.SelectGenderScreen
-
-        return if (!isCurrentScreenGender) {
-            CustomProfileSetupScreen.screenOrder.indexOf(currentScreen)
-        } else {
-            CustomProfileSetupScreen.screenOrder.indexOf(CustomProfileSetupScreen.ZodiacScreen)
         }
     }
 

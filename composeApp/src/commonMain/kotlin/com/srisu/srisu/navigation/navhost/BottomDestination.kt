@@ -9,11 +9,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
-import com.srisu.srisu.navigation.graph.ConnectionNav
 import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.navigation.graph.ProfileNav
 import com.srisu.srisu.navigation.graph.Route
-import com.srisu.srisu.navigation.graph.SuggestionsNav
 
 enum class BottomDestination(
     val icon: ImageVector,
@@ -28,17 +26,7 @@ enum class BottomDestination(
     EXPLORE(
         icon = Icons.Filled.Search,
         label = "Explore",
-        route = SuggestionsNav.Suggestions
-    ),
-    CONNECTIONS(
-        icon = Icons.Filled.Favorite,
-        label = "Crushes",
-        route = ConnectionNav.Connection
-    ),
-    MATCHES(
-        icon = Icons.Default.FavoriteBorder,
-        label = "Matches",
-        route = ConnectionNav.LoveRequestScreen
+        route = HomeNavigation.Explore
     ),
     PROFILE(
         icon = Icons.Filled.Person,
@@ -50,9 +38,7 @@ enum class BottomDestination(
         fun fromDestination(destination: NavDestination?): BottomDestination? {
             return when {
                 destination?.hasRoute<HomeNavigation.Home>() == true -> HOME
-                destination?.hasRoute<SuggestionsNav.Suggestions>() == true -> EXPLORE
-                destination?.hasRoute<ConnectionNav.Connection>() == true -> CONNECTIONS
-                destination?.hasRoute<ConnectionNav.LoveRequestScreen>() == true -> MATCHES
+                destination?.hasRoute<HomeNavigation.Explore>() == true -> EXPLORE
                 destination?.hasRoute<ProfileNav.EditProfile>() == true -> PROFILE
                 else -> null
             }

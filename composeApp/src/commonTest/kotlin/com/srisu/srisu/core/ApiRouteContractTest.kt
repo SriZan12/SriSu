@@ -11,8 +11,6 @@ import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiSer
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.*
 import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
-import com.srisu.srisu.features.home.suggestions.data.api.SuggestionApiService
-import com.srisu.srisu.features.home.suggestions.data.dto.UserPreferenceDTO
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -55,7 +53,6 @@ class ApiRouteContractTest {
             val profile = ProfileApiService(client)
             val chat = ChatApiService(client)
             val connections = ConnectionApiService(client)
-            val suggestions = SuggestionApiService(client)
             check("send-otp") { auth.sendOTPRequest(AuthDTO(phoneNumber = "+15005550123")) }
             check("verify-otp") { auth.sendVerifyOtpRequest("+15005550123", "000000") }
             check("profile-get") { auth.getProfile() }
@@ -68,21 +65,10 @@ class ApiRouteContractTest {
             check("rooms") { chat.rooms("synthetic-cursor") }
             check("history") { chat.history(room, 1) }
             check("media-upload") { chat.uploadMedias(emptyList()) }
-            check("suggestions") { suggestions.getUserSuggestions(1, 20) }
-            check("suggestion-profile") { suggestions.getSuggestionProfile(1) }
-            check("preferences-get") { suggestions.getUserPreferences() }
-            check("preferences-post") { suggestions.setUserPreferences(UserPreferenceDTO()) }
-            check("preferences-put") { suggestions.updateUserPreferences(UserPreferenceDTO(), 1) }
-            check("single-post") { connections.sendSingleConnectionRequest("+15005550101", "+15005550102") }
-            check("single-post") { profile.sendSingleConnectionRequest("+15005550101", "+15005550102") }
-            check("single-put") { connections.updateSingleConnectionRequestStatus(1, SingleConnectionDTO()) }
-            check("single-put") { connections.updateCrushRequest(1, SingleConnectionDTO()) }
             check("couple-post") { connections.sendCoupleConnectionRequest("+15005550101", "+15005550102") }
             check("couple-put") { connections.updateCoupleConnectionRequestStatus(1, CoupleConnectionDTO()) }
             check("couple-sent") { connections.getSentLoveRequests(20, 1) }
             check("couple-received") { connections.getLoveRequests(1, 20) }
-            check("single-sent") { connections.getMyCrushList(1, 20) }
-            check("single-received") { connections.getCrushOnMeList(1, 20) }
             check("find-partner") { connections.sendFindYourPartnerRequest("+15005550123") }
             check("connection-requested") { connections.haveCoupleConnectionRequested() }
             val couple = com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(client, environment, sessions)
