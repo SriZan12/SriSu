@@ -1,6 +1,4 @@
 package com.srisu.srisu.navigation.graph
 
-import kotlinx.serialization.Serializable
-
-@Serializable
-sealed interface Route
+/** Feature-owned serializable destinations implement this public contract. */
+interface Route

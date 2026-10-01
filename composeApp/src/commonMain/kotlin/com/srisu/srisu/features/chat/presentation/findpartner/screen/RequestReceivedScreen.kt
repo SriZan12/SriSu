@@ -18,7 +18,7 @@ import com.srisu.srisu.theme.spacing
 
 /** Retains the existing typed route, sharing the same paginated invitation UI. */
 @Composable
-fun ReceivedLoveRequestScreen(findPartnerViewModel: FindPartnerViewModel, onNavigateBack: () -> Unit, onNavigateToProfile: (String?) -> Unit) {
+fun ReceivedLoveRequestScreen(findPartnerViewModel: FindPartnerViewModel, onNavigateBack: () -> Unit, onNavigateToProfile: (Long?) -> Unit) {
     val invitations = findPartnerViewModel.loveRequests.collectAsLazyPagingItems()
     val state by findPartnerViewModel.findPartnerUIState.collectAsStateWithLifecycle()
     LaunchedEffect(findPartnerViewModel) { findPartnerViewModel.onScreenEntered() }

@@ -4,8 +4,7 @@ import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.BaseApiService
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
-import com.srisu.srisu.features.home.suggestions.data.response.CityResponse
-import com.srisu.srisu.features.home.suggestions.data.response.SingleConnectionResponse
+import com.srisu.srisu.core.data.remote.CityResponse
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.utils.MediaFile
@@ -16,16 +15,7 @@ class ProfileRepository(
     private val catalogue: com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 ) {
 
-    @Throws(Exception::class)
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String?,
-        receiverNumber: String?
-    ): ResultHandler<SingleConnectionResponse?> {
-        return profileApiService.sendSingleConnectionRequest(
-            senderNumber = senderNumber,
-            receiverNumber = receiverNumber
-        )
-    }
+
 
     @Throws(Exception::class)
     suspend fun getCityList(country: String?): CityResponse? {

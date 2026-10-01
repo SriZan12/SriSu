@@ -11,6 +11,37 @@ import kotlinx.coroutines.test.*
 import kotlin.test.*
 
 class ChatIsolationTest {
+    @Test fun entryViewModelsPinTheirRoomAndPoppedOwnerCannotClearAnotherRoom() = runTest(dispatcher) {
+        val sessions = session(); val lifetime = ApplicationLifetime()
+        val client = HttpClientFactory.create(sessions, environment, MockEngine(MockEngineConfig().apply {
+            dispatcher = this@ChatIsolationTest.dispatcher
+            addHandler { request ->
+                when {
+                    request.url.encodedPath.contains(roomA) -> respond(history(roomA, 1))
+                    request.url.encodedPath.contains(roomB) -> respond(history(roomB, 2))
+                    else -> respond("""{"data":{"chat_rooms":[],"has_more":false,"next_cursor":null}}""")
+                }
+            }
+        }))
+        val socket = ChatWebSocketClient(SocketConnector { throw SocketUnavailable() }, sessions, lifetime)
+        val repo = ChatRepository(socket, ChatApiService(client), sessions, lifetime)
+        val store = androidx.lifecycle.ViewModelStore()
+        val first = com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel(repo)
+        val second = com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel(repo)
+        store.put("first", first); store.put("second", second)
+        try {
+            runCurrent(); first.openRoom(roomA); advanceUntilIdle()
+            assertEquals(roomA, first.chatState.value.chatRoomData?.id)
+            assertEquals(listOf(roomA), first.chatState.value.chatMessages.map { it.chatRoomId })
+            second.openRoom(roomB); advanceUntilIdle()
+            assertEquals(roomB, second.chatState.value.chatRoomData?.id)
+            assertTrue(first.chatState.value.chatMessages.isEmpty())
+            first.clearActiveChatRoom()
+            assertEquals(roomB, repo.activeChatRoomId.value)
+            store.clear(); runCurrent()
+            assertNull(repo.activeChatRoomId.value)
+        } finally { store.clear(); repo.close(); socket.close(); lifetime.close(); client.close() }
+    }
     private val dispatcher = StandardTestDispatcher()
     @BeforeTest fun before() { Dispatchers.setMain(dispatcher) }
     @AfterTest fun after() { Dispatchers.resetMain() }

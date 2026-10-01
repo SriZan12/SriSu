@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.home.entertainment.screen
 
+import srisu.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import srisu.composeapp.generated.resources.cp_view_profile
 import srisu.composeapp.generated.resources.cp_explore
 import androidx.compose.foundation.layout.Column
@@ -15,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.srisu.srisu.features.home.entertainment.vm.EntertainmentViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -26,7 +27,8 @@ fun HomeScreen(
     onFindPartner: () -> Unit = {},
     onCoupleProfile: () -> Unit = {},
     onExplore: () -> Unit = {},
-    entertainmentViewModel: EntertainmentViewModel = koinViewModel<EntertainmentViewModel>()
+    onChat: () -> Unit = {},
+    onInvitations: () -> Unit = {},
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -41,15 +43,12 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
                 SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_view_profile), onCoupleProfile)
                 SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_explore), onExplore)
-                SriSuButton("Find your partner", onFindPartner)
+                SriSuButton(stringResource(Res.string.nav_find_partner), onFindPartner)
+                SriSuButton(stringResource(Res.string.nav_invitations), onInvitations)
+                SriSuButton(stringResource(Res.string.nav_conversations), onChat)
             }
         }
 
-//        ChatScreen(
-//            session = null,
-//            navController = rememberNavController()
-//        )
     }
 
 }
-

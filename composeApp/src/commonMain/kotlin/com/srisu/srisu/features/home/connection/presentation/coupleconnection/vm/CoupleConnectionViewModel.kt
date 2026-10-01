@@ -273,9 +273,5 @@ class CoupleConnectionViewModel(
     // Profile mapping (TEMP)
     // ---------------------------
 
-    fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?): String? {
-        return runCatching {
-            Json.encodeToString(userProfile?.toUser())
-        }.getOrNull()
-    }
+    fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?) = userProfile?.toUser()
 }

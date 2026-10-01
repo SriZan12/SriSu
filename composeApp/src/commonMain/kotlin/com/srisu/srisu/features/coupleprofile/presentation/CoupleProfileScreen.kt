@@ -38,7 +38,7 @@ import srisu.composeapp.generated.resources.*
 fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null) {
     val state by vm.state.collectAsState()
     var profileMenu by remember { mutableStateOf(false) }
-    DisposableEffect(coupleId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
+    DisposableEffect(coupleId, initialPage, planId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
     val back = { if (vm.back()) onBack() }
     BackHandler(onBack = back)
     MaterialTheme(typography = SriSuPartnerLinkTypography()) {

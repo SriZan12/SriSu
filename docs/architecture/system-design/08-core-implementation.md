@@ -250,3 +250,11 @@ It reuses the shared Ktor/session/Koin boundaries, existing private chat transpo
 image validation and contract synchronization. Private profile/media snapshots are
 not persisted in Room; foreground/re-entry invalidation and scoped revisions handle
 external edits. See the feature record for compatibility and verification limits.
+
+### Navigation scope update (2026-10-01)
+
+[ADR 001](../decisions/001-navigation.md) supersedes the account-wide Auth/Chat feature
+ViewModel and legacy interest-route notes above. BaseNavigation assembles one NavHost;
+Auth and Partner VMs are flow-scoped, conversation/profile VMs are entry-scoped, and
+account/couple access changes clear the relevant stores. Shared sockets/repositories
+remain application/session-owned. See [migration coverage](../../flows/navigation.md).

@@ -232,3 +232,11 @@ shared list, and that the real View profile button opens an overview without Edi
 or Save controls. Android tests/build, iOS simulator Kotlin compilation, paired
 contract consistency and theme checks passed for this frontend-only change. Native
 physical-device verification was not run; no backend migration is needed.
+
+### Navigation integration (2026-10-01)
+
+The feature now registers through `coupleProfileGraph` with a typed
+`CoupleProfileDestination(coupleId, section, planId)`. Each library entry owns its
+profile ViewModel/draft. Shared editor screens and local confirmation sheets stay
+within that resource flow; saves continue to use confirmed server responses.
+Explore uses the existing couple discovery screen. See [navigation coverage](navigation.md).
