@@ -232,3 +232,18 @@ shared list, and that the real View profile button opens an overview without Edi
 or Save controls. Android tests/build, iOS simulator Kotlin compilation, paired
 contract consistency and theme checks passed for this frontend-only change. Native
 physical-device verification was not run; no backend migration is needed.
+
+## Presentation refinement (2026-10-02)
+
+See [the visual refinement record](couple-profile-polish.md) for the observed baseline,
+scoped owner/visitor/editor improvements, before/after renders and exact checks.
+This local frontend-only pass starts at `00a198a` on `dev-core-architecture` and
+preserves the existing API, permissions, ViewModel and navigation entry contract.
+No dependency, backend or Figma changes are included. The user subsequently
+authorized committing and pushing this complete refinement and motion changeset
+to `origin/dev-core-architecture`; the implementation revision is in Git history.
+
+The requested motion follow-up adds an 820 ms one-time heart/Moments icon sequence
+when the profile statistics become visible. Its account/profile-scoped saved state
+prevents replay on refresh, editor return or restoration; reduced motion is honored.
+See the refinement record for frame captures, lifecycle behavior and test results.

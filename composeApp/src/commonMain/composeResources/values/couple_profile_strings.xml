@@ -125,4 +125,16 @@
     <string name="cp_history_updated">Updated %1$s</string>
     <string name="cp_your_interests">Your interests</string>
     <string name="cp_no_selections">No interests selected yet.</string>
+    <string name="cp_profile_options">Profile options</string>
+    <string name="cp_named_avatar">%1$s’s profile photo</string>
+    <string name="cp_change_cover">Change cover photo</string>
+    <string name="cp_edit_answer">Edit answer: %1$s</string>
+    <string name="cp_since">Since %1$s</string>
+    <string name="cp_private_title">A little privacy</string>
+    <string name="cp_song_details">The song</string>
+    <string name="cp_time">Time</string>
+    <string name="cp_date_label">Date</string>
+    <string name="cp_no_cover_choices">No shared photos available yet. Choose one from your library.</string>
+    <string name="cp_private_owner">Only the two of you can see these profile sections.</string>
+    <string name="cp_no_answer_shared">No answer shared yet.</string>
 </resources>

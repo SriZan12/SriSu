@@ -1,6 +1,13 @@
 package com.srisu.srisu.features.coupleprofile.presentation
 
 import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.srisu.srisu.theme.*
 import androidx.compose.runtime.*
 import kotlinx.datetime.*
 import kotlin.time.Clock
@@ -19,8 +26,9 @@ import srisu.composeapp.generated.resources.*
     var pickingDate by remember { mutableStateOf(false) }
     var pickingTime by remember { mutableStateOf(false) }
     val saveDateTime: (LocalDate, LocalTime) -> Unit = { d,t -> vm.edit(if(plan) "starts_at" else "anniversary_date", if(plan) LocalDateTime(d,t).toInstant(TimeZone.currentSystemDefault()).toString() else d.toString()) }
-    OutlinedButton(onClick={pickingDate=true},enabled=!state.saving) { Text(if(value.isBlank()) stringResource(Res.string.cp_choose_date) else date.toString()) }
-    if(plan) OutlinedButton(onClick={pickingTime=true},enabled=!state.saving) { Text(time.toString()) }
+    ProfileDateChoice(stringResource(Res.string.cp_date_label),
+        if (value.isBlank()) stringResource(Res.string.cp_choose_date) else date.toString(), !state.saving, false) { pickingDate = true }
+    if (plan) ProfileDateChoice(stringResource(Res.string.cp_time), time.toString(), !state.saving, true) { pickingTime = true }
     if(pickingDate) {
         val picker = rememberDatePickerState(initialSelectedDateMillis = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(), selectableDates=object: SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean = if(plan) utcTimeMillis >= now.date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds() else utcTimeMillis <= now.date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
@@ -38,3 +46,15 @@ internal fun localPlanTime(value: String): String = runCatching {
     val local = Instant.parse(value).toLocalDateTime(TimeZone.currentSystemDefault())
     "${local.date} · ${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
 }.getOrDefault(value)
+
+@Composable private fun ProfileDateChoice(label: String, value: String, enabled: Boolean, time: Boolean, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.field,
+        contentPadding = PaddingValues(MaterialTheme.spacing.medium)) {
+        Icon(if (time) Icons.Default.Schedule else Icons.Default.CalendarMonth, null)
+        Spacer(Modifier.width(MaterialTheme.spacing.compact))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
