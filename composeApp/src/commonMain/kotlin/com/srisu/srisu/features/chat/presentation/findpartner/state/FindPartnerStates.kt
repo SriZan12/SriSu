@@ -39,4 +39,6 @@ data class FindPartnerState(
     val updatingRequestIds: Set<Long> = emptySet(),
     val requestErrors: Map<Long, String> = emptyMap(),
     val acceptedPartnerName: String? = null,
+    val acceptedRoomId: String? = null,
+    val acceptedCoupleId: Long? = null,
 )

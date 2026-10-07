@@ -16,6 +16,15 @@ import com.srisu.srisu.features.chat.data.remote.response.TypingResponse
 
 sealed interface ChatWebSocketEvent {
     data object Resync : ChatWebSocketEvent
+    /** Content-free v2 invalidation; HTTP delta remains authoritative. */
+    data class ChatV2Changed(val roomId: String, val highWatermark: Long) : ChatWebSocketEvent
+    /** Content-free relationship invalidation; the relationship API remains authoritative. */
+    data class RelationshipChanged(
+        val connectionId: Long,
+        val revision: Long,
+        val status: String,
+        val roomId: String? = null,
+    ) : ChatWebSocketEvent
     data class AccessRevoked(val roomId: String) : ChatWebSocketEvent
     data object Connected : ChatWebSocketEvent
     data class Disconnected(val reason: String?) : ChatWebSocketEvent

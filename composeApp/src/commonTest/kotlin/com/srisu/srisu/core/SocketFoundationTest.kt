@@ -108,4 +108,61 @@ class SocketFoundationTest {
         assertEquals(2, events.count { it == ChatWebSocketEvent.Resync })
         client.close(); lifetime.close()
     }
+
+    @Test fun contentFreeV2ChangeHintIsTypedAndDeduplicatedBeforeLegacyParsing() = runTest(dispatcher) {
+        val lifetime = ApplicationLifetime().apply { setForeground(true) }
+        val socket = FakeSocket()
+        val client = ChatWebSocketClient(SocketConnector { socket }, session(), lifetime)
+        val events = mutableListOf<ChatWebSocketEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { client.events.collect { events += it.event } }
+        client.connect(); runCurrent()
+        val room = "123e4567-e89b-12d3-a456-426614174000"
+        val subscribe = async { client.subscribeRoomV2(room) }
+        runCurrent()
+        val command = ApiJson.parseToJsonElement(socket.sent.receive()).jsonObject
+        assertEquals(2, command["protocol_version"]?.jsonPrimitive?.int)
+        assertEquals("subscribe_room", command["action"]?.jsonPrimitive?.content)
+        val requestId = command["request_id"]?.jsonPrimitive?.content
+        socket.incoming.send("""{"type":"success","protocol_version":2,"action":"subscribe_room","request_id":"$requestId","data":{}}""")
+        runCurrent(); subscribe.await()
+        val frame = """{"type":"event","protocol_version":2,"event_id":"v2-fixed","action":"chat_v2_changed","data":{"chat_room_id":"$room","high_watermark":42}}"""
+        socket.incoming.send(frame); socket.incoming.send(frame)
+        runCurrent()
+
+        val hint = events.filterIsInstance<ChatWebSocketEvent.ChatV2Changed>().single()
+        assertEquals(room, hint.roomId)
+        assertEquals(42L, hint.highWatermark)
+        client.close(); lifetime.close()
+    }
+
+    @Test fun relationshipChangedHintUsesLongIdsAndMalformedPayloadResyncs() = runTest(dispatcher) {
+        val lifetime = ApplicationLifetime().apply { setForeground(true) }
+        val socket = FakeSocket()
+        val client = ChatWebSocketClient(SocketConnector { socket }, session(), lifetime)
+        val events = mutableListOf<ChatWebSocketEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { client.events.collect { events += it.event } }
+        client.connect(); runCurrent()
+        socket.incoming.send(
+            """{"type":"event","action":"relationship_changed","message":"Event","data":{"connection_id":2147483648,"revision":2147483649,"status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000"},"protocol_version":1,"event_id":"relationship-1","emitted_at":"2026-10-07T00:00:00Z"}"""
+        )
+        socket.incoming.send(
+            """{"type":"event","action":"relationship_changed","data":{"connection_id":0,"revision":2,"status":"ACCEPTED"},"protocol_version":1,"event_id":"relationship-bad"}"""
+        )
+        socket.incoming.send(
+            """{"type":"event","action":"access_revoked","data":{"chat_room_id":"123e4567-e89b-12d3-a456-426614174000"},"protocol_version":1,"event_id":"revoked-1"}"""
+        )
+        runCurrent()
+
+        val hint = events.filterIsInstance<ChatWebSocketEvent.RelationshipChanged>().single()
+        assertEquals(2_147_483_648L, hint.connectionId)
+        assertEquals(2_147_483_649L, hint.revision)
+        assertEquals("ACCEPTED", hint.status)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", hint.roomId)
+        assertEquals(
+            "123e4567-e89b-12d3-a456-426614174000",
+            events.filterIsInstance<ChatWebSocketEvent.AccessRevoked>().single().roomId,
+        )
+        assertEquals(1, events.count { it == ChatWebSocketEvent.Resync })
+        client.close(); lifetime.close()
+    }
 }

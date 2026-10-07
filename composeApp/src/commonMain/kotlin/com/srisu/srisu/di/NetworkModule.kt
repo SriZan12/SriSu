@@ -11,6 +11,13 @@ import com.srisu.srisu.features.chat.data.remote.api.ChatRepository
 import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
 import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
+import com.srisu.srisu.features.chat.v2.crypto.E2eeEngine
+import com.srisu.srisu.features.chat.v2.crypto.UnavailableE2eeEngine
+import com.srisu.srisu.features.chat.v2.data.ChatV2Repository
+import com.srisu.srisu.features.chat.v2.data.local.ChatDatabase
+import com.srisu.srisu.features.chat.v2.data.remote.ChatV2ApiService
+import com.srisu.srisu.features.chat.v2.data.remote.ChatV2Remote
+import com.srisu.srisu.features.chat.v2.presentation.ChatV2RolloutPolicy
 import com.srisu.srisu.core.session.SessionUtils
 import org.koin.core.module.Module
 import org.koin.dsl.onClose
@@ -23,6 +30,7 @@ val sharedNetworkModule = module {
     single<com.srisu.srisu.core.session.SessionStorage> { get<com.srisu.srisu.core.session.SessionCoordinator>() }
     single { HttpClientFactory.create(sessions = get(), environment = get(), engine = get()) } onClose { it?.close() }
     single { get<com.srisu.srisu.core.data.local.CatalogueDatabase>().catalogue() }
+    single { get<ChatDatabase>().chatV2() }
     single { com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository(get(), get(), get(), get()) }
 
     single { com.srisu.srisu.navigation.CoupleAccessCoordinator(get(), get(), get(), get()) }
@@ -44,6 +52,21 @@ val sharedNetworkModule = module {
     single { ChatWebSocketClient(connector = get(), sessions = get(), lifetime = get()) } onClose { it?.close() }
 
     single { ChatRepository(webSocketClient = get(), chatApiService = get(), sessions = get(), lifetime = get()) } onClose { it?.close() }
+
+    single<E2eeEngine> { UnavailableE2eeEngine() }
+    single { ChatV2RolloutPolicy.configured(get()) }
+    single<ChatV2Remote> { ChatV2ApiService(httpClient = get(), environment = get()) }
+    single {
+        ChatV2Repository(
+            dao = get(),
+            remote = get(),
+            sessions = get(),
+            environment = get(),
+            e2ee = get(),
+            lifetime = get(),
+            webSocketClient = get(),
+        )
+    } onClose { it?.close() }
 
 }
 

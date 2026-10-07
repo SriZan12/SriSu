@@ -3,11 +3,18 @@ package com.srisu.srisu.features.chat
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.config.ApiEnvironment
 import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
+import com.srisu.srisu.core.FakeSocket
+import com.srisu.srisu.core.data.remote.SocketConnector
+import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.session.SessionStorage
+import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
 import com.srisu.srisu.features.chat.presentation.findpartner.state.PartnerSearchStatus
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiService
+import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionResponse
+import com.srisu.srisu.features.home.connection.data.remote.response.HaveCoupleConnectionResponse
 import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.utils.Constants
 import io.ktor.client.HttpClient
@@ -33,15 +40,22 @@ import kotlin.test.*
 class FindPartnerViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var client: HttpClient
+    private lateinit var connectionRepository: ConnectionRepository
     private lateinit var vm: FindPartnerViewModel
+    private lateinit var sessions: SessionCoordinator
+    private lateinit var lifetime: ApplicationLifetime
+    private lateinit var socketConnection: FakeSocket
+    private lateinit var socket: ChatWebSocketClient
     private val calls = mutableListOf<Pair<String, String>>()
     private var searchStatus = HttpStatusCode.OK
     private var searchData = """{"id":2,"full_name":"Aayush","phone_number":"+9779812345678"}"""
     private var sendStatus = HttpStatusCode.OK
     private var updateStatus = HttpStatusCode.OK
+    private var updateData = "null"
     private var statusStatus = HttpStatusCode.OK
     private var statusData = """{"connection_requested":false}"""
     private var lastUpdateBody = ""
+    private val idempotencyKeys = mutableListOf<String?>()
     private var latency = 0L
 
     @BeforeTest
@@ -52,14 +66,16 @@ class FindPartnerViewModelTest {
             addHandler { request ->
             val path = request.url.encodedPath
             calls += path to request.url.parameters["phone_number"].orEmpty()
+            if (request.method != io.ktor.http.HttpMethod.Get) idempotencyKeys += request.headers["Idempotency-Key"]
+            val statusDataAtRequestStart = statusData
             delay(latency)
             val (status, data) = when {
                 path.endsWith("find-partner/") -> searchStatus to searchData
-                path.endsWith("have-couple-connection-requested/") -> statusStatus to statusData
+                path.endsWith("have-couple-connection-requested/") -> statusStatus to statusDataAtRequestStart
                 path.endsWith("connect-couple/") -> sendStatus to """{"id":7,"breakup_reason":null,"connection_status":null,"created_at":null,"receiver_number":null,"sender_number":null,"updated_at":null}"""
                 else -> {
                     lastUpdateBody = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
-                    updateStatus to "null"
+                    updateStatus to updateData
                 }
             }
             respond(if (status == HttpStatusCode.OK) """{"data":$data,"message":"Done"}"""
@@ -74,17 +90,33 @@ class FindPartnerViewModelTest {
             }
         }
         client.attributes.put(ApiEnvironmentKey, ApiEnvironment("https://example.test/"))
-        vm = FindPartnerViewModel(ConnectionRepository(ConnectionApiService(client)), object : SessionStorage {
-            override fun getSession(sessionKey: String) = Json.encodeToString(Session(phoneNumber = "+9779800000000"))
-            override fun saveSession(credentials: String, sessionKey: String) = Unit
-            override fun clearSession() = true
+        var storedSession: String? = Json.encodeToString(Session(id = 1, access = "synthetic", phoneNumber = "+9779800000000"))
+        val storage = object : SessionStorage {
+            override fun getSession(sessionKey: String) = storedSession
+            override fun saveSession(credentials: String, sessionKey: String) { storedSession = credentials }
+            override fun clearSession(): Boolean { storedSession = null; return true }
             override fun clearOnReinstall(key: String) = Unit
-        }, countryProvider = { emptyList() })
+        }
+        sessions = SessionCoordinator(storage)
+        lifetime = ApplicationLifetime()
+        socketConnection = FakeSocket()
+        socket = ChatWebSocketClient(SocketConnector { socketConnection }, sessions, lifetime)
+        connectionRepository = ConnectionRepository(ConnectionApiService(client))
+        vm = FindPartnerViewModel(
+            connectionRepository,
+            sessions,
+            countryProvider = { emptyList() },
+            sessionCoordinator = sessions,
+            webSocketClient = socket,
+            lifetime = lifetime,
+        )
     }
 
     @AfterTest
     fun teardown() {
         vm.viewModelScope.cancel()
+        socket.close()
+        lifetime.close()
         client.close()
         Dispatchers.resetMain()
     }
@@ -247,6 +279,134 @@ class FindPartnerViewModelTest {
         assertNull(vm.findPartnerUIState.value.sentInvitation)
     }
 
+    @Test fun manualStatusRecoveryDiscoversAcceptedRoomAfterPartnerAccepts() = runTest(dispatcher) {
+        statusData = """{"connection_requested":true,"connection":{"id":7,"connection_status":"PENDING","receiver_number":"+9779812345678","partner":{"full_name":"Aayush"}}}"""
+        vm.onScreenEntered()
+        advanceUntilIdle()
+        assertEquals(7L, vm.findPartnerUIState.value.sentInvitation?.requestId)
+
+        statusData = """{"connection_requested":false,"connection":{"id":7,"connection_status":"ACCEPTED","updated_at":"2026-10-07T01:02:03Z","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"partner":{"full_name":"Aayush"}}}"""
+        vm.sendHaveCoupleConnectionRequested()
+        advanceUntilIdle()
+
+        assertNull(vm.findPartnerUIState.value.sentInvitation)
+        assertEquals("Aayush", vm.findPartnerUIState.value.acceptedPartnerName)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", vm.findPartnerUIState.value.acceptedRoomId)
+        assertEquals(9L, vm.findPartnerUIState.value.acceptedCoupleId)
+        assertEquals("7 Oct 2026", vm.findPartnerUIState.value.connectedSince)
+    }
+
+    @Test fun relationshipHintRefreshesMatchingInvitationButIgnoresUnrelatedConnection() = runTest(dispatcher) {
+        statusData = """{"connection_requested":true,"connection":{"id":7,"connection_status":"PENDING","receiver_number":"+9779812345678","partner":{"full_name":"Aayush"}}}"""
+        vm.onScreenEntered()
+        advanceUntilIdle()
+        lifetime.setForeground(true)
+        advanceUntilIdle()
+        val statusReadsBeforeHints = calls.count { it.first.endsWith("have-couple-connection-requested/") }
+
+        socketConnection.incoming.send(
+            """{"type":"event","action":"relationship_changed","message":"Event","data":{"connection_id":8,"revision":2,"status":"ACCEPTED"},"protocol_version":1,"event_id":"unrelated","emitted_at":"2026-10-07T01:02:03Z"}"""
+        )
+        advanceUntilIdle()
+        assertEquals(statusReadsBeforeHints + 1, calls.count { it.first.endsWith("have-couple-connection-requested/") })
+        assertNull(vm.findPartnerUIState.value.acceptedPartnerName)
+        assertFalse(vm.findPartnerUIState.value.navigateToInviteSent)
+
+        statusData = """{"connection_requested":false,"connection":{"id":7,"connection_status":"ACCEPTED","updated_at":"2026-10-07T01:02:03Z","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"partner":{"full_name":"Aayush"}}}"""
+        socketConnection.incoming.send(
+            """{"type":"event","action":"relationship_changed","message":"Event","data":{"connection_id":7,"revision":2,"status":"ACCEPTED"},"protocol_version":1,"event_id":"matching","emitted_at":"2026-10-07T01:02:04Z"}"""
+        )
+        advanceUntilIdle()
+
+        assertEquals(statusReadsBeforeHints + 2, calls.count { it.first.endsWith("have-couple-connection-requested/") })
+        assertEquals("Aayush", vm.findPartnerUIState.value.acceptedPartnerName)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", vm.findPartnerUIState.value.acceptedRoomId)
+        assertFalse(vm.findPartnerUIState.value.navigateToInviteSent)
+    }
+
+    @Test fun foregroundTransitionRecoversAcceptanceWhenSocketHintWasMissed() = runTest(dispatcher) {
+        statusData = """{"connection_requested":true,"connection":{"id":7,"connection_status":"PENDING","receiver_number":"+9779812345678","partner":{"full_name":"Aayush"}}}"""
+        vm.onScreenEntered()
+        advanceUntilIdle()
+        val initialStatusReads = calls.count { it.first.endsWith("have-couple-connection-requested/") }
+
+        statusData = """{"connection_requested":false,"connection":{"id":7,"connection_status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"partner":{"full_name":"Aayush"}}}"""
+        lifetime.setForeground(true)
+        advanceUntilIdle()
+
+        assertEquals(initialStatusReads + 1, calls.count { it.first.endsWith("have-couple-connection-requested/") })
+        assertEquals("Aayush", vm.findPartnerUIState.value.acceptedPartnerName)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", vm.findPartnerUIState.value.acceptedRoomId)
+    }
+
+    @Test fun relationshipHintBeforeInitialStatusResultIsConflatedIntoPostReadReconcile() = runTest(dispatcher) {
+        statusData = """{"connection_requested":true,"connection":{"id":7,"connection_status":"PENDING","receiver_number":"+9779812345678","partner":{"full_name":"Aayush"}}}"""
+        latency = 1_000
+        lifetime.setForeground(true)
+        vm.onScreenEntered()
+        runCurrent()
+        assertTrue(vm.findPartnerUIState.value.isCheckingInvitation)
+
+        statusData = """{"connection_requested":false,"connection":{"id":7,"connection_status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"partner":{"full_name":"Aayush"}}}"""
+        socketConnection.incoming.send(
+            """{"type":"event","action":"relationship_changed","message":"Event","data":{"connection_id":7,"revision":2,"status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000"},"protocol_version":1,"event_id":"before-initial-result","emitted_at":"2026-10-07T01:02:02Z"}"""
+        )
+        advanceUntilIdle()
+
+        assertEquals(2, calls.count { it.first.endsWith("have-couple-connection-requested/") })
+        assertEquals("Aayush", vm.findPartnerUIState.value.acceptedPartnerName)
+    }
+
+    @Test fun socketConnectedAfterInitialSnapshotTriggersOneAuthoritativeReconcile() = runTest(dispatcher) {
+        val connectedVm = FindPartnerViewModel(
+            connectionRepository,
+            sessions,
+            countryProvider = { emptyList() },
+            sessionCoordinator = sessions,
+            webSocketClient = socket,
+            lifetime = null,
+        )
+        try {
+            statusData = """{"connection_requested":true,"connection":{"id":7,"connection_status":"PENDING","receiver_number":"+9779812345678","partner":{"full_name":"Aayush"}}}"""
+            connectedVm.onScreenEntered()
+            advanceUntilIdle()
+            val readsAfterSnapshot = calls.count { it.first.endsWith("have-couple-connection-requested/") }
+
+            statusData = """{"connection_requested":false,"connection":{"id":7,"connection_status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"partner":{"full_name":"Aayush"}}}"""
+            lifetime.setForeground(true)
+            advanceUntilIdle()
+
+            assertEquals(readsAfterSnapshot + 1, calls.count { it.first.endsWith("have-couple-connection-requested/") })
+            assertEquals("Aayush", connectedVm.findPartnerUIState.value.acceptedPartnerName)
+        } finally {
+            connectedVm.viewModelScope.cancel()
+        }
+    }
+
+    @Test fun relationshipHintDuringInFlightStatusQueuesOneConflatedFollowUp() = runTest(dispatcher) {
+        statusData = """{"connection_requested":true,"connection":{"id":7,"connection_status":"PENDING","receiver_number":"+9779812345678","partner":{"full_name":"Aayush"}}}"""
+        vm.onScreenEntered()
+        advanceUntilIdle()
+        lifetime.setForeground(true)
+        advanceUntilIdle()
+        val readsBeforeRace = calls.count { it.first.endsWith("have-couple-connection-requested/") }
+
+        latency = 1_000
+        vm.sendHaveCoupleConnectionRequested()
+        runCurrent()
+        assertTrue(vm.findPartnerUIState.value.isCheckingInvitation)
+        statusData = """{"connection_requested":false,"connection":{"id":7,"connection_status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"partner":{"full_name":"Aayush"}}}"""
+        socketConnection.incoming.send(
+            """{"type":"event","action":"relationship_changed","message":"Event","data":{"connection_id":7,"revision":3,"status":"ACCEPTED"},"protocol_version":1,"event_id":"in-flight","emitted_at":"2026-10-07T01:02:05Z"}"""
+        )
+        runCurrent()
+        advanceUntilIdle()
+
+        assertEquals(readsBeforeRace + 2, calls.count { it.first.endsWith("have-couple-connection-requested/") })
+        assertEquals("Aayush", vm.findPartnerUIState.value.acceptedPartnerName)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", vm.findPartnerUIState.value.acceptedRoomId)
+    }
+
     @Test fun statusFailureBlocksSendingUntilSuccessfulRetry() = runTest(dispatcher) {
         statusStatus = HttpStatusCode.ServiceUnavailable
         findPartner()
@@ -287,10 +447,36 @@ class FindPartnerViewModelTest {
         assertNull(vm.findPartnerUIState.value.connectedSince)
     }
 
+    @Test fun acceptanceRetryReusesIdempotencyKeyAndStoresTypedRoomId() = runTest(dispatcher) {
+        updateStatus = HttpStatusCode.ServiceUnavailable
+        vm.updateLoveRequest(42, "+9779812345678", "+9779800000000", Constants.ConnectionStatus.ACCEPTED)
+        advanceUntilIdle()
+        updateStatus = HttpStatusCode.OK
+        updateData = """{"id":42,"connection_status":"ACCEPTED","chat_room_id":"123e4567-e89b-12d3-a456-426614174000","couple_id":9,"replayed":true}"""
+        vm.updateLoveRequest(42, "+9779812345678", "+9779800000000", Constants.ConnectionStatus.ACCEPTED)
+        advanceUntilIdle()
+        assertEquals(2, idempotencyKeys.size)
+        assertFalse(idempotencyKeys[0].isNullOrBlank())
+        assertEquals(idempotencyKeys[0], idempotencyKeys[1])
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", vm.findPartnerUIState.value.acceptedRoomId)
+        assertEquals(9L, vm.findPartnerUIState.value.acceptedCoupleId)
+    }
+
     @Test fun connectionDateUsesServerValueAndRejectsInvalidDates() {
         assertEquals("10 Jan 2026", com.srisu.srisu.features.chat.presentation.findpartner.vm.formatConnectionDate("2026-01-10T12:34:56Z"))
         assertNull(com.srisu.srisu.features.chat.presentation.findpartner.vm.formatConnectionDate(null))
         assertNull(com.srisu.srisu.features.chat.presentation.findpartner.vm.formatConnectionDate("invalid"))
+    }
+
+    @Test fun relationshipContractsDecodeBigAutoFieldIdsBeyondIntRange() {
+        val mutation = Json.decodeFromString<CoupleConnectionResponse>(
+            """{"id":2147483648,"connection_status":"ACCEPTED"}"""
+        )
+        val status = Json.decodeFromString<HaveCoupleConnectionResponse>(
+            """{"connection_requested":true,"connection":{"id":2147483649,"connection_status":"PENDING"}}"""
+        )
+        assertEquals(2_147_483_648L, mutation.id)
+        assertEquals(2_147_483_649L, status.connection?.id)
     }
 
 }

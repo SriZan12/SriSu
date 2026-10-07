@@ -98,10 +98,9 @@ class ChatRepository(
         }
         scope.launch {
             lifetime.foreground.collectLatest { foreground ->
-                if (foreground) while (isActive) {
-                    if (connected) refreshes.trySend(Unit)
-                    delay(30_000) // Repair a lost final publication even when the socket stays connected.
-                }
+                // One lost-hint recovery read per foreground transition. Live
+                // convergence is driven by socket invalidations, never a timer.
+                if (foreground && connected) refreshes.trySend(Unit)
             }
         }
     }

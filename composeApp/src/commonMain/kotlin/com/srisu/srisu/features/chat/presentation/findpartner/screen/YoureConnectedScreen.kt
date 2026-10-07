@@ -29,10 +29,15 @@ import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.partner_invite_landscape
+import srisu.composeapp.generated.resources.partner_open_conversation
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun YouAreConnectedScreen(state: FindPartnerState, onViewOurSpace: () -> Unit) {
+fun YouAreConnectedScreen(
+    state: FindPartnerState,
+    onViewOurSpace: () -> Unit,
+    onOpenConversation: ((String) -> Unit)?,
+) {
     BackHandler(onBack = onViewOurSpace)
     MaterialTheme(typography = SriSuPartnerLinkTypography()) {
         Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
@@ -118,6 +123,14 @@ fun YouAreConnectedScreen(state: FindPartnerState, onViewOurSpace: () -> Unit) {
                                 Modifier.fillMaxWidth(),
                                 size = SriSuButtonSize.Large
                             )
+                            if (onOpenConversation != null) state.acceptedRoomId?.let { roomId ->
+                                SriSuButton(
+                                    label = org.jetbrains.compose.resources.stringResource(Res.string.partner_open_conversation),
+                                    onClick = { onOpenConversation(roomId) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    size = SriSuButtonSize.Large,
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.weight(1f))

@@ -11,6 +11,40 @@ import kotlinx.coroutines.test.*
 import kotlin.test.*
 
 class ChatIsolationTest {
+    @Test fun foregroundRecoveryReadDoesNotStartAnIntervalPoller() = runTest(dispatcher) {
+        val sessions = session()
+        val lifetime = ApplicationLifetime()
+        var roomFetches = 0
+        val client = HttpClientFactory.create(sessions, environment, MockEngine(MockEngineConfig().apply {
+            dispatcher = this@ChatIsolationTest.dispatcher
+            addHandler { request ->
+                if (request.url.encodedPath == "/api/chat/rooms/") roomFetches++
+                respond("""{"data":{"chat_rooms":[],"has_more":false,"next_cursor":null,"limit":20}}""")
+            }
+        }))
+        val socketConnection = FakeSocket()
+        val socket = ChatWebSocketClient(SocketConnector { socketConnection }, sessions, lifetime)
+        val repo = ChatRepository(socket, ChatApiService(client), sessions, lifetime)
+        try {
+            repo.connect()
+            lifetime.setForeground(true)
+            advanceTimeBy(500)
+            runCurrent()
+
+            val readsAfterForegroundRecovery = roomFetches
+            assertTrue(readsAfterForegroundRecovery > 0)
+
+            advanceTimeBy(31_000)
+            runCurrent()
+            assertEquals(readsAfterForegroundRecovery, roomFetches)
+        } finally {
+            repo.close()
+            socket.close()
+            lifetime.close()
+            client.close()
+        }
+    }
+
     @Test fun entryViewModelsPinTheirRoomAndPoppedOwnerCannotClearAnotherRoom() = runTest(dispatcher) {
         val sessions = session(); val lifetime = ApplicationLifetime()
         val client = HttpClientFactory.create(sessions, environment, MockEngine(MockEngineConfig().apply {

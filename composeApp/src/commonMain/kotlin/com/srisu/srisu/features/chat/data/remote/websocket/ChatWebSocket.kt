@@ -64,6 +64,30 @@ class ChatWebSocketClient(
             val action = (root["action"] as? JsonPrimitive)?.contentOrNull
             val id = (root["request_id"] as? JsonPrimitive)?.contentOrNull
             val version = (root["protocol_version"] as? JsonPrimitive)?.intOrNull
+            if (version == 2) {
+                if (type == "success" && action in setOf("subscribe_room", "unsubscribe_room")) {
+                    if (id != null) pending[id]?.takeIf { it.action == action }?.acknowledgment?.complete(Unit)
+                    return
+                }
+                if (type != "event" || action != "chat_v2_changed") {
+                    emit(stamp, ChatWebSocketEvent.Resync)
+                    return
+                }
+                val eventId = (root["event_id"] as? JsonPrimitive)?.contentOrNull
+                if (eventId != null) {
+                    if (!seen.add(eventId)) return
+                    if (seen.size > 256) seen.remove(seen.first())
+                }
+                val data = root["data"]?.jsonObject ?: throw SerializationException("Missing socket data")
+                val roomId = (data["chat_room_id"] as? JsonPrimitive)?.contentOrNull
+                    ?: throw SerializationException("Missing room")
+                if (!roomId.matches(Regex("[0-9a-fA-F-]{36}"))) throw SerializationException("Invalid room")
+                val highWatermark = (data["high_watermark"] as? JsonPrimitive)?.longOrNull
+                    ?: throw SerializationException("Missing high watermark")
+                if (highWatermark < 0) throw SerializationException("Invalid high watermark")
+                emit(stamp, ChatWebSocketEvent.ChatV2Changed(roomId.lowercase(), highWatermark))
+                return
+            }
             if (version != null && version != 1) { emit(stamp, ChatWebSocketEvent.Resync); return }
             if (type == "error") {
                 val code = ((root["error"] as? JsonObject)?.get("code") as? JsonPrimitive)?.contentOrNull
@@ -79,7 +103,7 @@ class ChatWebSocketClient(
                 if (!seen.add(eventId)) return
                 if (seen.size > 256) seen.remove(seen.first())
             }
-            if (action == "unsubscribe_room") { if (type == "success" && id != null) pending[id]?.takeIf { it.action == action }?.acknowledgment?.complete(Unit); return }
+            if (action in setOf("subscribe_room", "unsubscribe_room")) { if (type == "success" && id != null) pending[id]?.takeIf { it.action == action }?.acknowledgment?.complete(Unit); return }
             val data = root["data"] ?: throw SerializationException("Missing socket data")
             val event = when(action) {
                 "fetch_messages" -> ChatWebSocketEvent.FetchMessages(ApiJson.decodeFromJsonElement<FetchMessagesData>(data))
@@ -93,6 +117,20 @@ class ChatWebSocketClient(
                 "react_to_message", "message_reacted" -> ChatWebSocketEvent.ReactToMessage(ApiJson.decodeFromJsonElement<ReactionData>(data))
                 "chat_room_updated" -> ChatWebSocketEvent.ChatRoomUpdated(ApiJson.decodeFromJsonElement<ChatRoomItemDto>(data))
                 "access_revoked" -> ChatWebSocketEvent.AccessRevoked((data.jsonObject["chat_room_id"] as? JsonPrimitive)?.contentOrNull ?: throw SerializationException("Missing room"))
+                "relationship_changed" -> data.jsonObject.let { relationship ->
+                    val connectionId = (relationship["connection_id"] as? JsonPrimitive)?.longOrNull
+                        ?.takeIf { it > 0 } ?: throw SerializationException("Invalid connection")
+                    val revision = (relationship["revision"] as? JsonPrimitive)?.longOrNull
+                        ?.takeIf { it > 0 } ?: throw SerializationException("Invalid relationship revision")
+                    val status = (relationship["status"] as? JsonPrimitive)?.contentOrNull
+                        ?.takeIf { it in setOf("NOTHING", "PENDING", "ACCEPTED", "REJECTED", "BREAK-UP", "ENDED") }
+                        ?: throw SerializationException("Invalid relationship status")
+                    val roomId = (relationship["chat_room_id"] as? JsonPrimitive)?.contentOrNull?.let { value ->
+                        value.takeIf { it.matches(Regex("[0-9a-fA-F-]{36}")) }
+                            ?.lowercase() ?: throw SerializationException("Invalid relationship room")
+                    }
+                    ChatWebSocketEvent.RelationshipChanged(connectionId, revision, status, roomId)
+                }
                 else -> ChatWebSocketEvent.Resync
             }
             val mutation = when (event) {
@@ -113,6 +151,14 @@ class ChatWebSocketClient(
 
     suspend fun unsubscribe(roomId: String) = sendAcknowledged(
         buildJsonObject { put("action", "unsubscribe_room"); put("payload", buildJsonObject { put("chat_room_id", roomId) }) }.toString()
+    )
+
+    suspend fun subscribeRoomV2(roomId: String) = sendAcknowledged(
+        buildJsonObject {
+            put("protocol_version", 2)
+            put("action", "subscribe_room")
+            put("payload", buildJsonObject { put("chat_room_id", roomId) })
+        }.toString()
     )
 
     suspend fun fetchMessages(

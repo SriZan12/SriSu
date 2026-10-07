@@ -8,9 +8,13 @@ import app.cash.paging.cachedIn
 import app.cash.paging.filter
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
 import com.srisu.srisu.core.data.remote.ResultHandler
+import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.core.session.Session
+import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.features.chat.data.paging.PartnerInvitationsPagingSource
+import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
+import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketEvent
 import com.srisu.srisu.features.chat.presentation.findpartner.state.FindPartnerState
 import com.srisu.srisu.features.chat.presentation.findpartner.state.PartnerSearchStatus
 import com.srisu.srisu.features.chat.presentation.findpartner.state.SentPartnerInvitation
@@ -18,6 +22,7 @@ import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto
 import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
 import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.ConfirmedCoupleConnection
 import com.srisu.srisu.utils.Constants
 import com.srisu.srisu.utils.Country
 import com.srisu.srisu.utils.CountryModel
@@ -28,6 +33,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -35,16 +41,61 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.number
 import kotlinx.serialization.json.Json
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class FindPartnerViewModel(
     private val connectionRepository: ConnectionRepository,
     private val sessionStorage: SessionStorage,
     private val countryProvider: () -> List<CountryModel> = { Country.getAllCountriesFromJson().orEmpty() },
+    private val sessionCoordinator: SessionCoordinator? = null,
+    private val webSocketClient: ChatWebSocketClient? = null,
+    lifetime: ApplicationLifetime? = null,
 ) : ViewModel() {
     private val _findPartnerUIState = MutableStateFlow(FindPartnerState())
     val findPartnerUIState = _findPartnerUIState.asStateFlow()
     private var searchJob: Job? = null
     private var hasEntered = false
+    private val relationshipRevisions = mutableMapOf<Long, Long>()
+    private var relationshipRefreshPending = false
+    private var relationshipRefreshConnectionId: Long? = null
+    /** Failed retries retain the same idempotency key; success removes it. */
+    private val mutationOperationIds = mutableMapOf<String, String>()
+
+    init {
+        webSocketClient?.let { socket ->
+            viewModelScope.launch {
+                socket.events.collect { scoped ->
+                    val coordinator = sessionCoordinator ?: return@collect
+                    if (!hasEntered || scoped.session != coordinator.stamp()) return@collect
+                    when (val event = scoped.event) {
+                        ChatWebSocketEvent.Connected -> requestRelationshipStatusRefresh(connectionId = null)
+                        is ChatWebSocketEvent.RelationshipChanged -> {
+                            val previousRevision = relationshipRevisions[event.connectionId] ?: 0
+                            if (event.revision <= previousRevision) return@collect
+                            relationshipRevisions[event.connectionId] = event.revision
+                            // The authenticated user-group is participant-scoped.
+                            // Never mutate from the hint; reconcile authoritative
+                            // status even before an invitation ID is known.
+                            requestRelationshipStatusRefresh(connectionId = null)
+                        }
+                        else -> Unit
+                    }
+                }
+            }
+        }
+        lifetime?.let { appLifetime ->
+            viewModelScope.launch {
+                appLifetime.foreground.collectLatest { foreground ->
+                    val state = _findPartnerUIState.value
+                    if (foreground && hasEntered && state.sentInvitation != null && state.acceptedPartnerName == null) {
+                        requestRelationshipStatusRefresh(state.sentInvitation.requestId)
+                    }
+                }
+            }
+        }
+    }
 
     // One cached Pager. Item access drives prefetch; recomposition never refreshes it.
     val loveRequests = combine(
@@ -68,6 +119,7 @@ class FindPartnerViewModel(
             senderName = session?.fullName?.takeIf(String::isNotBlank) ?: "You", senderPhotoUrl = session?.profilePhoto) }
         if (hasEntered) return
         hasEntered = true
+        webSocketClient?.connect()
         _findPartnerUIState.update { it.copy(countryList = runCatching(countryProvider).getOrDefault(emptyList())) }
         sendHaveCoupleConnectionRequested()
     }
@@ -145,17 +197,25 @@ class FindPartnerViewModel(
             return
         }
         _findPartnerUIState.update { it.copy(isSendingInvitation = true, invitationError = null) }
+        val mutationKey = "invite:${state.senderPhoneNumber}:$receiver"
+        val operationId = mutationOperationIds.getOrPut(mutationKey) { Uuid.random().toString() }
         viewModelScope.launch {
             when (val result = request {
-                connectionRepository.sendCoupleConnectionRequest(state.senderPhoneNumber, receiver)
+                connectionRepository.sendCoupleConnectionRequest(state.senderPhoneNumber, receiver, operationId)
             }) {
-                is NetworkAPIResult.Success -> _findPartnerUIState.update {
-                    it.copy(isSendingInvitation = false, navigateToInviteSent = true,
-                        sentInvitation = SentPartnerInvitation(
-                            requestId = result.response?.id?.toLong(),
-                            name = partner.fullName?.takeIf(String::isNotBlank) ?: partner.username ?: "Your partner",
-                            phoneNumber = receiver, photoUrl = partner.profilePhoto,
-                        ))
+                is NetworkAPIResult.Success -> {
+                    mutationOperationIds.remove(mutationKey)
+                    _findPartnerUIState.update {
+                        it.copy(isSendingInvitation = false, navigateToInviteSent = true,
+                            sentInvitation = SentPartnerInvitation(
+                                requestId = result.response?.id,
+                                name = partner.fullName?.takeIf(String::isNotBlank) ?: partner.username ?: "Your partner",
+                                phoneNumber = receiver, photoUrl = partner.profilePhoto,
+                            ),
+                            acceptedRoomId = result.response?.chatRoomId?.takeIf(::isValidChatRoomId) ?: it.acceptedRoomId,
+                            acceptedCoupleId = result.response?.coupleId ?: it.acceptedCoupleId,
+                        )
+                    }
                 }
                 is NetworkAPIResult.Error -> _findPartnerUIState.update {
                     it.copy(isSendingInvitation = false, invitationError = result.error ?: "Couldn’t send the invitation. Try again.")
@@ -181,7 +241,7 @@ class FindPartnerViewModel(
                     val connection = result.response?.connection
                     val pending = if (result.response?.connectionRequested == true && connection != null && connection.connectionStatus != Constants.ConnectionStatus.ACCEPTED) {
                         SentPartnerInvitation(
-                            requestId = connection.id?.toLong(),
+                            requestId = connection.id,
                             name = connection.partner?.fullName?.takeIf(String::isNotBlank)
                                 ?: connection.partner?.username ?: it.sentInvitation?.name ?: "Your partner",
                             phoneNumber = connection.receiverNumber ?: connection.partner?.phoneNumber.orEmpty(),
@@ -196,12 +256,41 @@ class FindPartnerViewModel(
                         acceptedPartnerPhotoUrl = if (connection?.connectionStatus == Constants.ConnectionStatus.ACCEPTED)
                             connection.partner?.profilePhoto ?: it.sentInvitation?.photoUrl else it.acceptedPartnerPhotoUrl,
                         connectedSince = if (connection?.connectionStatus == Constants.ConnectionStatus.ACCEPTED)
-                            formatConnectionDate(connection.updatedAt) ?: it.connectedSince else it.connectedSince)
+                            formatConnectionDate(connection.updatedAt) ?: it.connectedSince else it.connectedSince,
+                        acceptedRoomId = if (connection?.connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                            connection.chatRoomId?.takeIf(::isValidChatRoomId) ?: it.acceptedRoomId else it.acceptedRoomId,
+                        acceptedCoupleId = if (connection?.connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                            connection.coupleId ?: it.acceptedCoupleId else it.acceptedCoupleId,
+                    )
                 }
                 is NetworkAPIResult.Error -> _findPartnerUIState.update {
                     it.copy(isCheckingInvitation = false, invitationStatusError = result.error ?: "Couldn’t check your invitation. Please retry.")
                 }
             }
+            consumePendingRelationshipRefresh()
+        }
+    }
+
+    private fun requestRelationshipStatusRefresh(connectionId: Long?) {
+        val state = _findPartnerUIState.value
+        if (state.acceptedPartnerName != null) return
+        if (state.isCheckingInvitation) {
+            relationshipRefreshPending = true
+            relationshipRefreshConnectionId = connectionId
+            return
+        }
+        sendHaveCoupleConnectionRequested()
+    }
+
+    private fun consumePendingRelationshipRefresh() {
+        if (!relationshipRefreshPending) return
+        val expectedConnectionId = relationshipRefreshConnectionId
+        relationshipRefreshPending = false
+        relationshipRefreshConnectionId = null
+        val state = _findPartnerUIState.value
+        if (state.acceptedPartnerName == null &&
+            (expectedConnectionId == null || state.sentInvitation?.requestId == expectedConnectionId)) {
+            sendHaveCoupleConnectionRequested()
         }
     }
 
@@ -211,16 +300,21 @@ class FindPartnerViewModel(
         val requestId = invitation.requestId ?: run { sendHaveCoupleConnectionRequested(); return }
         if (state.isCancellingInvitation || state.isCheckingInvitation || state.acceptedPartnerName != null || state.updatingRequestIds.isNotEmpty()) return
         _findPartnerUIState.update { it.copy(isCancellingInvitation = true, invitationError = null) }
+        val mutationKey = "cancel:$requestId"
+        val operationId = mutationOperationIds.getOrPut(mutationKey) { Uuid.random().toString() }
         viewModelScope.launch {
             when (val result = request {
                 connectionRepository.updateLoveRequest(requestId, CoupleConnectionDTO(
                     senderNumber = state.senderPhoneNumber, receiverNumber = invitation.phoneNumber,
                     connectionStatus = Constants.ConnectionStatus.NOTHING,
-                ))
+                ), operationId)
             }) {
-                is NetworkAPIResult.Success -> _findPartnerUIState.update {
-                    it.copy(isCancellingInvitation = false, sentInvitation = null, navigateToInviteSent = false,
-                        partnerResponse = null, searchStatus = PartnerSearchStatus.Idle)
+                is NetworkAPIResult.Success -> {
+                    mutationOperationIds.remove(mutationKey)
+                    _findPartnerUIState.update {
+                        it.copy(isCancellingInvitation = false, sentInvitation = null, navigateToInviteSent = false,
+                            partnerResponse = null, searchStatus = PartnerSearchStatus.Idle)
+                    }
                 }
                 is NetworkAPIResult.Error -> _findPartnerUIState.update {
                     it.copy(isCancellingInvitation = false, invitationError = result.error ?: "Couldn’t cancel the invitation. Try again.")
@@ -236,24 +330,52 @@ class FindPartnerViewModel(
             state.updatingRequestIds.isNotEmpty() || state.isSendingInvitation || state.isCancellingInvitation) return
         if (connectionStatus != Constants.ConnectionStatus.ACCEPTED && connectionStatus != Constants.ConnectionStatus.REJECTED) return
         _findPartnerUIState.update { it.copy(updatingRequestIds = it.updatingRequestIds + id, requestErrors = it.requestErrors - id) }
+        val mutationKey = "request:$id:$connectionStatus"
+        val operationId = mutationOperationIds.getOrPut(mutationKey) { Uuid.random().toString() }
         viewModelScope.launch {
             when (val result = request {
-                connectionRepository.updateLoveRequest(id, CoupleConnectionDTO(senderNumber = senderNumber, receiverNumber = receiverNumber, connectionStatus = connectionStatus))
+                connectionRepository.updateLoveRequest(
+                    id,
+                    CoupleConnectionDTO(senderNumber = senderNumber, receiverNumber = receiverNumber, connectionStatus = connectionStatus),
+                    operationId,
+                )
             }) {
-                is NetworkAPIResult.Success -> _findPartnerUIState.update {
-                    it.copy(updatingRequestIds = it.updatingRequestIds - id, handledRequestIds = it.handledRequestIds + id,
-                        acceptedPartnerName = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
-                            partner?.fullName?.takeIf(String::isNotBlank) ?: partner?.username ?: "Your partner" else it.acceptedPartnerName,
-                        acceptedPartnerPhotoUrl = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
-                            partner?.profilePhoto else it.acceptedPartnerPhotoUrl,
-                        connectedSince = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
-                            formatConnectionDate(result.response?.updatedAt) else it.connectedSince)
+                is NetworkAPIResult.Success -> {
+                    mutationOperationIds.remove(mutationKey)
+                    _findPartnerUIState.update {
+                        it.copy(updatingRequestIds = it.updatingRequestIds - id, handledRequestIds = it.handledRequestIds + id,
+                            acceptedPartnerName = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                                partner?.fullName?.takeIf(String::isNotBlank) ?: partner?.username ?: "Your partner" else it.acceptedPartnerName,
+                            acceptedPartnerPhotoUrl = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                                partner?.profilePhoto else it.acceptedPartnerPhotoUrl,
+                            connectedSince = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                                formatConnectionDate(result.response?.updatedAt) else it.connectedSince,
+                            acceptedRoomId = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                                result.response?.chatRoomId?.takeIf(::isValidChatRoomId) ?: it.acceptedRoomId else it.acceptedRoomId,
+                            acceptedCoupleId = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
+                                result.response?.coupleId ?: it.acceptedCoupleId else it.acceptedCoupleId,
+                        )
+                    }
                 }
                 is NetworkAPIResult.Error -> _findPartnerUIState.update {
                     it.copy(updatingRequestIds = it.updatingRequestIds - id,
                         requestErrors = it.requestErrors + (id to (result.error ?: "Couldn’t update this invitation. Please retry.")))
                 }
             }
+        }
+    }
+
+    /** Bridges the legacy invitations list into the shared, confirmed success flow. */
+    fun recordConfirmedConnection(connection: ConfirmedCoupleConnection) {
+        _findPartnerUIState.update {
+            it.copy(
+                handledRequestIds = it.handledRequestIds + connection.requestId,
+                acceptedPartnerName = connection.partnerName,
+                acceptedPartnerPhotoUrl = connection.partnerPhotoUrl,
+                connectedSince = formatConnectionDate(connection.connectedAt) ?: it.connectedSince,
+                acceptedRoomId = connection.roomId?.takeIf(::isValidChatRoomId) ?: it.acceptedRoomId,
+                acceptedCoupleId = connection.coupleId ?: it.acceptedCoupleId,
+            )
         }
     }
 
@@ -276,6 +398,7 @@ class FindPartnerViewModel(
     } catch (error: Exception) {
         NetworkAPIResult.Error(error.message ?: "Something went wrong. Please try again.")
     }
+
 }
 
 /** Only display a date supplied by the confirmed connection response. */
@@ -284,3 +407,5 @@ internal fun formatConnectionDate(timestamp: String?): String? = runCatching {
     val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     "${date.day} ${months[date.month.number - 1]} ${date.year}"
 }.getOrNull()
+
+private fun isValidChatRoomId(value: String): Boolean = value.matches(Regex("[0-9a-fA-F-]{36}"))
