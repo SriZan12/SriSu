@@ -1,5 +1,9 @@
 package com.srisu.srisu.navigation
 
+import androidx.navigation.NavGraphNavigator
+import androidx.navigation.NavigatorProvider
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.navigation
 import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.features.coupleprofile.navigation.*
 import kotlinx.serialization.json.Json
@@ -24,6 +28,16 @@ class NavigationContractTest {
         assertEquals(picker, Json.decodeFromString<ProfileNav.InterestScreen>(Json.encodeToString(picker)))
         assertEquals(AuthNavigation.ProfileSetUp, Json.decodeFromString<AuthNavigation.ProfileSetUp>(Json.encodeToString(AuthNavigation.ProfileSetUp)))
         assertEquals(ChatNav.PartnerPreview(2), Json.decodeFromString<ChatNav.PartnerPreview>("""{"userId":2}"""))
+    }
+    @Test fun coupleProfileEnumRouteBuildsWithoutPlatformReflection() {
+        val provider = NavigatorProvider()
+        provider.addNavigator(NavGraphNavigator(provider))
+        provider.addNavigator(ComposeNavigator())
+        val graph = provider.navigation(startDestination = CoupleProfileDestination()) {
+            coupleProfileDestination { }
+        }
+        val destination = assertNotNull(graph.findNode<CoupleProfileDestination>())
+        assertEquals("CoupleSection", destination.arguments.getValue("section").type.name)
     }
     @Test fun externalInputIsStrictAndCannotPerformActions() {
         assertEquals(CoupleProfileDestination(42), parseExternalEntry("srisu://couples/42"))

@@ -5,6 +5,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import androidx.navigation.NavDestination.Companion.hasRoute
+import com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestination
+import com.srisu.srisu.features.coupleprofile.navigation.CoupleSection
+import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileDestination
 import com.srisu.srisu.navigation.graph.*
 import org.junit.Rule
 import org.junit.Test
@@ -62,6 +65,24 @@ class NavigationOwnerTest {
         restoration.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(route, controller.currentBackStackEntry!!.toRoute<ChatNav.ChatScreen>()) }
+    }
+    @Test fun coupleProfileEnumRouteRegistersAndRestoresArguments() {
+        val restoration = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+        restoration.setContent {
+            controller = rememberNavController()
+            NavHost(controller, startDestination = HomeNavigation.Home) {
+                composable<HomeNavigation.Home> { }
+                coupleProfileDestination { }
+            }
+        }
+        val route = CoupleProfileDestination(42, CoupleSection.PLAN, 9)
+        compose.runOnIdle { AppNavigator(controller).open(route) }
+        compose.waitForIdle()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(route, controller.currentBackStackEntry!!.toRoute<CoupleProfileDestination>())
+        }
     }
     @Test fun duplicateAndLateCallbacksCannotStackOrNavigate() {
         host()
