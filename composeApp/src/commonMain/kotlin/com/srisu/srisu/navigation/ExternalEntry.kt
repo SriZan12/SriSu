@@ -1,6 +1,7 @@
 package com.srisu.srisu.navigation
 
 import com.srisu.srisu.navigation.graph.*
+import com.srisu.srisu.features.chat.matrix.normalizeDjangoRoomIdOrNull
 import com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,8 +11,8 @@ fun parseExternalEntry(url: String): Route? {
     if (url.length > 512) return null
     val couple = Regex("^srisu://couples/([1-9][0-9]{0,18})/?$").matchEntire(url)
     if (couple != null) return couple.groupValues[1].toLongOrNull()?.let { CoupleProfileDestination(it) }
-    val chat = Regex("^srisu://chats/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/?$").matchEntire(url)
-    return chat?.let { ChatNav.ChatScreen(it.groupValues[1].lowercase()) }
+    val chat = Regex("^srisu://chats/([^/?#]+)/?$").matchEntire(url)
+    return chat?.groupValues?.get(1)?.let(::normalizeDjangoRoomIdOrNull)?.let(ChatNav::ChatScreen)
 }
 
 data class PendingEntry(val deliveryId: String, val route: Route, val accountId: Long?)

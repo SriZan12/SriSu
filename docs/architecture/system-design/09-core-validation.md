@@ -6,6 +6,14 @@ Both repositories remain on local `dev-core-architecture` branches, with their
 starting commits unchanged. No production database, credentials, SMS, deployment,
 commit, push, merge or Figma mutation was used.
 
+> **Historical chat evidence only — 2026-10-08:** Chat results in this record
+> validate the former Django/Channels foundation and later custom ChatV2 work.
+> They do not validate private Synapse, Trixnity/vodozemac, Matrix E2EE, protected
+> Matrix persistence, Android↔iOS interoperability or the destructive cutover.
+> Those require the gates in the
+> [Couple Chat cutover record](../../flows/couple-chat.md). This documentation
+> update did not rerun any command listed below.
+
 ## Baseline and final results
 
 Environment: macOS, Android Studio bundled JBR, Kotlin 2.2.0 / Ktor 3.2.3;

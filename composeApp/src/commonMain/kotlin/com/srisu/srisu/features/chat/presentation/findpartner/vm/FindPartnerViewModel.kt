@@ -4,17 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cash.paging.Pager
 import app.cash.paging.PagingConfig
+import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
 import app.cash.paging.filter
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.core.session.Session
-import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.session.SessionStorage
 import com.srisu.srisu.features.chat.data.paging.PartnerInvitationsPagingSource
-import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
-import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketEvent
 import com.srisu.srisu.features.chat.presentation.findpartner.state.FindPartnerState
 import com.srisu.srisu.features.chat.presentation.findpartner.state.PartnerSearchStatus
 import com.srisu.srisu.features.chat.presentation.findpartner.state.SentPartnerInvitation
@@ -30,11 +28,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -48,57 +48,34 @@ import kotlin.uuid.Uuid
 class FindPartnerViewModel(
     private val connectionRepository: ConnectionRepository,
     private val sessionStorage: SessionStorage,
+    private val lifetime: ApplicationLifetime,
     private val countryProvider: () -> List<CountryModel> = { Country.getAllCountriesFromJson().orEmpty() },
-    private val sessionCoordinator: SessionCoordinator? = null,
-    private val webSocketClient: ChatWebSocketClient? = null,
-    lifetime: ApplicationLifetime? = null,
 ) : ViewModel() {
     private val _findPartnerUIState = MutableStateFlow(FindPartnerState())
     val findPartnerUIState = _findPartnerUIState.asStateFlow()
     private var searchJob: Job? = null
+    private var invitationPollingJob: Job? = null
     private var hasEntered = false
-    private val relationshipRevisions = mutableMapOf<Long, Long>()
-    private var relationshipRefreshPending = false
-    private var relationshipRefreshConnectionId: Long? = null
     /** Failed retries retain the same idempotency key; success removes it. */
     private val mutationOperationIds = mutableMapOf<String, String>()
 
     init {
-        webSocketClient?.let { socket ->
-            viewModelScope.launch {
-                socket.events.collect { scoped ->
-                    val coordinator = sessionCoordinator ?: return@collect
-                    if (!hasEntered || scoped.session != coordinator.stamp()) return@collect
-                    when (val event = scoped.event) {
-                        ChatWebSocketEvent.Connected -> requestRelationshipStatusRefresh(connectionId = null)
-                        is ChatWebSocketEvent.RelationshipChanged -> {
-                            val previousRevision = relationshipRevisions[event.connectionId] ?: 0
-                            if (event.revision <= previousRevision) return@collect
-                            relationshipRevisions[event.connectionId] = event.revision
-                            // The authenticated user-group is participant-scoped.
-                            // Never mutate from the hint; reconcile authoritative
-                            // status even before an invitation ID is known.
-                            requestRelationshipStatusRefresh(connectionId = null)
-                        }
-                        else -> Unit
-                    }
+        viewModelScope.launch {
+            var wasForeground = lifetime.foreground.value
+            lifetime.foreground.collect { foreground ->
+                if (foreground && !wasForeground && hasEntered &&
+                    _findPartnerUIState.value.sentInvitation != null &&
+                    _findPartnerUIState.value.acceptedPartnerName == null
+                ) {
+                    sendHaveCoupleConnectionRequested()
                 }
-            }
-        }
-        lifetime?.let { appLifetime ->
-            viewModelScope.launch {
-                appLifetime.foreground.collectLatest { foreground ->
-                    val state = _findPartnerUIState.value
-                    if (foreground && hasEntered && state.sentInvitation != null && state.acceptedPartnerName == null) {
-                        requestRelationshipStatusRefresh(state.sentInvitation.requestId)
-                    }
-                }
+                wasForeground = foreground
             }
         }
     }
 
     // One cached Pager. Item access drives prefetch; recomposition never refreshes it.
-    val loveRequests = combine(
+    val loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>> = combine(
         Pager(
             config = PagingConfig(pageSize = 20, initialLoadSize = 20, prefetchDistance = 3, enablePlaceholders = false),
             pagingSourceFactory = {
@@ -107,8 +84,10 @@ class FindPartnerViewModel(
                 }
             },
         ).flow.cachedIn(viewModelScope),
-        _findPartnerUIState.map { it.handledRequestIds }.distinctUntilChanged(),
-    ) { page, handled -> page.filter { it.id !in handled } }.cachedIn(viewModelScope)
+        _findPartnerUIState.map { it.handledRequestIds },
+    ) { page: PagingData<CoupleConnectionRequestResponse.Result>, handled: Set<Long> ->
+        page.filter { it.id !in handled }
+    }.cachedIn(viewModelScope)
 
     /** The shared NavHost creates this VM before authentication; defer API work until entry. */
     fun onScreenEntered() {
@@ -117,9 +96,13 @@ class FindPartnerViewModel(
         }.getOrNull()
         _findPartnerUIState.update { it.copy(senderPhoneNumber = session?.phoneNumber.orEmpty(),
             senderName = session?.fullName?.takeIf(String::isNotBlank) ?: "You", senderPhotoUrl = session?.profilePhoto) }
-        if (hasEntered) return
+        if (hasEntered) {
+            // Navigation/foreground re-entry reconciles the authoritative REST snapshot.
+            // Relationship changes no longer depend on the retired chat socket.
+            sendHaveCoupleConnectionRequested()
+            return
+        }
         hasEntered = true
-        webSocketClient?.connect()
         _findPartnerUIState.update { it.copy(countryList = runCatching(countryProvider).getOrDefault(emptyList())) }
         sendHaveCoupleConnectionRequested()
     }
@@ -232,6 +215,39 @@ class FindPartnerViewModel(
         _findPartnerUIState.update { it.copy(navigateToInviteSent = false) }
     }
 
+    /**
+     * The pending screen owns this bounded poll. It pauses with the application,
+     * never overlaps the existing status request, and is canceled when the screen
+     * leaves composition.
+     */
+    fun startInviteStatusPolling() {
+        if (invitationPollingJob?.isActive == true) return
+        invitationPollingJob = viewModelScope.launch {
+            var intervalMillis = INVITE_POLL_INITIAL_DELAY_MILLIS
+            repeat(INVITE_POLL_MAX_ATTEMPTS) {
+                lifetime.foreground.first { it }
+                delay(intervalMillis)
+                lifetime.foreground.first { it }
+                val state = _findPartnerUIState.value
+                if (state.sentInvitation == null || state.acceptedPartnerName != null) return@launch
+                if (state.isCheckingInvitation) {
+                    findPartnerUIState.first { !it.isCheckingInvitation }
+                } else {
+                    sendHaveCoupleConnectionRequested()
+                    findPartnerUIState.first { !it.isCheckingInvitation }
+                }
+                val refreshed = _findPartnerUIState.value
+                if (refreshed.sentInvitation == null || refreshed.acceptedPartnerName != null) return@launch
+                intervalMillis = (intervalMillis * 2).coerceAtMost(INVITE_POLL_MAX_DELAY_MILLIS)
+            }
+        }
+    }
+
+    fun stopInviteStatusPolling() {
+        invitationPollingJob?.cancel()
+        invitationPollingJob = null
+    }
+
     fun sendHaveCoupleConnectionRequested() {
         if (_findPartnerUIState.value.isCheckingInvitation || _findPartnerUIState.value.isCancellingInvitation) return
         _findPartnerUIState.update { it.copy(isCheckingInvitation = true, invitationStatusError = null) }
@@ -267,30 +283,6 @@ class FindPartnerViewModel(
                     it.copy(isCheckingInvitation = false, invitationStatusError = result.error ?: "Couldn’t check your invitation. Please retry.")
                 }
             }
-            consumePendingRelationshipRefresh()
-        }
-    }
-
-    private fun requestRelationshipStatusRefresh(connectionId: Long?) {
-        val state = _findPartnerUIState.value
-        if (state.acceptedPartnerName != null) return
-        if (state.isCheckingInvitation) {
-            relationshipRefreshPending = true
-            relationshipRefreshConnectionId = connectionId
-            return
-        }
-        sendHaveCoupleConnectionRequested()
-    }
-
-    private fun consumePendingRelationshipRefresh() {
-        if (!relationshipRefreshPending) return
-        val expectedConnectionId = relationshipRefreshConnectionId
-        relationshipRefreshPending = false
-        relationshipRefreshConnectionId = null
-        val state = _findPartnerUIState.value
-        if (state.acceptedPartnerName == null &&
-            (expectedConnectionId == null || state.sentInvitation?.requestId == expectedConnectionId)) {
-            sendHaveCoupleConnectionRequested()
         }
     }
 
@@ -401,6 +393,10 @@ class FindPartnerViewModel(
 
 }
 
+private const val INVITE_POLL_MAX_ATTEMPTS = 8
+private const val INVITE_POLL_INITIAL_DELAY_MILLIS = 5_000L
+private const val INVITE_POLL_MAX_DELAY_MILLIS = 30_000L
+
 /** Only display a date supplied by the confirmed connection response. */
 internal fun formatConnectionDate(timestamp: String?): String? = runCatching {
     val date = LocalDate.parse(timestamp?.take(10) ?: return null)
@@ -408,4 +404,5 @@ internal fun formatConnectionDate(timestamp: String?): String? = runCatching {
     "${date.day} ${months[date.month.number - 1]} ${date.year}"
 }.getOrNull()
 
-private fun isValidChatRoomId(value: String): Boolean = value.matches(Regex("[0-9a-fA-F-]{36}"))
+private fun isValidChatRoomId(value: String): Boolean =
+    com.srisu.srisu.features.chat.matrix.normalizeDjangoRoomIdOrNull(value) != null

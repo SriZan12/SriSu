@@ -22,7 +22,7 @@ import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileGraph
             homeGraph(navController)
             coupleProfileGraph(navController)
             profileGraph(navController)
-            chatGraph(navController, session)
+            chatGraph(navController)
         } else authGraph(navController, startDestination, onLeaveAuthentication)
     }
 }

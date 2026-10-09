@@ -1,9 +1,19 @@
 # Contracts and critical sequences
 
 **PROPOSED 0.1.** Existing contracts continue unchanged until their slice is
-approved. Paths prefixed `/api/v2/`, new fields, events and limits below are
-proposals, not endpoints currently available. Synthetic examples contain no
-real identities, tokens or private content.
+approved. Except for the observed Matrix bootstrap explicitly identified below,
+paths prefixed `/api/v2/`, new fields, events and limits are proposals rather than
+claims of available endpoints. Synthetic examples contain no real identities,
+tokens or private content.
+
+> **Couple Chat contract override — 2026-10-08:** the accepted message path is
+> the standard Matrix client-server API on private Synapse, consumed through
+> Trixnity/vodozemac. Django exposes only the authorized Matrix-session bootstrap
+> and provisioning/revocation control plane described below. The custom ChatV2
+> envelopes, Django message/change/receipt/attachment endpoints and chat socket
+> schemas elsewhere in this draft are historical migration evidence, not target
+> contracts. See [ADR 003](../decisions/003-matrix-couple-chat.md) and the
+> [cutover record](../../flows/couple-chat.md).
 
 ## Authority and drift prevention
 
@@ -17,17 +27,21 @@ branch or assume matching branch names mean matching contracts.
 
 The [draft OpenAPI subset](contracts/openapi.proposed.json) and
 [realtime draft schema](contracts/realtime.proposed.schema.json) in this design
-are reviewable specifications for refresh and message recovery. They are not a
-complete description of today's API or a second production schema registry.
-Move accepted definitions into the backend authority in A/B/C, then replace these
-drafts with links to the pinned artifact. Do not generate clients from this draft.
+are reviewable historical specifications for refresh and the retired custom chat
+recovery path. They do not describe Matrix, are not a complete description of
+today's API, and are not a second production schema registry. Move accepted
+non-chat definitions into the backend authority, and pin the Matrix bootstrap
+contract separately. Do not generate a Matrix client or new chat transport from
+these drafts.
 
-No contract tooling was found to preserve. Use OpenAPI 3.1 for HTTP and JSON Schema
-2020-12 for realtime envelopes/payloads. A full AsyncAPI toolchain is unnecessary
-for one socket initially. Evaluate DRF schema extraction against Django 6.0.3 and
-DRF 3.17.1 before choosing its package/version; custom actions, multipart and
+No contract tooling was found to preserve. Use OpenAPI 3.1 for Django HTTP and
+JSON Schema 2020-12 where SriSu still owns non-Matrix realtime envelopes. Matrix
+events follow the Matrix specification and the pinned SDK; do not duplicate them
+in a SriSu AsyncAPI schema. Evaluate DRF schema extraction against Django 6.0.3
+and DRF 3.17.1 before choosing its package/version; custom actions, multipart and
 permissions still require explicit annotations and tests. Handwritten Kotlin DTOs
-remain acceptable when validated against examples and server response schemas.
+remain acceptable for the Django bootstrap when validated against examples and
+server response schemas.
 
 Backend CI checks actual responses and socket events against schema fixtures,
 detects breaking changes against the released artifact, and publishes immutable
@@ -42,8 +56,9 @@ prove implementation conformance.
 | --- | --- |
 | `POST /api/auth/send-otp/`, `POST /api/auth/verify-otp/`, `/api/auth/setup-profile/`, `/api/auth/interests/` | Existing success envelope and `tokens.access`, `tokens.refresh`, `user`; additive server hardening in B1 |
 | `/api/social/find-partner/`, `connect-couple/`, `couple-connection/`, `couple-profile/` | Old callers remain supported through a thin adapter to authorized relationship operations; remove broad profile disclosure separately |
-| `/ws/chat/`: `action`, optional `request_id`, `payload`; old numeric message IDs and numeric history cursor | Adapter invokes the same new operations; do not reinterpret old IDs or claim legacy retries are deduplicated |
-| `POST /api/chat/media-upload/` | Existing upload flow gets ownership enforcement before migration; preserve only authorized existing use |
+| `POST /api/chat/v2/rooms/{uuid}/matrix/session/` | Retain as the authorized Django control-plane boundary; the UUID is the stable `ChatRoom` relationship identity, while the response maps it to a Matrix room and short-lived login credential |
+| `/ws/chat/`: `action`, optional `request_id`, `payload`; old numeric message IDs and numeric history cursor | Legacy-only surface. Keep only through the enforced minimum-client cutoff and until non-message relationship hints have a replacement; then retire it. It is never a secure fallback for Matrix |
+| `POST /api/chat/media-upload/` | Legacy-only chat media flow. Do not use it for Matrix attachments; retire it after the cutoff and approved destructive purge. Matrix media remains unimplemented in the first release |
 | `/api/social/couple-moments/`, `couple-feed/`, `couple-faves/`, `couple-moments/sequence/` | Preserve signed cursor, eligibility, per-user Fave and photo-authorization rules; endpoint-specific decoders because response envelopes differ |
 
 Legacy single-discovery endpoints are outside the intended product. Measure usage,
@@ -66,12 +81,14 @@ their data or routes as part of OTP work.
 | Idempotency | Stable client UUID per logical mutation. Key includes actor and operation type; request fingerprint includes target/content. Same key + same intent returns stored result; different intent is 409. Reauthorize before returning old result |
 | Retry | Safe reads: exponential jitter, honor Retry-After, bounded by foreground deadline. Writes: only replay with durable operation identity and known policy. A timeout can mean committed; reconcile instead of reporting definite failure |
 
-Operation retention is explicit: message operation identity stays with message or
-tombstone. Proposed short-lived invitation/Moment creation results survive at
-least seven days; pending mobile retries stop at that horizon and query canonical
-state. Refresh is a special non-replayable credential operation described below.
-Profile replacement PUT can be idempotent, but multipart upload attachment is not
-assumed safe to replay without a stable operation and upload identity.
+Operation retention is explicit. For Matrix chat, Trixnity's persisted outbox and
+Matrix transaction ID own exact-send retry; Django does not retain a parallel
+message operation or tombstone. Proposed short-lived invitation/Moment creation
+results survive at least seven days; pending mobile retries stop at that horizon
+and query canonical state. Refresh is a special non-replayable credential
+operation described below. Profile replacement PUT can be idempotent, but
+multipart upload attachment is not assumed safe to replay without a stable
+operation and upload identity.
 
 | HTTP status / code | Client action / example |
 | --- | --- |
@@ -196,110 +213,120 @@ downloaded bytes cannot be recalled. Historical access after unlink is an explic
 policy decision; default deny until approved, with no automatic transfer to a new
 partner. Model migration must preserve original participant identities.
 
-## Chat write, recovery and ordering
+## Matrix bootstrap, send and recovery
 
-Proposed v2 HTTP endpoints provide room list, history, mutations and changes.
-Socket commands invoke the same operations for latency; HTTP provides recovery
-and a send fallback. Use at most one active attempt per pending operation locally.
-Transport loss does not assign a new operation ID.
+The Django `ChatRoom` UUID remains the public relationship-conversation identity
+and the `ChatNav.ChatScreen(roomId)` navigation value. It is not a Matrix room ID
+and grants no access by itself. The accepted Django boundary is:
 
-Example send (HTTP POST or socket command payload):
-
-```json
-{"client_operation_id":"00000000-0000-4000-8000-000000000001","room_id":"room-synthetic-a","membership_epoch":3,"text":"Synthetic hello","media_ids":[],"reply_to_id":null}
+```text
+POST /api/chat/v2/rooms/{chat_room_uuid}/matrix/session/
+Authorization: Bearer <Django access token carrying a current device-session sid>
 ```
 
-Successful post-commit result:
+The endpoint has no message body. It rechecks the authenticated device session and
+current membership before and after remote provisioning/token work. It returns
+`401` for a missing, expired or revoked Django device session; a concealed `404`
+for an unknown room, unrelated user or former member; `429` at the scoped bootstrap
+throttle; and generic `503 temporarily_unavailable` while provisioning or Synapse
+is unavailable. Success uses `Cache-Control: private, no-store`.
+
+Synthetic success shape:
 
 ```json
-{"data":{"message":{"id":"42","room_id":"room-synthetic-a","sender_id":"7","client_operation_id":"00000000-0000-4000-8000-000000000001","sequence":81,"revision":1,"text":"Synthetic hello","media_ids":[],"reply_to_id":null,"deleted":false,"created_at":"2026-09-26T10:00:00Z"},"change_sequence":96},"request_id":"req-synthetic-02","server_time":"2026-09-26T10:00:00Z"}
+{
+  "data": {
+    "protocol_id": "matrix-e2ee-v1",
+    "homeserver_url": "https://matrix.example.test",
+    "room_id": "!opaque:server.name",
+    "room_alias": "#srisu_chat_00000000-0000-4000-8000-000000000001_e1:server.name",
+    "membership_epoch": 1,
+    "relationship_id": 123,
+    "self_user_id": 10,
+    "self_matrix_user_id": "@srisu_user_10:server.name",
+    "partner_user_id": 11,
+    "partner_matrix_user_id": "@srisu_user_11:server.name",
+    "initiator_user_id": 10,
+    "login_type": "org.matrix.login.jwt",
+    "login_token": "synthetic-short-lived-jwt",
+    "login_token_expires_at": "2026-10-08T12:00:00Z",
+    "login_token_one_time": false,
+    "refresh_token_enabled": false,
+    "access_token_expires_in_seconds": 300
+  }
+}
 ```
 
-`sequence` orders message creation; `revision` orders changes to one message;
-`change_sequence` orders recoverable room mutations. Socket events also carry a
-unique `event_id`, version/type, room ID and membership epoch. They are hints to
-merge or fetch authorized state. An event for A updates only A's projection,
-regardless of active screen B. Dedupe by event ID, ignore older entity revisions,
-and recover sequence gaps via HTTP. Unknown event types do not crash the client:
-record a redacted metric and resync if their sequence advances known state.
+The login JWT is not a Matrix access token. The current server declares it
+replayable during its short validity window (`login_token_one_time=false`; default
+maximum 120 seconds), so the UI must not describe it as one-time. It must never
+enter navigation, ordinary preferences, logs, analytics, crash reports, screenshots
+or fixtures. The client submits it directly to the returned trusted Synapse origin
+using `login_type`, a stable relationship-scoped device ID, a display name and
+`refresh_token=false`. It rejects a login response whose Matrix user or device
+identity does not match the expected account/device. The Matrix access token is
+seeded into a volatile Trixnity authentication repository and is not persisted in
+Room or ordinary preferences. The declared access-token lifetime must be between
+300 and 900 seconds or the client fails closed.
 
 ```mermaid
 sequenceDiagram
-  participant mobile as Scoped mobile outbox
-  participant api as Chat operation
-  participant database as PostgreSQL
-  participant socket as Realtime transport
-  mobile->>mobile: Persist pending intent and stable operation ID
-  mobile->>api: Send operation
-  api->>database: Commit message, dedup result, change and delivery job
-  database-->>api: Commit success
-  api--xmobile: Ack lost during disconnect
-  socket--xmobile: Event unavailable
-  mobile->>api: Retry same operation ID after reconnect
-  api->>database: Reauthorize and read existing result
-  api-->>mobile: Same message ID and revision
-  mobile->>api: HTTP changes after last applied checkpoint
-  api-->>mobile: Ordered changes with authorized current projections
-  mobile->>mobile: Atomic merge and checkpoint then mark pending sent
+  participant ui as Chat screen with Django UUID
+  participant django as Django control plane
+  participant matrix as Private Synapse
+  participant sdk as Trixnity store and crypto
+  ui->>django: POST authorized Matrix session bootstrap
+  django->>django: Recheck device session and current relationship
+  django->>matrix: Idempotently ensure encrypted private room if needed
+  django->>django: Recheck membership after remote work
+  django-->>ui: Mapping plus short-lived login credential
+  ui->>matrix: Standard Matrix JWT login with stable device ID
+  matrix-->>sdk: Access token and confirmed Matrix identity
+  sdk->>matrix: Standard sync, room events, keys and to-device traffic
+  sdk->>sdk: Persist encrypted-room state and durable send transaction
+  sdk->>matrix: Send encrypted text with stable Matrix transaction ID
+  matrix-->>sdk: Standard Matrix event acknowledgement
+  sdk->>matrix: Resume sync after disconnect or restart
 ```
 
-New history is keyset-paginated by `(room_id, message_sequence)`, descending for
-older messages; cursors are opaque, signed, user/room/purpose-bound, maximum page
-50. Sort oldest-to-newest for rendering without changing cursor semantics. Room
-lists use `(updated_at, room_id)` tie-breakers and dedupe repositioned rooms.
-Existing numeric cursor behavior is unchanged in v1.
+All timelines, pagination, device keys, encrypted room events, transaction retry,
+receipts and future encrypted media use standard Matrix APIs directly between
+Trixnity and Synapse. Django is not a message proxy and must not store a parallel
+message, ciphertext envelope, change cursor, receipt or attachment record. Matrix
+`/sync` plus Trixnity's persisted store replace the custom socket-hint + HTTP
+snapshot/change protocol. A network timeout leaves the transaction pending until
+Trixnity reconciles the same Matrix transaction ID; it never falls back to a new
+Django message operation.
 
-A changes response returns authorized mutations through a fixed high-water mark
-and a next cursor. Apply page and checkpoint in one local transaction. Snapshot
-recovery reads history plus a consistent high-water mark; buffered/live events
-above it are applied afterwards. History pagination must carry snapshot position
-so messages arriving mid-pagination are obtained through changes, not silently
-skipped. Seven-day change retention is proposed. A too-old cursor returns 410;
-discard old server projections or reconcile tombstones, preserve pending intent,
-then take a fresh scoped snapshot. Never reset pending messages as though sent.
+The first release supports encrypted text only. The product must not expose reply,
+edit, reaction, delete, delivery/read, typing or presence controls until their
+Matrix semantics and SriSu policy pass Android↔iOS tests. Photo/video attachments,
+voice, Sparks, Ask/polls, rich Planner/story cards, conversation nickname/options,
+push and calls are unimplemented and disabled. Unknown Matrix events or content
+versions render as an inert/update-required item; they never crash, disclose raw
+payloads or grant an action.
 
-Snapshot cursors carry both the message-creation boundary and change checkpoint,
-plus actor/room/epoch/purpose. The first read establishes them consistently in a
-short database transaction. Later pages may contain a more recent authorized
-entity projection; revision comparison prevents regression when the corresponding
-change is subsequently replayed. Do not hold a database transaction open across
-mobile pagination requests.
+An unlink makes Django bootstrap fail immediately and marks the mapped Matrix room
+for membership revocation. The UI closes the old scope, cancels presentation of
+queued work and stops sync for that relationship; a retry worker completes remote
+removal after an outage. Existing downloaded ciphertext cannot be recalled. A
+later relationship receives a new Django `ChatRoom`, Matrix room and cryptographic
+context—never the former partner's room or keys.
 
-State semantics: `pending` = durable local intent; `sending` = active attempt;
-`sent` = server commit acknowledged/reconciled; `delivered` = at least one eligible
-recipient device durably applied through that sequence; `read` = recipient viewed
-the conversation through an observed sequence while foreground. Receipt requests
-carry `through_sequence`, must reference accessible messages and advance only
-monotonically. Server receipt time is authoritative; a socket connection alone
-does not prove delivery/read. Other own devices sync via the same recovery path.
+On logout or account switch, call Matrix logout when reachable, then stop sync,
+invalidate late completions, clear credentials and apply the approved local-store
+wipe policy even if the network call fails. The configured access-token/session
+expiry is a recovery bound, not permission to keep another account's store open.
+Every foreground restore and deep link reauthorizes the Django UUID before using
+the mapped room. Matrix membership alone is never SriSu authorization.
 
-Edit uses expected revision and sender ownership; delete-for-everyone replaces
-content with a tombstone, scrubs reply previews and schedules media deletion when
-unreferenced. Delete-for-me records a user-specific visibility tombstone, including
-that user's other devices. Reactions use per-user uniqueness and an idempotent
-desired value. Exact edit/delete time windows need product approval; do not add
-an arbitrary restriction while preserving current functionality.
-
-Typing/presence are ephemeral, throttled and expire after roughly ten seconds.
-On background, suspend active socket work according to platform lifecycle; on
-foreground, revalidate session/membership then resume from checkpoint. APNs/FCM
-can hint at changes; absence of push cannot prevent HTTP recovery.
-
-Starting resource budgets below are proposals to load-test in C1/C3, not limits
-already enforced by the current application. Limit-error telemetry contains no
-payload content. Legacy-client compatibility must be considered before enforcement.
-
-| Resource | Proposed budget / overload behavior |
-| --- | --- |
-| Socket application frame | 64 KiB maximum; new text send <=4,000 characters; images upload over HTTP, not socket frames. Preserve longer valid historical text in responses |
-| Connections | Two sockets per device session, six per account, plus bounded unauthenticated handshake rate per IP/network; tune for real multi-device use |
-| Commands | Per-user message burst 10, refill 5/s; typing <=1 update/s; separately bound reads, uploads and reactions. Return explicit rate-limit/backoff, never silently accept dropped commands |
-| Outbound connection queue | At most 256 frames or 1 MiB; coalesce/drop ephemeral typing first. If durable hints cannot queue, close slow connection with retry guidance and recover via HTTP; never silently lose authoritative DB state |
-| Client event processing | Bounded channel; durable changes checkpoint only after DB apply. Overflow marks sync-needed/reconnect rather than using DROP_OLDEST as though all events were processed |
-| Provider jobs | Lease/retry with jitter and finite age/attempt budget; notification initial proposal eight attempts within 24 h, always rechecking content/session eligibility. Do not apply notification retry policy to billable OTP dispatch |
-
-Measure limits under legitimate image uploads, two devices, slow recipients and
-reconnect storms. Separate expected throttling from unexpected errors in metrics.
+Limits, retry/backpressure, event retention and media quotas must be measured and
+configured on Synapse/Trixnity. The text composer uses a conservative 32 KiB UTF-8
+plaintext budget so Megolm/base64 and JSON envelopes remain below Matrix's event
+ceiling. The retired 64 KiB custom envelope, Django command burst and seven-day
+change-cursor proposals are not Matrix limits. Observability
+records only redacted bootstrap/sync/error categories, queue age and synthetic
+journey timing—never tokens, keys, event bodies or message content.
 
 ## Sparks, Challenges and Moments
 
@@ -391,9 +418,11 @@ identify the inspired couple publicly, or notify the original creator by default
 | --- | --- | --- |
 | Current `tokens.access`, `tokens.refresh`, `user` | `features/auth/data/remote/response/OtpVerificationResponse.kt` | SessionCoordinator owns credentials; auth state uses identity/profile status. Tokens never enter Compose state or logs |
 | New `session_id`, `membership_epoch`, capability projection | New session DTO, not a replacement user model | Session scope and couple scope guard every result; onboarding state is server-derived |
-| Current message `id`, `chat_room_id`, `sender_id`, `timestamp` | `features/chat/data/remote/dto/ChatMessage.kt` | Typed MessageId/RoomId/UserId/Instant mapper; immutable message projection separated from upload progress |
-| New `client_operation_id`, `sequence`, `revision` | Version-specific message/event DTO | PendingMessage matches exact operation; reducer never matches “first image” or active room fallback |
-| Current boolean receipt flags → new participant high-water marks | Legacy adapter plus v2 receipt DTO | Derived sent/delivered/read indicator, monotonic across devices |
+| Django `ChatRoom.id` UUID | Typed navigation argument plus Matrix-bootstrap request | Stable relationship conversation identity only; reauthorize it on every entry and never treat it as Matrix room ID or permission |
+| `protocol_id`, `homeserver_url`, `room_id`, `room_alias`, `membership_epoch` and `relationship_id` | New Matrix-bootstrap DTO in the chat control-plane adapter | Validate protocol and trusted origin, bind the Matrix room to the captured account/relationship scope, and reject stale responses |
+| `self_user_id`, `self_matrix_user_id`, `partner_user_id`, `partner_matrix_user_id` and `initiator_user_id` | Same bootstrap DTO mapped to typed Django/Matrix identities | Verify the login result and render authors without accepting sender identity from navigation or message content |
+| `login_type`, `login_token`, `login_token_expires_at`, `login_token_one_time`, `refresh_token_enabled` and `access_token_expires_in_seconds` | Ephemeral bootstrap credential mapper into the Trixnity login boundary | Never enter Compose state, durable DTO fixtures, logs or analytics; reject expired or contradictory metadata |
+| Standard Matrix room events, event IDs and transaction IDs | Trixnity models/repository, not SriSu ChatV2 DTOs | Trixnity store is the sole timeline/outbox authority; unknown content stays inert and a retry reuses the same transaction ID |
 | Moment creator, original audience, visibility, immutable times, ordered photos | Proposed feature-specific Moment DTO | Creator action availability and expiry presentation; server still enforces rights |
 | Spark own response, partner status, authorized reveal projection | Proposed Spark DTO variants | Waiting UI cannot access a hidden partner answer because it was never transmitted |
 | Challenge template version, participant confirmations, revision | Proposed Challenge DTO | Separate per-person progress from joint completion; repeated taps reuse operation ID |

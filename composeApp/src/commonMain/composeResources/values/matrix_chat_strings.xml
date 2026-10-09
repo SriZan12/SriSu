@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_secure_title">Conversation</string>
+    <string name="chat_secure_back">Back to conversations</string>
+    <string name="chat_secure_loading">Opening your encrypted conversation…</string>
+    <string name="chat_secure_not_available">This encrypted conversation is not available right now.</string>
+    <string name="chat_secure_error">Secure messaging could not be loaded.</string>
+    <string name="chat_secure_retry">Retry</string>
+    <string name="chat_secure_empty">Your encrypted conversation starts here.</string>
+    <string name="chat_secure_message_hint">Message your partner</string>
+    <string name="chat_secure_send">Send</string>
+    <string name="chat_secure_sending">Sending…</string>
+    <string name="chat_secure_failed">Not sent</string>
+    <string name="chat_secure_content_unavailable">Encrypted message unavailable</string>
+    <string name="partner_open_conversation">Open conversation</string>
+</resources>

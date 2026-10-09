@@ -1,7 +1,8 @@
 # ADR 002: gate chat E2EE behind platform libsignal adapters
 
-Date: 2026-10-07. Status: proposed non-production security boundary; not an
-E2EE implementation or release approval.
+Date: 2026-10-07. Status: superseded on 2026-10-08 by
+[ADR 003](003-matrix-couple-chat.md); retained as the rejected libsignal
+evaluation record, not an implementation or release approval.
 
 ## Context and current-state audit
 

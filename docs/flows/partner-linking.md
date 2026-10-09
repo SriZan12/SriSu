@@ -49,8 +49,10 @@ only UI-triggered refresh; recomposition does not restart the Pager.
   displays “Waiting for acceptance” and a functional Check status action instead of a fabricated
   countdown or Share again button.
 - Non-users are directed to create an account. No unsupported SMS/share endpoint is introduced.
-- Status checking uses the existing pending-connection endpoint; there is no background polling.
-  Notification delivery remains the existing backend/app responsibility.
+- Status checking uses the existing pending-connection endpoint. While Invite sent is visible, a
+  lifecycle-owned poll runs at bounded backoff for a few minutes; it pauses in the background,
+  never overlaps a manual/foreground check, and is cancelled when the screen leaves composition.
+  There is no application-lifetime polling or new notification transport.
 
 ## Verification
 
@@ -68,7 +70,10 @@ backend remains unchanged.
 
 ## Connected confirmation
 
-`ChatNav.YoureConnected` opens after the received-invitation PUT succeeds, or when the existing Check status request confirms `ACCEPTED` for a sent invitation. The completed linking stack is cleared. View our space and system Back open Home. No polling or new notification transport is introduced.
+`ChatNav.YoureConnected` opens after the received-invitation PUT succeeds, or when a manual,
+foreground, re-entry, or bounded Invite sent poll confirms `ACCEPTED`. The completed linking stack
+is cleared. View our space and system Back open Home. No application-lifetime polling or new
+notification transport is introduced.
 
 The [You'reConnectedScreen frame](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=5-1118) supplies the paired-avatar card, heading, caption and action layout. Figma rate-limited the design-context/export request after metadata retrieval. The celebration check and existing invitation landscape are explicit replaceable placeholders; exact artwork fidelity remains pending. Names and avatars use session/API data. “Together since” uses the confirmed response's updated date when available; no specimen date is hardcoded.
 

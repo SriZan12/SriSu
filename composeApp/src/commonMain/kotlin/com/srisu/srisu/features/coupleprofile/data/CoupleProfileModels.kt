@@ -40,7 +40,13 @@ import kotlinx.serialization.Serializable
 @Serializable data class PlansPage(val results: List<CouplePlan>, @SerialName("next_before") val nextBefore: Long? = null)
 
 @Serializable data class ProfileChatAction(val kind: String, @SerialName("couple_id") val coupleId: Long, val prompt: String? = null, @SerialName("plan_id") val planId: Long? = null)
-@Serializable data class ProfileInviteResult(@SerialName("message_id") val messageId: Long, @SerialName("room_id") val roomId: String)
+@Serializable data class ProfileInviteResult(
+    val id: Long,
+    @SerialName("request_id") val requestId: String,
+    val prompt: String,
+    @SerialName("created_by") val createdBy: Long,
+    @SerialName("created_at") val createdAt: String,
+)
 @Serializable data class DiscoveryCouple(val id: Long)
 @Serializable data class DiscoveryMoment(val id: Long, val title: String? = null, val caption: String? = null, @SerialName("expires_at") val expiresAt: String)
 @Serializable data class DiscoveryCard(val couple: DiscoveryCouple, val preview: DiscoveryMoment)

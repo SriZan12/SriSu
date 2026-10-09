@@ -14,7 +14,6 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.accept
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -82,28 +81,18 @@ object HttpClientFactory {
             }
             onResponse { response ->
                 response.call.request.attributes.getOrNull(RequestScopeKey)?.ensureCurrent()
-                if (response.call.request.attributes.getOrNull(SocketHandshakeKey) == true && response.status.value in listOf(
-                        401,
-                        403
-                    )
-                ) {
-                    throw SocketAccessDenied(response.status.value)
-                }
             }
         }
         return HttpClient(engine) {
             expectSuccess = false
             followRedirects = false
             install(ContentNegotiation) { json(ApiJson) }
-            // OkHttp 3.2.3 rejects the plugin's maxFrameSize setter. Enforce our
-            // decode bound in KtorSocketConnector; native engine owns wire buffering.
             // Body/header logging is intentionally disabled: auth payloads contain proofs.
 
             install(Logging) {
                 logger = httpLogger
                 level = LogLevel.NONE
             }
-            install(WebSockets) { pingIntervalMillis = 25_000 }
             install(HttpTimeout) {
                 connectTimeoutMillis = 10_000
                 requestTimeoutMillis = 30_000
@@ -119,4 +108,3 @@ object HttpClientFactory {
         }
     }
 }
-

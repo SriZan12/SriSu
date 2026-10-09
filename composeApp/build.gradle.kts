@@ -55,12 +55,11 @@ kotlin {
     val xcf = XCFramework()
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
@@ -93,6 +92,10 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
+            implementation(libs.trixnity.client)
+            implementation(libs.trixnity.client.cryptodriver.vodozemac)
+            implementation(libs.trixnity.client.media.okio)
+            implementation(libs.trixnity.client.repository.room)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -152,9 +155,6 @@ kotlin {
             //material-icons
             implementation(libs.material.icons.core)
 
-            //websockets
-            implementation(libs.ktor.client.websockets)
-
             //swipeable compo
 //            implementation(libs.swipeable.kmp)
 
@@ -163,8 +163,8 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-            implementation("io.ktor:ktor-client-mock:3.2.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+            implementation("io.ktor:ktor-client-mock:3.5.2")
         }
 
         androidUnitTest.dependencies {
@@ -206,14 +206,13 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
 dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
-    add("kspIosX64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     debugImplementation(compose.uiTooling)

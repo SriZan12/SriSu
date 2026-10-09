@@ -20,6 +20,6 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
             onExplore = { nav.switchTab(HomeNavigation.Explore) },
             onCoupleProfile = { nav.open(CoupleProfileDestination()) },
             onInvitations = { nav.open(ChatNav.PartnerRequests) },
-            onChat = { nav.open(ChatNav.ChatRoomScreen) })
+            onChat = { nav.open(ChatNav.ConversationEntry) })
     }
 }

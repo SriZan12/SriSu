@@ -227,22 +227,6 @@ class AuthenticationFlowTest {
         } finally { client.close() }
     }
 
-    @Test fun socketHandshakeRenewsCredentialsBeforeConnecting() = runTest {
-        val sessions = SessionCoordinator(MemorySession(), epochSeconds = { 1000 }).apply {
-            saveSession(ApiJson.encodeToString(Session(id = 1, access = token(1), refresh = "synthetic")), SESSION_KEY)
-        }
-        var refreshes = 0
-        val client = HttpClientFactory.create(sessions, environment, engine { request ->
-            assertEquals("/api/auth/refresh/", request.url.encodedPath)
-            refreshes++
-            respond("", HttpStatusCode.ServiceUnavailable)
-        })
-        assertFailsWith<SocketUnavailable> { KtorSocketConnector(client, environment).open() }
-        assertEquals(1, refreshes)
-        assertNotNull(sessions.accessToken())
-        client.close()
-    }
-
     @Test fun backendFixturesParseWithRequiredProgressAndChallengeMetadata() {
         val challenge = ApiJson.parseToJsonElement(CoreContractFixtures.AUTH_CHALLENGE).let { it as kotlinx.serialization.json.JsonObject }["data"]!!
         val profile = ApiJson.parseToJsonElement(CoreContractFixtures.AUTH_PROFILE).let { it as kotlinx.serialization.json.JsonObject }["data"]!!

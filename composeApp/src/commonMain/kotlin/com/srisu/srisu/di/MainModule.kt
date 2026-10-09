@@ -1,7 +1,7 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
-import com.srisu.srisu.features.chat.v2.presentation.SecureChatViewModel
+import com.srisu.srisu.features.chat.matrix.MatrixChatEntryViewModel
+import com.srisu.srisu.features.chat.matrix.presentation.SecureChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.EditProfileViewModel
@@ -28,8 +28,6 @@ val mainModule = module {
         FindPartnerViewModel(
             connectionRepository = get(),
             sessionStorage = get(),
-            sessionCoordinator = get(),
-            webSocketClient = get(),
             lifetime = get(),
         )
     }
@@ -41,10 +39,8 @@ val mainModule = module {
     }
 
     viewModel {
-        ChatViewModel(repository = get())
-    }
-
-    viewModel {
         SecureChatViewModel(repository = get())
     }
+
+    viewModel { MatrixChatEntryViewModel(resolver = get(), sessions = get()) }
 }

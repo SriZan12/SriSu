@@ -6,11 +6,11 @@ import com.srisu.srisu.core.session.*
 import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
 import com.srisu.srisu.features.auth.data.remote.dto.AuthDTO
 import com.srisu.srisu.features.auth.data.remote.dto.ProfileSetupDTO
-import com.srisu.srisu.features.chat.data.remote.api.ChatApiService
 import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiService
 import com.srisu.srisu.features.home.connection.coupleconnection.data.remote.dto.*
 import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
+import com.srisu.srisu.features.chat.matrix.MatrixSessionApiService
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -28,7 +28,7 @@ class ApiRouteContractTest {
         val sessions = session()
         var expected = ""
         val visited = mutableSetOf<String>()
-        val room = "12345678-1234-1234-1234-123456789abc"
+        val room = "12345678-1234-4234-a234-123456789abc"
         val client = HttpClientFactory.create(sessions, environment, MockEngine { request ->
             val route = routes.getValue(expected).jsonObject
             assertEquals(environment.baseUrl, "${request.url.protocol.name}://${request.url.host}:${request.url.port}/")
@@ -51,7 +51,6 @@ class ApiRouteContractTest {
         try {
             val auth = AuthApiService(client)
             val profile = ProfileApiService(client)
-            val chat = ChatApiService(client)
             val connections = ConnectionApiService(client)
             check("send-otp") { auth.sendOTPRequest(AuthDTO(phoneNumber = "+15005550123")) }
             check("verify-otp") { auth.sendVerifyOtpRequest("+15005550123", "000000") }
@@ -62,9 +61,7 @@ class ApiRouteContractTest {
             check("profile-put") { profile.sendUpdateProfileRequest(1, ProfileUpdateDTO(), null, null) }
             check("logout") { auth.revoke("synthetic-refresh") }
             check("interests") { profile.getInterestList() }
-            check("rooms") { chat.rooms("synthetic-cursor") }
-            check("history") { chat.history(room, 1) }
-            check("media-upload") { chat.uploadMedias(emptyList()) }
+            check("matrix-session") { ResultHandler(MatrixSessionApiService(client, environment).create(room)) }
             check("couple-post") { connections.sendCoupleConnectionRequest("+15005550101", "+15005550102") }
             check("couple-put") { connections.updateCoupleConnectionRequestStatus(1, CoupleConnectionDTO()) }
             check("couple-sent") { connections.getSentLoveRequests(20, 1) }

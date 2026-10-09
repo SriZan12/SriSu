@@ -44,6 +44,8 @@ class NavigationContractTest {
         assertIs<ChatNav.ChatScreen>(parseExternalEntry("srisu://chats/00000000-0000-4000-8000-000000000001"))
         listOf("srisu://singles/1", "srisu://couples/-1", "srisu://couples/0", "https://attacker/couples/1",
             "srisu://couples/1/edit", "srisu://couples/1?isOwner=true", "srisu://chats/not-a-uuid",
+            "srisu://chats/00000000-0000-0000-0000-000000000000",
+            "srisu://chats/00000000-0000-4000-7000-000000000001",
             "srisu://couples/9223372036854775808", "srisu://couples/1#accept", "x".repeat(513)).forEach { assertNull(parseExternalEntry(it), it) }
     }
     @Test fun pendingLoginIsOneShotAndAccountSwitchClearsIt() {
