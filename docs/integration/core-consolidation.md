@@ -37,8 +37,9 @@ encrypted conversation entry points do not fall back to the legacy transport.
 Restoration, callback, entry disposal, and external-link tests exercise the
 encrypted route and retain the session/account-bound pending-link policy.
 
-The backend tree is the previously published chat PR tree. Both repositories'
-existing API contract snapshots agree. Backend migrations and private-media
+The backend application tree is the previously published chat PR tree. Both
+repositories' CI branch filters now include `dev-core-architecture` for push and
+pull-request checks. Their existing API contract snapshots agree. Backend migrations and private-media
 deployment requirements in [the chat guide](../flows/couple-chat.md) still apply;
 deploy the backend's additive migrations/API before the updated client. Challenge
 references remain unavailable with the versioned extension point intact.
