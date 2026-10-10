@@ -6,6 +6,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -33,7 +34,7 @@ import srisu.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null) {
+fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onMessage: (() -> Unit)? = null) {
     val state by vm.state.collectAsState()
     var profileMenu by remember { mutableStateOf(false) }
     DisposableEffect(coupleId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
@@ -55,6 +56,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                     }
                     else if (state.page == ProfilePage.PROFILE) {
                         if(state.profile?.canEdit == true) {
+                            onMessage?.let {message -> IconButton(onClick=message) {Icon(Icons.AutoMirrored.Filled.Send,"Message your partner")} }
                             IconButton(onClick = { vm.open(ProfilePage.PREVIEW) }) { Icon(Icons.Default.Visibility, stringResource(Res.string.cp_view_profile)) }
                             IconButton(onClick = { profileMenu = true }) { Icon(Icons.Default.MoreHoriz, stringResource(Res.string.cp_profile_options)) }
                             DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}) {

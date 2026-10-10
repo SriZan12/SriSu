@@ -21,7 +21,25 @@
       "auth_partner_linking_page": "1:2",
       "find_partner": "14:220",
       "invite_sent": "5:974",
-      "connected_confirmation": "5:1118"
+      "connected_confirmation": "5:1118",
+      "message_page": "1:5",
+      "message_thread": "184:2",
+      "message_voice": "184:1121",
+      "message_spark": "184:1634",
+      "message_ask": "185:2",
+      "message_planner": "185:781",
+      "message_options_nickname": "185:1624"
+    }
+  },
+  "features": {
+    "couple_chat": {
+      "frontend_branch": "dev-core-architecture-chat-system",
+      "backend_branch": "dev-core-architecture-chat-system",
+      "contract": "couple-chat-1",
+      "status": "implemented-local-qa-and-independent-security-review-pending",
+      "flow": "docs/flows/couple-chat.md",
+      "backend_guide": "docs/couple-chat.md",
+      "challenges": "versioned-references-unavailable-pending-future-domain-per-user"
     }
   }
 }

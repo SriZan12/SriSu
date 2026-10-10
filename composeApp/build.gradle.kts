@@ -14,6 +14,7 @@ plugins {
 
 val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.73:8000/")
 val apiEnvironment = providers.gradleProperty("srisu.environment").orElse("development")
+val chatAppEvaluation = providers.gradleProperty("chatAppEvaluation").orNull == "true"
 val environmentSources = layout.buildDirectory.dir("generated/srisuEnvironment/commonMain")
 abstract class GenerateEnvironment : DefaultTask() {
     @get:Input abstract val baseUrl: Property<String>
@@ -55,7 +56,7 @@ kotlin {
     val xcf = XCFramework()
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     
@@ -76,6 +77,14 @@ kotlin {
         commonMain { kotlin.srcDir(environmentSources) }
         
         androidMain.dependencies {
+            implementation(project(":secureChatNative"))
+            // Maintained MP4 remuxer with bounded in-memory output; no plaintext temp video.
+            implementation("androidx.media3:media3-muxer:1.10.1")
+            implementation("androidx.media3:media3-container:1.10.1")
+            implementation("com.google.zxing:core:3.5.4")
+            implementation("androidx.camera:camera-camera2:1.5.3")
+            implementation("androidx.camera:camera-lifecycle:1.5.3")
+            implementation("androidx.camera:camera-view:1.5.3")
             implementation(libs.androidx.core.splashscreen)
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -172,12 +181,25 @@ kotlin {
             implementation("org.robolectric:robolectric:4.16.1")
             implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
         }
+        androidInstrumentedTest.dependencies {
+            implementation("androidx.test:runner:1.6.2")
+            implementation("androidx.test.ext:junit:1.2.1")
+            implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
+        }
 
         iosMain.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)
 
         }
+        if(chatAppEvaluation) named("iosMain") {kotlin.srcDir(rootProject.file("tools/chat-app-evaluation"))}
+    }
+}
+
+// The synthetic-session harness is opt-in and cannot be linked into a Release artifact.
+tasks.configureEach {
+    if(chatAppEvaluation && name.contains("Release",ignoreCase=true)) doFirst {
+        error("Chat app evaluation is limited to Debug test artifacts")
     }
 }
 
@@ -187,6 +209,7 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         applicationId = "com.srisu.srisu"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
@@ -194,8 +217,10 @@ android {
         versionName = "1.0"
     }
     packaging {
+        jniLibs.excludes += "**/libsignal_jni_testing.so"
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += listOf("**/*.dll", "**/*.dylib", "**/*.so")
         }
     }
     buildTypes {
@@ -206,12 +231,16 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Signal's maintained bindings include Java records. Enable AGP's
+        // record/global-synthetic desugaring for all application dependencies.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspIosX64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)

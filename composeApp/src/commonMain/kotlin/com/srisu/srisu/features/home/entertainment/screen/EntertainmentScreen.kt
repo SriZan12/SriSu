@@ -13,6 +13,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.srisu.srisu.features.home.entertainment.vm.EntertainmentViewModel
@@ -26,8 +28,11 @@ fun HomeScreen(
     onFindPartner: () -> Unit = {},
     onCoupleProfile: () -> Unit = {},
     onExplore: () -> Unit = {},
+    onChat: () -> Unit = {},
     entertainmentViewModel: EntertainmentViewModel = koinViewModel<EntertainmentViewModel>()
 ) {
+    val conversation=org.koin.compose.koinInject<com.srisu.srisu.features.couplechat.data.ConversationRepository>()
+    val chat by conversation.state.collectAsStateWithLifecycle()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background
@@ -42,6 +47,7 @@ fun HomeScreen(
                 SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_view_profile), onCoupleProfile)
                 SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_explore), onExplore)
                 SriSuButton("Find your partner", onFindPartner)
+                SriSuButton(if(chat.unreadCount>0)"Chat (${chat.unreadCount.coerceAtMost(999)})" else "Chat", onChat)
             }
         }
 

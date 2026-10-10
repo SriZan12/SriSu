@@ -22,11 +22,12 @@ fun NavGraphBuilder.homeGraph(onFindPartner: () -> Unit, navController: androidx
 
     composable<HomeNavigation.CoupleProfile> { entry ->
         val route = entry.toRoute<HomeNavigation.CoupleProfile>()
-        com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileScreen(route.coupleId, onBack = { navController.popBackStack() }, initialPage = route.page, planId = route.planId, onOpenCouple = { id -> navController.navigate(HomeNavigation.CoupleProfile(id)) })
+        com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileScreen(route.coupleId, onBack = { navController.popBackStack() }, initialPage = route.page, planId = route.planId, onOpenCouple = { id -> navController.navigate(HomeNavigation.CoupleProfile(id)) },onMessage={navController.navigate(ChatNav.CoupleConversation(origin="couple_profile")) {launchSingleTop=true}})
     }
 
     composable<HomeNavigation.Home> { _ ->
-        HomeScreen(onFindPartner = onFindPartner, onExplore = { navController.navigate(HomeNavigation.CoupleProfile(page = "DISCOVER")) }, onCoupleProfile = { navController.navigate(HomeNavigation.CoupleProfile()) })
+        HomeScreen(onFindPartner = onFindPartner, onExplore = { navController.navigate(HomeNavigation.CoupleProfile(page = "DISCOVER")) }, onCoupleProfile = { navController.navigate(HomeNavigation.CoupleProfile()) },
+            onChat = { navController.navigate(ChatNav.CoupleConversation(origin = "home")) { launchSingleTop = true } })
     }
 
 }

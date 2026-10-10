@@ -1,0 +1,13 @@
+platform :ios, '15.0'
+use_frameworks!
+
+# From the checksum asset on the official v0.105.0 release. CocoaPods' upstream
+# build phase verifies the downloaded Rust archive against this exact digest.
+ENV['LIBSIGNAL_FFI_PREBUILD_CHECKSUM'] = '556a82414b545490085a0e21d94990788bdcbee4d769043f7889397872443faf'
+
+target 'SignalSpike' do
+  pod 'LibSignalClient', :git => 'https://github.com/signalapp/libsignal.git', :tag => 'v0.105.0'
+  target 'SignalSpikeTests' do
+    inherit! :search_paths
+  end
+end

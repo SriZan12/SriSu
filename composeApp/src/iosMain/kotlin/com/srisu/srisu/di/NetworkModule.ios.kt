@@ -15,6 +15,9 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 actual val platformNetworkModule = module {
+    single<com.srisu.srisu.features.couplechat.crypto.NativeChatDriver> {
+        checkNotNull(com.srisu.srisu.features.couplechat.crypto.NativeChatRuntime.driver) { "The iOS chat adapter must be installed before app startup." }
+    }
     single<HttpClientEngine> { Darwin.create() } onClose { it?.close() }
     single {
         val directory = NSFileManager.defaultManager.URLForDirectory(

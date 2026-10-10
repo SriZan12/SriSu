@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
+import kotlin.time.TimeSource
 
 val SocketHandshakeKey = io.ktor.util.AttributeKey<Boolean>("SriSuSocketHandshake")
 class SocketProtocolFailure : Exception("Socket protocol limit exceeded")
@@ -36,14 +37,17 @@ interface SocketConnection {
 }
 fun interface SocketConnector { suspend fun open(): SocketConnection }
 
-class KtorSocketConnector(private val client: HttpClient, private val environment: ApiEnvironment) : SocketConnector {
+class KtorSocketConnector(private val client: HttpClient, private val environment: ApiEnvironment,
+    private val socketPath: String = "ws/chat/") : SocketConnector {
+    init { require(socketPath in setOf("ws/chat/", "ws/couple-chat/v1/updates/")) }
     override suspend fun open(): SocketConnection {
         // Socket handshakes share the HTTP refresh mutex and secure credential owner.
         client.refreshSessionIfNeeded()?.let { error ->
             if (error.status == 401 || error.status == 403) throw SocketAccessDenied(error.status)
             throw SocketUnavailable()
         }
-        val socket = client.webSocketSession { url(environment.socketUrl); attributes.put(SocketHandshakeKey, true) }
+        val socketUrl = environment.baseUrl.replaceFirst("https://", "wss://").replaceFirst("http://", "ws://") + socketPath
+        val socket = client.webSocketSession { url(socketUrl); attributes.put(SocketHandshakeKey, true) }
         return object : SocketConnection {
             override suspend fun receive(): String? {
                 while (true) {
@@ -99,17 +103,20 @@ abstract class BaseWebSocketClient(
 
     private suspend fun runConnection(stamp: SessionStamp) {
         try {
-            for (attempt in 0..MAX_RECONNECTS) {
+            var attempt=0
+            while (attempt<=MAX_RECONNECTS) {
                 sessions.ensureCurrent(stamp)
                 _state.value = if (attempt == 0) SocketState.Connecting else SocketState.Reconnecting(attempt)
                 if (attempt > 0) delay(backoffMillis(attempt, jitter()))
                 var current: SocketConnection? = null
+                var connectedAt: kotlin.time.TimeMark?=null
                 try {
                     current = withTimeout(10_000) { connector.open() }
                     sessions.ensureCurrent(stamp)
                     connection = current
                     connectionStamp = stamp
                     _state.value = SocketState.Connected
+                    connectedAt=TimeSource.Monotonic.markNow()
                     com.srisu.srisu.core.logger.AppLogger.socket(com.srisu.srisu.core.logger.SocketDiagnostic.CONNECTED)
                     onConnected(stamp)
                     while (currentCoroutineContext().isActive) {
@@ -144,6 +151,9 @@ abstract class BaseWebSocketClient(
                     connectionStamp = null
                     onDisconnected(stamp)
                     withContext(NonCancellable) { withTimeoutOrNull(1_000) { current?.close() } }
+                    // Only consecutive short failures exhaust the retry budget.
+                    // Routine disconnects after a healthy minute start it afresh.
+                    attempt=if((connectedAt?.elapsedNow()?.inWholeSeconds ?: 0)>=60)1 else attempt+1
                 }
             }
             _state.value = SocketState.Terminal("reconnect_exhausted")
