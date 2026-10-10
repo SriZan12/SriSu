@@ -11,7 +11,7 @@ fun parseExternalEntry(url: String): Route? {
     val couple = Regex("^srisu://couples/([1-9][0-9]{0,18})/?$").matchEntire(url)
     if (couple != null) return couple.groupValues[1].toLongOrNull()?.let { CoupleProfileDestination(it) }
     val chat = Regex("^srisu://chats/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/?$").matchEntire(url)
-    return chat?.let { ChatNav.ChatScreen(it.groupValues[1].lowercase()) }
+    return chat?.let { ChatNav.CoupleConversation(it.groupValues[1].lowercase(), origin = "external") }
 }
 
 data class PendingEntry(val deliveryId: String, val route: Route, val accountId: Long?)

@@ -19,5 +19,7 @@ data class CoupleConnectionResponse(
     @SerialName("sender_number")
     val senderNumber: String?,
     @SerialName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String?,
+    @SerialName("couple_chat")
+    val coupleChat: com.srisu.srisu.features.couplechat.data.CoupleChatRoom? = null,
 )

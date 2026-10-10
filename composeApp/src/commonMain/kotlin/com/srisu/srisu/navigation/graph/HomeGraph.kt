@@ -2,7 +2,6 @@ package com.srisu.srisu.navigation.graph
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.toRoute
 import androidx.navigation.compose.composable
 import com.srisu.srisu.navigation.AppNavigator
 import com.srisu.srisu.features.home.entertainment.screen.HomeScreen
@@ -20,6 +19,6 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
             onExplore = { nav.switchTab(HomeNavigation.Explore) },
             onCoupleProfile = { nav.open(CoupleProfileDestination()) },
             onInvitations = { nav.open(ChatNav.PartnerRequests) },
-            onChat = { nav.open(ChatNav.ChatRoomScreen) })
+            onChat = { nav.open(ChatNav.CoupleConversation(origin = "home")) })
     }
 }

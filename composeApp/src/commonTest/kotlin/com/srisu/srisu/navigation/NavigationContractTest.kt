@@ -18,8 +18,8 @@ class NavigationContractTest {
     @Test fun minimalRoutesRoundTripWithoutJvmReflection() {
         val profile = CoupleProfileDestination(42, CoupleSection.PLAN, 9)
         assertEquals(profile, Json.decodeFromString<CoupleProfileDestination>(Json.encodeToString(profile)))
-        val chat = ChatNav.ChatScreen("00000000-0000-4000-8000-000000000001")
-        assertEquals(chat, Json.decodeFromString<ChatNav.ChatScreen>(Json.encodeToString(chat)))
+        val chat = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001", "message-1", "external")
+        assertEquals(chat, Json.decodeFromString<ChatNav.CoupleConversation>(Json.encodeToString(chat)))
         val picker = ProfileNav.InterestScreen("origin-entry", "request-1")
         assertEquals(picker, Json.decodeFromString<ProfileNav.InterestScreen>(Json.encodeToString(picker)))
         assertEquals(AuthNavigation.ProfileSetUp, Json.decodeFromString<AuthNavigation.ProfileSetUp>(Json.encodeToString(AuthNavigation.ProfileSetUp)))
@@ -27,7 +27,9 @@ class NavigationContractTest {
     }
     @Test fun externalInputIsStrictAndCannotPerformActions() {
         assertEquals(CoupleProfileDestination(42), parseExternalEntry("srisu://couples/42"))
-        assertIs<ChatNav.ChatScreen>(parseExternalEntry("srisu://chats/00000000-0000-4000-8000-000000000001"))
+        assertEquals(ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001", origin = "external"),
+            parseExternalEntry("srisu://chats/00000000-0000-4000-8000-000000000001"))
+        assertEquals(ChatNav.CoupleConversation(), Json.decodeFromString<ChatNav.CoupleConversation>("{}"))
         listOf("srisu://singles/1", "srisu://couples/-1", "srisu://couples/0", "https://attacker/couples/1",
             "srisu://couples/1/edit", "srisu://couples/1?isOwner=true", "srisu://chats/not-a-uuid",
             "srisu://couples/9223372036854775808", "srisu://couples/1#accept", "x".repeat(513)).forEach { assertNull(parseExternalEntry(it), it) }

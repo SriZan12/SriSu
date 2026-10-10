@@ -15,10 +15,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.srisu.srisu.features.couplechat.data.ConversationRepository
+import org.koin.compose.koinInject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.viewmodel.koinViewModel
 
 
 @Composable
@@ -30,6 +33,8 @@ fun HomeScreen(
     onChat: () -> Unit = {},
     onInvitations: () -> Unit = {},
 ) {
+    val conversation = koinInject<ConversationRepository>()
+    val chat by conversation.state.collectAsStateWithLifecycle()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background
@@ -45,7 +50,8 @@ fun HomeScreen(
                 SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_explore), onExplore)
                 SriSuButton(stringResource(Res.string.nav_find_partner), onFindPartner)
                 SriSuButton(stringResource(Res.string.nav_invitations), onInvitations)
-                SriSuButton(stringResource(Res.string.nav_conversations), onChat)
+                val chatLabel = stringResource(Res.string.nav_conversations)
+                SriSuButton(if (chat.unreadCount > 0) "$chatLabel (${chat.unreadCount.coerceAtMost(999)})" else chatLabel, onChat)
             }
         }
 

@@ -7,16 +7,20 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'composeApp/src'
 COLOR = SOURCE / 'commonMain/kotlin/com/srisu/srisu/theme/Color.kt'
-text = COLOR.read_text()
+text = COLOR.read_text(encoding='utf-8')
 errors = []
 for path in SOURCE.rglob('*.kt'):
     if 'theme' in path.parts:
         continue
-    for number, line in enumerate(path.read_text().splitlines(), 1):
-        if re.search(r'\bColor\s*\(|\bColor\.\w+|\b\d+(?:\.\d+)?\.sp\b|\bRoundedCornerShape\s*\(|\bFontFamily\.', line):
+    for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+        # QR contrast and synthetic codec fixtures are image data, not UI colors.
+        color_pattern = r'\bColor\s*\(|\bColor\.\w+'
+        if 'theme-audit: image pixels' in line:
+            color_pattern = r'(?!)'
+        if re.search(color_pattern + r'|\b\d+(?:\.\d+)?\.sp\b|\bRoundedCornerShape\s*\(|\bFontFamily\.', line):
             errors.append(f'{path.relative_to(ROOT)}:{number}: raw visual token: {line.strip()}')
 
-spec = json.loads((ROOT / 'docs/design-system/figma-spec.json').read_text())
+spec = json.loads((ROOT / 'docs/design-system/figma-spec.json').read_text(encoding='utf-8'))
 figma_hex = set(re.findall(r'#[0-9a-fA-F]{6}\b', json.dumps(spec)))
 figma_hex = {h[1:].upper() for h in figma_hex}
 implemented_hex = set(re.findall(r'0xFF([0-9A-F]{6})', text))
@@ -47,7 +51,7 @@ for mode in ('Light', 'Dark'):
             errors.append(f'{mode} {background}/{foreground}: {ratio:.2f}:1, below 4.5:1')
 
 # Verify that generated dark roles really use the recorded Material HCT tones.
-tones = json.loads((ROOT / 'docs/design-system/hct-tones.json').read_text())
+tones = json.loads((ROOT / 'docs/design-system/hct-tones.json').read_text(encoding='utf-8'))
 for role, seed in [('Primary', '2D2C2B'), ('Secondary', '3B197F'), ('Tertiary', '8144A8'), ('Error', 'D73431')]:
     for name, tone in [(role, 80), ('On'+role, 20), (role+'Container', 30), ('On'+role+'Container', 90)]:
         if values['Dark'+name] != tones[seed][str(tone)][2:]:
@@ -55,4 +59,4 @@ for role, seed in [('Primary', '2D2C2B'), ('Secondary', '3B197F'), ('Tertiary', 
 if errors:
     raise SystemExit('\n'.join(errors))
 print(f'PASS: {len(figma_hex)} documented Figma colors retained; 24 M3 role pairs >= 4.5:1 (minimum {minimum:.2f}:1).')
-print('PASS: HCT dark-role provenance; no raw Color, sp, font-family, or rounded-corner values outside theme.')
+print('PASS: HCT dark-role provenance; no raw UI Color, sp, font-family, or rounded-corner values outside theme (annotated image pixels excluded).')

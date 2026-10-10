@@ -126,3 +126,12 @@ manually exercised against a deployed backend.
 The new feature branches are based on the starting HEADs above. PRs target
 `dev-core-architecture`; the integration branches are not modified. Publication
 does not deploy the changes. No deployment or production migration was performed.
+
+### Encrypted chat consolidation (2026-10-10)
+
+Home, member-profile messaging, partner acceptance and allowed chat links now use
+the encrypted `CoupleConversation` route. Plan and Moment cards preserve typed
+feature navigation; completed partner flows are removed before entering chat.
+The navigation state remains scoped to the current session and couple membership.
+See [the consolidation record](../integration/core-consolidation.md) for preserved
+source commits, conflict decisions, paired PRs and validation limits.

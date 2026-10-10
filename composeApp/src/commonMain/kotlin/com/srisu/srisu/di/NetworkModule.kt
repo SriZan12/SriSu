@@ -17,6 +17,10 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
+    single { com.srisu.srisu.features.couplechat.data.ConversationRepository(get(), get(), get(), get(), get()) } onClose { it?.close() }
+    single { com.srisu.srisu.features.couplechat.data.CoupleChatApi(get(), get()) }
+    single { com.srisu.srisu.features.couplechat.data.CoupleChatRepository(get(),
+        com.srisu.srisu.core.data.remote.KtorSocketConnector(get(), get(), "ws/couple-chat/v1/updates/"), get(), get()) } onClose { it?.close() }
     single { com.srisu.srisu.core.config.ApiEnvironment.configured() }
     single { com.srisu.srisu.core.lifecycle.ApplicationLifetime() } onClose { it?.close() }
     single { com.srisu.srisu.core.session.SessionCoordinator(get(org.koin.core.qualifier.named("platformSessionStorage"))) }

@@ -9,6 +9,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
+    viewModel { com.srisu.srisu.features.couplechat.presentation.ConversationViewModel(get()) }
     viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get()) }
 
 

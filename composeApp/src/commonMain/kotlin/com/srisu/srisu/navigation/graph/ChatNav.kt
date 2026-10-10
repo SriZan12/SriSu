@@ -1,6 +1,12 @@
 package com.srisu.srisu.navigation.graph
 
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.srisu.srisu.features.couplechat.data.CoupleChatRepository
+import com.srisu.srisu.features.couplechat.data.CoupleChatState
+import com.srisu.srisu.features.couplechat.presentation.CoupleChatScreen
+import com.srisu.srisu.features.couplechat.presentation.SharedMomentScreen
+import org.koin.compose.koinInject
 import androidx.navigation.*
 import androidx.navigation.compose.composable
 import com.srisu.srisu.navigation.AppNavigator
@@ -17,6 +23,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.serialization.Serializable
 
 sealed interface ChatNav : Route {
+    @Serializable data class SharedMoment(val momentId: Long) : ChatNav
+    @Serializable data class CoupleConversation(val roomId: String? = null, val messageId: String? = null, val origin: String = "chat") : ChatNav
     @Serializable data object PartnerFlow : ChatNav
     @Serializable data object PartnerRequests : ChatNav
     @Serializable data object FindPartnerScreen : ChatNav
@@ -28,10 +36,22 @@ sealed interface ChatNav : Route {
     @Serializable data object YoureConnected : ChatNav
 }
 fun NavGraphBuilder.chatGraph(controller: NavController, session: Session?) {
+    composable<ChatNav.SharedMoment> { entry ->
+        SharedMomentScreen(entry.toRoute<ChatNav.SharedMoment>().momentId, AppNavigator(controller, entry)::back)
+    }
+    composable<ChatNav.CoupleConversation> { entry ->
+        val route = entry.toRoute<ChatNav.CoupleConversation>()
+        val nav = AppNavigator(controller, entry)
+        CoupleChatScreen(route.roomId, messageId = route.messageId, onBack = nav::back,
+            onOpenPlan = { couple, plan -> nav.open(CoupleProfileDestination(couple, CoupleSection.PLAN, plan)) },
+            onOpenMoment = { nav.open(ChatNav.SharedMoment(it)) },
+            onFindPartner = { nav.open(ChatNav.PartnerFlow) })
+    }
     navigation<ChatNav.PartnerFlow>(startDestination = ChatNav.FindPartnerScreen) {
         composable<ChatNav.PartnerRequests> { entry ->
             val vm = partnerModel(controller, entry)
             val nav = AppNavigator(controller, entry)
+            NavigateOnPartnerAccepted(vm) { nav.finishFlow(ChatNav.YoureConnected, ChatNav.PartnerFlow) }
             com.srisu.srisu.features.home.connection.presentation.coupleconnection.screen.CoupleConnectionScreen(onNavigateBack = nav::back) { user ->
                 user?.let { vm.rememberPreview(it) }?.let { nav.open(ChatNav.PartnerPreview(it)) }
             }
@@ -70,8 +90,18 @@ fun NavGraphBuilder.chatGraph(controller: NavController, session: Session?) {
         }
         composable<ChatNav.YoureConnected> { entry ->
             val vm = partnerModel(controller, entry)
-            val state by vm.findPartnerUIState.collectAsState()
-            YouAreConnectedScreen(state) { AppNavigator(controller, entry).root(HomeNavigation.Home) }
+            val state by vm.findPartnerUIState.collectAsStateWithLifecycle()
+            val nav = AppNavigator(controller, entry)
+            LaunchedEffect(vm) { vm.onScreenEntered() }
+            LaunchedEffect(state.acceptedRoomId) {
+                val room = state.acceptedRoomId ?: return@LaunchedEffect
+                kotlinx.coroutines.delay(900)
+                if (nav.isCurrent()) controller.navigate(ChatNav.CoupleConversation(room, origin = "acceptance")) {
+                    popUpTo<ChatNav.PartnerFlow> { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+            YouAreConnectedScreen(state) { nav.root(HomeNavigation.Home) }
         }
     }
     composable<ChatNav.ChatScreen> { entry ->
@@ -99,6 +129,17 @@ fun NavGraphBuilder.chatGraph(controller: NavController, session: Session?) {
     return koinViewModel(viewModelStoreOwner = parent)
 }
 @Composable private fun NavigateOnPartnerAccepted(vm: FindPartnerViewModel, onAccepted: () -> Unit) {
-    val state by vm.findPartnerUIState.collectAsState()
-    LaunchedEffect(state.acceptedPartnerName) { if (state.acceptedPartnerName != null) onAccepted() }
+    val state by vm.findPartnerUIState.collectAsStateWithLifecycle()
+    val repository = koinInject<CoupleChatRepository>()
+    val chatState by repository.state.collectAsStateWithLifecycle()
+    DisposableEffect(repository) { repository.enter(); onDispose { repository.leave() } }
+    LaunchedEffect(vm) { vm.onScreenEntered() }
+    LaunchedEffect(chatState) {
+        if (chatState is CoupleChatState.SetupRequired && state.acceptedPartnerName == null) {
+            vm.sendHaveCoupleConnectionRequested()
+        }
+    }
+    LaunchedEffect(state.acceptedNavigationPending) {
+        if (state.acceptedNavigationPending) { vm.onAcceptedNavigated(); onAccepted() }
+    }
 }

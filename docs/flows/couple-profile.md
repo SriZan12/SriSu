@@ -8,7 +8,7 @@ unaltered inspection backup is in /tmp/srisu-couple-models-takeover.py.
 ## Design evidence and screen-to-data mapping
 
 Figma file LztysD1YvINX7RwZpnhhTt, page 1:4, **Couple UI final**. Connector access
-was quota-limited. The user supplied Couple Profile UI Final.png (11661×23196).
+was quota-limited. The user supplied Couple Profile UI Final.png (11661Ã—23196).
 All 17 visible screens/states were inspected in full-resolution crops. Individual
 frame IDs, actual component properties and hidden prototype states are unavailable.
 The screenshot defines presentation; photos, names, answers and counts are samples.
@@ -19,7 +19,7 @@ The screenshot defines presentation; photos, names, answers and counts are sampl
 | Just connected / cover added | Existing anniversary and selected cover | Guarded cover delivery and scoped date update | Profile with real metrics; date picker is a derived interaction |
 | Write how it started | Three author-specific answers | Unique couple/author/prompt; never edit partner answers | Separate story editor; isolated draft, max 240 per answer |
 | Your side done | Own answers, partner contributions | Scoped story read, current partner attribution | Partial state, invitation action |
-| Asked → their chat | Question invitation | Existing private couple room only | Existing chat transport; profile destination |
+| Asked â†’ their chat | Question invitation | Existing private couple room only | Existing chat transport; profile destination |
 | Partner's side | Partner answers and own response/confirmation | Author derived from authentication | Separate draft, confirmation copies only explicitly selected answer |
 | Both done | Combined contributions, song, common interests, plans | Derived intersection and aggregates | Completed profile, real links |
 | Story skipped | Incomplete author contribution | No fabricated content | Write prompt; skip leaves persisted data unchanged |
@@ -151,7 +151,7 @@ Actual Android Robolectric/native-graphics renders with **synthetic test data**:
 - [Populated profile](couple-profile-validation/android-owner-populated.png)
 - [Single-answer sheet](couple-profile-validation/android-answer-sheet.png)
 - [Small song editor](couple-profile-validation/android-song-small.png)
-- [Dark song editor,1.6× font scale](couple-profile-validation/android-song-dark-large-text.png)
+- [Dark song editor,1.6Ã— font scale](couple-profile-validation/android-song-dark-large-text.png)
 
 The implementation preserves section hierarchy, typography family, warm surfaces,
 overlapping portraits and separate save flows. It is **not pixel-exact**: the cover
@@ -186,7 +186,7 @@ warning remain; no successful device or pixel-accuracy claim is made.
 
 ## Deployment and remaining limits
 
-Apply backend social0011–0013/chat0003 migrations and ship server support before
+Apply backend social0011â€“0013/chat0003 migrations and ship server support before
 the client. All new tables/fields are additive; users and relationship IDs remain.
 Legacy JSON routes remain, but cover image URLs now require authentication. Older
 clients using unauthenticated image loaders need this client update. Production
@@ -240,3 +240,17 @@ The feature now registers through `coupleProfileGraph` with a typed
 profile ViewModel/draft. Shared editor screens and local confirmation sheets stay
 within that resource flow; saves continue to use confirmed server responses.
 Explore uses the existing couple discovery screen. See [navigation coverage](navigation.md).
+## Presentation refinement (2026-10-02)
+
+See [the visual refinement record](couple-profile-polish.md) for the observed baseline,
+scoped owner/visitor/editor improvements, before/after renders and exact checks.
+This local frontend-only pass starts at `00a198a` on `dev-core-architecture` and
+preserves the existing API, permissions, ViewModel and navigation entry contract.
+No dependency, backend or Figma changes are included. The user subsequently
+authorized committing and pushing this complete refinement and motion changeset
+to `origin/dev-core-architecture`; the implementation revision is in Git history.
+
+The requested motion follow-up adds an 820 ms one-time heart/Moments icon sequence
+when the profile statistics become visible. Its account/profile-scoped saved state
+prevents replay on refresh, editor return or restoration; reduced motion is honored.
+See the refinement record for frame captures, lifecycle behavior and test results.

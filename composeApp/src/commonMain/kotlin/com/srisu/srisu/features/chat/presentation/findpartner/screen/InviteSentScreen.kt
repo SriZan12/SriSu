@@ -85,7 +85,7 @@ fun InviteSentScreen(findPartnerViewModel: FindPartnerViewModel, onNavigateBack:
                         PartnerLinkHeading(
                             title = if (state.acceptedPartnerName != null) "You’re connected!" else "Invite sent!",
                             subtitle = if (state.acceptedPartnerName != null) "Your partner has accepted your invitation."
-                            else invitation?.let { "Waiting for ${it.name} to join. You’ll be notified once they accept." }
+                            else invitation?.let { "Waiting for ${it.name} to join. Open SriSu to check for their response." }
                                 ?: "Check your pending invitation below.",
                         )
 

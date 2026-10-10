@@ -5,6 +5,7 @@ import androidx.navigation.NavController
 import androidx.navigation.toRoute
 import androidx.navigation.compose.composable
 import com.srisu.srisu.navigation.AppNavigator
+import com.srisu.srisu.navigation.graph.ChatNav
 import com.srisu.srisu.navigation.graph.Route
 import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileScreen
@@ -22,11 +23,13 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
             return@composable
         }
         CoupleProfileScreen(route.coupleId, onBack = nav::back, initialPage = route.section.name, planId = route.planId,
-            onOpenCouple = { nav.open(CoupleProfileDestination(it)) })
+            onOpenCouple = { nav.open(CoupleProfileDestination(it)) },
+            onMessage = { nav.open(ChatNav.CoupleConversation(origin = "couple_profile")) })
     }
     composable<HomeNavigation.Explore> { entry ->
         val nav = AppNavigator(controller, entry)
         CoupleProfileScreen(null, onBack = nav::back, initialPage = "DISCOVER",
-            onOpenCouple = { nav.open(CoupleProfileDestination(it)) })
+            onOpenCouple = { nav.open(CoupleProfileDestination(it)) },
+            onMessage = { nav.open(ChatNav.CoupleConversation(origin = "couple_profile")) })
     }
 }

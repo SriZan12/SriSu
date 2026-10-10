@@ -29,7 +29,7 @@ class NavigationOwnerTest {
             NavHost(controller, startDestination = HomeNavigation.Home) {
                 composable<HomeNavigation.Home> { }
                 composable<HomeNavigation.Explore> { }
-                composable<ChatNav.ChatScreen> { entry ->
+                composable<ChatNav.CoupleConversation> { entry ->
                     val probe = androidx.lifecycle.viewmodel.compose.viewModel<Probe>(initializer = { Probe() })
                     SideEffect { probes[entry.id] = probe }
                 }
@@ -40,7 +40,7 @@ class NavigationOwnerTest {
     }
     @Test fun poppedEntriesReleaseTheirViewModels() {
         host()
-        compose.runOnIdle { AppNavigator(controller).open(ChatNav.ChatScreen("00000000-0000-4000-8000-000000000001")) }
+        compose.runOnIdle { AppNavigator(controller).open(ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001")) }
         compose.waitForIdle()
         lateinit var probe: Probe
         compose.runOnIdle { probe = probes.getValue(controller.currentBackStackEntry!!.id); AppNavigator(controller).back() }
@@ -53,20 +53,20 @@ class NavigationOwnerTest {
             controller = rememberNavController()
             NavHost(controller, startDestination = HomeNavigation.Home) {
                 composable<HomeNavigation.Home> { }
-                composable<ChatNav.ChatScreen> { }
+                composable<ChatNav.CoupleConversation> { }
             }
         }
-        val route = ChatNav.ChatScreen("00000000-0000-4000-8000-000000000001")
+        val route = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001")
         compose.runOnIdle { AppNavigator(controller).open(route) }
         compose.waitForIdle()
         restoration.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
-        compose.runOnIdle { assertEquals(route, controller.currentBackStackEntry!!.toRoute<ChatNav.ChatScreen>()) }
+        compose.runOnIdle { assertEquals(route, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>()) }
     }
     @Test fun duplicateAndLateCallbacksCannotStackOrNavigate() {
         host()
         lateinit var origin: AppNavigator
-        val room = ChatNav.ChatScreen("00000000-0000-4000-8000-000000000001")
+        val room = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001")
         compose.runOnIdle {
             origin = AppNavigator(controller, controller.currentBackStackEntry)
             origin.open(room)
@@ -74,9 +74,9 @@ class NavigationOwnerTest {
         }
         compose.waitForIdle()
         compose.runOnIdle {
-            assertEquals(room, controller.currentBackStackEntry!!.toRoute<ChatNav.ChatScreen>())
+            assertEquals(room, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>())
             origin.open(ProfileNav.EditProfile)
-            assertTrue(controller.currentDestination!!.hasRoute<ChatNav.ChatScreen>())
+            assertTrue(controller.currentDestination!!.hasRoute<ChatNav.CoupleConversation>())
             AppNavigator(controller).back()
         }
         compose.waitForIdle()
@@ -85,18 +85,18 @@ class NavigationOwnerTest {
     @Test fun distinctConversationsHaveDistinctEntryIdentityAndBackRestoresArguments() {
         host()
         var first = ""
-        val a = ChatNav.ChatScreen("00000000-0000-4000-8000-000000000001")
-        val b = ChatNav.ChatScreen("00000000-0000-4000-8000-000000000002")
+        val a = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001")
+        val b = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000002")
         compose.runOnIdle { AppNavigator(controller).open(a); first = controller.currentBackStackEntry!!.id }
         compose.waitForIdle()
         compose.runOnIdle {
             AppNavigator(controller).open(b)
             assertNotEquals(first, controller.currentBackStackEntry!!.id)
-            assertEquals(b, controller.currentBackStackEntry!!.toRoute<ChatNav.ChatScreen>())
+            assertEquals(b, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>())
             AppNavigator(controller).back()
         }
         compose.waitForIdle()
-        compose.runOnIdle { assertEquals(a, controller.currentBackStackEntry!!.toRoute<ChatNav.ChatScreen>()) }
+        compose.runOnIdle { assertEquals(a, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>()) }
     }
     @Test fun tabReselectionDoesNotDuplicateRootAndSecurityRootClearsHistory() {
         host()
@@ -104,7 +104,7 @@ class NavigationOwnerTest {
             val nav = AppNavigator(controller)
             nav.switchTab(HomeNavigation.Explore)
             nav.switchTab(HomeNavigation.Explore)
-            nav.open(ChatNav.ChatScreen("00000000-0000-4000-8000-000000000001"))
+            nav.open(ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001"))
             nav.root(HomeNavigation.Home)
         }
         compose.waitForIdle()
