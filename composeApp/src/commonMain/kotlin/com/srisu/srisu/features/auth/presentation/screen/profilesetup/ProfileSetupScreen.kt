@@ -13,7 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.navigation.NavController
 import com.srisu.srisu.features.auth.presentation.components.CustomProfileSetupScreen
 import com.srisu.srisu.features.auth.presentation.state.AuthUIStates
 import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
@@ -24,7 +23,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun ProfileSetupScreen(
-    navController: NavController,
     authViewModel: AuthViewModel = koinViewModel<AuthViewModel>()
 ) {
 
@@ -35,7 +33,6 @@ fun ProfileSetupScreen(
         authViewModel.navigateProfileBack()
     }
     ProfileScreenContent(
-        navController = navController,
         authViewModel = authViewModel,
         authUIState = authUIState,
         localFocusManager = localFocusManager
@@ -47,7 +44,6 @@ fun ProfileSetupScreen(
 
 @Composable
 private fun ProfileScreenContent(
-    navController: NavController,
     authViewModel: AuthViewModel,
     localFocusManager: FocusManager,
     authUIState: AuthUIStates

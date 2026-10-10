@@ -20,12 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 
 
 @Composable
 fun AppBottomBar(
-    navController: NavHostController,
+    onSelect: (BottomDestination) -> Unit,
     currentDestination: BottomDestination?,
     visible: Boolean
 ) {
@@ -43,13 +42,7 @@ fun AppBottomBar(
                 onClick = {
                     if (selected) return@NavigationBarItem
 
-                    navController.navigate(destination.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    onSelect(destination)
                 },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = MaterialTheme.colorScheme.transparent

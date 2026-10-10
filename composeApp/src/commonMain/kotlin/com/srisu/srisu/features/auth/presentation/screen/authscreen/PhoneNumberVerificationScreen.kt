@@ -43,7 +43,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import androidx.navigation.NavController
 import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.components.ErrorDialog
 import com.srisu.srisu.components.ErrorText
@@ -63,14 +62,14 @@ import com.srisu.srisu.utils.isInternetAvailable
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun PhoneNumberVerificationScreen(
-    navController: NavController,
+    onBack: () -> Unit,
     authViewModel: AuthViewModel
 ) {
     val authUIStates by authViewModel.authUiState.collectAsState()
     val localFocusManager = LocalFocusManager.current
 
 
-    androidx.compose.ui.backhandler.BackHandler { authViewModel.abandonChallenge(); navController.popBackStack() }
+    androidx.compose.ui.backhandler.BackHandler(onBack = onBack)
 
     HandleUiStateDialog(
         authViewModel = authViewModel,
@@ -80,8 +79,7 @@ fun PhoneNumberVerificationScreen(
     PhoneNumberVerificationContent(
         authUIStates = authUIStates,
         onBackClick = {
-            authViewModel.abandonChallenge()
-            navController.popBackStack()
+            onBack()
         },
         onScreenClick = {
             localFocusManager.clearFocus(force = true)

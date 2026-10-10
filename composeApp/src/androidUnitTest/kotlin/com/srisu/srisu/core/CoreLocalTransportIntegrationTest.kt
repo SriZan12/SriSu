@@ -14,7 +14,6 @@ import com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
 import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
 import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiService
-import com.srisu.srisu.features.home.suggestions.data.api.SuggestionApiService
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.*
@@ -77,14 +76,9 @@ class CoreLocalTransportIntegrationTest {
                     assertEquals("complete", restored.response?.progress?.nextStep)
                 }
                 assertEquals(400, assertIs<NetworkAPIResult.Error<*>>(auth.updateGender("NONE").result).failure.status)
-                val suggestions = SuggestionApiService(client)
-                assertIs<NetworkAPIResult.Success<*>>(suggestions.getUserSuggestions(1, 20).result)
-                assertNull(assertIs<NetworkAPIResult.Success<*>>(suggestions.getUserPreferences().result).response)
                 val connections = ConnectionApiService(client)
                 assertIs<NetworkAPIResult.Success<*>>(connections.getSentLoveRequests(20, 1).result)
                 assertIs<NetworkAPIResult.Success<*>>(connections.getLoveRequests(1, 20).result)
-                assertIs<NetworkAPIResult.Success<*>>(connections.getMyCrushList(1, 20).result)
-                assertIs<NetworkAPIResult.Success<*>>(connections.getCrushOnMeList(1, 20).result)
                 assertIs<NetworkAPIResult.Success<*>>(connections.haveCoupleConnectionRequested().result)
                 assertIs<NetworkAPIResult.Success<*>>(connections.sendFindYourPartnerRequest("+15005550102").result)
                 // Couple Profile uses real HTTP bodies, migrations and guarded media.

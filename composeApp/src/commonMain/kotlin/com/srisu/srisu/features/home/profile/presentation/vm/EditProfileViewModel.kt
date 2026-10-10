@@ -41,6 +41,8 @@ class EditProfileViewModel(
         MutableStateFlow(_root_ide_package_.com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState())
 
     val editProfileUIState = _editProfileUIState.asStateFlow()
+    private val initialized = MutableStateFlow(false)
+    val isInitialized = initialized.asStateFlow()
 
     private val catalogue = com.srisu.srisu.features.home.profile.presentation.state.InterestCatalogueStateHolder(viewModelScope) { force -> profileRepository.loadCatalogue(force) }
     val catalogueState = catalogue.state
@@ -65,6 +67,7 @@ class EditProfileViewModel(
             )
 
             _editProfileUIState.value = mergedState.copy(interestList = catalogue.state.value.items)
+            initialized.value = true
 
         }
     }

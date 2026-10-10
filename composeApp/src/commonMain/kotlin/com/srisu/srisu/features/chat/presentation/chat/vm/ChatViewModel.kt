@@ -43,6 +43,8 @@ class ChatViewModel(
     private val _chatState = MutableStateFlow(ChatState())
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
+    private var requestedRoomId: String? = null
+    private var roomJob: Job? = null
     private var typingJob: Job? = null
     private var sendTextJob: Job? = null
     private val typingTimeoutMillis = 1200L
@@ -62,6 +64,7 @@ class ChatViewModel(
     override fun onCleared() {
         super.onCleared()
         typingJob?.cancel()
+        clearActiveChatRoom()
         // Application/session lifetime owns the shared repository and socket.
     }
 
@@ -84,10 +87,11 @@ class ChatViewModel(
 
             combine(repository.chatRoomsList, repository.activeChatRoomId) { rooms, active -> rooms to active }.collect { (chatRooms, activeRoomId) ->
 //                val selectedRoomId = chatState.value.chatRoomData?.id
-                val selectedRoom = if (activeRoomId != null) {
+                val selectedRoom = if (activeRoomId != null && activeRoomId == requestedRoomId) {
                     chatRooms.firstOrNull { it.id == activeRoomId }
                         ?: chatState.value.chatRoomData?.takeIf { it.id == activeRoomId }
-                } else chatRooms.firstOrNull()
+                        ?: ChatRoomItemDto(id = activeRoomId)
+                } else null
                 val myUserId = chatState.value.session?.id
 
                 _chatState.update { state ->
@@ -132,49 +136,29 @@ class ChatViewModel(
         }
     }
 
-    fun setChatRoomData() {
-        AppLogger.log("ChatRoomID = ${_chatState.value.chatRoomData}")
-
-        val chatRoomData = _chatState.value.chatRoomData ?: return
-
-        viewModelScope.launch(Dispatchers.Default) {
+    fun openRoom(roomId: String) {
+        if (requestedRoomId == roomId && roomJob?.isActive == true) return
+        val sameEntryRoom = requestedRoomId == roomId
+        requestedRoomId = roomId
+        roomJob?.cancel()
+        _chatState.update {
+            if (sameEntryRoom) it.copy(chatRoomData = ChatRoomItemDto(id = roomId), chatMessages = emptyList())
+            else ChatState(session = it.session, chatRoomData = ChatRoomItemDto(id = roomId))
+        }
+        roomJob = viewModelScope.launch {
             try {
-
-                withContext(Dispatchers.Main) {
-                    _chatState.update { state ->
-                        state.copy(
-                            chatRoomData = chatRoomData,
-                            selectedMessageForAction = null,
-                            selectedMessageIdForActions = null,
-                            isEditMessage = false,
-                            replyMessage = ChatState.ReplyMessage(),
-                            messageInput = TextFieldValue(),
-                            showImageScreen = ChatState.ShowImageScreen(),
-                        )
-                    }
-                }
-
-                chatRoomData.id?.let { roomId ->
-                    repository.fetchInitialMessages(chatRoomId = roomId)
-                    repository.markDelivered(chatRoomId = roomId)
-                    repository.markRead(chatRoomId = roomId)
-                }
+                repository.fetchInitialMessages(roomId)
+                repository.fetchInitialChatRooms()
+                repository.markDelivered(roomId)
+                repository.markRead(roomId)
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
-            } catch (failure: Exception) {
-                withContext(Dispatchers.Main) {
-                    showErrorMessage(
-                        errorType = "Error",
-                        message = "Invalid chat room data",
-                    )
-                }
-            }
+            } catch (_: Exception) { showErrorMessage("Conversation unavailable", "This conversation is unavailable. Return to conversations and refresh.") }
         }
     }
 
-    /**
-     * Call this when leaving ChatScreen.
-     */
     fun clearActiveChatRoom() {
+        if (repository.activeChatRoomId.value != requestedRoomId) return
+        roomJob?.cancel()
         stopTyping()
         repository.clearActiveChatRoom()
 
@@ -184,10 +168,6 @@ class ChatViewModel(
                 chatMessages = emptyList(),
                 selectedMessageForAction = null,
                 selectedMessageIdForActions = null,
-                isEditMessage = false,
-                replyMessage = ChatState.ReplyMessage(),
-                messageInput = TextFieldValue(),
-                showImageScreen = ChatState.ShowImageScreen(),
                 isTyping = false,
             )
         }

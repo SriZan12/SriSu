@@ -37,7 +37,7 @@ import srisu.composeapp.generated.resources.*
 fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onMessage: (() -> Unit)? = null) {
     val state by vm.state.collectAsState()
     var profileMenu by remember { mutableStateOf(false) }
-    DisposableEffect(coupleId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
+    DisposableEffect(coupleId, initialPage, planId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
     val back = { if (vm.back()) onBack() }
     val overviewScroll = rememberSaveable(vm.accountId, coupleId, saver = ScrollState.Saver) { ScrollState(0) }
     val accentMotion = rememberProfileAccentMotion(vm.accountId, state.profile?.id ?: coupleId)

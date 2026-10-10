@@ -71,3 +71,11 @@ backend remains unchanged.
 `ChatNav.YoureConnected` opens after the received-invitation PUT succeeds, or when the existing Check status request confirms `ACCEPTED` for a sent invitation. The completed linking stack is cleared. View our space and system Back open Home. No polling or new notification transport is introduced.
 
 The [You'reConnectedScreen frame](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=5-1118) supplies the paired-avatar card, heading, caption and action layout. Figma rate-limited the design-context/export request after metadata retrieval. The celebration check and existing invitation landscape are explicit replaceable placeholders; exact artwork fidelity remains pending. Names and avatars use session/API data. “Together since” uses the confirmed response's updated date when available; no specimen date is hardcoded.
+
+### Navigation migration (2026-10-01)
+
+See [the route inventory](navigation.md). Find Partner, Invite Sent, received requests
+and confirmation now share a partner-flow ViewModel rather than an account-wide one.
+The old Matches tab is removed; Home's Partner invitations action retains its existing
+sent/received lists. Profile previews pass a stable user ID and resolve the authorized
+selection from the flow scope; the former full-profile JSON route is removed.

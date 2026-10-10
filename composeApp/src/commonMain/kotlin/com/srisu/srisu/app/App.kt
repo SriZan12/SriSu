@@ -33,12 +33,12 @@ fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
             onDispose { owner.lifecycle.removeObserver(observer); lifetime.setForeground(false) }
         }
         SriSuTheme(darkTheme = darkTheme) {
-            key(session.accountId) {
+            key(session) {
                 // The entire navigation/view-model store is owned by this account.
                 val accountOwner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
                 DisposableEffect(accountOwner) { onDispose { accountOwner.viewModelStore.clear() } }
                 CompositionLocalProvider(LocalViewModelStoreOwner provides accountOwner) {
-                    AppRoot(sessionStorage = sessions)
+                    BaseNavigation(sessionStorage = sessions)
                 }
             }
         }

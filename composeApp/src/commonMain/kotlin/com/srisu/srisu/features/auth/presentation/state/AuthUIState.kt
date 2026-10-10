@@ -33,7 +33,6 @@ data class AuthUIStates(
     val profilePictureUri: Uri? = null,
     val session: Session? = null,
     val currentScreen: CustomProfileSetupScreen = CustomProfileSetupScreen.AddFullNameScreen,
-    val screenStack: ArrayDeque<CustomProfileSetupScreen> = ArrayDeque(),
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val validationError: Validation = Validation(),
     val countryList: List<CountryModel> = emptyList()

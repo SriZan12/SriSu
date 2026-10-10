@@ -49,6 +49,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun InterestScreen(
     interests: List<InterestResponse.Interest?>? = emptyList(),
     currentInterests: List<User.UserInterest?>? = emptyList(),
+    onCancel: () -> Unit = {},
     onInterestSelected: (List<User.UserInterest?>?) -> Unit = {}
 ) {
     val selectedInterests = remember { mutableStateListOf<User.UserInterest>() }
@@ -63,7 +64,7 @@ fun InterestScreen(
         topBar = {
             PrimaryToolBar(
                 title = "Interests",
-                onNavigate = { latestOnInterestSelected(selectedInterests.toList()) }
+                onNavigate = onCancel
             )
         },
         bottomBar = {
@@ -105,9 +106,7 @@ fun InterestScreen(
 
         }
 
-        BackHandler {
-            latestOnInterestSelected(selectedInterests.toList())
-        }
+        BackHandler { onCancel() }
     }
 }
 

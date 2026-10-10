@@ -36,7 +36,7 @@ fun FindYourPartnerScreen(
     onNavigateBack: () -> Unit,
     onNavigateToInviteSent: () -> Unit,
     onContinue: () -> Unit,
-    onNavigateToProfile: (String?) -> Unit,
+    onNavigateToProfile: (Long?) -> Unit,
 ) {
     val state by findPartnerViewModel.findPartnerUIState.collectAsStateWithLifecycle()
     val invitations = findPartnerViewModel.loveRequests.collectAsLazyPagingItems()

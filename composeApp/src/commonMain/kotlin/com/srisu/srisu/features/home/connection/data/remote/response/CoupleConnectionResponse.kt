@@ -1,11 +1,13 @@
-package com.srisu.srisu.features.home.suggestions.data.response
+package com.srisu.srisu.features.home.connection.data.remote.response
 
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SingleConnectionResponse(
+data class CoupleConnectionResponse(
+    @SerialName("breakup_reason")
+    val breakupReason: String?,
     @SerialName("connection_status")
     val connectionStatus: String?,
     @SerialName("created_at")
@@ -17,5 +19,7 @@ data class SingleConnectionResponse(
     @SerialName("sender_number")
     val senderNumber: String?,
     @SerialName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String?,
+    @SerialName("couple_chat")
+    val coupleChat: com.srisu.srisu.features.couplechat.data.CoupleChatRoom? = null,
 )

@@ -240,3 +240,11 @@ for Figma page1:4, the supplied complete board, separate editors, current-member
 permissions and both-partner publication consent. The paired implementation is on
 `dev-core-architecture` in both repositories; integration branches are unchanged.
 The backend's `docs/couple-profile.md` owns the domain/API/rollout detail.
+
+## Navigation and dating retirement (local, 2026-10-01)
+
+The [navigation migration record](flows/navigation.md) and [ADR 001](architecture/decisions/001-navigation.md)
+replace older descriptions of the root/account-wide feature ViewModels and legacy
+JSON route arguments. Both working branches remain `dev-core-architecture`; changes
+are uncommitted under the current request. Dating endpoint retirement is paired with
+client removal, while phone partner invitations, individual profiles and Faves remain.

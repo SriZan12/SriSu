@@ -12,7 +12,7 @@ struct iOSApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView().onOpenURL { url in PlatformEntry.shared.openUrl(url: url.absoluteString) }
         }
     }
 }

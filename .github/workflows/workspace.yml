@@ -2,9 +2,9 @@ name: SriSu frontend checks
 
 on:
   push:
-    branches: [dev-new-theme, codex/workspace-integration]
+    branches: [dev-new-theme, dev-core-architecture, codex/workspace-integration]
   pull_request:
-    branches: [dev-new-theme]
+    branches: [dev-new-theme, dev-core-architecture]
   workflow_dispatch:
 
 permissions:
