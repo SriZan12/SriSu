@@ -29,6 +29,11 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
         private set
     var speed by mutableFloatStateOf(1f)
         private set
+    var playbackLoading by mutableStateOf(false)
+        private set
+    var playbackError by mutableStateOf<String?>(null)
+        private set
+    private var playbackEnded = false
     private var sendRecording = false
     private var generation = 0
 
@@ -99,24 +104,29 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
         recording=false; preparing=false; locked=false
     }
     fun play(opened: OpenedChatMedia) {
+        position=0; duration=0; speed=1f; playing=false; playbackLoading=true; playbackError=null; playbackEnded=false
         native.play(opened.bytes,opened.media.mime) {raw -> scope.launch(Dispatchers.Main) {
             if(repository.state.value.openedMedia?.media?.descriptor?.id != opened.media.descriptor.id) return@launch
             try {
                 val value=ChatJson.parseToJsonElement(raw).jsonObject
                 when(value["event"]?.jsonPrimitive?.content) {
-                    "playing" -> { playing=true; if(opened.media.kind=="voice")repository.voicePlayed(opened.messageId) }
+                    "playing" -> { playing=true; playbackLoading=false; playbackEnded=false; if(opened.media.kind=="voice")repository.voicePlayed(opened.messageId) }
                     "position" -> { position=value["positionMs"]!!.jsonPrimitive.long; duration=value["durationMs"]!!.jsonPrimitive.long }
-                    "paused", "ended" -> playing=false
-                    "error" -> { playing=false; repository.mediaError("This media cannot be played on this device.") }
+                    "paused" -> playing=false
+                    "ended" -> {playing=false;playbackEnded=true;position=duration}
+                    "error" -> { playing=false; playbackLoading=false; playbackError="This media could not play. Try again." }
                 }
-            } catch (_: Exception) { playing=false; repository.mediaError("Playback could not continue.") }
+            } catch (_: Exception) { playing=false; playbackLoading=false; playbackError="Playback could not continue. Try again." }
         } }
     }
-    fun togglePlayback() { native.playback(if(playing) "pause" else "resume",0.0) }
+    fun togglePlayback() {
+        if(playbackEnded) {native.playback("seek",0.0);playbackEnded=false}
+        native.playback(if(playing) "pause" else "resume",0.0)
+    }
     fun seek(fraction: Float) { native.playback("seek",duration*fraction.toDouble()) }
     fun speed() { speed=when(speed) {1f->1.5f;1.5f->2f;else->1f}; native.playback("speed",speed.toDouble()) }
-    fun dismiss() { native.playback("stop",0.0); playing=false; position=0; speed=1f; repository.dismissMedia() }
-    fun stopPlayer() { native.playback("stop",0.0); playing=false; position=0; speed=1f }
+    fun dismiss() { stopPlayer(); repository.dismissMedia() }
+    fun stopPlayer() { native.playback("stop",0.0); playing=false; position=0; duration=0; speed=1f; playbackLoading=false; playbackError=null; playbackEnded=false }
     fun export(opened: OpenedChatMedia) { native.export(opened.bytes,opened.media.mime) { result ->
         if(result=="error") scope.launch(Dispatchers.Main) { repository.mediaError("The export could not be completed.") }
     } }

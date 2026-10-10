@@ -7,6 +7,7 @@ import com.srisu.srisu.features.couplechat.data.ConversationRepository
 class ConversationViewModel(val conversation: ConversationRepository) : ViewModel() {
     private var active = false
     val state = conversation.state
+    val connectionState = conversation.connectionState
     fun enter(roomId: String?) { if (!active) { active = true; conversation.enter(roomId) } }
     fun leave() { if (active) { active = false; conversation.leave() } }
     override fun onCleared() { leave() }

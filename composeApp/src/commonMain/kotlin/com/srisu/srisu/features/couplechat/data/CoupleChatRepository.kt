@@ -70,6 +70,9 @@ class CoupleChatRepository(
         }
     }
 
+    /** Presentation observes the actual transport; it does not infer network state from receipts. */
+    val connectionState = socket.connectionState
+
     init {
         scope.launch {
             combine(sessions.state,lifetime.foreground,active,ownActivity,socket.connectionState) {stamp,foreground,wanted,own,connection ->

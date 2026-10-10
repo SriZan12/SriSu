@@ -4,13 +4,17 @@ package com.srisu.srisu.features.couplechat.presentation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import com.srisu.srisu.features.couplechat.data.*
 import com.srisu.srisu.features.coupleprofile.data.*
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
-import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 import kotlin.uuid.Uuid
@@ -26,9 +30,9 @@ import kotlin.time.Instant
     var answer by remember(message.id) {mutableStateOf(state.privateDrafts["answer:${message.id}"].orEmpty())}
     val pending=message.id in state.pendingCards
     LaunchedEffect(pending) {if(pending)answer=""}
+    ChatContextCard(card) {
     when(card) {
         is ChatCard.Ask -> {
-            Text("Ask",style=MaterialTheme.typography.labelLarge)
             Text(card.question,style=MaterialTheme.typography.titleMedium)
             val reply=message.cardResponses.values.firstOrNull()
             if(reply!=null) {
@@ -46,7 +50,7 @@ import kotlin.time.Instant
         }
         is ChatCard.Spark -> {
             val spark=state.sparks[message.id] ?: LocalSparkState()
-            Text("Conversation Spark · ${card.deck}",style=MaterialTheme.typography.labelLarge)
+            Text(card.deck,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Text(card.question,style=MaterialTheme.typography.titleMedium)
             if(spark.revealed) {
                 spark.answers.forEach {(actor,text) -> Text("${if(actor==state.accountId)"You" else state.partnerName}: $text")}
@@ -63,11 +67,38 @@ import kotlin.time.Instant
         }
         is ChatCard.Plan -> PlanChatCard(card,state.accountId,onPlan)
         is ChatCard.Moment -> {
-            Text("Moment",style=MaterialTheme.typography.labelLarge)
             Text("A shared moment. Availability follows the original 24-hour audience.",style=MaterialTheme.typography.bodySmall)
             TextButton(onClick={onMoment(card.momentId)}) {Text("Open moment")}
         }
-        is ChatCard.Challenge -> {Text("Challenge",style=MaterialTheme.typography.labelLarge);Text("This Challenge is unavailable in this version.",style=MaterialTheme.typography.bodySmall)}
+        is ChatCard.Challenge -> Text("This Challenge is unavailable in this version.",style=MaterialTheme.typography.bodySmall)
+    }
+    }
+}
+
+/** Shared shell; each domain retains its own permission, expiry and interaction rules. */
+@Composable internal fun ChatContextCard(card: ChatCard, content: @Composable ColumnScope.() -> Unit) {
+    val (title, icon) = when(card) {
+        is ChatCard.Ask -> "Ask" to ChatIcons.ChatBubbleOutline
+        is ChatCard.Spark -> "Conversation Spark" to ChatIcons.AutoAwesome
+        is ChatCard.Plan -> "Planner" to ChatIcons.Event
+        is ChatCard.Moment -> "Moment" to ChatIcons.Collections
+        is ChatCard.Challenge -> "Challenge" to ChatIcons.Flag
+    }
+    val tint = when(card) {
+        is ChatCard.Spark -> MaterialTheme.colorScheme.spark
+        is ChatCard.Ask -> MaterialTheme.colorScheme.ask
+        is ChatCard.Plan -> MaterialTheme.colorScheme.planner
+        is ChatCard.Moment -> MaterialTheme.colorScheme.moments
+        is ChatCard.Challenge -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Column(Modifier.widthIn(min=200.dp).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+            Surface(shape=MaterialTheme.shapes.small,color=tint.copy(alpha=.12f)) {
+                Icon(icon,null,Modifier.padding(MaterialTheme.spacing.small).size(MaterialTheme.spacing.icon),tint=tint)
+            }
+            Text(title,style=MaterialTheme.typography.titleSmall)
+        }
+        content()
     }
 }
 
@@ -94,7 +125,6 @@ import kotlin.time.Instant
             is NetworkAPIResult.Error -> {plan=null;error=if(result.failure.status in listOf(403,404))"This plan is no longer available." else "Connect to load the current plan."}
         };busy=false
     }
-    Text("Planner",style=MaterialTheme.typography.labelLarge)
     if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
     plan?.let {value ->
         Text(value.title,style=MaterialTheme.typography.titleMedium);Text(value.startsAt,style=MaterialTheme.typography.bodySmall)

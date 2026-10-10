@@ -1,5 +1,8 @@
 # Couple chat implementation
 
+For the subsequent conversation redesign, its design-access limitations and
+validation, see [the Chat UI refinement record](couple-chat-ui.md).
+
 Updated 2026-10-10. Working branch `dev-core-architecture-chat-system`, baseline
 `fa7e4fa20a90d2e1289c80fc5552d2bf69e00dd5`. Backend same branch, baseline
 `c68e7b068229cb57d37064bea903108f237b1251`. Publication is through paired draft

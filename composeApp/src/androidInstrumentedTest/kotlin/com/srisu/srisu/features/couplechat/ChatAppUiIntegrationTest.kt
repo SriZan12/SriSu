@@ -1,8 +1,11 @@
 package com.srisu.srisu.features.couplechat
 
 import android.view.WindowManager
+import android.view.WindowInsets
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
@@ -28,8 +31,12 @@ class ChatAppUiIntegrationTest {
         compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
     }
     private fun menu(text:String) {
-        // Reply previews repeat the body. Select the message owning its actions.
+        // A quote repeats the original body but belongs to the replying message.
+        // Exclude that path before looking up the owning bubble's actions.
         val node=compose.onAllNodesWithText(text).fetchSemanticsNodes()
+            .filter {target->generateSequence(target) {it.parent}.none {
+                it.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Quoted message. Open original")==true
+            }}
             .flatMap {target->generateSequence(target) {it.parent}.toList()}
             .first {it.config.contains(SemanticsActions.CustomActions)}
         compose.runOnIdle {assertTrue(node.config[SemanticsActions.CustomActions].first {it.label=="Message options"}.action())}
@@ -62,7 +69,10 @@ class ChatAppUiIntegrationTest {
             }}
             visible("Message") // The subtitle may already show the partner's live activity.
             compose.runOnIdle {assertTrue(compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)}
-            compose.onNodeWithText("Message").performTextInput("Synthetic UI hello")
+            compose.onNodeWithContentDescription("Message").performClick()
+            compose.waitUntil(15000) {compose.activity.window.decorView.rootWindowInsets?.isVisible(WindowInsets.Type.ime())==true}
+            compose.onNodeWithContentDescription("Message").performTextInput("Synthetic UI hello")
+            compose.onNodeWithContentDescription("Send message").assertIsDisplayed()
             compose.onNodeWithContentDescription("Send message").performClick()
             val original=runBlocking {partner.waitFor("UI text delivery") {it.messages.any {m->(m.content as? ChatContent.Text)?.body=="Synthetic UI hello"}}.messages.single().id}
             partner.repo.setReply(original);partner.repo.updateDraft("Synthetic partner reply");partner.repo.sendText()
@@ -82,7 +92,8 @@ class ChatAppUiIntegrationTest {
             partner.repo.answerCard(ask.id,CardReply(vote=1));visible("Synthetic app participant 1: Walk")
             partner.repo.sendCard(ChatCard.Challenge("future-synthetic-reference"))
             visible("This Challenge is unavailable in this version.")
-            first.repo.jumpToMessage(original);visible("Synthetic UI hello")
+            compose.onNode(hasScrollToIndexAction()).performScrollToIndex(first.repo.state.value.messages.indexOfFirst {it.id==original})
+            visible("Synthetic UI hello")
             menu("Synthetic UI hello");compose.onNodeWithText("Delete for everyone").performScrollTo().performClick()
             compose.onNodeWithText("Delete").performClick()
             runBlocking {partner.waitFor("UI deletion") {it.messages.first {m->m.id==original}.deleted}}

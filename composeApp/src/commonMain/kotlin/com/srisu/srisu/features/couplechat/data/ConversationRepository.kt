@@ -56,6 +56,7 @@ class ConversationRepository(
     private var safetyIdentity: String? = null
     private val _state = MutableStateFlow(ConversationState())
     val state = _state.asStateFlow()
+    val connectionState = metadata.connectionState
 
     init {
         metadata.enter()

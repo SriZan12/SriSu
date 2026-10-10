@@ -38,6 +38,13 @@
       "contract": "couple-chat-1",
       "status": "implemented-local-qa-and-independent-security-review-pending",
       "flow": "docs/flows/couple-chat.md",
+      "ui_refinement": {
+        "branch": "codex/consolidate-core-20261010",
+        "record": "docs/flows/couple-chat-ui.md",
+        "design_basis": "existing-theme-and-documented-spec-live-figma-quota-blocked",
+          "android_validation": "build-render-unit-native-media-and-encrypted-ui-integration-passed",
+        "ios_validation": "pending-mac-unavailable-per-user"
+      },
       "backend_guide": "docs/couple-chat.md",
       "challenges": "versioned-references-unavailable-pending-future-domain-per-user",
       "consolidation": "docs/integration/core-consolidation.md",
