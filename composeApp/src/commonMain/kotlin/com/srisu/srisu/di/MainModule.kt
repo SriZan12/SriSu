@@ -3,36 +3,17 @@ package com.srisu.srisu.di
 import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel
-import com.srisu.srisu.features.home.connection.presentation.singleconnection.vm.SingleConnectionViewModel
-import com.srisu.srisu.features.home.entertainment.vm.EntertainmentViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.EditProfileViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel
-import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
-    viewModel {
-        EntertainmentViewModel(
-            suggestionRepository = get(),
-            sessionStorage = get()
-        )
-    }
+    viewModel { com.srisu.srisu.features.couplechat.presentation.ConversationViewModel(get()) }
+    viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get()) }
 
-    viewModel {
-        SuggestionViewModel(
-            suggestionRepository = get(),
-            connectionRepository = get(),
-            connectivityObserver = get(),
-        )
-    }
 
-    viewModel {
-        ProfileViewModel(
-            profileRepository = get(),
-            connectivityObserver = get(),
-        )
-    }
+    viewModel { ProfileViewModel() }
 
     viewModel {
         EditProfileViewModel(
@@ -42,12 +23,6 @@ val mainModule = module {
         )
     }
 
-    viewModel {
-        SingleConnectionViewModel(
-            connectionRepository = get(),
-            connectivityObserver = get()
-        )
-    }
 
     viewModel {
         FindPartnerViewModel(

@@ -1,5 +1,13 @@
 package com.srisu.srisu.features.home.entertainment.screen
 
+import srisu.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import srisu.composeapp.generated.resources.cp_view_profile
+import srisu.composeapp.generated.resources.cp_explore
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import com.srisu.srisu.components.SriSuButton
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -7,35 +15,46 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.srisu.srisu.features.couplechat.data.ConversationRepository
+import org.koin.compose.koinInject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.srisu.srisu.features.home.entertainment.vm.EntertainmentViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.viewmodel.koinViewModel
 
 
 @Composable
 @Preview
 fun HomeScreen(
-    entertainmentViewModel: EntertainmentViewModel = koinViewModel<EntertainmentViewModel>()
+    onFindPartner: () -> Unit = {},
+    onCoupleProfile: () -> Unit = {},
+    onExplore: () -> Unit = {},
+    onChat: () -> Unit = {},
+    onInvitations: () -> Unit = {},
 ) {
+    val conversation = koinInject<ConversationRepository>()
+    val chat by conversation.state.collectAsStateWithLifecycle()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.background
 
     ) { innerPadding ->
         Box(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
-            Text("HOME SCREEN")
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
+                SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_view_profile), onCoupleProfile)
+                SriSuButton(org.jetbrains.compose.resources.stringResource(srisu.composeapp.generated.resources.Res.string.cp_explore), onExplore)
+                SriSuButton(stringResource(Res.string.nav_find_partner), onFindPartner)
+                SriSuButton(stringResource(Res.string.nav_invitations), onInvitations)
+                val chatLabel = stringResource(Res.string.nav_conversations)
+                SriSuButton(if (chat.unreadCount > 0) "$chatLabel (${chat.unreadCount.coerceAtMost(999)})" else chatLabel, onChat)
+            }
         }
 
-//        ChatScreen(
-//            session = null,
-//            navController = rememberNavController()
-//        )
     }
 
 }
-

@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AuthDTO(
+    @SerialName("request_id") val requestId: String? = null,
     @SerialName("dob")
     val dob: String? = null,
     @SerialName("full_name")

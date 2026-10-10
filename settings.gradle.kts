@@ -17,6 +17,7 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        maven { url = uri("https://build-artifacts.signal.org/libraries/maven/"); content { includeGroup("org.signal") } }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -29,3 +30,4 @@ dependencyResolutionManagement {
 }
 
 include(":composeApp")
+include(":secureChatNative")
