@@ -18,3 +18,8 @@ captures
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
+iosApp/Pods/
+build-couple-chat-native.log
+build-chat-*.log
+build-couple-chat-unit.log
+build-production-engine-android.log

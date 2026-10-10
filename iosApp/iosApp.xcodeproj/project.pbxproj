@@ -6,8 +6,32 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 55529C763A875DDBD84BFC94 /* Foundation.framework */; };
+		7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86666EF693A88E393B6642E4 /* ChatMediaTests.swift */; };
+		AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CBE08F7CDE612F522B813BCD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B9DA97A92DC1472C00A4DA20 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B9DA97B02DC1472C00A4DA20;
+			remoteInfo = iosApp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SriSuChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D84D89AF61BA08443C4A305 /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
+		55529C763A875DDBD84BFC94 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		86666EF693A88E393B6642E4 /* ChatMediaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatMediaTests.swift; path = ChatTests/ChatMediaTests.swift; sourceTree = "<group>"; };
+		996363D69895B140A2C68AD3 /* Debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Configuration/Debug.xcconfig; sourceTree = "<group>"; };
+		B07530DAE48CAFBF3FB20FAA /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
 		B9DA97B12DC1472C00A4DA20 /* SriSu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SriSu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Configuration/Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -15,6 +39,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Info.Debug.plist,
 			);
 			target = B9DA97B02DC1472C00A4DA20 /* iosApp */;
 		};
@@ -31,7 +56,16 @@
 		};
 		B9DA98002DC14AA900A4DA20 /* Configuration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Configuration;
+			sourceTree = "<group>";
+		};
+		CCD00CE10000000000000001 /* SecureChat */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = SecureChat;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -41,18 +75,60 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E484BB396089A903F2743E45 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		061FB3E1F41EB2F553EEC279 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				55529C763A875DDBD84BFC94 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		127C89CDC0E41E040BD653EC /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				B07530DAE48CAFBF3FB20FAA /* Pods-iosApp.debug.xcconfig */,
+				3D84D89AF61BA08443C4A305 /* Pods-iosApp.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		95FE106BF690857BA3089605 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */,
+				061FB3E1F41EB2F553EEC279 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B9DA97A82DC1472C00A4DA20 = {
 			isa = PBXGroup;
 			children = (
 				B9DA98002DC14AA900A4DA20 /* Configuration */,
 				B9DA97B32DC1472C00A4DA20 /* iosApp */,
+				CCD00CE10000000000000001 /* SecureChat */,
 				B9DA97B22DC1472C00A4DA20 /* Products */,
+				127C89CDC0E41E040BD653EC /* Pods */,
+				95FE106BF690857BA3089605 /* Frameworks */,
+				996363D69895B140A2C68AD3 /* Debug.xcconfig */,
+				E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */,
+				86666EF693A88E393B6642E4 /* ChatMediaTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -60,6 +136,7 @@
 			isa = PBXGroup;
 			children = (
 				B9DA97B12DC1472C00A4DA20 /* SriSu.app */,
+				06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -67,25 +144,44 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		4AE5444ACD254E868FCBCFA8 /* SriSuChatTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D774B807AB9F5B987773A03 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */;
+			buildPhases = (
+				622D7043E62F19A70CD4F86E /* Sources */,
+				E484BB396089A903F2743E45 /* Frameworks */,
+				908D4164F73FDDE86DB06D9C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */,
+			);
+			name = SriSuChatTests;
+			productName = SriSuChatTests;
+			productReference = 06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		B9DA97B02DC1472C00A4DA20 /* iosApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B9DA97BF2DC1472D00A4DA20 /* Build configuration list for PBXNativeTarget "iosApp" */;
 			buildPhases = (
+				D2A4272B55E27A1093A691E2 /* [CP] Check Pods Manifest.lock */,
 				B9DA97F42DC1497100A4DA20 /* Compile Kotlin Framework */,
 				B9DA97AD2DC1472C00A4DA20 /* Sources */,
 				B9DA97AE2DC1472C00A4DA20 /* Frameworks */,
 				B9DA97AF2DC1472C00A4DA20 /* Resources */,
+				6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				CCD00CE10000000000000001 /* SecureChat */,
 				B9DA97B32DC1472C00A4DA20 /* iosApp */,
 			);
 			name = iosApp;
-			packageProductDependencies = (
-			);
 			productName = iosApp;
 			productReference = B9DA97B12DC1472C00A4DA20 /* SriSu.app */;
 			productType = "com.apple.product-type.application";
@@ -120,11 +216,19 @@
 			projectRoot = "";
 			targets = (
 				B9DA97B02DC1472C00A4DA20 /* iosApp */,
+				4AE5444ACD254E868FCBCFA8 /* SriSuChatTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		908D4164F73FDDE86DB06D9C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B9DA97AF2DC1472C00A4DA20 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -135,6 +239,23 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		B9DA97F42DC1497100A4DA20 /* Compile Kotlin Framework */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -154,9 +275,39 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
+		D2A4272B55E27A1093A691E2 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-iosApp-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		622D7043E62F19A70CD4F86E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B9DA97AD2DC1472C00A4DA20 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -166,7 +317,53 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = iosApp;
+			target = B9DA97B02DC1472C00A4DA20 /* iosApp */;
+			targetProxy = CBE08F7CDE612F522B813BCD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2B552C6CA851C97A28533B36 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.evaluation.SriSuChatTests;
+				PRODUCT_NAME = SriSuChatTests;
+				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SriSu.app/SriSu";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B365511BC86796F8AA9B88E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.evaluation.SriSuChatTests;
+				PRODUCT_NAME = SriSuChatTests;
+				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SriSu.app/SriSu";
+			};
+			name = Debug;
+		};
 		B9DA97BD2DC1472D00A4DA20 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -288,8 +485,7 @@
 		};
 		B9DA97C02DC1472D00A4DA20 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = B9DA98002DC14AA900A4DA20 /* Configuration */;
-			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			baseConfigurationReference = 996363D69895B140A2C68AD3 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -319,6 +515,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.srisu.SriSu;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -326,8 +523,7 @@
 		};
 		B9DA97C12DC1472D00A4DA20 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = B9DA98002DC14AA900A4DA20 /* Configuration */;
-			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			baseConfigurationReference = E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -356,6 +552,7 @@
 					"@executable_path/Frameworks",
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -364,6 +561,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		3D774B807AB9F5B987773A03 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2B552C6CA851C97A28533B36 /* Release */,
+				B365511BC86796F8AA9B88E3 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		B9DA97AC2DC1472C00A4DA20 /* Build configuration list for PBXProject "iosApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

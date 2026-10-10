@@ -172,6 +172,10 @@ class FindPartnerViewModel(
         _findPartnerUIState.update { it.copy(navigateToInviteSent = false) }
     }
 
+    fun onAcceptedNavigated() {
+        _findPartnerUIState.update { it.copy(acceptedNavigationPending = false) }
+    }
+
     fun sendHaveCoupleConnectionRequested() {
         if (_findPartnerUIState.value.isCheckingInvitation || _findPartnerUIState.value.isCancellingInvitation) return
         _findPartnerUIState.update { it.copy(isCheckingInvitation = true, invitationStatusError = null) }
@@ -189,6 +193,8 @@ class FindPartnerViewModel(
                         )
                     } else null
                     it.copy(isCheckingInvitation = false, invitationStatusChecked = result.response != null,
+                        acceptedRoomId = connection?.coupleChat?.id ?: it.acceptedRoomId,
+                        acceptedNavigationPending = if (connection?.connectionStatus == Constants.ConnectionStatus.ACCEPTED && it.acceptedPartnerName == null) true else it.acceptedNavigationPending,
                         invitationStatusError = if (result.response == null) "Couldn’t check your invitation. Please retry." else null,
                         sentInvitation = if (result.response != null) pending else it.sentInvitation,
                         acceptedPartnerName = if (connection?.connectionStatus == Constants.ConnectionStatus.ACCEPTED)
@@ -242,6 +248,8 @@ class FindPartnerViewModel(
             }) {
                 is NetworkAPIResult.Success -> _findPartnerUIState.update {
                     it.copy(updatingRequestIds = it.updatingRequestIds - id, handledRequestIds = it.handledRequestIds + id,
+                        acceptedRoomId = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED) result.response?.coupleChat?.id else it.acceptedRoomId,
+                        acceptedNavigationPending = connectionStatus == Constants.ConnectionStatus.ACCEPTED,
                         acceptedPartnerName = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)
                             partner?.fullName?.takeIf(String::isNotBlank) ?: partner?.username ?: "Your partner" else it.acceptedPartnerName,
                         acceptedPartnerPhotoUrl = if (connectionStatus == Constants.ConnectionStatus.ACCEPTED)

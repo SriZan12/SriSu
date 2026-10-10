@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>NSCameraUsageDescription</key>
-    <string>Take a photo for your shared couple profile.</string>
+    <string>Take a photo for your couple profile or private conversation.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Record a voice message for your partner.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>LSApplicationQueriesSchemes</key>
