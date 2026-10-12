@@ -33,6 +33,7 @@ class NavigationOwnerTest {
                     val probe = androidx.lifecycle.viewmodel.compose.viewModel<Probe>(initializer = { Probe() })
                     SideEffect { probes[entry.id] = probe }
                 }
+                composable<ChatNav.MediaViewer> { }
                 composable<ProfileNav.EditProfile> { }
             }
         }
@@ -81,6 +82,29 @@ class NavigationOwnerTest {
         }
         compose.waitForIdle()
         compose.runOnIdle { assertTrue(controller.currentDestination!!.hasRoute<HomeNavigation.Home>()) }
+    }
+    @Test fun mediaRouteReturnsToTheSameConversationEntryAndSavedReadingState() {
+        host()
+        val chat=ChatNav.CoupleConversation("room")
+        var chatEntry: NavBackStackEntry? = null
+        compose.runOnIdle {AppNavigator(controller).open(chat)}
+        compose.waitForIdle()
+        compose.runOnIdle {
+            chatEntry=controller.currentBackStackEntry
+            chatEntry!!.savedStateHandle["reading-offset"]=73
+            AppNavigator(controller,chatEntry).open(ChatNav.MediaViewer("room","message","attachment"))
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertTrue(controller.currentDestination!!.hasRoute<ChatNav.MediaViewer>())
+            assertFalse(probes[chatEntry!!.id]!!.cleared)
+            AppNavigator(controller,controller.currentBackStackEntry).back()
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(chatEntry,controller.currentBackStackEntry)
+            assertEquals(73,controller.currentBackStackEntry!!.savedStateHandle.get<Int>("reading-offset"))
+        }
     }
     @Test fun distinctConversationsHaveDistinctEntryIdentityAndBackRestoresArguments() {
         host()

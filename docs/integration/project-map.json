@@ -41,9 +41,11 @@
       "ui_refinement": {
         "branch": "codex/consolidate-core-20261010",
         "record": "docs/flows/couple-chat-ui.md",
-        "design_basis": "existing-theme-and-documented-spec-live-figma-quota-blocked",
-          "android_validation": "build-render-unit-native-media-and-encrypted-ui-integration-passed",
-        "ios_validation": "pending-mac-unavailable-per-user"
+        "design_basis": "2026-10-12-live-thread-184:274-context-theme-tokens; direct-screenshot-comparison-unverified",
+        "android_validation": "2026-10-12-edge-to-edge-media-tick-receipts-Iris-default-Dawn-option; 77-chat-theme-navigation-tests; five-presets-light-dark-and-large-type-renders; apk-build; no-device-runtime",
+        "ios_validation": "2026-10-12-iOS-26.5-five-themes-photo-video-route-native-seek-return-position-inline-voice-and-Iris-keyboard; two-XTests-passed; xcodebuild-stalled-after-suite-and-was-terminated",
+        "romantic_effects": "2026-10-12-custom-vector-bubbles-hearts-burst; confirmed-message-events; 87-focused-tests-passed; iOS-26.5-native-animation-test-and-video-clean-exit; no-live-backend-test",
+        "integration_limitation": "current-backend-feature-branch-is-Matrix; current-frontend-retains-couple-chat-1"
       },
       "backend_guide": "docs/couple-chat.md",
       "challenges": "versioned-references-unavailable-pending-future-domain-per-user",

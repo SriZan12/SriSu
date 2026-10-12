@@ -6,7 +6,8 @@ struct iOSApp: App {
     
     init(){
         NativeChatRuntime.shared.install(value: IosChatDriver())
-        NativeChatMediaRuntime.shared.install(value: IosChatMedia())
+        NativeChatMediaRuntime.shared.installFactory { IosChatMedia() }
+        NativeChatVideoRuntime.shared.install { driver in (driver as! IosChatMedia).videoViewController() }
         Platform_iosKt.debugBuild()
     }
     

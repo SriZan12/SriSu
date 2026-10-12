@@ -69,7 +69,7 @@ class ChatSurfaceTest {
         val root=compose.onRoot().getUnclippedBoundsInRoot()
         val bounds=compose.onNodeWithText(text).getUnclippedBoundsInRoot()
         assertTrue(bounds.left>=root.left);assertTrue(bounds.right<=root.right)
-        compose.onNodeWithText("Queued").assertExists()
+        compose.onNodeWithContentDescription(", Queued", substring=true).assertExists()
         screenshot("large-type-dark-reply")
     }
     @Test fun deletionPlaceholderExcludesBodyAndReplyPreviewFromAccessibility() {

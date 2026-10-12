@@ -12,7 +12,7 @@ import com.srisu.srisu.features.couplechat.data.*
 import com.srisu.srisu.theme.spacing
 
 @Composable
-internal fun ConversationOptions(state: ConversationState, repository: ConversationRepository, onDismiss: () -> Unit, onReset: () -> Unit) {
+internal fun ConversationOptions(state: ConversationState, repository: ConversationRepository, onDismiss: () -> Unit, onReset: () -> Unit, onAppearance: () -> Unit) {
     var nickname by remember { mutableStateOf(state.preferences.nickname) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(MaterialTheme.spacing.gutter).navigationBarsPadding(),
@@ -29,6 +29,7 @@ internal fun ConversationOptions(state: ConversationState, repository: Conversat
                 Column(Modifier.weight(1f)) { Text("Activity and typing"); Text("Share and see short-lived activity while this conversation is open.", style = MaterialTheme.typography.bodySmall) }
                 Switch(state.preferences.presence, { repository.preferences(state.preferences.copy(presence = it)) })
             }
+            TextButton(onClick = onAppearance) { Text("Chat appearance") }
             TextButton(onClick = { repository.showSafetyCode(); onDismiss() }, enabled = state.partnerId != null) { Text("Verify safety code") }
             TextButton(onClick = { repository.reconcileHistory(); onDismiss() }) { Text("Reconcile saved history") }
             TextButton(onClick = onReset) { Text("Reset local chat storage…") }
@@ -43,10 +44,8 @@ internal fun ConversationConfirmations(state: ConversationState, repository: Con
         text = { Text("Your message will be replaced with a deletion notice. Screenshots and exported copies cannot be erased.") },
         confirmButton = { TextButton(onClick = { repository.deleteForEveryone(delete); onDeleteDismiss() }) { Text("Delete") } },
         dismissButton = { TextButton(onClick = onDeleteDismiss) { Text("Cancel") } })
-    if (replace) AlertDialog(onDismissRequest = onReplaceDismiss, title = { Text("Use chat on this device?") },
-        text = { Text("SriSu chat supports one active device per account. Your other chat device will be revoked. Its undelivered messages and history cannot be restored here.") },
-        confirmButton = { TextButton(onClick = { repository.confirmDeviceReplacement(); onReplaceDismiss() }) { Text("Use this device") } },
-        dismissButton = { TextButton(onClick = onReplaceDismiss) { Text("Cancel") } })
+    if (replace) DeviceReplacementConfirmation(onConfirm = { repository.confirmDeviceReplacement(); onReplaceDismiss() },
+        onDismiss = onReplaceDismiss)
     if (reset) AlertDialog(onDismissRequest = onResetDismiss, title = { Text("Reset protected chat storage?") },
         text = { Text("This permanently removes chat history, drafts, pending sends, and keys on this device. SriSu has no recovery key. You will need to set up this chat device again. Try reopening SriSu first if storage is temporarily unavailable.") },
         confirmButton = { TextButton(onClick = { repository.resetSecureStorage(); onResetDismiss() }) { Text("Erase local chat and reset") } },
@@ -68,4 +67,12 @@ internal fun ConversationConfirmations(state: ConversationState, repository: Con
             else repository.dismissSafetyCode()
         },enabled=state.security!=ConversationSecurity.IDENTITY_CHANGED || state.safetyVerified!=false) { Text(if (state.security == ConversationSecurity.IDENTITY_CHANGED) "Codes match — continue" else "Done") } },
         dismissButton = { if (state.security == ConversationSecurity.IDENTITY_CHANGED) TextButton(onClick = repository::dismissSafetyCode) { Text("Cancel") } }) }
+}
+
+@Composable
+internal fun DeviceReplacementConfirmation(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Use chat on this device?") },
+        text = { Text("SriSu chat supports one active device per account. Your other chat device will be revoked. Its undelivered messages and history cannot be restored here.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Use this device") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }

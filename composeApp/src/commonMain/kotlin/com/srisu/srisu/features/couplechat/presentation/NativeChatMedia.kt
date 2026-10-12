@@ -19,6 +19,9 @@ interface NativeChatMedia {
 }
 
 object NativeChatMediaRuntime {
+    private var factory: (() -> NativeChatMedia)? = null
+    fun installFactory(value: () -> NativeChatMedia) { factory=value }
+    fun create(): NativeChatMedia = factory?.invoke() ?: checkNotNull(driver)
     var driver: NativeChatMedia? = null
         private set
     fun install(value: NativeChatMedia) { driver = value }
@@ -26,3 +29,5 @@ object NativeChatMediaRuntime {
 
 @Composable internal expect fun rememberNativeChatMedia(): NativeChatMedia
 internal expect fun decodePrivatePhoto(bytes: ByteArray): ImageBitmap?
+
+@Composable internal expect fun NativeChatVideo(native: NativeChatMedia, modifier: androidx.compose.ui.Modifier)

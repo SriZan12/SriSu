@@ -3,6 +3,7 @@ package com.srisu.srisu.features.couplechat.presentation
 import com.srisu.srisu.features.couplechat.data.*
 import com.srisu.srisu.core.data.remote.SocketState
 import kotlin.test.*
+import com.srisu.srisu.features.coupleprofile.data.*
 
 class ChatPresentationTest {
     private fun message(time: String = "2026-10-10T10:00:00Z") = LocalChatMessage("one","room",1,time,timelineKey="one")
@@ -20,6 +21,13 @@ class ChatPresentationTest {
         assertFalse(messagesGroup(message(),message().copy(authorId=2)))
         assertFalse(messagesGroup(message().copy(deleted=true),message()))
         assertFalse(messagesGroup(message("invalid"),message()))
+    }
+    @Test fun partnerAvatarRequiresExactParticipantIdentityAndNeverUsesCoupleCover() {
+        val profile=CoupleProfile(7,"member",members=listOf(CoupleMember(1,"Owner","own-photo"),
+            CoupleMember(2,"Partner","partner-photo")),cover=CoupleCover("couple-cover"))
+        assertEquals("partner-photo",partnerPhotoUrl(profile,1,2))
+        assertNull(partnerPhotoUrl(profile,1,1));assertNull(partnerPhotoUrl(profile,3,2));assertNull(partnerPhotoUrl(profile,1,3))
+        assertNull(partnerPhotoUrl(profile.copy(members=listOf(CoupleMember(1,"Owner"),CoupleMember(2,"Partner"))),1,2))
     }
     @Test fun presenceIsNotInventedAndPrivacyDisablesIt() {
         val state=ConversationState(roomId="room",loading=false,security=ConversationSecurity.READY)

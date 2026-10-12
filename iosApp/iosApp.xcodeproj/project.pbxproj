@@ -7,13 +7,34 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 55529C763A875DDBD84BFC94 /* Foundation.framework */; };
-		7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86666EF693A88E393B6642E4 /* ChatMediaTests.swift */; };
-		AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */; };
+		475D160D051E473E60A1EEC2 /* ChatMediaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E585A52E7DCDD9ED2DC5E75 /* ChatMediaTests.swift */; };
+		9AA72E968031E64E080EA807 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1CEF749FEDF1EE512480F10 /* Pods_iosApp.framework */; };
+		D6015ED4F7C0CF40C0F87AB7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 12B0A0F0886DA14D3E3EBBF2 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		CBE08F7CDE612F522B813BCD /* PBXContainerItemProxy */ = {
+		5A93BF43041A480ABD3D794C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = B097DD7534E741D5C41838011D755842;
+			remoteInfo = Subproject;
+		};
+		6CB9498FF01CB0B9527C59C7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = D11761D6988B5F29BB319D5189B9EF5E;
+			remoteInfo = Subproject;
+		};
+		D8AE12ECACF2EF0B279F1E44 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = ED39C638569286489CD697A6C8964146;
+			remoteInfo = "Pods-iosApp";
+		};
+		FF0D136B0BEE766A10360EAF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B9DA97A92DC1472C00A4DA20 /* Project object */;
 			proxyType = 1;
@@ -23,15 +44,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SriSuChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3D84D89AF61BA08443C4A305 /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
-		55529C763A875DDBD84BFC94 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		86666EF693A88E393B6642E4 /* ChatMediaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatMediaTests.swift; path = ChatTests/ChatMediaTests.swift; sourceTree = "<group>"; };
-		996363D69895B140A2C68AD3 /* Debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Configuration/Debug.xcconfig; sourceTree = "<group>"; };
-		B07530DAE48CAFBF3FB20FAA /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
+		0DBF8330D721393F6778DFEB /* Debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Configuration/Debug.xcconfig; sourceTree = "<group>"; };
+		0E585A52E7DCDD9ED2DC5E75 /* ChatMediaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatMediaTests.swift; path = ChatTests/ChatMediaTests.swift; sourceTree = "<group>"; };
+		12B0A0F0886DA14D3E3EBBF2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		3815042F01C27F813B436797 /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
+		587709DE043A2C5107BEB26E /* SriSuChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SriSuChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Pods.xcodeproj; path = Pods/Pods.xcodeproj; sourceTree = "<group>"; };
 		B9DA97B12DC1472C00A4DA20 /* SriSu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SriSu.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Configuration/Release.xcconfig; sourceTree = "<group>"; };
+		BF41AA95B37327E3BF739C37 /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
+		C1CEF749FEDF1EE512480F10 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0C3D678A1900A0A7A8CAC51 /* Release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Configuration/Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -39,7 +61,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				Info.Debug.plist,
 			);
 			target = B9DA97B02DC1472C00A4DA20 /* iosApp */;
 		};
@@ -51,12 +72,20 @@
 			exceptions = (
 				B99700CA2DC9B8D800C7335B /* Exceptions for "iosApp" folder in "iosApp" target */,
 			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
 			path = iosApp;
 			sourceTree = "<group>";
 		};
 		B9DA98002DC14AA900A4DA20 /* Configuration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
 			);
 			path = Configuration;
 			sourceTree = "<group>";
@@ -71,48 +100,30 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		420DA00EEBC5AEEBC45EAA5C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D6015ED4F7C0CF40C0F87AB7 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B9DA97AE2DC1472C00A4DA20 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E484BB396089A903F2743E45 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */,
+				9AA72E968031E64E080EA807 /* Pods_iosApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		061FB3E1F41EB2F553EEC279 /* iOS */ = {
+		958A432233D84632E7ADBF2A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				55529C763A875DDBD84BFC94 /* Foundation.framework */,
-			);
-			name = iOS;
-			sourceTree = "<group>";
-		};
-		127C89CDC0E41E040BD653EC /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				B07530DAE48CAFBF3FB20FAA /* Pods-iosApp.debug.xcconfig */,
-				3D84D89AF61BA08443C4A305 /* Pods-iosApp.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		95FE106BF690857BA3089605 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */,
-				061FB3E1F41EB2F553EEC279 /* iOS */,
+				C1CEF749FEDF1EE512480F10 /* Pods_iosApp.framework */,
+				CE3EB13BE3D1C43FAD18EBB0 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -124,11 +135,12 @@
 				B9DA97B32DC1472C00A4DA20 /* iosApp */,
 				CCD00CE10000000000000001 /* SecureChat */,
 				B9DA97B22DC1472C00A4DA20 /* Products */,
-				127C89CDC0E41E040BD653EC /* Pods */,
-				95FE106BF690857BA3089605 /* Frameworks */,
-				996363D69895B140A2C68AD3 /* Debug.xcconfig */,
-				E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */,
-				86666EF693A88E393B6642E4 /* ChatMediaTests.swift */,
+				0DBF8330D721393F6778DFEB /* Debug.xcconfig */,
+				F0C3D678A1900A0A7A8CAC51 /* Release.xcconfig */,
+				DFAD1D64CFDCC6E27E4594BF /* Pods */,
+				958A432233D84632E7ADBF2A /* Frameworks */,
+				6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */,
+				0E585A52E7DCDD9ED2DC5E75 /* ChatMediaTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -136,46 +148,67 @@
 			isa = PBXGroup;
 			children = (
 				B9DA97B12DC1472C00A4DA20 /* SriSu.app */,
-				06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */,
+				554B0C5B4B58BF8AFE53C067 /* LibSignalClient.framework */,
+				40A742ED9557C5ACDC9A1C4F /* Pods_iosApp.framework */,
+				587709DE043A2C5107BEB26E /* SriSuChatTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CE3EB13BE3D1C43FAD18EBB0 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				12B0A0F0886DA14D3E3EBBF2 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		DFAD1D64CFDCC6E27E4594BF /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				3815042F01C27F813B436797 /* Pods-iosApp.debug.xcconfig */,
+				BF41AA95B37327E3BF739C37 /* Pods-iosApp.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4AE5444ACD254E868FCBCFA8 /* SriSuChatTests */ = {
+		140289F3A72B1540B7F4769F /* SriSuChatTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3D774B807AB9F5B987773A03 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */;
+			buildConfigurationList = 0A52AB9D818738059EE830F5 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */;
 			buildPhases = (
-				622D7043E62F19A70CD4F86E /* Sources */,
-				E484BB396089A903F2743E45 /* Frameworks */,
-				908D4164F73FDDE86DB06D9C /* Resources */,
+				105AB7B3EC6E607B103E5A92 /* Sources */,
+				420DA00EEBC5AEEBC45EAA5C /* Frameworks */,
+				0041E3657DAA0FCBB9298CE1 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */,
+				9B661B885141AF03DC838D72 /* PBXTargetDependency */,
 			);
 			name = SriSuChatTests;
 			productName = SriSuChatTests;
-			productReference = 06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */;
+			productReference = 587709DE043A2C5107BEB26E /* SriSuChatTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		B9DA97B02DC1472C00A4DA20 /* iosApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B9DA97BF2DC1472D00A4DA20 /* Build configuration list for PBXNativeTarget "iosApp" */;
 			buildPhases = (
-				D2A4272B55E27A1093A691E2 /* [CP] Check Pods Manifest.lock */,
+				EF686CB5E6FD69728CA99CDA /* [CP] Check Pods Manifest.lock */,
 				B9DA97F42DC1497100A4DA20 /* Compile Kotlin Framework */,
 				B9DA97AD2DC1472C00A4DA20 /* Sources */,
 				B9DA97AE2DC1472C00A4DA20 /* Frameworks */,
 				B9DA97AF2DC1472C00A4DA20 /* Resources */,
-				6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */,
+				15E076BF59FBAB5A747AB223 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C34FDE6D27EC91995FE45B21 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CCD00CE10000000000000001 /* SecureChat */,
@@ -213,16 +246,39 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B9DA97B22DC1472C00A4DA20 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B9DA97B22DC1472C00A4DA20 /* Products */;
+					ProjectRef = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				B9DA97B02DC1472C00A4DA20 /* iosApp */,
-				4AE5444ACD254E868FCBCFA8 /* SriSuChatTests */,
+				140289F3A72B1540B7F4769F /* SriSuChatTests */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXReferenceProxy section */
+		40A742ED9557C5ACDC9A1C4F /* Pods_iosApp.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Pods_iosApp.framework;
+			remoteRef = 5A93BF43041A480ABD3D794C /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		554B0C5B4B58BF8AFE53C067 /* LibSignalClient.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = LibSignalClient.framework;
+			remoteRef = 6CB9498FF01CB0B9527C59C7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
 /* Begin PBXResourcesBuildPhase section */
-		908D4164F73FDDE86DB06D9C /* Resources */ = {
+		0041E3657DAA0FCBB9298CE1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -239,7 +295,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */ = {
+		15E076BF59FBAB5A747AB223 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -275,7 +331,7 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
-		D2A4272B55E27A1093A691E2 /* [CP] Check Pods Manifest.lock */ = {
+		EF686CB5E6FD69728CA99CDA /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -300,11 +356,11 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		622D7043E62F19A70CD4F86E /* Sources */ = {
+		105AB7B3EC6E607B103E5A92 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */,
+				475D160D051E473E60A1EEC2 /* ChatMediaTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -318,16 +374,39 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */ = {
+		9B661B885141AF03DC838D72 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = iosApp;
 			target = B9DA97B02DC1472C00A4DA20 /* iosApp */;
-			targetProxy = CBE08F7CDE612F522B813BCD /* PBXContainerItemProxy */;
+			targetProxy = FF0D136B0BEE766A10360EAF /* PBXContainerItemProxy */;
+		};
+		C34FDE6D27EC91995FE45B21 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Pods-iosApp";
+			targetProxy = D8AE12ECACF2EF0B279F1E44 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		2B552C6CA851C97A28533B36 /* Release */ = {
+		0C8F56A177B534794B310FCC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.evaluation.SriSuChatTests;
+				PRODUCT_NAME = SriSuChatTests;
+				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SriSu.app/SriSu";
+			};
+			name = Debug;
+		};
+		44C7F8E0CDC1E0EEA0231626 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -345,24 +424,6 @@
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
-		};
-		B365511BC86796F8AA9B88E3 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.evaluation.SriSuChatTests;
-				PRODUCT_NAME = SriSuChatTests;
-				SDKROOT = iphoneos;
-				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SriSu.app/SriSu";
-			};
-			name = Debug;
 		};
 		B9DA97BD2DC1472D00A4DA20 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -485,7 +546,7 @@
 		};
 		B9DA97C02DC1472D00A4DA20 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 996363D69895B140A2C68AD3 /* Debug.xcconfig */;
+			baseConfigurationReference = 0DBF8330D721393F6778DFEB /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -523,7 +584,7 @@
 		};
 		B9DA97C12DC1472D00A4DA20 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */;
+			baseConfigurationReference = F0C3D678A1900A0A7A8CAC51 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -561,11 +622,11 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		3D774B807AB9F5B987773A03 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */ = {
+		0A52AB9D818738059EE830F5 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				2B552C6CA851C97A28533B36 /* Release */,
-				B365511BC86796F8AA9B88E3 /* Debug */,
+				44C7F8E0CDC1E0EEA0231626 /* Release */,
+				0C8F56A177B534794B310FCC /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

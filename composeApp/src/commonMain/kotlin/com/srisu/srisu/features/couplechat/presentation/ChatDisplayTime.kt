@@ -28,3 +28,6 @@ internal fun messagesGroup(first: LocalChatMessage?, second: LocalChatMessage?):
     return try { (Instant.parse(second.createdAt) - Instant.parse(first.createdAt)).inWholeSeconds in 0..300 }
     catch (_: IllegalArgumentException) { false }
 }
+
+internal val LocalChatMessage.hasVisibleReactions: Boolean
+    get() = !hidden && !deleted && !unavailable && reactions.isNotEmpty()

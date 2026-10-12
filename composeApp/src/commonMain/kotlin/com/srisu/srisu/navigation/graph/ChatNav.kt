@@ -23,6 +23,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.serialization.Serializable
 
 sealed interface ChatNav : Route {
+    @Serializable data class MediaViewer(val roomId: String, val messageId: String, val attachmentId: String, val draft: Boolean = false) : ChatNav
     @Serializable data class SharedMoment(val momentId: Long) : ChatNav
     @Serializable data class CoupleConversation(val roomId: String? = null, val messageId: String? = null, val origin: String = "chat") : ChatNav
     @Serializable data object PartnerFlow : ChatNav
@@ -36,6 +37,9 @@ sealed interface ChatNav : Route {
     @Serializable data object YoureConnected : ChatNav
 }
 fun NavGraphBuilder.chatGraph(controller: NavController, session: Session?) {
+    composable<ChatNav.MediaViewer> { entry ->
+        com.srisu.srisu.features.couplechat.presentation.ChatMediaScreen(entry.toRoute<ChatNav.MediaViewer>(), AppNavigator(controller, entry)::back)
+    }
     composable<ChatNav.SharedMoment> { entry ->
         SharedMomentScreen(entry.toRoute<ChatNav.SharedMoment>().momentId, AppNavigator(controller, entry)::back)
     }
@@ -45,7 +49,8 @@ fun NavGraphBuilder.chatGraph(controller: NavController, session: Session?) {
         CoupleChatScreen(route.roomId, messageId = route.messageId, onBack = nav::back,
             onOpenPlan = { couple, plan -> nav.open(CoupleProfileDestination(couple, CoupleSection.PLAN, plan)) },
             onOpenMoment = { nav.open(ChatNav.SharedMoment(it)) },
-            onFindPartner = { nav.open(ChatNav.PartnerFlow) })
+            onFindPartner = { nav.open(ChatNav.PartnerFlow) },
+            onOpenMedia = { room, message, attachment, draft -> nav.open(ChatNav.MediaViewer(room,message,attachment,draft)) })
     }
     navigation<ChatNav.PartnerFlow>(startDestination = ChatNav.FindPartnerScreen) {
         composable<ChatNav.PartnerRequests> { entry ->

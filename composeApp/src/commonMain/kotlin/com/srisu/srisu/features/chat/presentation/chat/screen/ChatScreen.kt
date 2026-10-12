@@ -136,6 +136,7 @@ import com.srisu.srisu.components.ImageViewerScreen
 import com.srisu.srisu.components.LoadingScrim
 import com.srisu.srisu.components.OfflineBottomSheetCompo
 import com.srisu.srisu.components.SuccessDialog
+import com.srisu.srisu.core.data.remote.SocketState
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.features.chat.data.remote.dto.ChatMessage
 import com.srisu.srisu.features.chat.data.remote.response.ChatRoomsData
@@ -291,12 +292,12 @@ private fun ChatContent(
             )
             val connection by viewModel.connectionState.collectAsStateWithLifecycle()
             when (val value = connection) {
-                is com.srisu.srisu.core.data.remote.SocketState.Terminal -> {
+                is SocketState.Terminal -> {
                     if (value.code == "unauthenticated") Text("Session expired. Sign in to reconnect.", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
                     else TextButton(onClick = viewModel::retryConnection) { Text("Chat disconnected · Retry") }
                 }
-                is com.srisu.srisu.core.data.remote.SocketState.Connecting,
-                is com.srisu.srisu.core.data.remote.SocketState.Reconnecting -> Text("Connecting to chat…", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
+                is SocketState.Connecting,
+                is SocketState.Reconnecting -> Text("Connecting to chat…", modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium), style = MaterialTheme.typography.bodySmall)
                 else -> Unit
             }
             }

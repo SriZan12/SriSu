@@ -72,7 +72,7 @@ internal data class QueuedChatOperation(
 )
 
 @Serializable
-data class ConversationPreferences(val nickname: String = "", val readReceipts: Boolean = true, val presence: Boolean = true)
+data class ConversationPreferences(val nickname: String = "", val readReceipts: Boolean = true, val presence: Boolean = true, val chatTheme: String = ChatThemePreset.DEFAULT.id)
 
 @Serializable
 data class ChatReadingAnchor(val messageId: String,val offset: Int,val windowEnd: String)
@@ -103,6 +103,8 @@ data class ConversationState(
     val uploadProgress: Map<String, Float> = emptyMap(),
     val openedMedia: OpenedChatMedia? = null,
     val mediaLoading: Boolean = false,
+    val mediaRequest: ChatMediaRequest? = null,
+    val mediaRequestError: String? = null,
     val offlineMedia: Set<String> = emptySet(),
     val partnerActivity: PartnerChatActivity = PartnerChatActivity(),
     val sparks: Map<String,LocalSparkState> = emptyMap(),
@@ -115,3 +117,19 @@ data class ConversationState(
 @Serializable
 data class MediaDraft(val messageId: String, val items: List<ChatMedia>)
 data class OpenedChatMedia(val messageId: String, val media: ChatMedia, val bytes: ByteArray)
+
+/** Identifies the attachment being opened without retaining its plaintext bytes. */
+data class ChatMediaRequest(val messageId: String, val attachmentId: String, val kind: String)
+
+/** Personal chat palette; independent of system light/dark appearance. Unknown saved IDs fall back without migration. */
+enum class ChatThemePreset(val id: String, val label: String, val description: String) {
+    ORIGINAL("original", "Original SriSu", "Warm neutrals · soft violet"),
+    BLEND("blend", "SriSu Blend", "Violet flowing into warm peach"),
+    CALM("calm", "SriSu Calm", "Quiet blue · gentle contrast"),
+    IRIS("iris", "SriSu Iris", "Soft lavender blending into mist blue"),
+    DAWN("dawn", "SriSu Dawn", "Warm peach blending into cream");
+    companion object {
+        val DEFAULT = IRIS
+        fun fromId(id: String) = entries.firstOrNull { it.id == id } ?: ORIGINAL
+    }
+}

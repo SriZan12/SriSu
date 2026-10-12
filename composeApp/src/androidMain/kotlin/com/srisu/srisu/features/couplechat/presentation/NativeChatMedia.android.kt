@@ -1,7 +1,6 @@
 package com.srisu.srisu.features.couplechat.presentation
 
 import android.Manifest
-import android.app.Dialog
 import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -15,8 +14,6 @@ import android.os.Looper
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.WindowManager
-import android.widget.FrameLayout
-import android.widget.MediaController
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,7 +60,17 @@ internal class AndroidChatMedia(private val context: Context) : NativeChatMedia 
     private var player: MediaPlayer?=null
     private var playerResult: ((String)->Unit)?=null
     private var progress: Job?=null
-    private var videoDialog: Dialog?=null
+    private var videoSurface: SurfaceHolder?=null
+    private var waitingForSurface=false
+    fun attachVideoSurface(holder: SurfaceHolder?) {
+        videoSurface=holder
+        val media=player ?: return
+        if(holder==null) {playback("pause",0.0);media.setDisplay(null)}
+        else {
+            media.setDisplay(holder)
+            if(waitingForSurface) {waitingForSurface=false;media.prepareAsync()}
+        }
+    }
     private val audio=context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val focus=AudioManager.OnAudioFocusChangeListener { change -> if(change<0) main.post {
         if(recording) { stopRecording(true); recordingResult?.invoke("{\"event\":\"error\",\"code\":\"interrupted\"}",null) }
@@ -218,41 +225,26 @@ internal class AndroidChatMedia(private val context: Context) : NativeChatMedia 
                 media.start();result("{\"event\":\"playing\"}")
                 progress=scope.launch {while(isActive && player===media) {result(JSONObject().put("event","position").put("positionMs",media.currentPosition).put("durationMs",media.duration).toString());delay(200)}}
             }
+            media.setOnInfoListener { _, what, _ ->
+                if(what==MediaPlayer.MEDIA_INFO_BUFFERING_START)result("{\"event\":\"buffering\"}")
+                if(what==MediaPlayer.MEDIA_INFO_BUFFERING_END)result(if(media.isPlaying)"{\"event\":\"playing\"}" else "{\"event\":\"paused\"}")
+                false
+            }
             if(mime.startsWith("video/")) {
-                val surface=SurfaceView(context);val dialog=Dialog(context,android.R.style.Theme_Material_NoActionBar)
-                val frame=FrameLayout(context);frame.addView(surface,FrameLayout.LayoutParams(-1,-1))
-                val controls=MediaController(context)
-                controls.setMediaPlayer(object:MediaController.MediaPlayerControl {
-                    override fun start()=playback("resume",0.0)
-                    override fun pause()=playback("pause",0.0)
-                    override fun getDuration()=if(player===media && playerReady)media.duration else 0
-                    override fun getCurrentPosition()=if(player===media && playerReady)media.currentPosition else 0
-                    override fun seekTo(position:Int)=playback("seek",position.toDouble())
-                    override fun isPlaying()=player===media && playerReady && media.isPlaying
-                    override fun getBufferPercentage()=100
-                    override fun canPause()=true
-                    override fun canSeekBackward()=true
-                    override fun canSeekForward()=true
-                    override fun getAudioSessionId()=media.audioSessionId
-                })
-                controls.setAnchorView(frame);surface.setOnClickListener {controls.show(4000)}
-                dialog.setContentView(frame);dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                dialog.setOnDismissListener {if(videoDialog===dialog) {videoDialog=null;playback("stop",0.0)}}
-                surface.holder.addCallback(object: SurfaceHolder.Callback {
-                    override fun surfaceCreated(holder: SurfaceHolder) {if(player===media) {media.setDisplay(holder);media.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);media.prepareAsync()} }
-                    override fun surfaceChanged(h: SurfaceHolder,f: Int,w: Int,height: Int)=Unit
-                    override fun surfaceDestroyed(h: SurfaceHolder) {if(player===media)playback("stop",0.0)}
-                });videoDialog=dialog;dialog.show()
+                media.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT)
+                val holder=videoSurface
+                if(holder!=null) {media.setDisplay(holder);media.prepareAsync()} else waitingForSurface=true
             } else media.prepareAsync()
         } catch(_: Exception) {result("{\"event\":\"error\"}");playback("stop",0.0)}
     }
     override fun playback(action: String,value: Double) {
         val media=player
         try {when(action) {
-            "stop" -> {playerReady=false;progress?.cancel();progress=null;player=null;media?.release();val dialog=videoDialog;videoDialog=null;dialog?.dismiss();abandonFocus()}
+            "stop" -> {playerReady=false;progress?.cancel();progress=null;player=null;media?.release();waitingForSurface=false;abandonFocus()}
             "pause" -> if(media!=null && media.isPlaying) {media.pause();playerResult?.invoke("{\"event\":\"paused\"}")}
             "resume" -> if(media!=null && focus()) {media.start();playerResult?.invoke("{\"event\":\"playing\"}")}
-            "seek" -> media?.seekTo(value.toInt().coerceAtLeast(0))
+            "seek" -> if(Build.VERSION.SDK_INT>=26)media?.seekTo(value.toLong().coerceAtLeast(0),MediaPlayer.SEEK_CLOSEST)
+                else media?.seekTo(value.toInt().coerceAtLeast(0))
             "speed" -> if(media!=null) {val wasPlaying=media.isPlaying;media.playbackParams=media.playbackParams.setSpeed(value.toFloat().coerceIn(0.5f,2f));if(!wasPlaying)media.pause()}
         }} catch(_: IllegalStateException) {playerResult?.invoke("{\"event\":\"error\"}")}
     }
@@ -280,10 +272,19 @@ internal class AndroidChatMedia(private val context: Context) : NativeChatMedia 
             } finally {if(scaled!==bitmap)scaled.recycle()}
         }
         fun thumbnail(bitmap: Bitmap): String {
-            val ratio=120f/max(bitmap.width,bitmap.height);val small=Bitmap.createScaledBitmap(bitmap,(bitmap.width*ratio).toInt().coerceAtLeast(1),(bitmap.height*ratio).toInt().coerceAtLeast(1),true)
-            try {val bytes=ByteArrayOutputStream().use {small.compress(Bitmap.CompressFormat.JPEG,45,it);it.toByteArray()};require(bytes.size<=6144)
-                return android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)
-            } finally {if(small!==bitmap)small.recycle()}
+            // A sharper preview within the existing encrypted 6 KiB thumbnail budget.
+            for(edge in listOf(320,240,160,120)) {
+                val ratio=(edge.toFloat()/max(bitmap.width,bitmap.height)).coerceAtMost(1f)
+                val small=Bitmap.createScaledBitmap(bitmap,(bitmap.width*ratio).toInt().coerceAtLeast(1),
+                    (bitmap.height*ratio).toInt().coerceAtLeast(1),true)
+                try {
+                    for(quality in listOf(60,40,25)) {
+                        val bytes=ByteArrayOutputStream().use {small.compress(Bitmap.CompressFormat.JPEG,quality,it);it.toByteArray()}
+                        if(bytes.size<=6144)return android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)
+                    }
+                } finally {if(small!==bitmap)small.recycle()}
+            }
+            error("Thumbnail exceeds the private payload limit")
         }
     }
 }
@@ -304,4 +305,15 @@ internal actual fun decodePrivatePhoto(bytes: ByteArray): ImageBitmap? {
     BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
     if(bounds.outWidth !in 1..4096 || bounds.outHeight !in 1..4096 || bounds.outWidth.toLong()*bounds.outHeight>4096L*4096)return null
     return BitmapFactory.decodeByteArray(bytes,0,bytes.size)?.asImageBitmap()
+}
+
+@Composable internal actual fun NativeChatVideo(native: NativeChatMedia, modifier: androidx.compose.ui.Modifier) {
+    val driver=native as AndroidChatMedia
+    androidx.compose.ui.viewinterop.AndroidView(modifier=modifier,factory={context ->
+        SurfaceView(context).apply {holder.addCallback(object: SurfaceHolder.Callback {
+            override fun surfaceCreated(holder: SurfaceHolder) {driver.attachVideoSurface(holder)}
+            override fun surfaceChanged(holder: SurfaceHolder,format: Int,width: Int,height: Int) = Unit
+            override fun surfaceDestroyed(holder: SurfaceHolder) {driver.attachVideoSurface(null)}
+        })}
+    },onRelease={driver.attachVideoSurface(null)})
 }

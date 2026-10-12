@@ -20,6 +20,8 @@ class NavigationContractTest {
         assertEquals(profile, Json.decodeFromString<CoupleProfileDestination>(Json.encodeToString(profile)))
         val chat = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001", "message-1", "external")
         assertEquals(chat, Json.decodeFromString<ChatNav.CoupleConversation>(Json.encodeToString(chat)))
+        val media = ChatNav.MediaViewer("room","message","attachment",true)
+        assertEquals(media,Json.decodeFromString<ChatNav.MediaViewer>(Json.encodeToString(media)))
         val picker = ProfileNav.InterestScreen("origin-entry", "request-1")
         assertEquals(picker, Json.decodeFromString<ProfileNav.InterestScreen>(Json.encodeToString(picker)))
         assertEquals(AuthNavigation.ProfileSetUp, Json.decodeFromString<AuthNavigation.ProfileSetUp>(Json.encodeToString(AuthNavigation.ProfileSetUp)))

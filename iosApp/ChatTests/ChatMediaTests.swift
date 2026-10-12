@@ -8,6 +8,136 @@ import ComposeApp
 /// All files below are generated color/audio fixtures in this test simulator.
 final class ChatMediaTests:XCTestCase {
     #if CHAT_APP_EVALUATION
+    @MainActor func testChatThemesAndDedicatedMediaNavigation() async throws {
+        try await testPreparedVideoDecodesAndHasNoSourceLocation()
+        try testPcmWaveAndThumbnailUseNativeDecoders()
+        let image=UIGraphicsImageRenderer(size:CGSize(width:480,height:320)).image {ctx in
+            UIColor.systemTeal.setFill();ctx.fill(CGRect(x:0,y:0,width:480,height:320))
+            UIColor.systemYellow.setFill();ctx.cgContext.fillEllipse(in:CGRect(x:280,y:40,width:72,height:72))
+        }
+        func kotlin(_ data:Data)->KotlinByteArray {let result=KotlinByteArray(size:Int32(data.count));for(index,byte) in data.enumerated() {result.set(index:Int32(index),value:Int8(bitPattern:byte))};return result}
+        let native=IosChatMedia()
+        let fixture=ChatUiEvaluation(photo:kotlin(try XCTUnwrap(image.jpegData(compressionQuality:0.8))),
+            voice:kotlin(try Data(contentsOf:folder.appendingPathComponent("voice.wav"))),native:native)
+        fixture.setVideoFixture(bytes:kotlin(try Data(contentsOf:folder.appendingPathComponent("ios-prepared.mp4"))))
+        let scene=try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap {$0 as? UIWindowScene}.first)
+        let previous=scene.windows.first(where: \.isKeyWindow)
+        let window=UIWindow(windowScene:scene);window.rootViewController=fixture.controller();window.makeKeyAndVisible()
+        defer {fixture.close();window.isHidden=true;previous?.makeKeyAndVisible()}
+        func capture(_ name:String) throws {
+            let screenshot=UIGraphicsImageRenderer(bounds:window.bounds).image {_ in window.drawHierarchy(in:window.bounds,afterScreenUpdates:true)}
+            try XCTUnwrap(screenshot.pngData()).write(to:folder.appendingPathComponent(name+".png"))
+        }
+        try await Task.sleep(nanoseconds:1_000_000_000)
+        for theme in ["original","blend","calm","dawn","iris"] {
+            fixture.selectTheme(id:theme);try await Task.sleep(nanoseconds:300_000_000)
+            try capture("ios-theme-"+theme)
+        }
+        fixture.showAppearance();try await Task.sleep(nanoseconds:500_000_000);try capture("ios-theme-selector")
+        fixture.hideAppearance();fixture.showMedia();try await Task.sleep(nanoseconds:500_000_000)
+        let before=fixture.readingIndex;try capture("ios-compact-media")
+        fixture.showViewer(kind:"photo");try await Task.sleep(nanoseconds:800_000_000)
+        XCTAssertNil(window.rootViewController?.presentedViewController)
+        try capture("ios-photo-destination")
+        fixture.returnToChat();try await Task.sleep(nanoseconds:500_000_000)
+        XCTAssertEqual(fixture.readingIndex,before)
+        fixture.playVoice();try await Task.sleep(nanoseconds:200_000_000);XCTAssertTrue(fixture.playing)
+        fixture.showViewer(kind:"video");try await Task.sleep(nanoseconds:700_000_000)
+        XCTAssertFalse(fixture.playing);XCTAssertTrue(fixture.videoPlaying);XCTAssertGreaterThan(fixture.videoPosition,0)
+        XCTAssertNil(window.rootViewController?.presentedViewController)
+        fixture.pauseVideo();try await Task.sleep(nanoseconds:250_000_000);XCTAssertFalse(fixture.videoPlaying)
+        fixture.seekVideo();try await Task.sleep(nanoseconds:250_000_000)
+        XCTAssertGreaterThanOrEqual(fixture.videoPosition,800)
+        try capture("ios-video-destination")
+        fixture.returnToChat();try await Task.sleep(nanoseconds:500_000_000)
+        XCTAssertFalse(fixture.videoPlaying);XCTAssertEqual(fixture.readingIndex,before)
+        try capture("ios-returned-conversation")
+    }
+    @MainActor func testRomanticMessageAnimationsRenderOnIncomingAndOutgoingMessages() async throws {
+        let fixture=ChatUiEvaluation(photo:KotlinByteArray(size:0),voice:KotlinByteArray(size:0),native:IosChatMedia())
+        fixture.showEmptyConversation(deviceRequired:false)
+        let scene=try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap {$0 as? UIWindowScene}.first)
+        let previous=scene.windows.first(where: \.isKeyWindow)
+        let window=UIWindow(windowScene:scene);window.rootViewController=fixture.controller();window.makeKeyAndVisible()
+        defer {fixture.close();window.isHidden=true;previous?.makeKeyAndVisible()}
+        try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
+        try await Task.sleep(nanoseconds:1_000_000_000)
+        print("CHAT_ROMANCE_RECORD_START")
+        for (name,text) in [("sweet","Thinking of you"),("affectionate","luv u"),("deep","I love you so much")] {
+            fixture.showRomanticMessage(text:text)
+            try await Task.sleep(nanoseconds:1_500_000_000)
+            let screenshot=UIGraphicsImageRenderer(bounds:window.bounds).image {_ in window.drawHierarchy(in:window.bounds,afterScreenUpdates:true)}
+            try XCTUnwrap(screenshot.pngData()).write(to:folder.appendingPathComponent("ios-romance-"+name+".png"))
+            XCTAssertNil(window.rootViewController?.presentedViewController)
+            try await Task.sleep(nanoseconds:2_700_000_000)
+        }
+        print("CHAT_ROMANCE_RECORD_END")
+    }
+    @MainActor func testEmptyConversationStatesAreRendered() async throws {
+        let fixture=ChatUiEvaluation(photo:KotlinByteArray(size:0),voice:KotlinByteArray(size:0),native:IosChatMedia())
+        fixture.showEmptyConversation(deviceRequired:true)
+        let scene=try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap {$0 as? UIWindowScene}.first)
+        let previous=scene.windows.first(where: \.isKeyWindow)
+        let window=UIWindow(windowScene:scene);window.rootViewController=fixture.controller();window.makeKeyAndVisible()
+        defer {fixture.close();window.isHidden=true;previous?.makeKeyAndVisible()}
+        try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
+        for (name,required) in [("ios-device-required",true),("ios-empty-ready",false)] {
+            fixture.showEmptyConversation(deviceRequired:required)
+            try await Task.sleep(nanoseconds:1_500_000_000)
+            let screenshot=UIGraphicsImageRenderer(bounds:window.bounds).image {_ in
+                window.drawHierarchy(in:window.bounds,afterScreenUpdates:true)
+            }
+            try XCTUnwrap(screenshot.pngData()).write(to:folder.appendingPathComponent(name+".png"))
+        }
+    }
+    @MainActor func testRenderedConversationKeepsNativeVoiceInlineWhileScrolling() async throws {
+        let count=48000*2*6;var voice=Data("RIFF".utf8)
+        func append<T:FixedWidthInteger>(_ value:T) {var little=value.littleEndian;withUnsafeBytes(of:&little) {voice.append(contentsOf:$0)}}
+        append(UInt32(36+count));voice.append(Data("WAVEfmt ".utf8));append(UInt32(16));append(UInt16(1));append(UInt16(1))
+        append(UInt32(48000));append(UInt32(96000));append(UInt16(2));append(UInt16(16));voice.append(Data("data".utf8));append(UInt32(count));voice.append(Data(count:count))
+        let image=UIGraphicsImageRenderer(size:CGSize(width:120,height:80)).image {ctx in
+            UIColor.systemTeal.setFill();ctx.fill(CGRect(x:0,y:0,width:120,height:80))
+            UIColor.systemYellow.setFill();ctx.cgContext.fillEllipse(in:CGRect(x:72,y:12,width:20,height:20))
+            UIColor.darkGray.setFill();ctx.cgContext.fillEllipse(in:CGRect(x:-20,y:55,width:170,height:100))
+        }
+        func kotlin(_ data:Data)->KotlinByteArray {let result=KotlinByteArray(size:Int32(data.count));for (index,byte) in data.enumerated() {result.set(index:Int32(index),value:Int8(bitPattern:byte))};return result}
+        let photo=try XCTUnwrap(image.jpegData(compressionQuality:0.7))
+        let fixture=ChatUiEvaluation(photo:kotlin(photo),voice:kotlin(voice),native:IosChatMedia())
+        let scene=try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap {$0 as? UIWindowScene}.first)
+        let previous=scene.windows.first(where: \.isKeyWindow)
+        let window=UIWindow(windowScene:scene);window.rootViewController=fixture.controller();window.makeKeyAndVisible()
+        defer {fixture.close();window.isHidden=true;previous?.makeKeyAndVisible()}
+        try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
+        func capture(_ name:String) throws {
+            let renderer=UIGraphicsImageRenderer(bounds:window.bounds)
+            let screenshot=renderer.image {_ in window.drawHierarchy(in:window.bounds,afterScreenUpdates:true)}
+            try XCTUnwrap(screenshot.pngData()).write(to:folder.appendingPathComponent(name+".png"))
+        }
+        try await Task.sleep(nanoseconds:1_500_000_000)
+        try capture("ios-conversation")
+        fixture.playVoice();try await Task.sleep(nanoseconds:1_000_000_000)
+        XCTAssertTrue(fixture.playing);XCTAssertEqual(fixture.activeMessage,"voice");XCTAssertGreaterThan(fixture.position,0)
+        XCTAssertNil(window.rootViewController?.presentedViewController)
+        try capture("ios-inline-voice")
+        let before=fixture.position;fixture.showMedia();try await Task.sleep(nanoseconds:1_000_000_000)
+        XCTAssertTrue(fixture.playing);XCTAssertGreaterThan(fixture.position,before)
+        XCTAssertNil(window.rootViewController?.presentedViewController)
+        try capture("ios-media-scrolled")
+        var keyboardVisible=false
+        let keyboardShown=expectation(forNotification:UIResponder.keyboardDidShowNotification,object:nil) {_ in
+            keyboardVisible=true;return true
+        }
+        fixture.selectTheme(id:"iris")
+        fixture.showReply()
+        await fulfillment(of:[keyboardShown],timeout:8)
+        try await Task.sleep(nanoseconds:500_000_000)
+        try capture("ios-reply-composer")
+        if keyboardVisible {print("CHAT_REVIEW_KEYBOARD_VISIBLE")}
+        // Allow the runner to capture the simulator including the system keyboard.
+        try await Task.sleep(nanoseconds:3_000_000_000)
+        window.endEditing(true)
+        try await Task.sleep(nanoseconds:500_000_000)
+    }
     @MainActor func testActualKmpRepositoriesWithTwoIosPartners() async throws {
         let fixture=FileManager.default.urls(for:.documentDirectory,in:.userDomainMask)[0].appendingPathComponent("chat-app-fixture.json")
         defer {try? FileManager.default.removeItem(at:fixture)}

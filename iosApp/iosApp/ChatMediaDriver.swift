@@ -27,7 +27,7 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
     private var recording = false
     private var audioPlayer: AVAudioPlayer?
     private var videoSource: ChatMemoryVideo?
-    private var videoController: ChatVideoController?
+    private var videoController: AVPlayerViewController?
     private var playerCallback: ((String) -> Void)?
     private var timer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -160,12 +160,17 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
             "thumbnail":Self.thumbnail(rendered) ?? ""],bytes)
     }
     static func thumbnail(_ image: UIImage) -> String? {
-        let ratio=120/max(image.size.width,image.size.height)
-        let size=CGSize(width:max(1,image.size.width*ratio),height:max(1,image.size.height*ratio))
-        let format=UIGraphicsImageRendererFormat();format.scale=1;format.opaque=true
-        let small=UIGraphicsImageRenderer(size:size,format:format).image {_ in image.draw(in:CGRect(origin:.zero,size:size))}
-        guard let data=small.jpegData(compressionQuality:0.45),data.count<=6144 else {return nil}
-        return data.base64EncodedString()
+        // Preserve the encrypted payload bound while using the sharpest preview that fits.
+        for edge:CGFloat in [320,240,160,120] {
+            let ratio=min(1,edge/max(image.size.width,image.size.height))
+            let size=CGSize(width:max(1,image.size.width*ratio),height:max(1,image.size.height*ratio))
+            let format=UIGraphicsImageRendererFormat();format.scale=1;format.opaque=true
+            let small=UIGraphicsImageRenderer(size:size,format:format).image {_ in image.draw(in:CGRect(origin:.zero,size:size))}
+            for quality:CGFloat in [0.6,0.4,0.25] {
+                if let data=small.jpegData(compressionQuality:quality),data.count<=6144 {return data.base64EncodedString()}
+            }
+        }
+        return nil
     }
     func startRecording(result: @escaping Result) {
         playback(action:"stop",value:0);recordingEpoch += 1;let epoch=recordingEpoch;recordingResult=result
@@ -209,7 +214,7 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
         device?.inputNode.removeTap(onBus:0);device?.stop()
         recordingLock.lock();recording=false;let data=pcm;let peaks=levels;pcm=Data();levels=[];recordingLock.unlock()
         let callback=recordingResult;recordingResult=nil
-        try? session.setActive(false,options:.notifyOthersOnDeactivation)
+        if device != nil || callback != nil {try? session.setActive(false,options:.notifyOthersOnDeactivation)}
         guard !discard && data.count>=Int(sampleRate/2) else {if callback != nil {deliver(callback,["event":"cancelled"])};return}
         var wav=Data("RIFF".utf8);wav.chatAppend(UInt32(36+data.count));wav.append(Data("WAVEfmt ".utf8));wav.chatAppend(UInt32(16))
         wav.chatAppend(UInt16(1));wav.chatAppend(UInt16(1));wav.chatAppend(UInt32(sampleRate));wav.chatAppend(UInt32(sampleRate*2))
@@ -223,6 +228,14 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
         if callback != nil {deliver(callback,["event":"error","code":"interrupted"])}
         playback(action:"pause",value:0)
     }
+    func videoViewController() -> UIViewController {
+        if let videoController {return videoController}
+        let controller=AVPlayerViewController()
+        controller.showsPlaybackControls=false;controller.allowsPictureInPicturePlayback=false
+        controller.videoGravity = .resizeAspect;controller.player=videoSource?.player
+        videoController=controller
+        return controller
+    }
     func play(bytes: KotlinByteArray, mime: String, result: @escaping (String)->Void) {
         stopRecording(discard:true);playback(action:"stop",value:0);playerCallback=result
         do {
@@ -230,9 +243,8 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
             let data=bytes.chatData()
             if mime.hasPrefix("video/") {
                 let source=ChatMemoryVideo(data:data);videoSource=source
-                let controller=ChatVideoController();controller.player=source.player
-                controller.finished = {[weak self] in self?.playback(action:"stop",value:0)}
-                videoController=controller;root()?.present(controller,animated:true) {source.player.play()}
+                videoController?.player=source.player
+                source.player.play()
             } else {
                 let player=try AVAudioPlayer(data:data);player.enableRate=true;player.prepareToPlay();audioPlayer=player
                 guard player.play() else {throw ChatMediaError.invalid}
@@ -244,7 +256,20 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
                     _ = result(self.json(["event":"position","positionMs":Int(player.currentTime*1000),"durationMs":Int(player.duration*1000)]))
                     if !player.isPlaying && player.currentTime==0 {_ = result(self.json(["event":"ended"]))}
                 } else if let source=self.videoSource {
-                    if source.player.status == .failed {_ = result(self.json(["event":"error"]));self.playback(action:"stop",value:0)}
+                    let player=source.player
+                    if player.status == .failed || player.currentItem?.status == .failed {
+                        _ = result(self.json(["event":"error"]));self.playback(action:"stop",value:0)
+                    } else {
+                        let seconds=player.currentTime().seconds
+                        let duration=player.currentItem?.duration.seconds ?? 0
+                        if seconds.isFinite && duration.isFinite && duration>0 {
+                            _ = result(self.json(["event":"position","positionMs":Int(seconds*1000),"durationMs":Int(duration*1000)]))
+                        }
+                        let event = duration.isFinite && duration>0 && seconds>=duration ? "ended" :
+                            player.timeControlStatus == .waitingToPlayAtSpecifiedRate ? "buffering" :
+                            player.timeControlStatus == .playing ? "playing" : "paused"
+                        _ = result(self.json(["event":event]))
+                    }
                 }
             }
         } catch {_ = result(json(["event":"error"]));playback(action:"stop",value:0)}
@@ -252,15 +277,16 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
     func playback(action: String, value: Double) {
         switch action {
         case "stop":
+            let ownedPlayback = audioPlayer != nil || videoSource != nil
             timer?.invalidate();timer=nil;audioPlayer?.stop();audioPlayer=nil;videoSource?.player.pause();videoSource=nil
-            let controller=videoController;videoController=nil;controller?.finished=nil;controller?.dismiss(animated:true)
-            try? session.setActive(false,options:.notifyOthersOnDeactivation)
+            videoController?.player=nil
+            if ownedPlayback {try? session.setActive(false,options:.notifyOthersOnDeactivation)}
         case "pause":audioPlayer?.pause();videoSource?.player.pause();_ = playerCallback?(json(["event":"paused"]))
         case "resume":
             try? session.setActive(true)
             if let audioPlayer,audioPlayer.play() {_ = playerCallback?(json(["event":"playing"]))}
             videoSource?.player.play()
-        case "seek":audioPlayer?.currentTime=max(0,value/1000);videoSource?.player.seek(to:CMTime(seconds:max(0,value/1000),preferredTimescale:600))
+        case "seek":audioPlayer?.currentTime=max(0,value/1000);videoSource?.player.seek(to:CMTime(seconds:max(0,value/1000),preferredTimescale:600),toleranceBefore:.zero,toleranceAfter:.zero)
         case "speed":audioPlayer?.rate=Float(min(2,max(0.5,value)));videoSource?.player.rate=Float(value)
         default:break
         }
@@ -292,7 +318,7 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
         }
     }
     func interrupt() {stopRecording(discard:true);playback(action:"stop",value:0)}
-    func close() {interrupt();selectionEpoch += 1;selection=nil;selectionController?.dismiss(animated:false);selectionController=nil}
+    func close() {interrupt();videoController=nil;for observer in observers {NotificationCenter.default.removeObserver(observer)};observers=[];privacyCovers.forEach {$0.removeFromSuperview()};privacyCovers=[];selectionEpoch += 1;selection=nil;selectionController?.dismiss(animated:false);selectionController=nil}
 }
 
 enum ChatMediaError: Error {case invalid}
@@ -306,10 +332,6 @@ private extension Data {
     mutating func chatAppend<T:FixedWidthInteger>(_ value:T) {var little=value.littleEndian;Swift.withUnsafeBytes(of:&little) {append(contentsOf:$0)}}
 }
 
-private final class ChatVideoController: AVPlayerViewController {
-    var finished:(()->Void)?
-    override func viewDidDisappear(_ animated:Bool) {super.viewDidDisappear(animated);finished?()}
-}
 private final class ChatMemoryVideo: NSObject, AVAssetResourceLoaderDelegate {
     let data:Data
     let player:AVPlayer

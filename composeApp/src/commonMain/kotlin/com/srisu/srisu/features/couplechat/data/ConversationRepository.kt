@@ -8,6 +8,7 @@ import com.srisu.srisu.core.session.SessionStamp
 import com.srisu.srisu.features.couplechat.crypto.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -57,6 +58,16 @@ class ConversationRepository(
     private val _state = MutableStateFlow(ConversationState())
     val state = _state.asStateFlow()
     val connectionState = metadata.connectionState
+    private val _messageArrivals = MutableSharedFlow<ConversationMessageArrival>(extraBufferCapacity=16, onBufferOverflow=BufferOverflow.DROP_OLDEST)
+    internal val messageArrivals = _messageArrivals.asSharedFlow()
+    private var arrivalBaseline: Long? = null
+
+    private fun canAnnounceMessage() = screenVisible && lifetime.foreground.value && _state.value.security == ConversationSecurity.READY
+    private fun announceMessage(db: LocalConversation, before: LocalChatMessage?, id: String, live: Boolean) {
+        if (!live || !canAnnounceMessage()) return
+        confirmedMessageArrival(db.accountId, before, db.rawMessage(id), visible=true, live=true)
+            ?.let { _messageArrivals.tryEmit(it) }
+    }
 
     init {
         metadata.enter()
@@ -182,6 +193,7 @@ class ConversationRepository(
 
     fun enter(roomId: String?) { roomId?.let { Uuid.parse(it) };screenVisible=true; selected.value = roomId.orEmpty();work.trySend(Unit) }
     fun leave() {screenVisible=false;metadata.stopActivity();dismissMedia();selected.value=""}
+    fun coverWithMedia() { screenVisible=false;metadata.stopActivity();dismissMedia() }
     fun retry() { metadata.refresh(); work.trySend(Unit) }
     fun close() { metadata.leave();scope.cancel(); work.close(); actions.close() }
 
@@ -190,6 +202,7 @@ class ConversationRepository(
         db.recoverSending()
         cleanInterruptedMedia(db)
         local = db
+        arrivalBaseline = null
         val anchor=store.record<ChatReadingAnchor>("app/anchor/$roomId")
         val end=anchor?.let {db.rawMessage(it.windowEnd)}?.timelineKey
         var (messages, older) = db.page(end?.plus("z").orEmpty())
@@ -234,6 +247,12 @@ class ConversationRepository(
     private fun refreshWindow() {
         val db = local ?: return
         cleanInterruptedMedia(db)
+        _state.value.mediaRequest?.let { request ->
+            val message = db.rawMessage(request.messageId)
+            val inDraft = db.mediaDraft()?.let { it.messageId == request.messageId &&
+                it.items.any { item -> item.descriptor.id == request.attachmentId } } == true
+            if (!inDraft && (message == null || message.hidden || message.deleted || message.unavailable)) dismissMedia()
+        }
         val old = _state.value
         if (old.atLatest) {
             val (messages, older) = db.page()
@@ -318,6 +337,8 @@ class ConversationRepository(
             page.hasMore != (page.cursor < page.highWatermark) || (page.changes.isEmpty() && page.cursor != after) ||
             (page.changes.isEmpty() && page.hasMore) ||
             page.changes.lastOrNull()?.sequence?.let { it != page.cursor } == true) throw SerializationException("Invalid change page")
+        // Freeze the initial server watermark once: pagination/catch-up is not a new arrival.
+        val baseline = localMutex.withLock { arrivalBaseline ?: page.highWatermark.also { arrivalBaseline = it } }
         for (change in page.changes) {
             sessions.ensureCurrent(stamp)
             var peer: ChatDevice? = null
@@ -355,7 +376,12 @@ class ConversationRepository(
                         } catch (_: SerializationException) { unreadable = true }
                     } else unreadable = operation.unavailable
                 }
+                val announce = canAnnounceMessage() && operation?.kind == "message" &&
+                    (operation.actorId == db.accountId || change.sequence > baseline)
+                val beforeMessage = if(announce) db.rawMessage(operation!!.targetId) else null
                 db.apply(change, payload, unreadable)
+                if (announce && operation != null) announceMessage(db, beforeMessage, operation.targetId,
+                    live = if (operation.actorId == db.accountId) beforeMessage != null else change.sequence > baseline)
                 if (operation?.targetDeleted==true) {
                     db.store.write(listOf(ProtectedEntry("app/spark/${db.roomId}/${operation.targetId}",null),
                         ProtectedEntry("app/spark-answer/${db.roomId}/${operation.targetId}",null),ProtectedEntry("app/spark-watch/${db.roomId}/${operation.targetId}",null)))
@@ -471,7 +497,10 @@ class ConversationRepository(
                 val acceptance = request(stamp, db.roomId) { api.send(db.roomId, wire) }
                 if (acceptance.operationId != operation.id) throw SerializationException("Wrong acknowledgement")
                 localMutex.withLock {
+                    val announce = operation.kind=="message" && canAnnounceMessage()
+                    val beforeMessage = if(announce) db.rawMessage(operation.targetId) else null
                     db.accepted(operation, acceptance)
+                    if(announce) announceMessage(db, beforeMessage, operation.targetId, live=true)
                     if(operation.kind=="message" && db.store.read(db.cancelPrefix+operation.id)!=null)
                         db.enqueue("delete",ChatContent.Delete,operation.id,registration=native,partner=partner,completedMarker=db.cancelPrefix+operation.id)
                     cleanInterruptedMedia(db)
@@ -720,25 +749,27 @@ class ConversationRepository(
         db.store.put(key,old.copy(error="This Spark answer could not be verified. Start a new Spark.",revealed=false))
     }
 
-    fun openAttachment(messageId: String,id: String) {
+    fun openAttachment(messageId: String,id: String, expectedRoom: String? = null) {
         val stamp=sessions.stamp()
         val generation=++mediaGeneration
         mediaJob?.cancel()
+        _state.update { it.copy(openedMedia=null, mediaRequest=ChatMediaRequest(messageId,id,"attachment"), mediaRequestError=null, mediaLoading=true) }
         mediaJob=scope.launch {
             try {
                 val captured=localMutex.withLock {
-                    val db=local ?: return@launch
-                    val message=db.message(messageId) ?: return@launch
-                    if(message.deleted || message.hidden || message.unavailable)return@launch
-                    val item=(message.content as? ChatContent.Media)?.items?.firstOrNull {it.descriptor.id==id} ?: return@launch
-                    _state.update {it.copy(mediaLoading=true,error=null)}
+                    val db=local ?: error("Conversation unavailable")
+                    check(expectedRoom == null || db.roomId == expectedRoom)
+                    val message=db.message(messageId) ?: error("Message unavailable")
+                    check(!message.deleted && !message.hidden && !message.unavailable)
+                    val item=(message.content as? ChatContent.Media)?.items?.firstOrNull {it.descriptor.id==id} ?: error("Attachment unavailable")
+                    _state.update {it.copy(mediaLoading=true,error=null, mediaRequest=ChatMediaRequest(messageId,id,item.kind))}
                     db to item
                 }
                 val (db,item)=captured
                 val descriptor=ChatJson.encodeToJsonElement(item.descriptor).jsonObject
                 var bytes=localMutex.withLock {db.store.attachment(descriptor,true)}
                 if(bytes==null) {
-                    val device=localMutex.withLock { registration?.deviceId } ?: return@launch
+                    val device=localMutex.withLock { registration?.deviceId } ?: error("Device unavailable")
                     val capability=request(stamp,db.roomId) {api.mediaCapability(db.roomId,id,device)}
                     val ciphertext=request(stamp,db.roomId) {api.download(db.roomId,item.descriptor,capability.capability)}
                     localMutex.withLock {
@@ -753,22 +784,30 @@ class ConversationRepository(
                     if(generation==mediaGeneration && local===db && db.message(messageId)?.let {it.deleted || it.hidden}==false) {
                         _state.update {it.copy(openedMedia=bytes?.let {data -> OpenedChatMedia(messageId,item,data)},
                             offlineMedia=if(bytes!=null)it.offlineMedia+item.descriptor.id else it.offlineMedia-item.descriptor.id,
-                            error=if(bytes==null)"The attachment could not be verified." else null)}
+                            mediaRequestError=if(bytes==null)"The attachment could not be verified. Tap to retry." else null)}
                     }
                 }
             } catch (cancelled: CancellationException) {throw cancelled}
-            catch (_: Exception) {if(generation==mediaGeneration && sessions.stamp()==stamp)_state.update {it.copy(error="This attachment is unavailable. Reconnect and try again.")}}
+            catch (_: Exception) {if(generation==mediaGeneration && sessions.stamp()==stamp)_state.update {it.copy(mediaRequestError="Attachment unavailable. Reconnect and tap to retry.")}}
             finally {if(generation==mediaGeneration && sessions.stamp()==stamp)_state.update {it.copy(mediaLoading=false)}}
         }
     }
-    fun openDraftAttachment(id: String) = action(refresh=false) { db ->
-        val draft=db.mediaDraft() ?: return@action
-        val item=draft.items.firstOrNull {it.descriptor.id==id} ?: return@action
+    fun openDraftAttachment(id: String, expectedRoom: String? = null, expectedMessage: String? = null) {
+        dismissMedia()
+        action(refresh=false) { db ->
+        val draft=db.mediaDraft()
+        if (draft == null || expectedRoom != null && db.roomId != expectedRoom || expectedMessage != null && draft.messageId != expectedMessage) {
+            _state.update {it.copy(mediaRequestError="This attachment is no longer available.")};return@action
+        }
+        val item=draft.items.firstOrNull {it.descriptor.id==id} ?: run {
+            _state.update {it.copy(mediaRequestError="This attachment is no longer available.")};return@action
+        }
         val bytes=db.store.attachment(ChatJson.encodeToJsonElement(item.descriptor).jsonObject,true)
         _state.update {it.copy(openedMedia=bytes?.let {OpenedChatMedia(draft.messageId,item,it)},
-            error=if(bytes==null)"This attachment is no longer saved. Select it again." else null)}
+            mediaRequest=ChatMediaRequest(draft.messageId,id,item.kind), mediaRequestError=if(bytes==null)"This attachment is no longer saved. Select it again." else null)}
+        }
     }
-    fun dismissMedia() { mediaGeneration++;mediaJob?.cancel();mediaJob=null; _state.update {it.copy(openedMedia=null,mediaLoading=false)} }
+    fun dismissMedia() { mediaGeneration++;mediaJob?.cancel();mediaJob=null; _state.update {it.copy(openedMedia=null,mediaLoading=false,mediaRequest=null,mediaRequestError=null)} }
     fun voicePlayed(messageId: String) = action(refresh=false) { db ->
         if(!db.preferences().readReceipts || _state.value.security!=ConversationSecurity.READY)return@action
         val message=db.message(messageId) ?: return@action
@@ -837,6 +876,13 @@ class ConversationRepository(
         val partner = connected?.devices?.partnerDevice ?: return@action
         ids.take(50).mapNotNull(db::message).filter { !it.hidden && !it.unavailable }.forEach { db.receipt(it, "receipt.read", native, partner) }
         work.trySend(Unit)
+    }
+    /** Local appearance only: no presence publication, sync work or timeline rebuild. */
+    fun chatTheme(id: String) = action(refresh=false) { db ->
+        if (ChatThemePreset.entries.none { it.id == id }) return@action
+        val preferences = db.preferences().copy(chatTheme=id)
+        db.store.put(db.preferencesKey, preferences)
+        _state.update { it.copy(preferences=preferences) }
     }
     fun preferences(value: ConversationPreferences) = action { db ->
         db.store.put(db.preferencesKey, value.copy(nickname = value.nickname.trim().take(60)))

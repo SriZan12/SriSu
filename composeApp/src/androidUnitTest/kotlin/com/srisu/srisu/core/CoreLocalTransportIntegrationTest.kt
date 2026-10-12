@@ -30,6 +30,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.SQLiteMode
 import java.io.File
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -59,7 +60,7 @@ class CoreLocalTransportIntegrationTest {
         val path = RuntimeEnvironment.getApplication().getDatabasePath("integration-catalogue.db").absolutePath
         val database = Room.databaseBuilder<CatalogueDatabase>(RuntimeEnvironment.getApplication(), path).setDriver(AndroidSQLiteDriver()).build()
         try { runBlocking {
-            withTimeout(15_000) {
+            withTimeout(15_000.milliseconds) {
                 val catalogue = InterestCatalogueRepository(database.catalogue(), ProfileApiService(client, environment), environment, sessions)
                 assertEquals("Synthetic hiking", catalogue.load(force = true).value?.interests?.single()?.name)
                 assertNotNull(database.catalogue().read("interests:1:${environment.baseUrl}"))

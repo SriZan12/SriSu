@@ -51,6 +51,29 @@ class LocalConversationTest {
             applied = applied, signalType = 3, ciphertext = "opaque", unavailable = false, targetDeleted = deleted))
     private fun body(content: ChatContent) = ChatPrivatePayload(content = content)
 
+    @Test fun chatThemeSurvivesReopeningAndIsIsolatedByAccountAndRoom() {
+        local.store.put(local.preferencesKey,ConversationPreferences(nickname="Private name",chatTheme="blend"))
+        assertEquals("blend",LocalConversation(ProtectedChatStore(driver,1),"room-one").preferences().chatTheme)
+        assertEquals("Private name",local.preferences().nickname)
+        assertEquals("iris",LocalConversation(ProtectedChatStore(driver,2),"room-one").preferences().chatTheme)
+        assertEquals("iris",LocalConversation(store,"another-room").preferences().chatTheme)
+        store.put(local.preferencesKey,ChatJson.decodeFromString<ConversationPreferences>("""{"nickname":"Existing preference","readReceipts":false}"""))
+        assertEquals("iris",local.preferences().chatTheme);assertFalse(local.preferences().readReceipts)
+        assertEquals(ChatThemePreset.ORIGINAL,ChatThemePreset.fromId("future-preset"))
+    }
+
+    @Test fun newDefaultPreservesEveryExplicitThemeIncludingOriginal() {
+        assertEquals(ChatThemePreset.DEFAULT.id,ConversationPreferences().chatTheme)
+        for(preset in ChatThemePreset.entries) {
+            val saved=ConversationPreferences(nickname="Kept",readReceipts=false,chatTheme=preset.id)
+            // The protected store encodes defaults too, so a previously selected Original is explicit.
+            store.put(local.preferencesKey,saved)
+            assertEquals(saved,LocalConversation(ProtectedChatStore(driver,1),"room-one").preferences())
+        }
+        val old=ChatJson.decodeFromString<ConversationPreferences>("""{"chatTheme":"original","presence":false}""")
+        assertEquals("original",old.chatTheme);assertFalse(old.presence)
+    }
+
     @Test fun cursorAndMessageCommitTogetherAfterNativeProcessing() {
         driver.failWrite = true
         assertFailsWith<ChatStorageFailure> { local.apply(event(1), body(ChatContent.Text("synthetic"))) }
@@ -71,6 +94,21 @@ class LocalConversationTest {
         local.apply(event(3,"delete","delete","another",deleted=true), body(ChatContent.Delete))
         assertTrue(local.message("another")!!.deleted); assertNull(local.message("another")!!.content)
     }
+    @Test fun failedReactionDoesNotReplaceConfirmedSelectionOrCreateDuplicates() {
+        local.apply(event(1),body(ChatContent.Text("Synthetic")))
+        local.apply(event(2,"reaction-one","reaction","message-one",actor=1),body(ChatContent.Reaction("❤️")))
+        val pending=local.enqueue("reaction",ChatContent.Reaction("👍"),"message-one")
+        assertEquals(mapOf(1L to "❤️"),local.message("message-one")!!.reactions)
+        local.failed(pending,"permission_denied",true,0)
+        assertEquals(mapOf(1L to "❤️"),local.message("message-one")!!.reactions)
+        local.apply(event(3,"reaction-two","reaction","message-one",actor=1),body(ChatContent.Reaction("👍")))
+        // Duplicate sequences are rejected at the projection boundary; the confirmed chip stays singular.
+        assertFailsWith<ChatStorageFailure> {
+            local.apply(event(3,"reaction-two","reaction","message-one",actor=1),body(ChatContent.Reaction("👍")))
+        }
+        assertEquals(mapOf(1L to "👍"),local.message("message-one")!!.reactions)
+    }
+
     @Test fun lateReactionCannotRestoreOlderSelectionAndReceiptsAreMonotonic() {
         local.apply(event(1), body(ChatContent.Text("synthetic")))
         local.apply(event(2,"reaction-new","reaction","message-one",actor=1), body(ChatContent.Reaction("❤️")))

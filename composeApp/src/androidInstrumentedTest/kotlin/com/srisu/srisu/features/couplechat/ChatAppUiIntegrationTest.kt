@@ -57,7 +57,7 @@ class ChatAppUiIntegrationTest {
         val partner=harness.Client(users.getJSONObject(1),base)
         val profiles=CoupleProfileRepository(first.http,first.environment,first.sessions)
         val dependencies=module {single {first.api};single {profiles}}
-        val viewModel=ConversationViewModel(first.repo)
+        val viewModel=ConversationViewModel(first.repo,profiles)
         try {
             first.start(room);partner.start(room)
             runBlocking {
@@ -65,7 +65,7 @@ class ChatAppUiIntegrationTest {
                 partner.waitFor("Partner secure setup") {it.security==ConversationSecurity.READY}
             }
             compose.setContent {KoinApplication(application={modules(dependencies)}) {
-                SriSuTheme {CoupleChatScreen(room,{}, {}, {_,_->}, {},viewModel)}
+                SriSuTheme {CoupleChatScreen(room,{}, {}, {_,_->}, {},viewModel,onOpenMedia={_,_,_,_->})}
             }}
             visible("Message") // The subtitle may already show the partner's live activity.
             compose.runOnIdle {assertTrue(compose.activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)}

@@ -135,3 +135,25 @@ feature navigation; completed partner flows are removed before entering chat.
 The navigation state remains scoped to the current session and couple membership.
 See [the consolidation record](../integration/core-consolidation.md) for preserved
 source commits, conflict decisions, paired PRs and validation limits.
+
+### iOS typed section arguments (2026-10-10)
+
+Compose Navigation 2.9.1 does not infer enum `NavType`s on non-Android targets.
+`coupleProfileGraph` registers a `CoupleSection` type mapping that saves and
+restores the enum by name, so typed profile routes work on iOS as well as Android.
+`compileKotlinIosSimulatorArm64` passed after this fix; device navigation was not
+run.
+
+### Dedicated private media viewer (2026-10-12)
+
+`ChatNav.MediaViewer` is a full destination in BaseNavigation's chat graph, carrying
+room/message/attachment IDs and a draft flag. It resolves bytes through the current
+account's existing encrypted repository. Photos fit/zoom; video embeds the native
+player with shared controls. Voice remains inline. Chat hands off audio ownership
+and preserves its list/draft/reply state; back pops the viewer to the original entry.
+No bitmap, native controller, token or private message body is serialized in a route.
+Account/room matching, lifecycle cleanup, loading and unavailable/retry states are
+owned by `ChatMediaViewModel` and the existing repository/player boundary.
+The selected unit/navigation tests and iOS native route/back checks passed; native
+Android and interactive back gestures remain unverified. See the current evidence
+and source references in [the chat UI record](couple-chat-ui.md).

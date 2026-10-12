@@ -21,19 +21,8 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
         private set
     var preparing by mutableStateOf(false)
         private set
-    var playing by mutableStateOf(false)
-        private set
-    var position by mutableLongStateOf(0)
-        private set
-    var duration by mutableLongStateOf(0)
-        private set
-    var speed by mutableFloatStateOf(1f)
-        private set
-    var playbackLoading by mutableStateOf(false)
-        private set
-    var playbackError by mutableStateOf<String?>(null)
-        private set
-    private var playbackEnded = false
+    val player = ChatPlaybackOwner(native, scope, repository.state, repository::voicePlayed)
+    private var relinquished = false
     private var sendRecording = false
     private var generation = 0
 
@@ -87,6 +76,9 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
     }
     fun pick(source: String) {
         if (preparing || recording) return
+        // Pause inline audio before the system picker stops our foreground view.
+        // Otherwise that lifecycle stop would invalidate the picker callback.
+        dismiss()
         val state=repository.state.value; val current=++generation
         sendRecording=false; preparing=true
         native.pick(source) {raw,bytes -> receive(raw,bytes,current,state.accountId,state.roomId)}
@@ -94,6 +86,7 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
     fun record(lock: Boolean = false) {
         if (preparing || recording) return
         val state=repository.state.value; val current=++generation
+        dismiss()
         sendRecording=false; locked=lock; elapsed=0; levels=emptyList(); preparing=true
         native.startRecording {raw,bytes -> receive(raw,bytes,current,state.accountId,state.roomId)}
     }
@@ -103,35 +96,20 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
         native.stopRecording(discard)
         recording=false; preparing=false; locked=false
     }
-    fun play(opened: OpenedChatMedia) {
-        position=0; duration=0; speed=1f; playing=false; playbackLoading=true; playbackError=null; playbackEnded=false
-        native.play(opened.bytes,opened.media.mime) {raw -> scope.launch(Dispatchers.Main) {
-            if(repository.state.value.openedMedia?.media?.descriptor?.id != opened.media.descriptor.id) return@launch
-            try {
-                val value=ChatJson.parseToJsonElement(raw).jsonObject
-                when(value["event"]?.jsonPrimitive?.content) {
-                    "playing" -> { playing=true; playbackLoading=false; playbackEnded=false; if(opened.media.kind=="voice")repository.voicePlayed(opened.messageId) }
-                    "position" -> { position=value["positionMs"]!!.jsonPrimitive.long; duration=value["durationMs"]!!.jsonPrimitive.long }
-                    "paused" -> playing=false
-                    "ended" -> {playing=false;playbackEnded=true;position=duration}
-                    "error" -> { playing=false; playbackLoading=false; playbackError="This media could not play. Try again." }
-                }
-            } catch (_: Exception) { playing=false; playbackLoading=false; playbackError="Playback could not continue. Try again." }
-        } }
+    fun play(opened: OpenedChatMedia) = player.play(opened)
+    fun openVoice(messageId: String, attachmentId: String, draft: Boolean = false) {
+        if (player.activeMessageId == messageId && player.activeAttachmentId == attachmentId && player.playbackError == null) player.togglePlayback()
+        else if (draft) repository.openDraftAttachment(attachmentId)
+        else repository.openAttachment(messageId, attachmentId)
     }
-    fun togglePlayback() {
-        if(playbackEnded) {native.playback("seek",0.0);playbackEnded=false}
-        native.playback(if(playing) "pause" else "resume",0.0)
-    }
-    fun seek(fraction: Float) { native.playback("seek",duration*fraction.toDouble()) }
-    fun speed() { speed=when(speed) {1f->1.5f;1.5f->2f;else->1f}; native.playback("speed",speed.toDouble()) }
-    fun dismiss() { stopPlayer(); repository.dismissMedia() }
-    fun stopPlayer() { native.playback("stop",0.0); playing=false; position=0; duration=0; speed=1f; playbackLoading=false; playbackError=null; playbackEnded=false }
+    fun dismiss() { player.stop(); repository.dismissMedia() }
     fun export(opened: OpenedChatMedia) { native.export(opened.bytes,opened.media.mime) { result ->
         if(result=="error") scope.launch(Dispatchers.Main) { repository.mediaError("The export could not be completed.") }
     } }
-    fun interrupt() { generation++; native.interrupt(); recording=false; locked=false; preparing=false; playing=false; sendRecording=false }
-    fun close() { interrupt(); native.close() }
+    fun resumeConversation() { relinquished=false }
+    fun handoffToViewer() { interrupt(); relinquished=true }
+    fun interrupt() { generation++; player.stop(); if(!relinquished)repository.dismissMedia(); native.interrupt(); recording=false; locked=false; preparing=false; sendRecording=false }
+    fun close() { player.close(); interrupt(); native.close() }
 }
 
 @Composable internal fun rememberChatMediaController(repository: ConversationRepository): ChatMediaController {
@@ -142,7 +120,7 @@ internal class ChatMediaController(private val native: NativeChatMedia, private 
         val observer=LifecycleEventObserver {_,event -> if(event==Lifecycle.Event.ON_STOP) {
             // Opening a system picker also stops the activity. It has no active
             // recording/player; preserve only that explicitly requested callback.
-            if(controller.recording || controller.playing) controller.interrupt()
+            if(controller.recording || controller.player.activeMessageId != null || repository.state.value.mediaLoading) controller.interrupt()
         }}
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); controller.close() }
