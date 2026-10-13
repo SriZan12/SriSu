@@ -128,6 +128,11 @@ configured. Use an account with the appropriate enrolled-team access to continue
 No enrollment purchase, agreement acceptance or Apple credential changes were made.
 See Apple's [account access documentation](https://developer.apple.com/help/account/basics/account-landing-page/).
 
+The user deferred Apple enrollment/APNs on 2026-10-13. Continue Android and backend
+deployment/testing independently. The current Docker host is another Windows laptop
+using Docker Desktop/WSL; its access, rollout and credential requirements are in the
+paired backend's `docs/notifications.md`, under "Windows Docker Desktop host".
+
 Google Cloud sender is configured as
 `srisu-notification-sender@srisu-ef431.iam.gserviceaccount.com` with custom role
 `projects/srisu-ef431/roles/srisuNotificationSender`, containing only
@@ -261,8 +266,13 @@ above). Apple/APNs configuration remains blocked by that access requirement.
 - Frontend implementation: `af6033a0a0fd37a960ef22762b15cac62eb8acf6`.
 - Backend implementation plus final worker regressions: `3245510566e0872e4ec3da0c9a7e7476db66cfe6`
   (main implementation `85c0e3bff79b3cd2d6977eb7bee6316fe62221b6`).
+- Backend Windows deployment guidance and Docker credential exclusions follow in
+  `69cdb2c`.
 - This handoff documentation follows those implementation commits. Both branches are
-  local `codex/notifications-crashlytics-v1`; nothing has been pushed or deployed.
+  `codex/notifications-crashlytics-v1`; publication is separate from deployment.
+  The Windows Docker rollout and physical Android acceptance checks are pending.
+- Published branch locations: [frontend](https://github.com/SriZan12/SriSu/tree/codex/notifications-crashlytics-v1)
+  and [backend](https://github.com/SrizanKhadka/SriSu/tree/codex/notifications-crashlytics-v1).
 - Frontend worktree: `/Users/srijan/.codex/worktrees/notifications-crashlytics-v1/SriSu`.
 - Backend worktree: `/Users/srijan/studioprojects/SriSu-backend-notifications`.
 
