@@ -118,6 +118,16 @@ upload an authorized APNs key/certificate through the trusted UI if absent. Do n
 rotate/revoke a shared key or commit `.p8`, `.p12`, or provisioning files. Apple terms,
 account enrollment and key authorization require the account holder.
 
+On 2026-10-13, Apple sign-in succeeded, but opening Certificates, Identifiers &
+Profiles returned **Access Unavailable**: access requires enrollment in a developer
+program or membership of an enrolled organization's team. The account page showed
+the invitation to join the Apple Developer Program and no program resources.
+Consequently, the configured Xcode team ID is not proof of active program access;
+App ID push capability, signing profiles and APNs keys could not be inspected or
+configured. Use an account with the appropriate enrolled-team access to continue.
+No enrollment purchase, agreement acceptance or Apple credential changes were made.
+See Apple's [account access documentation](https://developer.apple.com/help/account/basics/account-landing-page/).
+
 Google Cloud sender is configured as
 `srisu-notification-sender@srisu-ef431.iam.gserviceaccount.com` with custom role
 `projects/srisu-ef431/roles/srisuNotificationSender`, containing only
@@ -242,10 +252,9 @@ configuration and physical-device reporting are also unverified.
 
 No Android device or emulator executable was available. No physical iPhone test,
 real FCM/APNs round trip, cloud Crashlytics issue inspection, signed release archive
-or symbol upload was completed. Apple enrollment navigation stalled for the account
-holder; Apple registration/membership and APNs credentials remain unverified. The
-account holder was directed to the Apple Developer account page in Safari, without
-accepting agreements or purchasing membership on their behalf.
+or symbol upload was completed. After the account holder completed Apple sign-in,
+the developer resources page explicitly denied program access (see setup evidence
+above). Apple/APNs configuration remains blocked by that access requirement.
 
 ## Paired implementation commits
 
