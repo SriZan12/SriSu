@@ -7,9 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1C81D6F669B7BB6D2FFCCEB3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 16D66C9411832E1B7D572C76 /* FirebaseCore */; };
+		445C052442747365B7CB2124 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 108F0D6F9A31550A5E7E3D81 /* FirebaseCrashlytics */; };
 		6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 55529C763A875DDBD84BFC94 /* Foundation.framework */; };
 		7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86666EF693A88E393B6642E4 /* ChatMediaTests.swift */; };
 		AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */; };
+		B7C4F6137AC8345E71E92063 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = AC813CE66F97994D9BE8A812 /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,7 +38,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B99700CA2DC9B8D800C7335B /* Exceptions for "iosApp" folder in "iosApp" target */ = {
+		B99700CA2DC9B8D800C7335B /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -49,22 +52,18 @@
 		B9DA97B32DC1472C00A4DA20 /* iosApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				B99700CA2DC9B8D800C7335B /* Exceptions for "iosApp" folder in "iosApp" target */,
+				B99700CA2DC9B8D800C7335B /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
 		};
 		B9DA98002DC14AA900A4DA20 /* Configuration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Configuration;
 			sourceTree = "<group>";
 		};
 		CCD00CE10000000000000001 /* SecureChat */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = SecureChat;
 			sourceTree = "<group>";
 		};
@@ -76,6 +75,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */,
+				1C81D6F669B7BB6D2FFCCEB3 /* FirebaseCore in Frameworks */,
+				445C052442747365B7CB2124 /* FirebaseCrashlytics in Frameworks */,
+				B7C4F6137AC8345E71E92063 /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -158,6 +160,8 @@
 				ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */,
 			);
 			name = SriSuChatTests;
+			packageProductDependencies = (
+			);
 			productName = SriSuChatTests;
 			productReference = 06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -172,6 +176,8 @@
 				B9DA97AE2DC1472C00A4DA20 /* Frameworks */,
 				B9DA97AF2DC1472C00A4DA20 /* Resources */,
 				6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */,
+				5671ECFC90E7751550C207A7 /* SriSu Firebase release validation and symbols */,
+				0AFDA97E6D8E9338169BFD24 /* SriSu Firebase release validation and symbols */,
 			);
 			buildRules = (
 			);
@@ -182,6 +188,11 @@
 				B9DA97B32DC1472C00A4DA20 /* iosApp */,
 			);
 			name = iosApp;
+			packageProductDependencies = (
+				16D66C9411832E1B7D572C76 /* FirebaseCore */,
+				108F0D6F9A31550A5E7E3D81 /* FirebaseCrashlytics */,
+				AC813CE66F97994D9BE8A812 /* FirebaseMessaging */,
+			);
 			productName = iosApp;
 			productReference = B9DA97B12DC1472C00A4DA20 /* SriSu.app */;
 			productType = "com.apple.product-type.application";
@@ -198,6 +209,11 @@
 				TargetAttributes = {
 					B9DA97B02DC1472C00A4DA20 = {
 						CreatedOnToolsVersion = 16.2;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -210,6 +226,9 @@
 			);
 			mainGroup = B9DA97A82DC1472C00A4DA20;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B9DA97B22DC1472C00A4DA20 /* Products */;
 			projectDirPath = "";
@@ -239,6 +258,36 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		0AFDA97E6D8E9338169BFD24 /* SriSu Firebase release validation and symbols */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "SriSu Firebase release validation and symbols";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/../tools/firebase-symbols.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		5671ECFC90E7751550C207A7 /* SriSu Firebase release validation and symbols */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "SriSu Firebase release validation and symbols";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/../tools/firebase-symbols.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -247,9 +296,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -398,7 +451,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -489,11 +542,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/SriSu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
 				DEVELOPMENT_TEAM = 46U64W55Y8;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
@@ -513,7 +569,12 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.srisu.SriSu;
+				SRISU_APS_ENVIRONMENT = development;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_VERSION = 5.0;
@@ -527,11 +588,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/SriSu.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
 				DEVELOPMENT_TEAM = 46U64W55Y8;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
@@ -551,6 +615,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
+				SRISU_APS_ENVIRONMENT = production;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_VERSION = 5.0;
@@ -589,6 +658,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 13.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		108F0D6F9A31550A5E7E3D81 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		16D66C9411832E1B7D572C76 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		AC813CE66F97994D9BE8A812 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B9DA97A92DC1472C00A4DA20 /* Project object */;
 }

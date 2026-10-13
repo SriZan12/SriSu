@@ -135,3 +135,10 @@ feature navigation; completed partner flows are removed before entering chat.
 The navigation state remains scoped to the current session and couple membership.
 See [the consolidation record](../integration/core-consolidation.md) for preserved
 source commits, conflict decisions, paired PRs and validation limits.
+
+## Notification integration (2026-10-13)
+
+[Notifications V1](notifications.md) adds authenticated, current-state tap routing and
+privacy-safe alerts for the implemented transitions. Profile settings include device
+permission, server delivery preferences/mute and separate opt-in crash diagnostics.
+See that guide for contract compatibility, backend-first rollout and verification limits.

@@ -82,3 +82,10 @@ bytecode and compileSdk36. D:-based ignored Gradle/temp/test caches avoid this
 machine's full C: drive; do not delete user files to make room.
 Core desugaring is explicitly updated from 1.1.6 to 2.1.5 for compileSdk36 after
 the lint compatibility error; unrelated dependency upgrades are not included.
+
+## Notification integration (2026-10-13)
+
+[Notifications V1](notifications.md) adds authenticated, current-state tap routing and
+privacy-safe alerts for the implemented transitions. Profile settings include device
+permission, server delivery preferences/mute and separate opt-in crash diagnostics.
+See that guide for contract compatibility, backend-first rollout and verification limits.

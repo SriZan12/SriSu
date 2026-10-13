@@ -35,6 +35,9 @@ private fun CoupleChatContent(roomId: String?, onBack: () -> Unit, onFindPartner
     val repository = viewModel.conversation
     val media = rememberChatMediaController(repository)
     val state by viewModel.state.collectAsStateWithLifecycle()
+    com.srisu.srisu.features.notifications.ReportNotificationScreen(
+        state.roomId?.let { com.srisu.srisu.navigation.graph.ChatNav.CoupleConversation(it) }
+    )
     ProtectConversation()
     DisposableEffect(viewModel, roomId) { viewModel.enter(roomId); onDispose { viewModel.leave() } }
     val list = rememberLazyListState()

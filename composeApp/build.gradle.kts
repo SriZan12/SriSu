@@ -10,9 +10,15 @@ plugins {
     kotlin("plugin.serialization")
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    id("com.google.gms.google-services") version "4.5.0" apply false
+    id("com.google.firebase.crashlytics") version "3.0.8"
 }
 
-val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.73:8000/")
+// Local app configuration is downloaded from the existing Firebase project.
+val firebaseConfigured = file("google-services.json").exists()
+if (firebaseConfigured) apply(plugin = "com.google.gms.google-services")
+
+val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.69:8000/")
 val apiEnvironment = providers.gradleProperty("srisu.environment").orElse("development")
 val chatAppEvaluation = providers.gradleProperty("chatAppEvaluation").orNull == "true"
 val environmentSources = layout.buildDirectory.dir("generated/srisuEnvironment/commonMain")
@@ -28,7 +34,7 @@ abstract class GenerateEnvironment : DefaultTask() {
         require(environment.get() == "development" || url.scheme == "https")
         val file = destination.get().file("com/srisu/srisu/core/config/BuildEnvironment.kt").asFile
         file.parentFile.mkdirs()
-        file.writeText("package com.srisu.srisu.core.config\ninternal object BuildEnvironment { const val baseUrl = \"${url.toASCIIString()}\"; const val development = ${environment.get() == "development"} }\n")
+        file.writeText("package com.srisu.srisu.core.config\ninternal object BuildEnvironment { const val baseUrl = \"${url.toASCIIString()}\"; const val development = ${environment.get() == "development"}; const val name = \"${environment.get()}\" }\n")
     }
 }
 abstract class ValidateReleaseEnvironment : DefaultTask() {
@@ -40,6 +46,12 @@ abstract class ValidateReleaseEnvironment : DefaultTask() {
         }
     }
 }
+abstract class ValidateAndroidFirebase : DefaultTask() {
+    @get:Input abstract val configured: Property<Boolean>
+    @TaskAction fun validate() {
+        require(configured.get()) { "Android Release requires the registered Firebase google-services.json." }
+    }
+}
 val generateEnvironment by tasks.registering(GenerateEnvironment::class) {
     baseUrl.set(apiBaseUrl)
     environment.set(apiEnvironment)
@@ -48,6 +60,9 @@ val generateEnvironment by tasks.registering(GenerateEnvironment::class) {
 val validateReleaseEnvironment by tasks.registering(ValidateReleaseEnvironment::class) {
     baseUrl.set(apiBaseUrl)
     environment.set(apiEnvironment)
+}
+val validateAndroidFirebase by tasks.registering(ValidateAndroidFirebase::class) {
+    configured.set(firebaseConfigured)
 }
 
 room { schemaDirectory("$projectDir/schemas") }
@@ -77,6 +92,10 @@ kotlin {
         commonMain { kotlin.srcDir(environmentSources) }
         
         androidMain.dependencies {
+            implementation(project.dependencies.platform("com.google.firebase:firebase-bom:35.0.0"))
+            implementation("com.google.firebase:firebase-messaging")
+            implementation("com.google.firebase:firebase-crashlytics")
+            implementation("com.google.firebase:firebase-crashlytics-ndk")
             implementation(project(":secureChatNative"))
             // Maintained MP4 remuxer with bounded in-memory output; no plaintext temp video.
             implementation("androidx.media3:media3-muxer:1.10.1")
@@ -253,6 +272,7 @@ tasks.configureEach {
     if (name.startsWith("compile") || name.startsWith("ksp")) dependsOn(generateEnvironment)
     if ((name.startsWith("assemble") || name.startsWith("bundle") || name.startsWith("link")) && name.contains("Release")) {
         dependsOn(validateReleaseEnvironment)
+        if (name.startsWith("assemble") || name.startsWith("bundle")) dependsOn(validateAndroidFirebase)
     }
 }
 

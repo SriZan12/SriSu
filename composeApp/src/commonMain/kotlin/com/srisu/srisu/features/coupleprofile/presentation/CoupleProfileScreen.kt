@@ -36,6 +36,12 @@ import srisu.composeapp.generated.resources.*
 @Composable
 fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onMessage: (() -> Unit)? = null) {
     val state by vm.state.collectAsState()
+    com.srisu.srisu.features.notifications.ReportNotificationScreen(state.profile?.id?.let { id ->
+        com.srisu.srisu.features.coupleprofile.navigation.CoupleSection.entries.firstOrNull { it.name == state.page.name }?.let { section ->
+            com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestination(id, section,
+                if (state.page == ProfilePage.PLAN) state.plans.firstOrNull()?.id else null)
+        }
+    })
     var profileMenu by remember { mutableStateOf(false) }
     DisposableEffect(coupleId, initialPage, planId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
     val back = { if (vm.back()) onBack() }

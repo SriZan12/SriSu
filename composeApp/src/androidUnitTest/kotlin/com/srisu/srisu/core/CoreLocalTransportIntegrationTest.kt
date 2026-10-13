@@ -76,6 +76,15 @@ class CoreLocalTransportIntegrationTest {
                     assertEquals("complete", restored.response?.progress?.nextStep)
                 }
                 assertEquals(400, assertIs<NetworkAPIResult.Error<*>>(auth.updateGender("NONE").result).failure.status)
+                val notifications=com.srisu.srisu.features.notifications.NotificationApi(client,environment)
+                val registered=assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.InstallationBinding?>>(notifications.register(
+                    com.srisu.srisu.features.notifications.InstallationRequest(java.util.UUID.randomUUID().toString(),"s".repeat(48),1,"android","fid","synthetic-integration-fid",true)).result)
+                assertEquals(1L,registered.response?.version)
+                val prefs=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.preferences().result).response)
+                val changed=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.save(
+                    com.srisu.srisu.features.notifications.PreferenceWrite(prefs.revision,false,true,true,"1h")).result).response)
+                assertFalse(changed.push);assertNotNull(changed.muteUntil)
+                assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(notifications.resolve(java.util.UUID.randomUUID().toString()).result).failure.status)
                 val connections = ConnectionApiService(client)
                 assertIs<NetworkAPIResult.Success<*>>(connections.getSentLoveRequests(20, 1).result)
                 assertIs<NetworkAPIResult.Success<*>>(connections.getLoveRequests(1, 20).result)

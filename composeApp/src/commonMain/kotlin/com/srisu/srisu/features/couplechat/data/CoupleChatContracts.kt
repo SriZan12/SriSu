@@ -15,7 +15,7 @@ data class CoupleChatRoom(
 )
 
 @Serializable
-data class CoupleChatSnapshot(val contract: String, val room: CoupleChatRoom?, val devices: ChatDevices? = null)
+data class CoupleChatSnapshot(val contract: String, val room: CoupleChatRoom?, val devices: ChatDevices? = null, val capabilities: List<String> = emptyList())
 
 @Serializable
 data class ChatPublicKey(val id: Int, @SerialName("public_key") val publicKey: String, val signature: String? = null)
@@ -75,6 +75,7 @@ data class ChatBundle(
     @SerialName("kyber_prekey") val kyberPrekey: ChatPublicKey,
 )
 
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 data class ChatEnvelope(
     @SerialName("device_id") val deviceId: String,
@@ -87,6 +88,8 @@ data class ChatEnvelope(
     @SerialName("signal_type") val signalType: Int,
     val ciphertext: String,
     val attachments: List<String> = emptyList(),
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    @SerialName("notification_plan_id") val notificationPlanId: Long? = null,
 )
 
 @Serializable

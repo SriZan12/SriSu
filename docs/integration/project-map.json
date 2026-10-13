@@ -41,7 +41,21 @@
       "backend_guide": "docs/couple-chat.md",
       "challenges": "versioned-references-unavailable-pending-future-domain-per-user",
       "consolidation": "docs/integration/core-consolidation.md",
-      "related_prs": ["SriZan12/SriSu#23", "SriZan12/SriSu#24", "SrizanKhadka/SriSu#39"]
+      "related_prs": [
+        "SriZan12/SriSu#23",
+        "SriZan12/SriSu#24",
+        "SrizanKhadka/SriSu#39"
+      ]
+    },
+    "notifications": {
+      "frontend_branch": "codex/notifications-crashlytics-v1",
+      "backend_branch": "codex/notifications-crashlytics-v1",
+      "contract": "notifications-1",
+      "status": "implemented-local-validation-provider-device-and-docker-deployment-pending",
+      "flow": "docs/flows/notifications.md",
+      "backend_guide": "docs/notifications.md",
+      "frontend_base": "9f1a7708f1aa9785fb6e046227e134f23e1ec9f1",
+      "backend_base": "2c4f312b3cb0327d7d298615028370514db2feb7"
     }
   }
 }

@@ -467,7 +467,10 @@ class ConversationRepository(
                 }))
             } ?: continue
             try {
-                val acceptance = request(stamp, db.roomId) { api.send(db.roomId, wire) }
+                val acceptance = request(stamp, db.roomId) { api.send(db.roomId, wire.copy(notificationPlanId =
+                    if ("notification-plan-1" in connected?.capabilities.orEmpty())
+                        ((operation.content.content as? ChatContent.Card)?.card as? ChatCard.Plan)?.planId
+                    else null)) }
                 if (acceptance.operationId != operation.id) throw SerializationException("Wrong acknowledgement")
                 localMutex.withLock {
                     db.accepted(operation, acceptance)

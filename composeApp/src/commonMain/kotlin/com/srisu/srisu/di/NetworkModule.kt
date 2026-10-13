@@ -17,6 +17,8 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
+    single { com.srisu.srisu.features.notifications.NotificationApi(get(), get()) }
+    single { com.srisu.srisu.features.notifications.NotificationRepository(get(), get(), get()) } onClose { it?.close() }
     single { com.srisu.srisu.features.couplechat.data.ConversationRepository(get(), get(), get(), get(), get()) } onClose { it?.close() }
     single { com.srisu.srisu.features.couplechat.data.CoupleChatApi(get(), get()) }
     single { com.srisu.srisu.features.couplechat.data.CoupleChatRepository(get(),

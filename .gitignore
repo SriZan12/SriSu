@@ -23,3 +23,13 @@ build-couple-chat-native.log
 build-chat-*.log
 build-couple-chat-unit.log
 build-production-engine-android.log
+
+# Downloaded Firebase app configuration and Apple signing material
+**/google-services.json
+**/GoogleService-Info.plist
+*.p8
+*.p12
+*.mobileprovision
+
+**/.build/
+**/.swiftpm/

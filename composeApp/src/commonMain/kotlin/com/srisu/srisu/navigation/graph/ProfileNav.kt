@@ -17,6 +17,7 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.ExperimentalUuidApi
 
 sealed interface ProfileNav : Route {
+    @Serializable data object NotificationSettings : ProfileNav
     @Serializable data object EditProfile : ProfileNav
     @Serializable data class InterestScreen(val requester: String, val requestId: String) : ProfileNav
 }
@@ -25,6 +26,9 @@ private const val RESULT = "interest.result.v2"
 
 @OptIn(ExperimentalUuidApi::class)
 fun NavGraphBuilder.profileGraph(controller: NavController) {
+    composable<ProfileNav.NotificationSettings> { entry ->
+        com.srisu.srisu.features.notifications.NotificationSettings { AppNavigator(controller,entry).back() }
+    }
     composable<ProfileNav.EditProfile> { entry ->
         val vm = koinViewModel<EditProfileViewModel>()
         val result by entry.savedStateHandle.getStateFlow<String?>(RESULT, null).collectAsState()

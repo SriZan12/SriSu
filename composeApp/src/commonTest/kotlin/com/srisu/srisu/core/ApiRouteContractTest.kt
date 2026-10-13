@@ -88,6 +88,11 @@ class ApiRouteContractTest {
             check("couple-fave-remove") { ResultHandler(couple.fave(1,false)) }
             expected = "couple-profile-cover-read"; couple.image(environment.baseUrl + "api/social/profiles/1/cover/")
             expected = "couple-profile-member-photo"; couple.image(environment.baseUrl + "api/social/profiles/1/members/1/photo/")
+            val notifications = com.srisu.srisu.features.notifications.NotificationApi(client,environment)
+            check("notification-register") {notifications.register(com.srisu.srisu.features.notifications.InstallationRequest(room,"synthetic-proof",1,"android","fid","synthetic-fid",true))}
+            check("notification-preferences") {notifications.preferences()}
+            check("notification-preferences-save") {notifications.save(com.srisu.srisu.features.notifications.PreferenceWrite(1,true,true,true))}
+            check("notification-resolve") {notifications.resolve(room)}
             val expired = "synthetic." + Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
                 .encode("""{"exp":1,"sid":"synthetic"}""".encodeToByteArray()) + ".synthetic"
             sessions.saveSession(ApiJson.encodeToString(Session(id = 1, access = expired, refresh = "synthetic-refresh")), SESSION_KEY)

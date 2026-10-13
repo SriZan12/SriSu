@@ -17,7 +17,7 @@ private data class OwnChatActivity(val room: String, val device: String, val vis
 sealed interface CoupleChatState {
     data object Loading : CoupleChatState
     data object NotConnected : CoupleChatState
-    data class SetupRequired(val room: CoupleChatRoom, val devices: ChatDevices? = null) : CoupleChatState
+    data class SetupRequired(val room: CoupleChatRoom, val devices: ChatDevices? = null, val capabilities: List<String> = emptyList()) : CoupleChatState
     data class Unavailable(val message: String, val retryable: Boolean) : CoupleChatState
 }
 
@@ -114,7 +114,7 @@ class CoupleChatRepository(
                                         room == null -> CoupleChatState.NotConnected
                                         room.participantIds.size != 2 || stamp.accountId !in room.participantIds -> CoupleChatState.Unavailable("This conversation is unavailable.", false)
                                         // A future server capability alone cannot enable unfinished client cryptography.
-                                        else -> CoupleChatState.SetupRequired(room, snapshot.devices)
+                                        else -> CoupleChatState.SetupRequired(room, snapshot.devices, snapshot.capabilities)
                                     }
                                 }
                                 is NetworkAPIResult.Error -> {

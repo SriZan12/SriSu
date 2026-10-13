@@ -20,6 +20,7 @@ import org.koin.core.annotation.KoinExperimentalAPI
 @Composable
 fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
     KoinMultiplatformApplication(config = createKoinConfiguration()) {
+        val notifications: com.srisu.srisu.features.notifications.NotificationRepository = koinInject()
         val sessions: SessionCoordinator = koinInject()
         val lifetime: ApplicationLifetime = koinInject()
         val session by sessions.state.collectAsState()
