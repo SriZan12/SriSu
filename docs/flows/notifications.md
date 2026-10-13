@@ -216,7 +216,7 @@ configuration and physical-device reporting are also unverified.
   check/migration check and isolated SQLite allowlist (239 tests, 19 skipped because
   SQLite lacks the relevant PostgreSQL behavior).
 - Backend `.venv/bin/python tools/auth_postgres_tests.py --postgres-bin /opt/homebrew/opt/postgresql@17/bin`:
-  **239 passed, no skips**, including duplicate producer and competing worker races.
+  **242 passed, no skips**, including duplicate producer, competing worker, deletion races and both FID/token provider targets.
 - `:composeApp:testDebugUnitTest`: **166 tests, zero failures, one skipped**. The skip
   is the explicit loopback integration test, run separately below. Settings tests cover
   OS denial, failed save preserving confirmed values, reload, diagnostics default-off,
@@ -246,3 +246,17 @@ or symbol upload was completed. Apple enrollment navigation stalled for the acco
 holder; Apple registration/membership and APNs credentials remain unverified. The
 account holder was directed to the Apple Developer account page in Safari, without
 accepting agreements or purchasing membership on their behalf.
+
+## Paired implementation commits
+
+- Frontend implementation: `af6033a0a0fd37a960ef22762b15cac62eb8acf6`.
+- Backend implementation plus final worker regressions: `3245510566e0872e4ec3da0c9a7e7476db66cfe6`
+  (main implementation `85c0e3bff79b3cd2d6977eb7bee6316fe62221b6`).
+- This handoff documentation follows those implementation commits. Both branches are
+  local `codex/notifications-crashlytics-v1`; nothing has been pushed or deployed.
+- Frontend worktree: `/Users/srijan/.codex/worktrees/notifications-crashlytics-v1/SriSu`.
+- Backend worktree: `/Users/srijan/studioprojects/SriSu-backend-notifications`.
+
+The original checkout paths retain their previous branches and uncommitted files.
+Use the worktree paths above for this implementation and set `SRISU_BACKEND_DIR` when
+using the cross-repository workspace checks.
