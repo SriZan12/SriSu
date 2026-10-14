@@ -5,12 +5,21 @@ import com.srisu.srisu.navigation.graph.ChatNav
 import com.srisu.srisu.features.coupleprofile.navigation.*
 import com.srisu.srisu.features.couplechat.data.ChatEnvelope
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import com.srisu.srisu.core.data.remote.ApiJson
 import kotlin.test.*
 
 class NotificationTest {
     private val room="11111111-1111-4111-8111-111111111111"
     private val message="22222222-2222-4222-8222-222222222222"
     @AfterTest fun clear() { NativeNotifications.clear() }
+    @Test fun preferenceSwitchSendsRequiredUnchangedMuteCommand() {
+        val body=ApiJson.encodeToJsonElement(PreferenceWrite(2,false,true,true)).jsonObject
+        assertEquals("unchanged",body.getValue("mute").jsonPrimitive.content)
+        assertEquals(setOf("expected_revision","push","chat","activity","mute"),body.keys)
+    }
     @Test fun strictTypedDestinationsRejectInventedAndIncompleteTargets() {
         assertEquals(ChatNav.PartnerRequests,NotificationDestination("invitations").route())
         assertEquals(ChatNav.CoupleConversation(room,message,"notification"),NotificationDestination("conversation",room,message).route())

@@ -84,6 +84,10 @@ class CoreLocalTransportIntegrationTest {
                 val changed=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.save(
                     com.srisu.srisu.features.notifications.PreferenceWrite(prefs.revision,false,true,true,"1h")).result).response)
                 assertFalse(changed.push);assertNotNull(changed.muteUntil)
+                val toggled=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.save(
+                    com.srisu.srisu.features.notifications.PreferenceWrite(changed.revision,true,false,true)).result).response)
+                assertTrue(toggled.push);assertFalse(toggled.chat)
+                assertEquals(changed.muteUntil,toggled.muteUntil)
                 assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(notifications.resolve(java.util.UUID.randomUUID().toString()).result).failure.status)
                 val connections = ConnectionApiService(client)
                 assertIs<NetworkAPIResult.Success<*>>(connections.getSentLoveRequests(20, 1).result)

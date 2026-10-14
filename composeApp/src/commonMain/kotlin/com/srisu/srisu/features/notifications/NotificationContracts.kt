@@ -17,9 +17,12 @@ import com.srisu.srisu.features.coupleprofile.navigation.*
     @SerialName("mute_forever") val muteForever: Boolean = false, val revision: Long = 1,
     val capabilities: List<String> = emptyList(),
 )
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable data class PreferenceWrite(
     @SerialName("expected_revision") val expectedRevision: Long,
-    val push: Boolean, val chat: Boolean, val activity: Boolean, val mute: String = "unchanged",
+    val push: Boolean, val chat: Boolean, val activity: Boolean,
+    // The server requires an explicit command, including when only a switch changes.
+    @kotlinx.serialization.EncodeDefault val mute: String = "unchanged",
 )
 @Serializable data class NotificationDestination(
     val kind: String, @SerialName("room_id") val roomId: String? = null,
