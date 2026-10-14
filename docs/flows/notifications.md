@@ -1,6 +1,6 @@
 # Notifications and crash diagnostics V1
 
-Implementation record, 2026-10-13. The user approved the [architecture plan](../architecture/notifications-crashlytics-plan.md).
+Implementation and deployment record, updated 2026-10-14. The user approved the [architecture plan](../architecture/notifications-crashlytics-plan.md).
 Both repositories use `codex/notifications-crashlytics-v1`, branched from fresh
 `dev-core-architecture`: frontend `9f1a7708f1aa9785fb6e046227e134f23e1ec9f1`, backend
 `2c4f312b3cb0327d7d298615028370514db2feb7`. Existing primary checkouts and their
@@ -203,26 +203,99 @@ The Android probe Activity is absent from Release and iOS probe code is `#if DEB
 
 ## Verification record and remaining acceptance checks
 
-Automated tests use synthetic accounts and provider replacements; no production DB.
-See the implementation handoff below for final command results. Still require real
-Android/iOS device testing and deployed matching backend:
+Unit/server tests use synthetic accounts and provider replacements. The separate
+live Android test below uses real FCM with synthetic accounts in its own database.
+The matching backend is deployed. Remaining device/release acceptance coverage:
 
-- Permission grant, denial, later settings change; foreground/background/terminated;
-  Android force-stop and iOS force-quit/Focus behavior; no second foreground OS alert.
+- Physical-device permission denial and later settings changes, terminated app,
+  Android force-stop and iOS force-quit/Focus behavior. Android permission grant,
+  foreground/background delivery and no duplicate foreground OS alert passed on
+  the API 35 emulator.
 - Same/different conversation suppression, tap before login, exact message/Plan anchor,
-  deleted content, expired invitation alert and ended/replaced relationship.
-- FID/token rotation, provider Unregistered, expired session, offline logout, account
-  switching, reinstall/Keychain retention and active encrypted-device replacement.
+  deleted content, expired invitation alert and ended/replaced relationship. The
+  invitation PendingIntent, MainActivity launch, authorized typed destination,
+  unrelated-user denial and rejected-invitation stale tap passed on Android.
+- FID/token rotation, provider Unregistered, expired session, offline logout,
+  reinstall/Keychain retention and active encrypted-device replacement on devices.
+  Registered FID delivery, online logout and account-switch fencing passed on Android.
 - Two installations receiving general activity, only active encrypted device receiving
   chat, mute/push/category preferences, retries, coalescing, worker restart and no backlog.
-- Controlled native fatal/nonfatal reports for both apps, diagnostics off, no sensitive
-  custom fields, signed-release mapping/dSYM/native-symbol validation.
+- iOS controlled fatal/nonfatal reports and signed-release mapping/dSYM/native-symbol
+  validation. Android debug fatal/nonfatal cloud reports and their custom fields were
+  inspected; diagnostics default-off and clearing on logout passed on the emulator.
+  Physical-device opt-out/upload races remain a release acceptance check.
 
-The public existing LAN backend at `192.168.1.69:8000` responded, but no Docker CLI,
-Docker daemon connection or authenticated remote-host management is available on this
-Mac. Its notification migrations/worker are **not deployed**. Do not use this endpoint
-for synthetic writes or infer current deployment from HTTP availability. Apple/APNs
-configuration and physical-device reporting are also unverified.
+On **2026-10-14**, backend implementation
+`784c5aface38e862bb5dae9e7379c515c761a73f` was deployed to the Windows Docker Desktop
+host at `192.168.1.69:8000` through verified SSH access. The separate deployment
+checkout preserves the original checkout, environment, PostgreSQL volume and media.
+A verified host-local database backup preceded the two additive notification
+migrations. Web and the notification worker are running with sending enabled; the
+worker is healthy. Django checks, migration completeness, LAN HTTP 200 for interests
+and HTTP 401 for unauthenticated notification preferences passed. Windows-local
+sender impersonation also passed an FCM validation-only request. See the paired
+backend's `docs/notifications.md` for paths, image identity and rollback information.
+
+Android device tests use the same backend image with a separate disposable PostgreSQL
+database and synthetic accounts on Windows loopback port 8029, forwarded into the
+task's Google Play API 35 emulator. The deployed application's database is not used
+for synthetic writes. Apple/APNs configuration and physical-device reporting remain
+unverified and Apple enrollment is deferred by the user.
+
+### Windows Android delivery and Crashlytics evidence — 2026-10-14
+
+`NotificationDeviceIntegrationTest.registeredFidDeliversPrivatelyAndTapReauthorizes`
+passed (**one live test, 36.457 seconds**) on the isolated Google Play API 35 x86_64
+emulator `srisu_notifications_v1`. It exercised the real native Firebase SDK, shared
+Ktor/repository code, Django producer/outbox and worker, and Google delivery:
+
+- Permission-gated registered FCM FID; diagnostics initially off.
+- Foreground signal with no duplicate OS alert; owner-only resolution, unrelated-user
+  HTTP 404 and stale invitation rejection.
+- Push disabled through the real preference API suppresses delivery; enabling it
+  restores background delivery with the fixed private title/body and expected channel.
+- The real notification PendingIntent opens MainActivity and resolves to the typed
+  partner-request destination. This is not a pixel/UI-layout assertion.
+- Account switching advances registration ownership/version; online logout retires
+  the installation and clears local alerts and diagnostics consent.
+
+Aggregate test-worker status showed **two accepted deliveries and zero active
+installations after logout**; native assertions establish presentation separately
+from that provider acceptance. No synthetic writes used the deployed database.
+The test discovered a missing `mute: "unchanged"` field on ordinary preference writes.
+Frontend fix `58d6322` always serializes it and adds both wire-format and real-HTTP
+regressions, preserving an existing chat mute when another switch changes.
+
+After explicit diagnostic opt-in, a debug-only controlled fatal crash and sanitized
+`TEST_NONFATAL` report were received in Firebase for Android version **1.0 (1)**.
+The actual cloud samples were inspected through Firebase's authenticated Crashlytics
+MCP tools: both have only custom key `environment=development`, with no app-supplied
+user ID, logs or breadcrumbs. The SDK's own installation/device metadata remains
+present; these observations do not imply metadata-free crash reporting. The fatal
+sample resolves to `CrashlyticsProbeActivity.kt:8`; nonfatal frames are deliberately
+sanitized. These are Debug JVM reports, not NDK or signed-release symbol verification.
+
+The opt-in instrumentation test requires a short-lived, app-private
+`files/notification-device-fixture.json` from an isolated backend. It skips if absent
+and rejects other scope/base URL/user-ID ranges. Never store credentials in arguments,
+logs, screenshots or source control. The host runner at
+`D:\SriSu-tools\deployment\device-run.py` resets only database
+`srisu_notifications_e2e`, grants notification permission on the task emulator and
+uses `adb reverse tcp:8029 tcp:8029`. Build its APK with
+`-Psrisu.apiBaseUrl=http://127.0.0.1:8029/`. The fixture is removed by test cleanup.
+The temporary test Compose project and emulator are removed/stopped after verification;
+the deployment remains running.
+
+The normal development APK uses `http://192.168.1.69:8000/`, and is copied to
+`D:\SriSu-tools\SriSu-notifications-debug.apk` on Windows. It is separate from the
+loopback-test APK. Keep the phone and Windows host on the same LAN for manual use.
+
+After the preference fix, Android unit tests reported **166 tests, zero failures,
+one opt-in integration skip**; the newly extended notification-only suite then
+reported **10 passing tests**. Real KMP/Django HTTP/WebSocket integration, Android
+APK assembly, iOS shared-code compilation and theme checks passed. The native live
+test above then passed with the corrected build. Earlier iOS simulator/native build
+evidence below remains valid for its recorded revision; Apple/APNs remains deferred.
 
 ## Commands completed on the implementation branch
 
@@ -231,7 +304,7 @@ configuration and physical-device reporting are also unverified.
   check/migration check and isolated SQLite allowlist (239 tests, 19 skipped because
   SQLite lacks the relevant PostgreSQL behavior).
 - Backend `.venv/bin/python tools/auth_postgres_tests.py --postgres-bin /opt/homebrew/opt/postgresql@17/bin`:
-  **242 passed, no skips**, including duplicate producer, competing worker, deletion races and both FID/token provider targets.
+  **245 passed, no skips**, including duplicate producer, competing worker, deletion races and both FID/token provider targets.
 - `:composeApp:testDebugUnitTest`: **166 tests, zero failures, one skipped**. The skip
   is the explicit loopback integration test, run separately below. Settings tests cover
   OS denial, failed save preserving confirmed values, reload, diagnostics default-off,
@@ -255,22 +328,24 @@ configuration and physical-device reporting are also unverified.
 - Google Cloud FCM validation-only send with the dedicated impersonated identity:
   **accepted**. No device was targeted and no delivery is inferred.
 
-No Android device or emulator executable was available. No physical iPhone test,
-real FCM/APNs round trip, cloud Crashlytics issue inspection, signed release archive
-or symbol upload was completed. After the account holder completed Apple sign-in,
+No physical iPhone test, real APNs round trip, signed release archive or release
+symbol upload was completed. Android emulator delivery and cloud Crashlytics were
+verified on 2026-10-14 as recorded above. After the account holder completed Apple sign-in,
 the developer resources page explicitly denied program access (see setup evidence
 above). Apple/APNs configuration remains blocked by that access requirement.
 
 ## Paired implementation commits
 
-- Frontend implementation: `af6033a0a0fd37a960ef22762b15cac62eb8acf6`.
+- Frontend implementation: `af6033a0a0fd37a960ef22762b15cac62eb8acf6`; Android/shared
+  preference serialization fix and regressions: `58d6322`.
 - Backend implementation plus final worker regressions: `3245510566e0872e4ec3da0c9a7e7476db66cfe6`
   (main implementation `85c0e3bff79b3cd2d6977eb7bee6316fe62221b6`).
-- Backend Windows deployment guidance and Docker credential exclusions follow in
-  `69cdb2c`.
+- Backend Windows deployment guidance and Docker credential exclusions: `69cdb2c`;
+  existing Windows schema compatibility and three regressions: `aceecda`; isolated
+  Docker build tooling and deployed implementation: `784c5af`.
 - This handoff documentation follows those implementation commits. Both branches are
   `codex/notifications-crashlytics-v1`; publication is separate from deployment.
-  The Windows Docker rollout and physical Android acceptance checks are pending.
+  The Windows Docker rollout is complete; physical Android acceptance checks remain.
 - Published branch locations: [frontend](https://github.com/SriZan12/SriSu/tree/codex/notifications-crashlytics-v1)
   and [backend](https://github.com/SrizanKhadka/SriSu/tree/codex/notifications-crashlytics-v1).
 - Frontend worktree: `/Users/srijan/.codex/worktrees/notifications-crashlytics-v1/SriSu`.
