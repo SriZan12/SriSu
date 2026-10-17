@@ -52,6 +52,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -370,8 +372,7 @@ class TrixnityMatrixChatRepository(
         }
         try {
             sessions.ensureCurrent(requestedStamp)
-            val result = remote.create(djangoRoomId)
-            if (operation != roomOperation) return
+            val result = createMatrixSessionWithRetry(djangoRoomId, accountId, operation) ?: return
             val bootstrap = when (result) {
                 is NetworkAPIResult.Success -> requireNotNull(result.response) { "The Matrix session response was empty." }
                 is NetworkAPIResult.Error -> {
@@ -461,6 +462,40 @@ class TrixnityMatrixChatRepository(
             }
         }
     }
+
+    /**
+     * Relationship acceptance commits before asynchronous Matrix provisioning, so
+     * the bootstrap endpoint can briefly return a retryable 503 while the mapping
+     * is becoming ready. Keep that expected window in Loading, but never turn this
+     * into a general write retry: every other status and every non-retryable 503 is
+     * returned immediately to the existing authorization/error handling.
+     */
+    private suspend fun createMatrixSessionWithRetry(
+        djangoRoomId: String,
+        accountId: Long,
+        operation: Long,
+    ): NetworkAPIResult<MatrixSessionDto?>? {
+        repeat(MATRIX_BOOTSTRAP_MAX_ATTEMPTS) { attempt ->
+            currentCoroutineContext().ensureActive()
+            if (!isCurrentBootstrapOperation(operation, accountId)) return null
+
+            val result = remote.create(djangoRoomId)
+
+            // A transport implementation that completes after cancellation must
+            // still be unable to revive a closed room or a different account.
+            currentCoroutineContext().ensureActive()
+            if (!isCurrentBootstrapOperation(operation, accountId)) return null
+            if (!result.isRetryableMatrixBootstrap503() || attempt == MATRIX_BOOTSTRAP_MAX_ATTEMPTS - 1) {
+                return result
+            }
+
+            delay(MATRIX_BOOTSTRAP_RETRY_DELAYS[attempt])
+        }
+        error("Unreachable Matrix bootstrap retry state")
+    }
+
+    private fun isCurrentBootstrapOperation(operation: Long, accountId: Long): Boolean =
+        operation == roomOperation && sessions.stamp().accountId == accountId
 
     private suspend fun ensureClient(
         bootstrap: MatrixSessionDto,
@@ -746,7 +781,7 @@ class TrixnityMatrixChatRepository(
         }
 
         val result = try {
-            remote.create(expected.djangoRoomId)
+            createMatrixSessionWithRetry(expected.djangoRoomId, accountId, operation) ?: return
         } catch (_: SessionChangedException) {
             restartForegroundValidationAfterSessionChange(expected, accountId, allowSameAccountRestart)
             return
@@ -1250,7 +1285,9 @@ class TrixnityMatrixChatRepository(
     )
 
     private companion object {
+        const val MATRIX_BOOTSTRAP_MAX_ATTEMPTS = 4
         const val TIMELINE_SIZE = 100
+        val MATRIX_BOOTSTRAP_RETRY_DELAYS = listOf(1.seconds, 2.seconds, 4.seconds)
         val SECURE_ROOM_TIMEOUT = 30.seconds
         val TIMELINE_EVENT_TIMEOUT = 5.seconds
         val OUTBOX_CANCEL_TIMEOUT = 5.seconds
@@ -1259,6 +1296,9 @@ class TrixnityMatrixChatRepository(
 }
 
 internal enum class MatrixClientReuseDecision { REUSE, REAUTHENTICATE, REPLACE }
+
+private fun NetworkAPIResult<*>.isRetryableMatrixBootstrap503(): Boolean =
+    this is NetworkAPIResult.Error && failure.status == 503 && failure.retryable
 
 internal fun matrixOutboxAllowed(
     secure: Boolean,

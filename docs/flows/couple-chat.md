@@ -1,10 +1,12 @@
 # Couple Chat — Matrix cutover record
 
-Record updated: 2026-10-09. This is the frontend-owned implementation and release
+Record updated: 2026-10-17. This is the frontend-owned implementation and release
 record for Couple Chat. The KMP client is now Matrix-only and the custom Django
-message/WebSocket and ChatV2 transports have been removed. This does not claim a
-live Synapse interoperability run, production deployment, independent security
-review, app-level database encryption, or the complete Figma experience.
+message/WebSocket and ChatV2 transports have been removed. A local Compose
+control-plane interoperability run verified Django authorization, JWT exchange,
+Synapse room policy and membership for two synthetic couples. This does not claim
+a two-client encrypted message exchange, production deployment, independent
+security review, app-level database encryption, or the complete Figma experience.
 
 The accepted direction is defined by
 [ADR 003](../architecture/decisions/003-matrix-couple-chat.md). The rejected
@@ -141,6 +143,17 @@ The bootstrap endpoint is currently
 does not make the retired ChatV2 message API part of the Matrix design. If the
 route is renamed later, introduce the replacement additively and keep one pinned
 contract during client rollout.
+
+Because relationship acceptance commits before asynchronous Matrix room
+provisioning finishes, that endpoint can briefly return HTTP `503` with
+`retryable=true`. The KMP repository keeps the room in its loading state and
+automatically makes at most four total bootstrap attempts, waiting 1, 2 and 4
+seconds between them. The delays are cancellable, and every attempt remains bound
+to the same open-room operation and authenticated account; a room switch, account
+switch, logout or cancellation makes the old retry sequence inert. The client
+does not automatically retry `401`, `403`, `404`, validation failures, other
+statuses, or a non-retryable `503`. Exhaustion renders the normal retryable error
+state and retains the explicit **Retry** action, which begins a new bounded cycle.
 
 The response is private, `no-store`, and short-lived. The Django-issued JWT stays
 in memory while needed for login and must not enter navigation, logs, analytics,

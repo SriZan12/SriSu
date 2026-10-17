@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -190,6 +191,194 @@ class MatrixPresentationTest {
         advanceUntilIdle()
 
         assertIs<MatrixChatAvailability.Error>(repository.observeRoom(ROOM_A).first().availability)
+        repository.close()
+        lifetime.close()
+    }
+
+    @Test
+    fun retryable503StaysLoadingUntilBootstrapReachesTheNextPhase() = runTest(dispatcher) {
+        val sessions = coordinator(1)
+        val lifetime = ApplicationLifetime()
+        val platformStore = BootstrapPhasePlatformStore()
+        var calls = 0
+        val repository = TrixnityMatrixChatRepository(
+            remote = object : MatrixSessionRemote {
+                override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> =
+                    if (++calls == 1) retryableBootstrap503()
+                    else NetworkAPIResult.Success(validMatrixSession())
+            },
+            sessions = sessions,
+            environment = ApiEnvironment("https://api.example.test/"),
+            engine = MockEngine { respondOk() },
+            platformStore = platformStore,
+            lifetime = lifetime,
+        )
+        runCurrent()
+
+        repository.openRoom(ROOM_A)
+        runCurrent()
+        assertEquals(1, calls)
+        assertIs<MatrixChatAvailability.Loading>(repository.observeRoom(ROOM_A).first().availability)
+
+        advanceTimeBy(999)
+        runCurrent()
+        assertEquals(1, calls)
+        assertIs<MatrixChatAvailability.Loading>(repository.observeRoom(ROOM_A).first().availability)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(2, calls)
+        assertEquals(1, platformStore.deviceIdRequests)
+        assertIs<MatrixChatAvailability.Error>(repository.observeRoom(ROOM_A).first().availability)
+
+        repository.close()
+        lifetime.close()
+    }
+
+    @Test
+    fun retryable503ExhaustsAfterFourCallsAndManualRetryStartsANewAttempt() = runTest(dispatcher) {
+        val sessions = coordinator(1)
+        val lifetime = ApplicationLifetime()
+        var calls = 0
+        val repository = TrixnityMatrixChatRepository(
+            remote = object : MatrixSessionRemote {
+                override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> {
+                    calls += 1
+                    return retryableBootstrap503()
+                }
+            },
+            sessions = sessions,
+            environment = ApiEnvironment("https://api.example.test/"),
+            engine = MockEngine { respondOk() },
+            platformStore = UnusedPlatformStore,
+            lifetime = lifetime,
+        )
+        runCurrent()
+
+        repository.openRoom(ROOM_A)
+        runCurrent()
+        assertEquals(1, calls)
+        assertIs<MatrixChatAvailability.Loading>(repository.observeRoom(ROOM_A).first().availability)
+
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertEquals(2, calls)
+        advanceTimeBy(1_999)
+        runCurrent()
+        assertEquals(2, calls)
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(3, calls)
+        advanceTimeBy(3_999)
+        runCurrent()
+        assertEquals(3, calls)
+        advanceTimeBy(1)
+        runCurrent()
+
+        assertEquals(4, calls)
+        assertTrue(
+            assertIs<MatrixChatAvailability.Error>(repository.observeRoom(ROOM_A).first().availability).retryable
+        )
+
+        repository.retryRoom(ROOM_A)
+        runCurrent()
+        assertEquals(5, calls)
+        assertIs<MatrixChatAvailability.Loading>(repository.observeRoom(ROOM_A).first().availability)
+
+        repository.close()
+        lifetime.close()
+    }
+
+    @Test
+    fun non503AndNonRetryableBootstrapFailuresAreNeverAutomaticallyRetried() = runTest(dispatcher) {
+        val failures = listOf(
+            ApiError(
+                kind = NetworkAPIResult.ErrorType.NOT_FOUND,
+                code = "not_found",
+                message = "Conversation unavailable.",
+                status = 404,
+                retryable = true,
+            ),
+            ApiError(
+                kind = NetworkAPIResult.ErrorType.BAD_REQUEST,
+                code = "validation_failed",
+                message = "Invalid bootstrap request.",
+                status = 400,
+                retryable = true,
+            ),
+            ApiError(
+                kind = NetworkAPIResult.ErrorType.SERVER,
+                code = "temporarily_unavailable",
+                message = "Provisioning unavailable.",
+                status = 503,
+                retryable = false,
+            ),
+        )
+
+        failures.forEach { failure ->
+            val sessions = coordinator(1)
+            val lifetime = ApplicationLifetime()
+            var calls = 0
+            val repository = TrixnityMatrixChatRepository(
+                remote = object : MatrixSessionRemote {
+                    override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> {
+                        calls += 1
+                        return NetworkAPIResult.Error(failure)
+                    }
+                },
+                sessions = sessions,
+                environment = ApiEnvironment("https://api.example.test/"),
+                engine = MockEngine { respondOk() },
+                platformStore = UnusedPlatformStore,
+                lifetime = lifetime,
+            )
+            runCurrent()
+
+            repository.openRoom(ROOM_A)
+            advanceUntilIdle()
+
+            assertEquals(1, calls, "Unexpected retry for status ${failure.status}")
+            repository.close()
+            lifetime.close()
+        }
+    }
+
+    @Test
+    fun staleRoomAndAccountOperationsCannotContinueBootstrapRetries() = runTest(dispatcher) {
+        val sessions = coordinator(1)
+        val lifetime = ApplicationLifetime()
+        val rooms = mutableListOf<String>()
+        val repository = TrixnityMatrixChatRepository(
+            remote = object : MatrixSessionRemote {
+                override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> {
+                    rooms += roomId
+                    return retryableBootstrap503()
+                }
+            },
+            sessions = sessions,
+            environment = ApiEnvironment("https://api.example.test/"),
+            engine = MockEngine { respondOk() },
+            platformStore = UnusedPlatformStore,
+            lifetime = lifetime,
+        )
+        runCurrent()
+
+        repository.openRoom(ROOM_A)
+        runCurrent()
+        assertEquals(listOf(ROOM_A), rooms)
+
+        repository.openRoom(ROOM_B)
+        runCurrent()
+        assertEquals(1, rooms.count { it == ROOM_A })
+        assertEquals(1, rooms.count { it == ROOM_B })
+
+        sessions.saveSession(ApiJson.encodeToString(Session(id = 2, access = "synthetic-2")), SESSION_KEY)
+        runCurrent()
+        advanceTimeBy(10_000)
+        runCurrent()
+
+        assertEquals(1, rooms.count { it == ROOM_A })
+        assertEquals(1, rooms.count { it == ROOM_B })
         repository.close()
         lifetime.close()
     }
@@ -396,6 +585,21 @@ class MatrixPresentationTest {
         override suspend fun rotateDeviceId(scope: MatrixStorageScope): String = error("unused")
     }
 
+    private class BootstrapPhasePlatformStore : MatrixPlatformStore {
+        var deviceIdRequests = 0
+        override fun deviceId(scope: MatrixStorageScope): String {
+            deviceIdRequests += 1
+            error("Synthetic stop after successful bootstrap validation")
+        }
+        override fun repositories(scope: MatrixStorageScope): RepositoriesModule = error("unused")
+        override fun media(scope: MatrixStorageScope): MediaStoreModule = error("unused")
+        override suspend fun deleteAccountData(scope: MatrixStorageScope) = Unit
+        override suspend fun deleteAllAccountData(accountId: Long, preserving: MatrixStorageScope?) = Unit
+        override fun recordAccountCleanupRequired(accountId: Long) = Unit
+        override suspend fun reconcileAccountData(currentAccountId: Long?) = Unit
+        override suspend fun rotateDeviceId(scope: MatrixStorageScope): String = error("unused")
+    }
+
     private class FlakyPlatformStore : MatrixPlatformStore {
         val attempts = mutableListOf<Long>()
         var failCleanup = false
@@ -436,6 +640,36 @@ class MatrixPresentationTest {
         }
         override suspend fun rotateDeviceId(scope: MatrixStorageScope): String = error("unused")
     }
+
+    private fun retryableBootstrap503(): NetworkAPIResult<MatrixSessionDto?> = NetworkAPIResult.Error(
+        ApiError(
+            kind = NetworkAPIResult.ErrorType.SERVER,
+            code = "temporarily_unavailable",
+            message = "Secure chat is still being prepared.",
+            status = 503,
+            retryable = true,
+        )
+    )
+
+    private fun validMatrixSession() = MatrixSessionDto(
+        protocolId = "matrix-e2ee-v1",
+        homeserverUrl = "https://matrix.example.test/",
+        roomId = "!couple:matrix.example.test",
+        roomAlias = "#couple:matrix.example.test",
+        membershipEpoch = 1,
+        relationshipId = 9,
+        selfUserId = 1,
+        selfMatrixUserId = "@srisu_1:matrix.example.test",
+        partnerUserId = 2,
+        partnerMatrixUserId = "@srisu_2:matrix.example.test",
+        initiatorUserId = 1,
+        loginType = "org.matrix.login.jwt",
+        loginToken = "synthetic.jwt.value",
+        loginTokenExpiresAt = "2099-01-01T00:00:00Z",
+        loginTokenOneTime = false,
+        refreshTokenEnabled = false,
+        accessTokenExpiresInSeconds = 300,
+    )
 
     private companion object {
         const val ROOM_A = "123e4567-e89b-42d3-a456-426614174000"
