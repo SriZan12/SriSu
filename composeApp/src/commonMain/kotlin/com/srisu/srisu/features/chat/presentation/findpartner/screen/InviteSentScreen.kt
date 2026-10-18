@@ -32,6 +32,13 @@ fun InviteSentScreen(findPartnerViewModel: FindPartnerViewModel, onNavigateBack:
 
     LaunchedEffect(key1 = findPartnerViewModel) { findPartnerViewModel.onScreenEntered() }
 
+    DisposableEffect(findPartnerViewModel, state.sentInvitation?.requestId, state.acceptedPartnerName) {
+        if (state.sentInvitation != null && state.acceptedPartnerName == null) {
+            findPartnerViewModel.startInviteStatusPolling()
+        }
+        onDispose { findPartnerViewModel.stopInviteStatusPolling() }
+    }
+
     LaunchedEffect(key1 = state.sentInvitation) {
         if (state.sentInvitation != null) hadInvitation = true
         else if (hadInvitation && state.acceptedPartnerName == null) onNavigateBack()
@@ -85,7 +92,9 @@ fun InviteSentScreen(findPartnerViewModel: FindPartnerViewModel, onNavigateBack:
                         PartnerLinkHeading(
                             title = if (state.acceptedPartnerName != null) "You’re connected!" else "Invite sent!",
                             subtitle = if (state.acceptedPartnerName != null) "Your partner has accepted your invitation."
-                            else invitation?.let { "Waiting for ${it.name} to join. Open SriSu to check for their response." }
+                            else invitation?.let {
+                                "Waiting for ${it.name} to join. SriSu checks for a few minutes while this screen is open; you can also use Check status."
+                            }
                                 ?: "Check your pending invitation below.",
                         )
 

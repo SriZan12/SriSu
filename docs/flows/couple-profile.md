@@ -5,10 +5,18 @@ branch at 9303cdd. Integration branches remain frontend dev-new-theme and backen
 dev. Backend draft social/models.py was explicitly taken over on 2026-10-01; an
 unaltered inspection backup is in /tmp/srisu-couple-models-takeover.py.
 
+> **Chat transport supersession — 2026-10-08:** profile and Plan records remain
+> Django-owned, but legacy question/plan cards persisted through Django messages
+> are not part of the Matrix text release. Keeping the `ChatRoom` UUID preserves
+> relationship identity, not `MessageModel.profile_action`. Those actions stay
+> disabled until a separately approved encrypted Matrix reference/event replaces
+> the legacy card path. See the
+> [Couple Chat cutover record](couple-chat.md).
+
 ## Design evidence and screen-to-data mapping
 
 Figma file LztysD1YvINX7RwZpnhhTt, page 1:4, **Couple UI final**. Connector access
-was quota-limited. The user supplied Couple Profile UI Final.png (11661Ã—23196).
+was quota-limited. The user supplied Couple Profile UI Final.png (11661×23196).
 All 17 visible screens/states were inspected in full-resolution crops. Individual
 frame IDs, actual component properties and hidden prototype states are unavailable.
 The screenshot defines presentation; photos, names, answers and counts are samples.
@@ -19,7 +27,7 @@ The screenshot defines presentation; photos, names, answers and counts are sampl
 | Just connected / cover added | Existing anniversary and selected cover | Guarded cover delivery and scoped date update | Profile with real metrics; date picker is a derived interaction |
 | Write how it started | Three author-specific answers | Unique couple/author/prompt; never edit partner answers | Separate story editor; isolated draft, max 240 per answer |
 | Your side done | Own answers, partner contributions | Scoped story read, current partner attribution | Partial state, invitation action |
-| Asked â†’ their chat | Question invitation | Existing private couple room only | Existing chat transport; profile destination |
+| Asked → their chat | Question invitation | Existing private couple room only | Profile destination exists; Matrix invitation card is unimplemented and disabled |
 | Partner's side | Partner answers and own response/confirmation | Author derived from authentication | Separate draft, confirmation copies only explicitly selected answer |
 | Both done | Combined contributions, song, common interests, plans | Derived intersection and aggregates | Completed profile, real links |
 | Story skipped | Incomplete author contribution | No fabricated content | Write prompt; skip leaves persisted data unchanged |
@@ -29,7 +37,7 @@ The screenshot defines presentation; photos, names, answers and counts are sampl
 | Our song | Title, artist, **band**, optional note | Shared section, optimistic concurrency | Separate form/removal; metadata only, no promised audio playback |
 | Your interests | Actor's personal interests; partner suggestions | Reuse UserInterestModel; only actor writes | Search, catalogue/custom choices; shared intersection derived |
 | Plans | Private couple plan list and responses | New bounded domain needed; no existing Plans feature | Upcoming/past, empty states and real detail/save flow |
-| New plan | Title, proposed date/time and response | Private plan persistence and existing couple chat | Sheet; server confirmation before success |
+| New plan | Title, proposed date/time and response | Private Plan persistence; chat delivery needs a separate Matrix-safe reference | Sheet and server confirmation remain; Matrix rich card is unimplemented and disabled |
 | Cover photo | Upload/library and eligible Moment photos | Decode/size validation, guarded association and delivery | Pick then preview; cancellation retains previous cover |
 | Position it | Vertical focal point | Narrow cover revision update | Drag/accessible slider; confirm save |
 
@@ -105,8 +113,11 @@ Implemented editors: full story, one-answer sheet and removal confirmation,
 partner contribution confirmation, song/removal, personal interests/custom choices,
 cover camera/library/Moment selection and positioning, new plan/date/time and plan
 response. The shared date and publication editors are documented derived additions.
-Existing private chat displays server-authored question/plan cards with profile
-navigation. No visitor action opens the couple's private partner chat. Fave writes
+The legacy private chat displayed server-authored question/plan cards with profile
+navigation. That plaintext Django-message path is a retirement dependency, not a
+Matrix capability. The Matrix text client must keep these send/open controls
+disabled until a typed encrypted representation and failure policy are implemented
+and tested. No visitor action opens the couple's private partner chat. Fave writes
 use the viewer's existing personal Fave endpoint. Moment counts are informational;
 this task does not replace the existing Moment viewer or creator-only permissions.
 
@@ -151,7 +162,7 @@ Actual Android Robolectric/native-graphics renders with **synthetic test data**:
 - [Populated profile](couple-profile-validation/android-owner-populated.png)
 - [Single-answer sheet](couple-profile-validation/android-answer-sheet.png)
 - [Small song editor](couple-profile-validation/android-song-small.png)
-- [Dark song editor,1.6Ã— font scale](couple-profile-validation/android-song-dark-large-text.png)
+- [Dark song editor,1.6× font scale](couple-profile-validation/android-song-dark-large-text.png)
 
 The implementation preserves section hierarchy, typography family, warm surfaces,
 overlapping portraits and separate save flows. It is **not pixel-exact**: the cover
@@ -186,8 +197,10 @@ warning remain; no successful device or pixel-accuracy claim is made.
 
 ## Deployment and remaining limits
 
-Apply backend social0011â€“0013/chat0003 migrations and ship server support before
+Apply backend social0011–0013/chat0003 migrations and ship server support before
 the client. All new tables/fields are additive; users and relationship IDs remain.
+That historical `chat0003` card support does not authorize Matrix card delivery and
+must not block retirement by becoming a hidden fallback.
 Legacy JSON routes remain, but cover image URLs now require authentication. Older
 clients using unauthenticated image loaders need this client update. Production
 proxies/buckets must deny public direct access to private Moment and both old/new
@@ -197,8 +210,10 @@ for abandoned uploads. See backend rollout notes before deployment.
 No production server was restarted and no database was migrated outside disposable
 tests. Repository pushes are not deployment. Content already downloaded cannot be
 retracted. There is no licensed song playback or new visitor messaging feature.
-No policy decision remains unresolved; physical-device and exact Figma-property
-validation are the outstanding verification limits.
+No Couple Profile domain-policy decision remains unresolved. The encrypted Matrix
+representation for question/Plan cards remains unimplemented and is governed by
+the separate Couple Chat release gates. Physical-device and exact Figma-property
+validation are the other outstanding verification limits.
 
 ## Publication dependency
 
@@ -240,6 +255,7 @@ The feature now registers through `coupleProfileGraph` with a typed
 profile ViewModel/draft. Shared editor screens and local confirmation sheets stay
 within that resource flow; saves continue to use confirmed server responses.
 Explore uses the existing couple discovery screen. See [navigation coverage](navigation.md).
+
 ## Presentation refinement (2026-10-02)
 
 See [the visual refinement record](couple-profile-polish.md) for the observed baseline,

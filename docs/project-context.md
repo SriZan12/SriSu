@@ -56,7 +56,7 @@ Reuse [the theme documentation](design-system/README.md),
 | Feature/reference | Figma node | Frontend anchor | Backend anchor on `dev` |
 | --- | --- | --- | --- |
 | Design system | `0:1` | `theme/`, `components/`, design-system docs | Not applicable |
-| Find your partner | [`14:220`](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=14-220) | `features/chat/presentation/findpartner/`, `ChatApiService.kt` | `social/urls.py`, `social/api/views.py`; `/api/social/find-partner/` |
+| Find your partner | [`14:220`](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=14-220) | `features/chat/presentation/findpartner/`, `ConnectionApiService.kt` | `social/urls.py`, `social/api/views.py`; `/api/social/find-partner/` |
 | Invite sent | [`5:974`](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=5-974) | `InviteSentScreen.kt`, partner-linking docs | Inspect the connection routes and handlers in `social/` |
 | Connected confirmation | [`5:1118`](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=5-1118) | `YoureConnectedScreen.kt`, partner-linking docs | Inspect accepted-connection state and authorization in `social/` |
 
@@ -142,9 +142,11 @@ its DTOs and calls against an identified schema version or backend commit.
 A published contract artifact or pinned generated copy is preferable to two
 independently edited schemas. OpenAPI/contract CI was not added by this setup.
 
-Document WebSocket messages separately: event names, payload schemas, auth,
-reconnection, ordering, acknowledgement, and duplicate-delivery behavior. Chat
-has a WebSocket implementation, so an HTTP schema alone is insufficient.
+Document any future WebSocket protocol separately: event names, payload schemas,
+auth, reconnection, ordering, acknowledgement, and duplicate-delivery behavior.
+Couple Chat no longer has a WebSocket transport: the retired Django socket must
+not be restored, and Matrix `/sync` plus standard Matrix APIs are its sole live
+message transport.
 
 For every feature, record these together in a flow document or task brief:
 

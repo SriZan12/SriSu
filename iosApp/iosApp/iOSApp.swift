@@ -5,8 +5,6 @@ import ComposeApp
 struct iOSApp: App {
     
     init(){
-        NativeChatRuntime.shared.install(value: IosChatDriver())
-        NativeChatMediaRuntime.shared.install(value: IosChatMedia())
         Platform_iosKt.debugBuild()
     }
     

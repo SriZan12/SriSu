@@ -16,6 +16,7 @@ import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepo
 import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
 import com.srisu.srisu.features.home.connection.data.remote.mappers.toUser
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.CoupleConnectionUiState
+import com.srisu.srisu.features.home.connection.presentation.coupleconnection.state.ConfirmedCoupleConnection
 import com.srisu.srisu.utils.Constants.ConnectionStatus.ACCEPTED
 import com.srisu.srisu.utils.Constants.ConnectionStatus.REJECTED
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,7 +33,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.collections.contains
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class CoupleConnectionViewModel(
     private val connectionRepository: ConnectionRepository
 ) : ViewModel() {
@@ -47,6 +51,7 @@ class CoupleConnectionViewModel(
     // Refresh triggers
     private val loveRequestRefreshTrigger = MutableStateFlow(0)
     private val sentLoveRequestRefreshTrigger = MutableStateFlow(0)
+    private val mutationOperationIds = mutableMapOf<String, String>()
 
     //Paging flows
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -189,10 +194,14 @@ class CoupleConnectionViewModel(
         loveRequestId: Long?,
         senderNumber: String?,
         receiverNumber: String?,
-        connectionStatus: String?
+        connectionStatus: String?,
+        partner: CoupleConnectionRequestResponse.Result.Receiver? = null,
     ) {
         val requestId = loveRequestId ?: return
         val status = connectionStatus.orEmpty()
+        if (requestId in _coupleConnectionUiState.value.handledRequestIds) return
+        val mutationKey = "request:$requestId:$status"
+        val operationId = mutationOperationIds.getOrPut(mutationKey) { Uuid.random().toString() }
 
         applyOptimisticUpdate(requestId, status)
 
@@ -204,11 +213,31 @@ class CoupleConnectionViewModel(
                         senderNumber = senderNumber,
                         receiverNumber = receiverNumber,
                         connectionStatus = connectionStatus
-                    )
+                    ),
+                    operationId = operationId,
                 )
             }.onSuccess { result ->
-                result.onSuccess { _, _ ->
-                    showSuccess("Request updated successfully")
+                result.onSuccess { response, _ ->
+                    mutationOperationIds.remove(mutationKey)
+                    updateState {
+                        it.copy(
+                            baseUIState = BaseUIState.Success("Request updated successfully"),
+                            acceptedConnection = if (status == ACCEPTED) {
+                                ConfirmedCoupleConnection(
+                                    requestId = requestId,
+                                    partnerName = partner?.fullName?.takeIf(String::isNotBlank)
+                                        ?: partner?.username?.takeIf(String::isNotBlank)
+                                        ?: "Your partner",
+                                    partnerPhotoUrl = partner?.profilePhoto,
+                                    connectedAt = response?.updatedAt,
+                                    roomId = response?.chatRoomId,
+                                    coupleId = response?.coupleId,
+                                )
+                            } else {
+                                it.acceptedConnection
+                            },
+                        )
+                    }
 
                     // refresh after action
 //                    refreshLoveRequests()
@@ -219,6 +248,12 @@ class CoupleConnectionViewModel(
             }.onFailure {
                 rollback(requestId, status, it.message ?: "Unknown error", "Exception")
             }
+        }
+    }
+
+    fun consumeAcceptedConnection(requestId: Long) {
+        updateState {
+            if (it.acceptedConnection?.requestId == requestId) it.copy(acceptedConnection = null) else it
         }
     }
 

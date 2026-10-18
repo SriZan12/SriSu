@@ -5,6 +5,27 @@ investigation, not a line-by-line code review or exhaustive audit. “Confirmed�
 means visible in the inspected code/configuration; it does not mean reproduced
 against a deployed service. No production data or credentials were used.
 
+> **Chat supersession — 2026-10-08:** the Chat rows and risks below remain a
+> historical audit of the legacy Django/Channels implementation. They are not the
+> target Couple Chat architecture. [ADR 003](../decisions/003-matrix-couple-chat.md)
+> and the [Matrix cutover record](../../flows/couple-chat.md) now define private
+> Synapse + Trixnity/vodozemac as the only new message path. Django retains
+> relationship authorization and the stable `ChatRoom` UUID, not message
+> transport. Earlier custom ChatV2/libsignal implementation evidence must not be
+> used as Matrix release evidence.
+
+### Current Couple Chat implementation
+
+The active mobile runtime is now Matrix-only. `ChatNav.CoupleConversation` keeps
+the Django `ChatRoom` UUID as its stable route identity, obtains a short-lived
+session from `POST /api/chat/v2/rooms/{uuid}/matrix/session/`, and uses Trixnity
+with vodozemac and a relationship-scoped Room store for encrypted text. The
+deleted Django socket client and custom libsignal runtime are not fallbacks.
+Replies, reactions, edits/deletion, receipts, media, voice notes and rich cards
+are not implemented in this release and remain disabled. Startup reconciliation
+also removes the exact retired mobile chat stores and key namespaces without
+touching Matrix, profile, authentication or catalogue data.
+
 ## Workspace and preservation
 
 Frontend root: `/Users/srijan/studioprojects/SriSu`. Backend root:

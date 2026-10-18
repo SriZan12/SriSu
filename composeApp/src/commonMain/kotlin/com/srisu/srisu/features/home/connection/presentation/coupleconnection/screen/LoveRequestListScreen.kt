@@ -27,7 +27,7 @@ typealias loveRequestId = Long?
 @Composable
 fun LoveRequestListScreen(
     onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
+    onAcceptLoveRequest: (loveRequestId, senderNumber, receiverNumber, CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onRejectLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
     loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
@@ -62,7 +62,7 @@ fun LoveRequestListScreen(
 private fun LoveRequestListContent(
     modifier: Modifier,
     onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber) -> Unit,
+    onAcceptLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber, CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onRejectLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber) -> Unit,
     loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
@@ -102,7 +102,8 @@ private fun LoveRequestListContent(
                     onAcceptLoveRequest(
                         loveRequest.id,
                         loveRequest.senderNumber,
-                        loveRequest.receiverNumber
+                        loveRequest.receiverNumber,
+                        loveRequest.receiver,
                     )
                 },
                 onClickSecondButton = {
@@ -116,4 +117,3 @@ private fun LoveRequestListContent(
         }
     }
 }
-

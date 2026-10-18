@@ -1,6 +1,7 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
+import com.srisu.srisu.features.chat.matrix.MatrixChatEntryViewModel
+import com.srisu.srisu.features.chat.matrix.presentation.SecureChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.EditProfileViewModel
@@ -9,7 +10,6 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
-    viewModel { com.srisu.srisu.features.couplechat.presentation.ConversationViewModel(get()) }
     viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get()) }
 
 
@@ -27,7 +27,8 @@ val mainModule = module {
     viewModel {
         FindPartnerViewModel(
             connectionRepository = get(),
-            sessionStorage = get()
+            sessionStorage = get(),
+            lifetime = get(),
         )
     }
 
@@ -38,6 +39,8 @@ val mainModule = module {
     }
 
     viewModel {
-        ChatViewModel(repository = get())
+        SecureChatViewModel(repository = get(), partners = get())
     }
+
+    viewModel { MatrixChatEntryViewModel(resolver = get(), sessions = get()) }
 }

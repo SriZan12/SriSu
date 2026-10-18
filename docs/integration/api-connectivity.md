@@ -1,5 +1,15 @@
 # API connectivity audit — 2026-09-29
 
+> **Current local configuration — 2026-10-18:** the committed development
+> fallback is `http://127.0.0.1:8000/`; the former `192.168.1.73` examples below
+> are historical evidence from this audit, not an active default. Resolution
+> order is Gradle `-Psrisu.apiBaseUrl`, `SRISU_API_BASE_URL`, ignored
+> `local.properties` (`srisu.apiBaseUrl=...`), then loopback. Set the ignored
+> per-machine value to `http://<backend-lan-ip>:8000/` for a physical device or
+> another computer. Android Emulator can use `http://10.0.2.2:8000/` when the
+> backend runs on the emulator host; iOS Simulator can use loopback when the
+> backend runs on the same Mac. Release builds still require HTTPS.
+
 Baseline: frontend `SriZan12/SriSu` at `e30a3275be06345c1e4d311d3711cdda2fea0eca`
 and backend `SrizanKhadka/SriSu` at `b9160da83430b4b4c1fbac71d3cb1fcad2ab3860`,
 both on `dev-core-architecture`. Existing local frontend edits were preserved.
@@ -10,7 +20,8 @@ This task changes transport/configuration/tests only; no Figma screen changes.
 The supplied request was `POST /api/auth/send-otp/` with a **400 HTML** response,
 not 404. On the user's Docker server, the same origin with its LAN Host returned
 400 for every probed route; a read-only diagnostic with Host localhost returned
-200 JSON for interests, 405 JSON for send-otp and refresh, and 401 JSON for rooms.
+200 JSON for interests, 405 JSON for send-otp and refresh, and 401 JSON for the
+current-viewer profile probe.
 That confirms host validation rejects the LAN address before DRF/OTP processing.
 Changing endpoint spellings, JSON bodies or CORS will not fix this rejection.
 

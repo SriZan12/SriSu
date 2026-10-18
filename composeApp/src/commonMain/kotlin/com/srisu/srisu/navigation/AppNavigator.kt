@@ -27,8 +27,16 @@ class AppNavigator(private val controller: NavController, private val origin: Na
         popUpTo(controller.graph.id) { inclusive = false }
         launchSingleTop = true
     } }
-    fun finishFlow(route: Route, flow: Route) { if (permitted()) controller.navigate(route) {
-        popUpTo(flow) { inclusive = false }
+    fun finishFlow(route: Route, flow: Route): Boolean {
+        if (!permitted()) return false
+        controller.navigate(route) {
+            popUpTo(flow) { inclusive = false }
+            launchSingleTop = true
+        }
+        return true
+    }
+    fun leaveFlow(route: Route, flow: Route) { if (permitted()) controller.navigate(route) {
+        popUpTo(flow) { inclusive = true }
         launchSingleTop = true
     } }
     fun switchTab(route: Route) { if (permitted()) controller.navigate(route) {

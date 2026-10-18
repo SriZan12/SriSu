@@ -28,7 +28,6 @@ data class ApiError(
     val requestId: String? = null,
     val retryAfterSeconds: Long? = null,
     val retryable: Boolean = false,
-    val chatCode: String? = null,
 )
 data class ResponseMetadata(val status: Int, val requestId: String?, val hasBody: Boolean)
 
@@ -187,11 +186,6 @@ fun decodeApiError(status: Int, body: String, requestId: String? = null, retryAf
         requestId = requestId ?: (root?.get("request_id") as? JsonPrimitive)?.contentOrNull,
         retryAfterSeconds = (retryAfter?.toLongOrNull() ?: (error?.get("retry_after_seconds") as? JsonPrimitive)?.longOrNull)?.coerceAtLeast(0),
         retryable = (error?.get("retryable") as? JsonPrimitive)?.booleanOrNull ?: (status in listOf(502, 503, 504)),
-        chatCode = (root?.get("chat_code") as? JsonPrimitive)?.contentOrNull?.takeIf { it in setOf(
-            "key_id_reused", "key_pool_full", "device_id_unavailable", "operation_conflict",
-            "replacement_required", "device_revoked", "partner_device_changed", "session_reset_limit",
-            "prekeys_exhausted", "recipient_backlog_full", "message_id_unavailable", "message_deleted", "cursor_ahead",
-        ) },
     )
 }
 

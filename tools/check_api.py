@@ -23,7 +23,7 @@ def main():
     opener = build_opener(NoRedirect())
     failed = False
     for path, expected in [('api/auth/interests/', 200), ('api/auth/send-otp/', 405),
-                           ('api/auth/refresh/', 405), ('api/chat/rooms/', 401)]:
+                           ('api/auth/refresh/', 405), ('api/social/profiles/me/', 401)]:
         try:
             response = opener.open(Request(args.base_url + path, method='GET'), timeout=5)
         except HTTPError as error:

@@ -25,11 +25,13 @@ class ConnectionRepository(
 
     suspend fun sendCoupleConnectionRequest(
         senderNumber: String?,
-        receiverNumber: String?
+        receiverNumber: String?,
+        operationId: String? = null,
     ): ResultHandler<CoupleConnectionResponse?> {
         return connectionApiService.sendCoupleConnectionRequest(
             receiverNumber = receiverNumber,
-            senderNumber = senderNumber
+            senderNumber = senderNumber,
+            operationId = operationId,
         )
     }
 
@@ -62,11 +64,13 @@ class ConnectionRepository(
 
     suspend fun updateLoveRequest(
         loveRequestId: Long?,
-        coupleConnectionDTO: CoupleConnectionDTO
+        coupleConnectionDTO: CoupleConnectionDTO,
+        operationId: String? = null,
     ): ResultHandler<CoupleConnectionResponse?> {
         return connectionApiService.updateCoupleConnectionRequestStatus(
             connectionId = loveRequestId,
-            coupleConnectionDTO = coupleConnectionDTO
+            coupleConnectionDTO = coupleConnectionDTO,
+            operationId = operationId,
         )
     }
 }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_secure_title">Conversation</string>
+    <string name="chat_secure_back">Back to conversations</string>
+    <string name="chat_secure_loading">Opening your encrypted conversation…</string>
+    <string name="chat_secure_not_available">This encrypted conversation is not available right now.</string>
+    <string name="chat_secure_error">Secure messaging could not be loaded.</string>
+    <string name="chat_secure_retry">Retry</string>
+    <string name="chat_secure_message_hint">Message your partner</string>
+    <string name="chat_secure_send">Send</string>
+    <string name="chat_secure_sending">Sending…</string>
+    <string name="chat_secure_content_unavailable">Encrypted message unavailable</string>
+    <string name="chat_secure_encrypted">End-to-end encrypted</string>
+    <string name="chat_secure_encrypted_offline">End-to-end encrypted · Offline</string>
+    <string name="chat_secure_verifying">Verifying secure chat…</string>
+    <string name="chat_secure_header_unavailable">Secure chat unavailable</string>
+    <string name="chat_secure_empty_title">Your first message.</string>
+    <string name="chat_secure_empty_body">Only you two are in here. Start with anything.</string>
+    <string name="chat_secure_starter_smile">What made you smile today?</string>
+    <string name="chat_secure_starter_dinner">Dinner this week?</string>
+    <string name="chat_secure_starter_song">Send me a song you love</string>
+    <string name="chat_secure_starters_label">Conversation starters. Tapping one adds it to your message.</string>
+    <string name="chat_secure_today">Today</string>
+    <string name="chat_secure_yesterday">Yesterday</string>
+    <string name="chat_secure_status_sending">Sending</string>
+    <string name="chat_secure_status_sent">Sent</string>
+    <string name="chat_secure_status_failed">Not sent</string>
+    <string name="chat_secure_tap_to_retry">Not sent · Tap to retry</string>
+    <string name="chat_secure_jump_latest">Jump to latest messages</string>
+    <string name="chat_secure_new_messages">%1$d new</string>
+    <string name="chat_secure_error_title">Couldn’t open your chat</string>
+    <string name="chat_secure_unavailable_title">Chat unavailable</string>
+    <string name="chat_secure_message_partner">Message %1$s</string>
+    <string name="chat_secure_received_at">%1$s, %2$s</string>
+    <string name="partner_open_conversation">Open conversation</string>
+</resources>

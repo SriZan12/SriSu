@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -12,9 +13,23 @@ plugins {
     alias(libs.plugins.room)
 }
 
-val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.73:8000/")
-val apiEnvironment = providers.gradleProperty("srisu.environment").orElse("development")
-val chatAppEvaluation = providers.gradleProperty("chatAppEvaluation").orNull == "true"
+val localProjectProperties = providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+    .asText
+    .map { text -> Properties().apply { text.reader().use(::load) } }
+val localApiBaseUrl = localProjectProperties.map {
+    it.getProperty("srisu.apiBaseUrl").orEmpty().ifBlank { "http://127.0.0.1:8000/" }
+}
+val localApiEnvironment = localProjectProperties.map {
+    it.getProperty("srisu.environment").orEmpty().ifBlank { "development" }
+}
+val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl")
+    .orElse(providers.environmentVariable("SRISU_API_BASE_URL"))
+    .orElse(localApiBaseUrl)
+    .orElse("http://127.0.0.1:8000/")
+val apiEnvironment = providers.gradleProperty("srisu.environment")
+    .orElse(providers.environmentVariable("SRISU_ENVIRONMENT"))
+    .orElse(localApiEnvironment)
+    .orElse("development")
 val environmentSources = layout.buildDirectory.dir("generated/srisuEnvironment/commonMain")
 abstract class GenerateEnvironment : DefaultTask() {
     @get:Input abstract val baseUrl: Property<String>
@@ -61,7 +76,6 @@ kotlin {
     }
     
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
@@ -77,14 +91,6 @@ kotlin {
         commonMain { kotlin.srcDir(environmentSources) }
         
         androidMain.dependencies {
-            implementation(project(":secureChatNative"))
-            // Maintained MP4 remuxer with bounded in-memory output; no plaintext temp video.
-            implementation("androidx.media3:media3-muxer:1.10.1")
-            implementation("androidx.media3:media3-container:1.10.1")
-            implementation("com.google.zxing:core:3.5.4")
-            implementation("androidx.camera:camera-camera2:1.5.3")
-            implementation("androidx.camera:camera-lifecycle:1.5.3")
-            implementation("androidx.camera:camera-view:1.5.3")
             implementation(libs.androidx.core.splashscreen)
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -102,6 +108,10 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
+            implementation(libs.trixnity.client)
+            implementation(libs.trixnity.client.cryptodriver.vodozemac)
+            implementation(libs.trixnity.client.media.okio)
+            implementation(libs.trixnity.client.repository.room)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -161,9 +171,6 @@ kotlin {
             //material-icons
             implementation(libs.material.icons.core)
 
-            //websockets
-            implementation(libs.ktor.client.websockets)
-
             //swipeable compo
 //            implementation(libs.swipeable.kmp)
 
@@ -172,8 +179,8 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-            implementation("io.ktor:ktor-client-mock:3.2.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+            implementation("io.ktor:ktor-client-mock:3.5.2")
         }
 
         androidUnitTest.dependencies {
@@ -181,10 +188,16 @@ kotlin {
             implementation("org.robolectric:robolectric:4.16.1")
             implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
         }
+
         androidInstrumentedTest.dependencies {
             implementation("androidx.test:runner:1.6.2")
             implementation("androidx.test.ext:junit:1.2.1")
-            implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
+        }
+
+        iosTest.dependencies {
+            // Test-only: renders chat states on the iOS simulator for screenshot evidence.
+            // Matches the Compose UI version resolved transitively for iOS (1.10.2), not the plugin's 1.8.2.
+            implementation("org.jetbrains.compose.ui:ui-test:1.10.2")
         }
 
         iosMain.dependencies {
@@ -192,14 +205,6 @@ kotlin {
             implementation(libs.ktor.client.darwin)
 
         }
-        if(chatAppEvaluation) named("iosMain") {kotlin.srcDir(rootProject.file("tools/chat-app-evaluation"))}
-    }
-}
-
-// The synthetic-session harness is opt-in and cannot be linked into a Release artifact.
-tasks.configureEach {
-    if(chatAppEvaluation && name.contains("Release",ignoreCase=true)) doFirst {
-        error("Chat app evaluation is limited to Debug test artifacts")
     }
 }
 
@@ -217,10 +222,8 @@ android {
         versionName = "1.0"
     }
     packaging {
-        jniLibs.excludes += "**/libsignal_jni_testing.so"
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += listOf("**/*.dll", "**/*.dylib", "**/*.so")
         }
     }
     buildTypes {
@@ -231,18 +234,13 @@ android {
         }
     }
     compileOptions {
-        // Signal's maintained bindings include Java records. Enable AGP's
-        // record/global-synthetic desugaring for all application dependencies.
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        isCoreLibraryDesugaringEnabled = true
     }
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     add("kspAndroid", libs.androidx.room.compiler)
-    add("kspIosX64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     debugImplementation(compose.uiTooling)

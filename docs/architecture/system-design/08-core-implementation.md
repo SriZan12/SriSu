@@ -5,6 +5,14 @@ The subsequent implementation request authorizes this foundation slice. It does
 code; [the validation record](09-core-validation.md) separates evidence and gaps.
 No commit, push, merge, deployment, Figma edit, or existing-data migration was made.
 
+> **Chat evidence boundary — 2026-10-08:** the Django/Channels and custom
+> ChatV2/libsignal implementation below remains a historical record of what was
+> built and tested. It is not the selected production message architecture and
+> none of its passing checks count as Matrix E2EE evidence. ADR 003 and the
+> [Couple Chat cutover record](../../flows/couple-chat.md) select private Synapse
+> plus Trixnity/vodozemac while retaining Django relationship authorization and
+> the `ChatRoom` UUID.
+
 ## Baselines and ownership
 
 | Repository | Local branch created | Starting HEAD |
@@ -17,7 +25,10 @@ checkouts, including uncommitted design/workspace files. Upstream integration
 branches were read and had advanced; they were deliberately not merged. The
 repositories remain independent changes requiring paired release coordination.
 
-## Implemented boundaries
+## Historical foundation implementation boundaries
+
+This table records the pre-Matrix core slice. For the active chat ownership and
+runtime, use “Couple Chat Matrix supersession” below.
 
 | Owner/lifetime | Responsibility | Main implementation |
 | --- | --- | --- |
@@ -77,7 +88,7 @@ this slice remain legacy. KMP preserves their field names as generic `invalid`
 codes without forwarding arbitrary server strings. Unhandled opt-in exceptions
 mark transaction rollback and return a fixed 500, not internal exception text.
 
-## Realtime transport and Chat recovery
+## Historical pre-Matrix realtime transport and Chat recovery
 
 The KMP transport owns connection states, foreground pause/resume, cancellation,
 cleanup, serialized sends and five reconnect attempts after the initial attempt.
@@ -198,11 +209,12 @@ lifecycle-aware collection. Declare cache scope/freshness and session generation
 before adding persistence. Add a contract fixture and a backend authorization test,
 then a KMP parsing/state test. Do not derive permissions or endpoints from Figma.
 
-Working examples are `ProfileApiService → InterestCatalogueRepository →
-InterestCatalogueStateHolder → EditProfileScreen`, and `ChatApiService +
-ChatWebSocketClient → ChatRepository → ChatViewModel/ChatScreen`. Existing profile
-and chat visual components/tokens are retained; only loading/offline/retry status
-is added. Current Figma content was not re-fetched or edited during this core task.
+The active examples are `ProfileApiService → InterestCatalogueRepository →
+InterestCatalogueStateHolder → EditProfileScreen` and `MatrixSessionRemote →
+TrixnityMatrixChatRepository → SecureChatViewModel/SecureChatScreen`. The former
+`ChatApiService + ChatWebSocketClient` chain documented above is historical and
+has been deleted. Current Figma content was not re-fetched or edited during this
+core task.
 
 HTTP diagnostics contain status, elapsed time and a sanitized correlation UUID.
 Backend structured logs use fixed event names and allowlisted metadata; new core
@@ -222,18 +234,20 @@ was used in a deployment, treat it as exposed and plan coordinated rotation; thi
 work neither rotates deployed keys nor silently changes token lifetime.
 
 Before deployment, reconcile the advanced integration branches and run paired
-checks on the combined code. Full device session revocation/refresh, strict
-unlink-versus-write transaction serialization, private media ownership/delivery,
-private offline retention, durable message dedup/revisions and historical media
-cache cleanup remain separate refactors. In particular, the legacy media model
-has no owner and its current media-ID lookup is not fixed by room authorization.
-Do not treat this core slice as production security certification.
+checks on the combined code. The Matrix supersession below resolves this slice's
+earlier Chat unlink/write and legacy-media transport assumptions. Decrypted bodies
+of encrypted Matrix timeline events are now cache-only, while the plaintext Matrix
+outbox and crypto store still require an app-level encryption decision. Production
+E2EE validation, account-deletion/retention policy, and deployment cutoff remain
+open release decisions. Do not treat either core slice as production security
+certification.
 
-Temporary adapters: `ResultHandler` convenience strings (remove as each screen
-adopts `ApiError`); v1 socket schemas/query token support (remove only after a mobile
-support cutoff); existing Interest DTOs in legacy navigation (remove during profile
-model refactor); full-window Chat snapshots (replace after durable C1 revisions).
-The lower-level transport/HTTP/session/DAO mechanisms themselves are active code.
+Temporary adapters outside Couple Chat: `ResultHandler` convenience strings
+(remove as each screen adopts `ApiError`) and existing Interest DTOs in legacy
+navigation (remove during profile model refactor). The historical full-window
+Django Chat snapshot/socket components were removed by the Matrix supersession
+below and must not be restored. The lower-level HTTP/session/DAO mechanisms remain
+active where referenced by non-chat features.
 
 **First Authentication refactor:** implement real OTP request → one-time verify
 across Django and KMP while retaining Twilio Messaging and existing screens. Remove
@@ -246,15 +260,51 @@ lifetimes unchanged until the device-session/legacy-client cutoff decision is ma
 
 [Couple Profile](../../flows/couple-profile.md) adds route-scoped profile/draft state,
 current-viewer backend projections and content-bound two-member publication consent.
-It reuses the shared Ktor/session/Koin boundaries, existing private chat transport,
-image validation and contract synchronization. Private profile/media snapshots are
-not persisted in Room; foreground/re-entry invalidation and scoped revisions handle
-external edits. See the feature record for compatibility and verification limits.
+It reuses the shared Ktor/session/Koin boundaries, relationship-scoped `ChatRoom`
+identity, image validation and contract synchronization. It must not reuse the
+retired Django message transport for new activity cards. Private profile/media
+snapshots are not persisted in Room; foreground/re-entry invalidation and scoped
+revisions handle external edits. See the feature record for compatibility and
+verification limits.
+
+## Couple Chat Matrix supersession (2026-10-08)
+
+[Couple Chat](../../flows/couple-chat.md) makes the active relationship instance,
+not a user pair, the conversation authority. Transactional acceptance creates one
+Couple, two active memberships, and exactly one room for that Couple; ending and
+relinking cannot reopen the old room. Django retains that `ChatRoom` UUID,
+relationship authorization, deterministic Matrix mappings, short-lived login
+bootstrap, and retryable provision/revoke state. It does not own the new message
+timeline.
+
+Private Synapse is the message service. Trixnity 5.9.2 with vodozemac and its Room
+repository is the selected KMP client, E2EE, timeline and durable Matrix outbox.
+This replaces both the legacy `ChatApiService`/`ChatRepository` message path and
+the custom `ChatV2Repository`/`ChatDatabase`/`E2eeEngine` path documented in the
+older section. The frontend components, their DI/socket wiring, Room schema and
+tests have now been deleted; they are not fallback or rollback code. The backend
+minimum-version cutoff and restore-tested rollback snapshot remain deployment
+gates rather than reasons to keep a callable legacy client.
+
+The accepted first release is encrypted text only. Media, voice, reply/edit/
+reaction/delete UI, receipts, Sparks, Ask/polls, rich Planner/story cards and
+conversation settings are unimplemented and stay disabled. In particular, legacy
+Couple Profile cards stored through `MessageModel.profile_action` need a separate
+Matrix-safe domain/reference design; they are not preserved by keeping `ChatRoom`.
+
+The subsequent Matrix-only frontend implementation compiles for Android,
+`iosArm64`, and Apple-silicon `iosSimulatorArm64`; Intel `iosX64` support was
+intentionally removed. A live Android↔iOS Synapse exchange and app-level local
+database encryption remain release gates. See [ADR 003](../decisions/003-matrix-couple-chat.md),
+the feature record, and the backend `docs/chat-v2.md` for the backend-first rollout
+and destructive retirement boundary.
 
 ### Navigation scope update (2026-10-01)
 
 [ADR 001](../decisions/001-navigation.md) supersedes the account-wide Auth/Chat feature
 ViewModel and legacy interest-route notes above. BaseNavigation assembles one NavHost;
 Auth and Partner VMs are flow-scoped, conversation/profile VMs are entry-scoped, and
-account/couple access changes clear the relevant stores. Shared sockets/repositories
-remain application/session-owned. See [migration coverage](../../flows/navigation.md).
+account/couple access changes clear the relevant stores. The Trixnity client is
+session-owned. Generic sockets remain application/session-owned only for non-message
+signals until those callers migrate; they are not the Matrix message transport.
+See [migration coverage](../../flows/navigation.md).

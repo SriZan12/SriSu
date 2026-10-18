@@ -2,25 +2,26 @@ package com.srisu.srisu.di
 
 import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
 import com.srisu.srisu.core.data.remote.BaseApiService
-import com.srisu.srisu.features.chat.data.remote.api.ChatApiService
 import com.srisu.srisu.features.home.connection.data.remote.api.ConnectionApiService
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
 import com.srisu.srisu.core.data.remote.HttpClientFactory
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
-import com.srisu.srisu.features.chat.data.remote.api.ChatRepository
 import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
-import com.srisu.srisu.features.chat.data.remote.websocket.ChatWebSocketClient
+import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
+import com.srisu.srisu.features.chat.matrix.ConnectionChatPartnerSource
+import com.srisu.srisu.features.chat.matrix.ConnectionCurrentCoupleRoomResolver
+import com.srisu.srisu.features.chat.matrix.CurrentCoupleRoomResolver
+import com.srisu.srisu.features.chat.matrix.MatrixChatRepository
+import com.srisu.srisu.features.chat.matrix.MatrixSessionApiService
+import com.srisu.srisu.features.chat.matrix.MatrixSessionRemote
+import com.srisu.srisu.features.chat.matrix.TrixnityMatrixChatRepository
 import com.srisu.srisu.core.session.SessionUtils
 import org.koin.core.module.Module
 import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
-    single { com.srisu.srisu.features.couplechat.data.ConversationRepository(get(), get(), get(), get(), get()) } onClose { it?.close() }
-    single { com.srisu.srisu.features.couplechat.data.CoupleChatApi(get(), get()) }
-    single { com.srisu.srisu.features.couplechat.data.CoupleChatRepository(get(),
-        com.srisu.srisu.core.data.remote.KtorSocketConnector(get(), get(), "ws/couple-chat/v1/updates/"), get(), get()) } onClose { it?.close() }
     single { com.srisu.srisu.core.config.ApiEnvironment.configured() }
     single { com.srisu.srisu.core.lifecycle.ApplicationLifetime() } onClose { it?.close() }
     single { com.srisu.srisu.core.session.SessionCoordinator(get(org.koin.core.qualifier.named("platformSessionStorage"))) }
@@ -43,11 +44,22 @@ val sharedNetworkModule = module {
     single { ConnectionApiService(httpClient = get()) }
     single { ConnectionRepository(connectionApiService = get()) }
 
-    single { ChatApiService(httpClient = get(), environment = get()) }
-    single<com.srisu.srisu.core.data.remote.SocketConnector> { com.srisu.srisu.core.data.remote.KtorSocketConnector(get(), get()) }
-    single { ChatWebSocketClient(connector = get(), sessions = get(), lifetime = get()) } onClose { it?.close() }
+    single<CurrentCoupleRoomResolver> { ConnectionCurrentCoupleRoomResolver(get()) }
+    single<ChatPartnerSource> { ConnectionChatPartnerSource(get()) }
 
-    single { ChatRepository(webSocketClient = get(), chatApiService = get(), sessions = get(), lifetime = get()) } onClose { it?.close() }
+    single<MatrixSessionRemote> { MatrixSessionApiService(httpClient = get(), environment = get()) }
+    // Eager so logout/account-switch privacy cleanup runs after process restart
+    // even when the user never opens Couple Chat in that process.
+    single<MatrixChatRepository>(createdAtStart = true) {
+        TrixnityMatrixChatRepository(
+            remote = get(),
+            sessions = get(),
+            environment = get(),
+            engine = get(),
+            platformStore = get(),
+            lifetime = get(),
+        )
+    } onClose { it?.close() }
 
 }
 

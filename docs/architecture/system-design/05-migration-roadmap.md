@@ -148,81 +148,119 @@ boundary proven across HTTP/socket, user can finish onboarding. **Approval befor
 
 ## Phase C — Chat
 
-### C1: durable send, scoped state and recoverable history
+ADR 003 and the [Couple Chat cutover record](../../flows/couple-chat.md)
+supersede the earlier custom ChatV2/libsignal plan. Complete these slices in order.
+Never run the two message transports as co-authoritative writers.
 
-**Purpose/preserve:** retain existing conversation UI, room caches and supported
-message actions while fixing send uncertainty and room/account isolation.
+### C1: private Matrix control plane and infrastructure
 
-**Targets/data/contract:** backend `chat/models.py`, services/selectors/presenters,
-handlers/consumers, new HTTP history/send/change endpoints. Add operation identity,
-message sequence/revision, room change index and durable side-effect references.
-Existing IDs stay; resumable per-room backfill establishes order from current IDs.
-Mobile `ChatRepository`, `ChatViewModel`, socket client/DTOs, immutable room route
-and pending-operation store. Run a small Room KMP compatibility/storage-protection
-spike before adopting it; stop or choose a justified alternative if targets fail.
+**Purpose/preserve:** retain users, device sessions, invitations, relationships,
+profiles and the existing Django `ChatRoom` UUID as the stable conversation/
+navigation identity. Add a deterministic mapping to one new encrypted Matrix room;
+do not move relationship authorization into Matrix.
 
-**Verification:** pending message survives app termination; duplicate send creates
-one message; disconnect after commit before ack reconciles same ID; unknown/out-of-
-order events and cursor gaps converge through HTTP. Room A fetch while B is open
-never changes B; reorder room list never changes selected send target. Account
-switch cancels and rejects all old completions. Fault-injection and two-device
-journeys meet ack/recovery targets on the agreed test network.
+**Targets/data/contract:** private Synapse 1.162.0 with separate PostgreSQL/media,
+TLS, closed registration/federation, backup and secret rotation; additive Django
+Matrix user/room mappings; current-membership bootstrap; idempotent provision/
+revoke work and reconciliation. `POST /api/chat/v2/rooms/{uuid}/matrix/session/`
+returns the mapping and a short-lived Matrix login credential only after the
+Django session and current relationship are checked. It never proxies or stores
+message content, device keys or Matrix access tokens.
 
-**Rollout/recovery/removal:** additive schema/backfill and common service → v1 socket
-adapter plus v2 HTTP/socket → internal mobile with local store → cohort. Legacy
-commands without stable operation identity retain documented weaker retry behavior;
-do not invent server dedup from text/time guesses. Roll back v2 rollout by pausing
-new capability while retaining committed records/pending state; never drop sequence
-or dedup columns. Remove old socket-only history after adoption/cutoff. Offline
-history privacy and encryption threat decision must precede durable storage rollout.
+**Verification:** deterministic provision retry, encrypted-before-invite room
+state, outsider/former-member concealment, expired/revoked session, acceptance/
+unlink races, delayed Synapse recovery, immediate bootstrap denial on unlink,
+relink isolation, secret-free logs, backup and timed isolated restore. Reconcile
+every eligible relationship to an active or intentionally revoked mapping before
+mobile rollout.
 
-### C2: mutations, receipts and convergence
+**Rollout/recovery:** deploy Synapse and additive backend control-plane changes
+first, migrate, then reconcile. Do not delete legacy data or disable legacy reads
+in C1. If the control plane fails, disable Matrix entry and repair mappings; never
+route a Matrix client to the old plaintext transport as a fallback.
 
-**Purpose/preserve:** preserve replies, reactions, edit/delete and receipt UI with
-monotonic authoritative semantics, not approximate booleans and list heuristics.
+### C2: Trixnity encrypted-text client
 
-**Targets/data/contract:** chat message/receipt/typing services, history selectors,
-deletion/reaction models and mobile reducers. Add participant high-water cursors,
-expected revisions and user deletion changes; reuse existing relational deletion
-and reaction records. Move ephemeral typing to bounded Redis TTL. Backfill old read
-state conservatively; never mark unseen messages read to manufacture a clean cursor.
+**Purpose/preserve:** keep the stable `ChatNav.CoupleConversation` contract and
+existing Figma visual references while replacing both legacy Django messages and custom
+`ChatV2Repository`/libsignal envelopes with Trixnity Matrix state.
 
-**Verification:** edit/delete/reaction races, tombstones in replies, delete-for-me
-followed by refetch on two devices, receipt monotonicity, unread reconciliation,
-typing expiry and state under delayed events. No stale lower revision resurrects
-deleted content. Measure tied timestamp pagination and repeated room switches.
+**Targets/data/contract:** Trixnity 5.9.2 `trixnity-client`,
+`trixnity-client-cryptodriver-vodozemac`,
+`trixnity-client-repository-room` and `trixnity-client-media-okio`. Resolve its
+Kotlin 2.3.21/KSP 2.3.9/Room 2.8.4 requirements against the app's selected
+toolchain and make an explicit `iosX64` support decision. Trixnity Room is the
+only timeline/outbox/crypto store; its app-private, backup-excluded,
+protected-at-rest design must be reviewed before release.
 
-**Rollout/recovery/removal:** server computes new and legacy projections from one
-authority → mobile reducers → retire JSON/boolean writers. Rollback preserves new
-state and uses projection adapters; do not restart competing old writers. Remove
-legacy JSON fields only after backfill reconciliation and all supported routes stop
-writing them. Proposed edit-window changes require separate product approval.
+The first client supports encrypted text only and has no plaintext fallback.
+Replies, edits, reactions, deletion/receipts UI, photo/video, voice, Sparks,
+Ask/polls, rich Planner/story cards, nickname/options, push and calls remain
+unimplemented and disabled.
 
-### C3: private media and lifecycle delivery
+**Verification:** Android→iOS and iOS→Android encrypted text, stable-device login,
+room/user identity verification, exact transaction retry after lost ack, restart/
+offline catch-up, pagination, tamper/decryption and lost-key states, unknown-event
+handling, account/room isolation, logout/account-switch wipe and unlink during
+queued work. Exercise supported Android and iPhone devices against disposable
+Synapse; compilation and old ChatV2 tests are not Matrix integration evidence.
 
-**Purpose/preserve:** retain supported image attachments; do not expand to calls,
-video or arbitrary file uploads. Make retries, revocation and background recovery
-consistent with the same room/session contract.
+**Rollout/recovery:** ship only after C1 is healthy and the minimum supported client
+policy is ready. Observe redacted setup/sync/revocation signals. Before destructive
+cutoff, rollback may disable Matrix entry and return to the matching supported
+legacy deployment; content is never copied between transports.
 
-**Targets/data/contract:** media model/upload endpoint/presenter/storage boundary,
-ASGI auth/origin handling, durable worker, proposed push registration; KMP platform
-media hooks, upload state, image cache and lifecycle bridge. Add trusted ownership,
-room binding, staging/finalization/deletion metadata. Backfill only from trusted
-message relationships; quarantine unresolved files. Preserve existing Moment
-guarding while reusing infrastructure, not replacing its policy with generic URLs.
+### C3: cutoff and authorized destructive retirement
 
-**Verification:** cross-user media substitution/download, expired/revoked session,
-malformed/oversized image, EXIF removal, simultaneous image sends, upload cancel,
-orphan cleanup grace, storage unavailable after stage, background/resume and stale
-push. Reconnect must work with push disabled. Device tests confirm no cross-account
-cache or lock-screen content leak.
+**Purpose/preserve:** the product owner authorized destruction of legacy chat data
+on 2026-10-08, with no history migration into Matrix. Destruction is limited to
+legacy/custom-v2 message transport. Preserve authentication, device sessions,
+invitations, couples, membership history, profiles, Plans, Moments, non-chat media,
+Django `ChatRoom` identities, Matrix mappings/data, migration history and the
+backend checkout's unrelated `.DS_Store`.
 
-**Rollout/recovery/removal:** guarded download before new private uploads → owned
-staging/mobile protocol → optional generic push. Deny raw access at origin/proxy,
-not only Django. Rollback cannot reopen private files; temporary degraded media UI
-is preferable to losing authorization. Remove unowned upload/direct-URL adapters
-after attribution and client adoption. C exit includes load/backpressure/restore
-checks and no critical unresolved privacy regression. **Approval before D.**
+**Prerequisites:** enforce the minimum Matrix-only client/cutoff policy; confirm no
+released supported client needs old history; replace non-message relationship
+signals that still share the legacy socket; disable legacy writes; drain or account
+for in-flight work; then stop legacy chat outbox/media-maintenance jobs and retire
+legacy chat HTTP/socket entry. Never remove the generic WebSocket infrastructure
+while Find Partner or relationship-change signaling still uses it.
+
+Take an encrypted, access-controlled, expiring rollback snapshot before deletion:
+exact application/config versions, database dump and migrations, protected/legacy
+table counts, media key-size-digest manifest, Matrix mappings, and Synapse database,
+media and configuration. Restore-test the complete matching bundle in isolation.
+
+**Allowlisted removal:** purge only obsolete message/media/reaction/deletion/
+operation/change/outbox/receipt/visibility/staged-attachment tables and join rows;
+objects under `chats/media/`, `messages/media/`, `chat_encrypted/` and historical
+`chats_media/`; and the exact per-platform
+`srisu-private-chat-v2.db` plus its `-wal`, `-shm` and `-journal` sidecars. The
+mobile cutover also removes only `<noBackupFilesDir>/couple-chat-v1`, AndroidKeyStore
+aliases matching `com.srisu.couplechat.v1.<positive-account-id>`,
+`<Application Support>/couple-chat-v1`, generic-password Keychain items with the
+exact service `com.srisu.couplechat.v1.protocol-store`, and iOS temporary folders
+`SriSuChatExports` and `SriSuChatVideo`. Do not
+use broad media deletion, database `CASCADE` or application-support directory
+cleanup. Add forward purge/drop migrations; never rewrite the applied migration
+chain that the retained Matrix mapping migration historically depends on. Remove
+legacy code/contracts/dependencies only after data verification.
+
+**Verification/rollback:** rehearse with sanitized production-like shape; compare
+pre/post allowlisted counts and protected-data checksums; prove Matrix text still
+works, former-member denial still holds and `.DS_Store` is unchanged. Before the
+purge, rollback disables one transport before enabling the other. After the purge,
+rollback requires the restore-tested database, media, application images and
+supported client as one bundle; a partial rollback or dual-writer mode is forbidden.
+
+### C4: optional rich chat capabilities
+
+Define and approve each Matrix event/content contract, domain authority, retention,
+failure UI and cross-platform test plan separately before enabling it. Matrix text
+release does not imply media, voice, replies, edits, reactions, deletion, receipts,
+rich cards, Sparks, Ask/polls, Planner enhancements or conversation options.
+C exit requires all C1–C3 release gates and no critical unresolved privacy or
+restore regression. **Approval before D.**
 
 ## Phase D — Sparks, then Challenges, then Moments/discovery
 

@@ -101,12 +101,13 @@ private fun LoveRequestContent(
                                     coupleConnectionViewModel.getUserProfile(userProfile = userProfileData)
                                 onNavigateToProfile(user)
                             },
-                            onAcceptLoveRequest = { id, senderNumber, receiverNumber ->
+                            onAcceptLoveRequest = { id, senderNumber, receiverNumber, partner ->
                                 coupleConnectionViewModel.updateLoveRequest(
                                     loveRequestId = id,
                                     senderNumber = senderNumber,
                                     receiverNumber = receiverNumber,
-                                    connectionStatus = Constants.ConnectionStatus.ACCEPTED
+                                    connectionStatus = Constants.ConnectionStatus.ACCEPTED,
+                                    partner = partner,
                                 )
                             },
                             onRejectLoveRequest = { id, senderNumber, receiverNumber ->

@@ -30,8 +30,8 @@ merged or rebased. See [ADR 001](../architecture/decisions/001-navigation.md).
 | FindPartner | Partner / authenticated incl. unlinked | ChatNav.PartnerFlow → FindPartnerScreen | Flow-scoped FindPartnerVM; phone lookup preserved |
 | InviteSent, RequestReceived, YoureConnected | Partner / same flow | Typed object destinations | Finish child flow on acceptance; return to Home; stale callbacks ignored |
 | ConnectionNav.Profile(JSON) from invitations | Partner preview / authorized existing flow | PartnerPreview(userId), ephemeral authorized preview in flow VM | No JSON route; recovery after missing flow data |
-| ChatRoomScreen | Chat / authenticated | Typed room list route from Home | Entry VM; choose stable room ID |
-| ChatScreen (no argument) | Chat / server-authorized room | ChatScreen(roomId), room list or safe external link | Distinct entry per room, no first-room fallback; scoped drafts |
+| ChatRoomScreen | Chat / authenticated | Retired; Home opens `CoupleConversation(roomId=null)` | Resolve only the authenticated user's active couple room |
+| ChatScreen (no argument) | Chat / server-authorized room | `CoupleConversation(roomId?, messageId?, origin)` from Home, accepted invitation, profile or safe external link | Null resolves the active room; supplied UUID is validated and authorized by the Matrix bootstrap; entry-scoped draft/state |
 | CoupleProfile(id,page:String,planId) | Couple Profile / explicit server capabilities | CoupleProfileDestination(id, section:CoupleSection, planId) | Entry VM; local section draft/Back/save; server persistence |
 | Story, answers, song, interests, cover/position, date, sharing, plans, plan editor | Couple Profile / member or permitted visitor | Existing separate editors; public typed section intents | Existing confirmation modals stay local; no UI-only authorization |
 | EditProfile | Personal account / authenticated | ProfileNav.EditProfile | Entry VM, existing persistence |
@@ -51,10 +51,11 @@ were removed with their unused wizard navigation. Personal fields/models/APIs re
 - Removed dating ViewSets/discovery handlers, serializers, scorer/repository/constants
   and unregistered old chat sender/deleter/backup. Old dating seed command names now
   fail without mutating data.
-- Active HTTP chat/history, WebSocket subscription/mutations/delivery share current
-  couple authorization. A dating-only room no longer grants access. Its records and
-  messages remain in the database, **not presented as an active or read-only archive**.
-  A separately authorized archive/export product would need its own access policy.
+- Current couple chat enters through the authorized Matrix-session endpoint and
+  then uses the authenticated Matrix room for encrypted text. The legacy HTTP
+  history, WebSocket mutation/delivery, and media-upload paths are retired and
+  have no client fallback. A dating-only or former-couple relationship never
+  grants Matrix room access.
 - Historical SingleConnectionModel, foreign keys, migrations and BLOCKED records stay.
   Existing couple feed/Moments blocking rules continue to use those records. No user,
   relationship, message or preference table was deleted or backfilled.

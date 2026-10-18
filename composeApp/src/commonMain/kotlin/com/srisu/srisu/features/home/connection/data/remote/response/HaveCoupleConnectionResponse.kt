@@ -21,7 +21,7 @@ data class HaveCoupleConnectionResponse(
         @SerialName("created_at")
         val createdAt: String? = null,
         @SerialName("id")
-        val id: Int? = null,
+        val id: Long? = null,
         @SerialName("partner")
         val partner: CoupleConnectionRequestResponse.Result.Receiver? = null,
         @SerialName("receiver_number")
@@ -30,6 +30,10 @@ data class HaveCoupleConnectionResponse(
         val senderNumber: String? = null,
         @SerialName("updated_at")
         val updatedAt: String? = null,
-        @SerialName("couple_chat") val coupleChat: com.srisu.srisu.features.couplechat.data.CoupleChatRoom? = null,
+        @SerialName("chat_room_id")
+        val chatRoomId: String? = null,
+        @SerialName("couple_id")
+        val coupleId: Long? = null,
+        val replayed: Boolean? = null,
     )
 }

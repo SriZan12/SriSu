@@ -1,11 +1,24 @@
 package com.srisu.srisu.navigation
 
+import androidx.navigation.NavGraphNavigator
+import androidx.navigation.NavigatorProvider
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.navigation
 import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.features.coupleprofile.navigation.*
 import kotlinx.serialization.json.Json
 import kotlin.test.*
 
 class NavigationContractTest {
+    @Test fun stalePartnerOriginCannotConsumeAcceptedNavigation() {
+        var consumed = false
+        consumeAcceptedNavigation(pending = true, navigate = { false }) { consumed = true }
+        assertFalse(consumed)
+
+        consumeAcceptedNavigation(pending = true, navigate = { true }) { consumed = true }
+        assertTrue(consumed)
+    }
+
     @Test fun pickerResultsAreBoundedAndMatchOnlyTheirRequest() {
         val result = Json.encodeToString(InterestPickerResult("first", listOf(1, 2)))
         assertEquals(listOf(1, 2), decodeInterestResult("first", result)?.ids)
@@ -25,6 +38,16 @@ class NavigationContractTest {
         assertEquals(AuthNavigation.ProfileSetUp, Json.decodeFromString<AuthNavigation.ProfileSetUp>(Json.encodeToString(AuthNavigation.ProfileSetUp)))
         assertEquals(ChatNav.PartnerPreview(2), Json.decodeFromString<ChatNav.PartnerPreview>("""{"userId":2}"""))
     }
+    @Test fun coupleProfileEnumRouteBuildsWithoutPlatformReflection() {
+        val provider = NavigatorProvider()
+        provider.addNavigator(NavGraphNavigator(provider))
+        provider.addNavigator(ComposeNavigator())
+        val graph = provider.navigation(startDestination = CoupleProfileDestination()) {
+            coupleProfileDestination { }
+        }
+        val destination = assertNotNull(graph.findNode<CoupleProfileDestination>())
+        assertEquals("CoupleSection", destination.arguments.getValue("section").type.name)
+    }
     @Test fun externalInputIsStrictAndCannotPerformActions() {
         assertEquals(CoupleProfileDestination(42), parseExternalEntry("srisu://couples/42"))
         assertEquals(ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001", origin = "external"),
@@ -32,6 +55,8 @@ class NavigationContractTest {
         assertEquals(ChatNav.CoupleConversation(), Json.decodeFromString<ChatNav.CoupleConversation>("{}"))
         listOf("srisu://singles/1", "srisu://couples/-1", "srisu://couples/0", "https://attacker/couples/1",
             "srisu://couples/1/edit", "srisu://couples/1?isOwner=true", "srisu://chats/not-a-uuid",
+            "srisu://chats/00000000-0000-0000-0000-000000000000",
+            "srisu://chats/00000000-0000-4000-7000-000000000001",
             "srisu://couples/9223372036854775808", "srisu://couples/1#accept", "x".repeat(513)).forEach { assertNull(parseExternalEntry(it), it) }
     }
     @Test fun pendingLoginIsOneShotAndAccountSwitchClearsIt() {

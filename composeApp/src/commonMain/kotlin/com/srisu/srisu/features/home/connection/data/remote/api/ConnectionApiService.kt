@@ -10,6 +10,7 @@ import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerRespons
 import com.srisu.srisu.features.home.connection.data.remote.response.HaveCoupleConnectionResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
+import io.ktor.client.request.header
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.HttpMethod
@@ -30,7 +31,8 @@ class ConnectionApiService(private val httpClient: HttpClient) {
 
     suspend fun sendCoupleConnectionRequest(
         senderNumber: String?,
-        receiverNumber: String?
+        receiverNumber: String?,
+        operationId: String? = null,
     ): ResultHandler<CoupleConnectionResponse?> {
 
         val connectionRequest: HashMap<String, String> = HashMap()
@@ -40,17 +42,20 @@ class ConnectionApiService(private val httpClient: HttpClient) {
         return httpClient.safeRequest<CoupleConnectionResponse?> {
             url("${environment.baseUrl}api/social/connect-couple/")
             method = HttpMethod.Post
+            operationId?.let { header("Idempotency-Key", it) }
             setBody(connectionRequest)
         }
     }
 
     suspend fun updateCoupleConnectionRequestStatus(
         connectionId: Long?,
-        coupleConnectionDTO: CoupleConnectionDTO
+        coupleConnectionDTO: CoupleConnectionDTO,
+        operationId: String? = null,
     ): ResultHandler<CoupleConnectionResponse?> {
         return httpClient.safeRequest<CoupleConnectionResponse?> {
             url("${environment.baseUrl}api/social/connect-couple/${connectionId}/")
             method = HttpMethod.Put
+            operationId?.let { header("Idempotency-Key", it) }
             setBody(coupleConnectionDTO)
         }
     }

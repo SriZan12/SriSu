@@ -5,6 +5,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import androidx.navigation.NavDestination.Companion.hasRoute
+import com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestination
+import com.srisu.srisu.features.coupleprofile.navigation.CoupleSection
+import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileDestination
 import com.srisu.srisu.navigation.graph.*
 import org.junit.Rule
 import org.junit.Test
@@ -63,6 +66,24 @@ class NavigationOwnerTest {
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(route, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>()) }
     }
+    @Test fun coupleProfileEnumRouteRegistersAndRestoresArguments() {
+        val restoration = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+        restoration.setContent {
+            controller = rememberNavController()
+            NavHost(controller, startDestination = HomeNavigation.Home) {
+                composable<HomeNavigation.Home> { }
+                coupleProfileDestination { }
+            }
+        }
+        val route = CoupleProfileDestination(42, CoupleSection.PLAN, 9)
+        compose.runOnIdle { AppNavigator(controller).open(route) }
+        compose.waitForIdle()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(route, controller.currentBackStackEntry!!.toRoute<CoupleProfileDestination>())
+        }
+    }
     @Test fun duplicateAndLateCallbacksCannotStackOrNavigate() {
         host()
         lateinit var origin: AppNavigator
@@ -75,9 +96,41 @@ class NavigationOwnerTest {
         compose.waitForIdle()
         compose.runOnIdle {
             assertEquals(room, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>())
+            assertFalse(origin.finishFlow(ProfileNav.EditProfile, ChatNav.PartnerFlow))
             origin.open(ProfileNav.EditProfile)
             assertTrue(controller.currentDestination!!.hasRoute<ChatNav.CoupleConversation>())
             AppNavigator(controller).back()
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(controller.currentDestination!!.hasRoute<HomeNavigation.Home>()) }
+    }
+    @Test fun leavingPartnerFlowForConversationDoesNotRestoreAcceptanceOnBack() {
+        compose.setContent {
+            controller = rememberNavController()
+            NavHost(controller, startDestination = HomeNavigation.Home) {
+                composable<HomeNavigation.Home> { }
+                navigation<ChatNav.PartnerFlow>(startDestination = ChatNav.YoureConnected) {
+                    composable<ChatNav.YoureConnected> { }
+                }
+                composable<ChatNav.CoupleConversation> { }
+            }
+        }
+        compose.waitForIdle()
+        val room = ChatNav.CoupleConversation(
+            roomId = "00000000-0000-4000-8000-000000000001",
+            origin = "acceptance",
+        )
+        compose.runOnIdle { AppNavigator(controller).open(ChatNav.PartnerFlow) }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            val acceptanceEntry = controller.currentBackStackEntry!!
+            assertTrue(controller.currentDestination!!.hasRoute<ChatNav.YoureConnected>())
+            AppNavigator(controller, acceptanceEntry).leaveFlow(room, ChatNav.PartnerFlow)
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(room, controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>())
+            controller.popBackStack()
         }
         compose.waitForIdle()
         compose.runOnIdle { assertTrue(controller.currentDestination!!.hasRoute<HomeNavigation.Home>()) }

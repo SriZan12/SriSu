@@ -40,5 +40,7 @@ data class FindPartnerState(
     val requestErrors: Map<Long, String> = emptyMap(),
     val acceptedPartnerName: String? = null,
     val acceptedRoomId: String? = null,
+    val acceptedCoupleId: Long? = null,
+    /** One-shot navigation signal emitted only when acceptance is first confirmed. */
     val acceptedNavigationPending: Boolean = false,
 )

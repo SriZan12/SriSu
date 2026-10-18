@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run real loopback KMP HTTP/WebSocket traffic against a disposable Django DB."""
+"""Run real loopback KMP HTTP traffic against a disposable Django DB."""
 import argparse
 import os
 from pathlib import Path
