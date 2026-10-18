@@ -43,6 +43,33 @@ class ConnectionCurrentCoupleRoomResolver(
         }
 }
 
+/** Display-only partner identity for the conversation header; never used for authorization. */
+data class ChatPartnerIdentity(val name: String, val photoUrl: String?)
+
+interface ChatPartnerSource {
+    /** Returns the current partner only when the active relationship owns [roomId]. */
+    suspend fun partnerFor(roomId: String): ChatPartnerIdentity?
+}
+
+class ConnectionChatPartnerSource(
+    private val repository: ConnectionRepository,
+) : ChatPartnerSource {
+    override suspend fun partnerFor(roomId: String): ChatPartnerIdentity? {
+        val requested = normalizeDjangoRoomIdOrNull(roomId) ?: return null
+        val connection = (repository.sendHaveCoupleConnectionRequested().result as? NetworkAPIResult.Success)
+            ?.response?.connection
+            ?.takeIf { it.connectionStatus == ACCEPTED }
+            ?: return null
+        if (connection.chatRoomId?.let(::normalizeDjangoRoomIdOrNull) != requested) return null
+        val partner = connection.partner ?: return null
+        val name = listOfNotNull(partner.fullName, partner.firstName, partner.username)
+            .map(String::trim)
+            .firstOrNull(String::isNotEmpty)
+            ?: return null
+        return ChatPartnerIdentity(name = name, photoUrl = partner.profilePhoto?.takeIf(String::isNotBlank))
+    }
+}
+
 class MatrixChatEntryViewModel(
     private val resolver: CurrentCoupleRoomResolver,
     private val sessions: SessionCoordinator,

@@ -14,12 +14,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import com.srisu.srisu.components.SriSuButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import com.srisu.srisu.features.chat.matrix.presentation.ChatStatusState
+import org.jetbrains.compose.resources.painterResource
 import com.srisu.srisu.theme.spacing
 import org.jetbrains.compose.resources.stringResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.chat_secure_loading
-import srisu.composeapp.generated.resources.chat_secure_retry
+import srisu.composeapp.generated.resources.chat_offline
+import srisu.composeapp.generated.resources.chat_secure_error_title
+import srisu.composeapp.generated.resources.chat_secure_unavailable_title
 
 @Composable
 fun MatrixChatEntryScreen(
@@ -44,20 +49,18 @@ fun MatrixChatEntryScreen(
                     CircularProgressIndicator()
                     Text(stringResource(Res.string.chat_secure_loading), textAlign = TextAlign.Center)
                 }
-                is MatrixChatEntryState.Unavailable -> {
-                    Text(current.message, textAlign = TextAlign.Center)
-                    SriSuButton(
-                        label = stringResource(Res.string.chat_secure_retry),
-                        onClick = { viewModel.resolve(force = true) },
-                    )
-                }
-                is MatrixChatEntryState.Error -> {
-                    Text(current.message, textAlign = TextAlign.Center)
-                    SriSuButton(
-                        label = stringResource(Res.string.chat_secure_retry),
-                        onClick = { viewModel.resolve(force = true) },
-                    )
-                }
+                is MatrixChatEntryState.Unavailable -> ChatStatusState(
+                    title = stringResource(Res.string.chat_secure_unavailable_title),
+                    message = current.message,
+                    vector = Icons.Filled.Lock,
+                    action = { viewModel.resolve(force = true) },
+                )
+                is MatrixChatEntryState.Error -> ChatStatusState(
+                    title = stringResource(Res.string.chat_secure_error_title),
+                    message = current.message,
+                    icon = painterResource(Res.drawable.chat_offline),
+                    action = { viewModel.resolve(force = true) },
+                )
             }
         }
     }

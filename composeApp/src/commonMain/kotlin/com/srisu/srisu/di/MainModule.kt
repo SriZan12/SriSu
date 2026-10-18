@@ -39,7 +39,7 @@ val mainModule = module {
     }
 
     viewModel {
-        SecureChatViewModel(repository = get())
+        SecureChatViewModel(repository = get(), partners = get())
     }
 
     viewModel { MatrixChatEntryViewModel(resolver = get(), sessions = get()) }

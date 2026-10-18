@@ -88,17 +88,21 @@ permissions, encryption behavior, or proof that every prototype state exists.
 
 ## Feature scope and truthful status
 
+The 2026-10-17 presentation refinement (header identity, grouping, timestamps, status
+icons, composer and state views) is recorded in
+[couple-chat-ui-revisit.md](couple-chat-ui-revisit.md).
+
 The first releasable slice is intentionally narrow: private encrypted text,
 timeline synchronization, durable retry/catch-up for sends already accepted into
 Trixnity's outbox, truthful offline/error state, current-relationship
-authorization, and logout/account-switch isolation. The composer is disabled
+authorization, and logout/account-switch isolation. Sending is disabled
 without a current secure room observation and `SyncState.RUNNING`; this slice does
 not promise creation of new messages while offline.
 
 | Figma/product area | Matrix-era ownership | Status for the first release |
 | --- | --- | --- |
 | Empty conversation and text thread | Trixnity timeline backed by the mapped encrypted Matrix room | Implemented and compile/unit verified; live two-device Synapse verification remains |
-| Send/retry/offline recovery | One Matrix transaction ID and Trixnity's gated durable outbox; never a parallel Django message operation | Implemented for retry/catch-up of already queued sends; composer is disabled while offline, and live restart verification remains |
+| Send/retry/offline recovery | One Matrix transaction ID and Trixnity's gated durable outbox; never a parallel Django message operation | Implemented for retry/catch-up of already queued sends; sending is disabled while offline (the draft stays editable), and live restart verification remains |
 | Delivery/read state | Matrix receipt semantics exposed only when tested across both clients | Required only if the UI can report it truthfully; otherwise hide it |
 | Reply, edit, reaction and deletion | Standard Matrix relations/redactions plus SriSu product policy and current-membership gating | Deferred until each action is implemented and tested; controls stay absent |
 | Photo/video and viewer | Trixnity/Matrix encrypted media with bounded cache and current-room access | Unimplemented and disabled |

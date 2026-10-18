@@ -21,7 +21,12 @@ data class MatrixChatMessage(
     val retryTransactionId: String? = null,
     /** Encrypted event exists but its content could not be safely rendered. */
     val unavailable: Boolean = false,
-)
+    /** Matrix client transaction ID for this device's own sends; survives the outbox-to-timeline handoff. */
+    val transactionId: String? = null,
+) {
+    /** List identity that stays stable while a local send is acknowledged by the server. */
+    val stableKey: String get() = transactionId?.let { "txn:$it" } ?: id
+}
 
 sealed interface MatrixChatAvailability {
     data object Loading : MatrixChatAvailability

@@ -2,19 +2,28 @@ package com.srisu.srisu.features.chat.matrix.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
+import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
 import com.srisu.srisu.features.chat.matrix.MatrixChatRepository
 import com.srisu.srisu.features.chat.matrix.MatrixChatRoomState
 import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
 import com.srisu.srisu.features.chat.matrix.MATRIX_TEXT_MAX_PLAINTEXT_BYTES
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewModel() {
+class SecureChatViewModel(
+    private val repository: MatrixChatRepository,
+    private val partners: ChatPartnerSource? = null,
+) : ViewModel() {
     private val _state = MutableStateFlow<MatrixChatRoomState?>(null)
     val state: StateFlow<MatrixChatRoomState?> = _state.asStateFlow()
+    private val _partner = MutableStateFlow<ChatPartnerIdentity?>(null)
+    /** Header identity; null while unknown, in which case the screen shows a neutral title. */
+    val partner: StateFlow<ChatPartnerIdentity?> = _partner.asStateFlow()
     private val _messageInput = MutableStateFlow("")
     val messageInput: StateFlow<String> = _messageInput.asStateFlow()
     private val _composerValidationError = MutableStateFlow<String?>(null)
@@ -22,6 +31,7 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
     private var roomId: String? = null
     private var observer: Job? = null
     private var sendJob: Job? = null
+    private var partnerJob: Job? = null
     private var roomOperation: Long = 0
 
     fun openRoom(value: String) {
@@ -34,6 +44,8 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
         _messageInput.value = ""
         _composerValidationError.value = null
         _state.value = null
+        partnerJob?.cancel()
+        _partner.value = null
         roomId = value
         observer = viewModelScope.launch {
             repository.observeRoom(value).collect {
@@ -41,6 +53,22 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
             }
         }
         repository.openRoom(value)
+        loadPartner(value, operation)
+    }
+
+    private fun loadPartner(room: String, operation: Long) {
+        val source = partners ?: return
+        partnerJob = viewModelScope.launch {
+            val identity = try {
+                source.partnerFor(room)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // The header falls back to a neutral title; chat availability is unaffected.
+                null
+            }
+            if (roomId == room && roomOperation == operation) _partner.value = identity
+        }
     }
 
     fun updateMessageInput(value: String) {
@@ -99,6 +127,9 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
         sendJob = null
         observer?.cancel()
         observer = null
+        partnerJob?.cancel()
+        partnerJob = null
+        _partner.value = null
         roomId?.let(repository::closeRoom)
         roomId = null
         _messageInput.value = ""

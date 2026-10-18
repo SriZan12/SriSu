@@ -8,6 +8,8 @@ import com.srisu.srisu.core.data.remote.HttpClientFactory
 import com.srisu.srisu.features.auth.domain.repository.AuthRepository
 import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
+import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
+import com.srisu.srisu.features.chat.matrix.ConnectionChatPartnerSource
 import com.srisu.srisu.features.chat.matrix.ConnectionCurrentCoupleRoomResolver
 import com.srisu.srisu.features.chat.matrix.CurrentCoupleRoomResolver
 import com.srisu.srisu.features.chat.matrix.MatrixChatRepository
@@ -43,6 +45,7 @@ val sharedNetworkModule = module {
     single { ConnectionRepository(connectionApiService = get()) }
 
     single<CurrentCoupleRoomResolver> { ConnectionCurrentCoupleRoomResolver(get()) }
+    single<ChatPartnerSource> { ConnectionChatPartnerSource(get()) }
 
     single<MatrixSessionRemote> { MatrixSessionApiService(httpClient = get(), environment = get()) }
     // Eager so logout/account-switch privacy cleanup runs after process restart

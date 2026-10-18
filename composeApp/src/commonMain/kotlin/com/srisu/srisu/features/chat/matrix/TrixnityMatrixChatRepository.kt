@@ -639,7 +639,9 @@ class TrixnityMatrixChatRepository(
                     it.toMessage(active.ownMatrixId, active.partnerMatrixId)
                 } else emptyList()
                 val pendingMessages = if (ready) pending.mapNotNull { it.toMessage(active.ownMatrixId) }
-                    .filter { candidate -> timelineMessages.none { it.id == candidate.id } }
+                    .filter { candidate ->
+                        timelineMessages.none { it.id == candidate.id || it.stableKey == candidate.stableKey }
+                    }
                 else emptyList()
                 RoomObservation(
                     secure = secure,
@@ -649,6 +651,7 @@ class TrixnityMatrixChatRepository(
                         roomId = active.djangoRoomId,
                         messages = (timelineMessages + pendingMessages)
                             .distinctBy(MatrixChatMessage::id)
+                            .distinctBy(MatrixChatMessage::stableKey)
                             .sortedBy(MatrixChatMessage::timestampMillis),
                         availability = when {
                             !secure -> MatrixChatAvailability.Unavailable(
@@ -1246,6 +1249,7 @@ class TrixnityMatrixChatRepository(
             timestampMillis = event.originTimestamp,
             delivery = MatrixMessageDelivery.SENT,
             unavailable = body == null,
+            transactionId = event.unsigned?.transactionId?.takeIf { sender == ownMatrixId },
         )
     }
 
@@ -1263,6 +1267,7 @@ class TrixnityMatrixChatRepository(
                 else -> MatrixMessageDelivery.SENT
             },
             retryTransactionId = transactionId.takeIf { sendError != null },
+            transactionId = transactionId,
         )
     }
 

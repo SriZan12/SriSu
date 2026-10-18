@@ -173,6 +173,12 @@ kotlin {
             implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
         }
 
+        iosTest.dependencies {
+            // Test-only: renders chat states on the iOS simulator for screenshot evidence.
+            // Matches the Compose UI version resolved transitively for iOS (1.10.2), not the plugin's 1.8.2.
+            implementation("org.jetbrains.compose.ui:ui-test:1.10.2")
+        }
+
         iosMain.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)
