@@ -547,8 +547,31 @@ or imply any of them.
 
 ## Verification record for the KMP cutover
 
-The KMP unit suite and Android/iOS compile targets are the local acceptance checks
-for this cutover; see the task handoff for their exact final output. Contract
-fixtures are synchronized from the backend `core-1` manifest. No physical-device
-run, live two-user Synapse exchange, production data migration, deployment,
-independent security review, commit or push is claimed here.
+Final local verification on 2026-10-18 used frontend implementation merge
+`b0e335e89cd9a884fd1cdd5d4ebe229ccf5f7944` with backend
+`2a7d1f7d502bbaf3fb11b2330835a0d64bbe3ea5`:
+
+- Android unit tests passed: 197 tests, zero failures/errors and one expected
+  opt-in integration skip. Android compilation, debug APK assembly and the
+  device-only KeyStore cleanup test compilation also passed.
+- Apple-silicon iOS simulator tests passed: 134 tests with no failures, errors or
+  skips. The Xcode Debug app built for, installed on and launched in an iPhone 17
+  Pro / iOS 26.5 simulator. A generic dual-architecture simulator build remains
+  unsupported because this release intentionally removed `iosX64`.
+- `python3 tools/workspace.py verify all` passed the paired contracts, theme,
+  selected KMP checks, backend system check and 231 backend tests with 11 expected
+  SQLite skips. The separate disposable KMP-to-Django loopback integration passed.
+- The running development stack reported healthy Redis, Synapse, Synapse
+  PostgreSQL and SriSu PostgreSQL services; Django and the Matrix reconciler were
+  running. The live readiness command verified Matrix policy and all three eligible
+  rooms with zero failures or outstanding work. Its short-lived attestation is a
+  destructive-migration guard and may expire after the already-applied migration;
+  it is not a runtime chat availability switch.
+- LAN probes passed against the same ignored development configuration used by the
+  app: the backend host on Django port 8000 and Synapse port 8008. The per-machine
+  address remains outside source control.
+
+The feature branch and integration merge were pushed normally; no deployment is
+implied. No Android physical-device run, authenticated live two-user Android↔iOS
+message exchange, production data migration or independent security review is
+claimed. Those remain release gates above.
