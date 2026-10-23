@@ -86,7 +86,7 @@ private fun NavigationShell(access: StartupState.Available, member: CoupleAccess
                 Text(stringResource(Res.string.nav_membership_retry))
             }
         },
-        bottomBar = { AppBottomBar({ navigator.switchTab(it.route) }, tab, tab != null) }
+        bottomBar = { AppBottomBar(navigator::selectBottomDestination, tab, tab != null) }
     ) { padding ->
         AppNavHost(controller, start, access.session, protected, onLeaveAuth,
             Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))

@@ -28,7 +28,8 @@
       "message_spark": "184:1634",
       "message_ask": "185:2",
       "message_planner": "185:781",
-      "message_options_nickname": "185:1624"
+      "message_options_nickname": "185:1624",
+      "home_moments_page": "1:3"
     }
   },
   "features": {
@@ -36,11 +37,27 @@
       "frontend_branch": "dev-core-architecture",
       "backend_branch": "codex/couple-chat-rebuild",
       "contract": "core-1:POST /api/chat/v2/rooms/{uuid}/matrix/session/",
-      "status": "matrix-e2ee-text-client-local-runtime-ready-rich-chat-deferred",
+      "status": "matrix-chat-ui-recovered-media-replies-reactions-local-verified-live-exchange-pending",
       "flow": "docs/flows/couple-chat.md",
       "backend_guide": "../SriSu-backend/docs/chat-v2.md",
       "challenges": "matrix-domain-events-unimplemented-and-disabled",
-      "related_prs": ["SriZan12/SriSu#23", "SriZan12/SriSu#24", "SrizanKhadka/SriSu#39"]
+      "related_prs": [
+        "SriZan12/SriSu#23",
+        "SriZan12/SriSu#24",
+        "SrizanKhadka/SriSu#39"
+      ]
+    },
+    "moments": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "98f17e769bf4d0a43b444919f6f81aac91b76b3b",
+      "backend_branch": "codex/couple-chat-rebuild",
+      "backend_start": "2a7d1f7d502bbaf3fb11b2330835a0d64bbe3ea5",
+      "contract": "core-1: moments-1",
+      "flow": "docs/flows/moments.md",
+      "backend_guide": "../SriSu-backend/docs/couple_moments.md",
+      "figma_page": "1:3",
+      "migration": "social.0016_couplemomentmodel_revision_and_more",
+      "status": "implemented-local-android-ios-postgres-http-verified-no-deployment"
     }
   }
 }

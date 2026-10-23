@@ -16,9 +16,11 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
     composable<HomeNavigation.Home> { entry ->
         val nav = AppNavigator(controller, entry)
         HomeScreen(onFindPartner = { nav.open(ChatNav.PartnerFlow) },
-            onExplore = { nav.switchTab(HomeNavigation.Explore) },
+            onExplore = { nav.open(HomeNavigation.Explore) },
             onCoupleProfile = { nav.open(CoupleProfileDestination()) },
             onInvitations = { nav.open(ChatNav.PartnerRequests) },
-            onChat = { nav.open(ChatNav.CoupleConversation(origin = "home")) })
+            onChat = { nav.open(ChatNav.CoupleConversation(origin = "home")) },
+            onCreateMoment = { nav.open(com.srisu.srisu.features.moments.navigation.MomentComposerDestination(it)) },
+            onViewMoments = { couple,creator -> nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(coupleId=couple,creatorId=creator)) })
     }
 }

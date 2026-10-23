@@ -30,6 +30,7 @@ object ChatTokens {
     val statusIconContainer = 56.dp
     val skeletonLine = 14.dp
     const val composerMaxLines = 6
+    const val messageEnterMillis = 160
 
     fun bubbleShape(mine: Boolean, joinsPrevious: Boolean, joinsNext: Boolean): RoundedCornerShape {
         val full = bubbleRadius

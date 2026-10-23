@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileGraph
+import com.srisu.srisu.features.moments.navigation.momentGraph
 
 /** Assembly only; each feature registers and owns its entry/flow scopes. */
 @Composable fun AppNavHost(
@@ -20,6 +21,7 @@ import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileGraph
     NavHost(navController, startDestination = if (protectedAccess) startDestination else AuthNavigation.Flow, modifier = modifier) {
         if (protectedAccess) {
             homeGraph(navController)
+            momentGraph(navController)
             coupleProfileGraph(navController)
             profileGraph(navController)
             chatGraph(navController)

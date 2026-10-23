@@ -41,7 +41,7 @@ class ApiRouteContractTest {
             if (route.getValue("public").jsonPrimitive.boolean) assertNull(request.headers[HttpHeaders.Authorization])
             else assertEquals("Bearer synthetic-1", request.headers[HttpHeaders.Authorization])
             visited += expected
-            respond(if (expected == "refresh") CoreContractFixtures.AUTH_REFRESH else """{"data":null}""",
+            respond(if (expected == "refresh") CoreContractFixtures.AUTH_REFRESH else if(expected=="moment-get") CoreContractFixtures.MOMENT_PRIVATE else """{"data":null}""",
                 headers = headersOf(HttpHeaders.ContentType, "application/json"))
         })
         suspend fun check(name: String, call: suspend () -> ResultHandler<*>) {
@@ -85,6 +85,27 @@ class ApiRouteContractTest {
             check("couple-fave-remove") { ResultHandler(couple.fave(1,false)) }
             expected = "couple-profile-cover-read"; couple.image(environment.baseUrl + "api/social/profiles/1/cover/")
             expected = "couple-profile-member-photo"; couple.image(environment.baseUrl + "api/social/profiles/1/members/1/photo/")
+            val moments = com.srisu.srisu.features.moments.data.MomentRepository(client,environment,couple)
+            check("moment-home") {ResultHandler(moments.home())}
+            check("moment-get") {ResultHandler(moments.get(1))}
+            check("moment-sequence") {ResultHandler(moments.sequence(1,1,null))}
+            check("moment-feed") {ResultHandler(moments.discover("global",null))}
+            check("moment-viewed") {ResultHandler(moments.viewed(1))}
+            check("moment-react") {ResultHandler(moments.react(1,true))}
+            check("moment-caption") {ResultHandler(moments.edit(1,1,"Caption"))}
+            check("moment-delete") {ResultHandler(moments.delete(1))}
+            check("moment-note") {ResultHandler(moments.note(1,"Appreciation"))}
+            check("moment-notes") {ResultHandler(moments.notes(1,1))}
+            check("moment-note-reply") {ResultHandler(moments.noteReply(1,"Thank you"))}
+            check("moment-draft-create") {ResultHandler(moments.createDraft(room,1))}
+            check("moment-draft-get") {ResultHandler(moments.draft(room))}
+            check("moment-draft-delete") {ResultHandler(moments.discard(room))}
+            check("moment-upload") {ResultHandler(moments.upload(room,room,byteArrayOf(1)) {})}
+            check("moment-upload-remove") {ResultHandler(moments.removePhoto(room,room))}
+            check("moment-publish") {ResultHandler(moments.publish(room,com.srisu.srisu.features.moments.data.PublishMoment(1,"Caption","private",listOf(room))))}
+            expected="moment-photo"; moments.image(environment.baseUrl+"api/social/couple-moments/1/photos/1/")
+            expected="moment-creator-photo"; moments.image(environment.baseUrl+"api/social/couple-moments/1/creator-photo/")
+            expected="moment-staged-photo"; moments.image(environment.baseUrl+"api/social/moment-drafts/$room/photos/$room/")
             val expired = "synthetic." + Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
                 .encode("""{"exp":1,"sid":"synthetic"}""".encodeToByteArray()) + ".synthetic"
             sessions.saveSession(ApiJson.encodeToString(Session(id = 1, access = expired, refresh = "synthetic-refresh")), SESSION_KEY)

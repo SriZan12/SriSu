@@ -4,6 +4,15 @@ import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
@@ -62,6 +71,10 @@ class SecureChatRenderTest {
                 }
             }
             compose.waitForIdle()
+            state.messages.firstOrNull { it.attachment?.kind in setOf("photo", "video") }?.let { message ->
+                val label = if (message.attachment?.kind == "video") "Video preview" else "Photo preview"
+                compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription(label).fetchSemanticsNodes().isNotEmpty() }
+            }
             interact()
             compose.waitForIdle()
             val output = File("build/reports/chat-ui-revist/$name.png").apply { parentFile?.mkdirs() }
@@ -78,8 +91,21 @@ class SecureChatRenderTest {
         }
     }
 
+    @Test fun restoredMedia() = render("14-restored-photo-voice-reply", ChatRecoveryFixtures.media())
+    @Test fun emptyConversationCanComposeAndSend() = render("17-empty-composing", ChatFixtures.empty()) {
+        compose.onNodeWithContentDescription("Message").performTextInput("Our first message")
+        compose.onNodeWithContentDescription("Send message").assertIsEnabled().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Message").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
+    }
+    @Test fun restoredVideo() = render("15-restored-video", ChatRecoveryFixtures.media(video = true))
+    @Test fun restoredMediaDark() = render("16-restored-media-dark", ChatRecoveryFixtures.media(), dark = true)
     @Test fun empty() = render("01-empty", ChatFixtures.empty())
     @Test fun conversation() = render("02-conversation", ChatFixtures.conversation())
+    @Test fun loadFadeMidpoint() {
+        compose.mainClock.autoAdvance = false
+        render("18-load-fade-midpoint", ChatFixtures.conversation()) { compose.mainClock.advanceTimeBy(80) }
+    }
     @Test fun longAndGrouped() = render("03-long-grouped", ChatFixtures.longAndGrouped())
     @Test fun deliveryStates() = render("10-pending-failed-unavailable", ChatFixtures.deliveryStates())
     @Test fun multilineDraft() = render("09-multiline-draft", ChatFixtures.conversation(), draft = ChatFixtures.MULTILINE_DRAFT)

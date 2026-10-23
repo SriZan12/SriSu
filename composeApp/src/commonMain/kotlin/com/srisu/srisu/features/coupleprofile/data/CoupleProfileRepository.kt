@@ -53,7 +53,7 @@ class CoupleProfileRepository(val client: HttpClient, val environment: ApiEnviro
 
     /** Only first-party guarded media, bounded bytes, current session, no disk cache.
      * Rendering is byte-based so a generic image loader never receives credentials. */
-    suspend fun image(url: String): ByteArray? {
+    suspend fun image(url: String, maxBytes: Int = 5 * 1024 * 1024): ByteArray? {
         val stamp = sessions.stamp()
         return try {
             val target = Url(url)
@@ -69,7 +69,7 @@ class CoupleProfileRepository(val client: HttpClient, val environment: ApiEnviro
                 val count = channel.readAvailable(buffer)
                 if (count < 0) break
                 size += count
-                if (size > 5 * 1024 * 1024) { channel.cancel(); return null }
+                if (size > maxBytes.coerceIn(1, 10 * 1024 * 1024)) { channel.cancel(); return null }
                 if (count > 0) chunks += buffer.copyOf(count)
             }
             sessions.ensureCurrent(stamp)

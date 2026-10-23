@@ -10,6 +10,10 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
+    viewModel { com.srisu.srisu.features.moments.presentation.HomeMomentsViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.MomentComposerViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.MomentViewerViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.MomentDiscoveryViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get()) }
 
 
@@ -39,7 +43,7 @@ val mainModule = module {
     }
 
     viewModel {
-        SecureChatViewModel(repository = get(), partners = get())
+        SecureChatViewModel(repository = get(), partners = get(), storage = get(), sessions = get(), moments = get())
     }
 
     viewModel { MatrixChatEntryViewModel(resolver = get(), sessions = get()) }

@@ -136,3 +136,19 @@ feature navigation; completed partner flows are removed before entering chat.
 The navigation state remains scoped to the current session and couple membership.
 See [the consolidation record](../integration/core-consolidation.md) for preserved
 source commits, conflict decisions, paired PRs and validation limits.
+
+
+## Floating Home navigation follow-up (2026-10-23)
+
+The Home/Profile shell now uses the browser-visible Figma Home reference
+(`LztysD1YvINX7RwZpnhhTt`, page `1:3`): Home, Chat, Profile in an inset pill.
+Home and Profile retain saved tab entries through `AppNavigator.switchTab`.
+Chat uses `AppNavigator.open` with the existing `ChatNav.CoupleConversation`;
+the conversation hides bottom chrome and Back returns to its originating root.
+Explore remains available from Home's Explore Moments action as a pushed screen
+with a back action and system-bar padding. No Matrix/permission/room-resolution
+logic changes. `NavigationOwnerTest` covers chat-return ownership, hidden chrome
+on detail routes, and discovery returning to Home. Exact Figma metadata/assets
+were quota-blocked; Material icons and existing accessible theme tokens are used.
+See [Moments follow-up](moments.md#gallery-multi-selection-and-bottom-navigation-2026-10-23)
+for builds, renders and platform coverage.

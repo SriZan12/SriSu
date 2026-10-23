@@ -5,6 +5,8 @@ import de.connect2x.trixnity.client.RepositoriesModule
 import io.ktor.http.Url
 import kotlinx.coroutines.flow.Flow
 import okio.ByteString.Companion.encodeUtf8
+import com.srisu.srisu.features.couplechat.data.PreparedChatMedia
+import de.connect2x.trixnity.core.model.events.m.room.EncryptedFile
 
 enum class MatrixMessageDelivery { SENT, SENDING, FAILED }
 
@@ -23,10 +25,25 @@ data class MatrixChatMessage(
     val unavailable: Boolean = false,
     /** Matrix client transaction ID for this device's own sends; survives the outbox-to-timeline handoff. */
     val transactionId: String? = null,
+    val attachment: MatrixChatAttachment? = null,
+    val replyTo: String? = null,
+    val reactions: Map<String, String> = emptyMap(),
+    val ownReactionId: String? = null,
+    val read: Boolean = false,
+    val deleted: Boolean = false,
+    val uploadProgress: Float? = null,
+    val momentReference: com.srisu.srisu.features.moments.data.MomentReference? = null,
 ) {
     /** List identity that stays stable while a local send is acknowledged by the server. */
     val stableKey: String get() = transactionId?.let { "txn:$it" } ?: id
 }
+
+/** File keys are decrypted Matrix event content, held in memory; never route arguments. */
+data class MatrixChatAttachment(
+    val kind: String, val mime: String, val file: EncryptedFile,
+    val width: Int = 0, val height: Int = 0, val durationMs: Long = 0,
+    val thumbnail: EncryptedFile? = null,
+)
 
 sealed interface MatrixChatAvailability {
     data object Loading : MatrixChatAvailability
@@ -44,6 +61,10 @@ data class MatrixChatRoomState(
     val syncing: Boolean = false,
     val sending: Boolean = false,
     val composerError: String? = null,
+    val accountId: Long? = null,
+    val hasOlder: Boolean = false,
+    /** Failed reaction/redaction outbox operations; never silently discard these hidden events. */
+    val failedChangeIds: List<String> = emptyList(),
 )
 
 /**
@@ -60,6 +81,14 @@ interface MatrixChatRepository {
     fun closeRoom(roomId: String, owner: MatrixChatRoomOwner)
     suspend fun sendText(roomId: String, text: String): Result<String>
     suspend fun retryMessage(roomId: String, transactionId: String): Result<Unit>
+    suspend fun sendMomentReply(roomId: String, text: String, reference: com.srisu.srisu.features.moments.data.MomentReference): Result<String> = Result.failure(UnsupportedOperationException())
+    suspend fun sendReply(roomId: String, text: String, replyTo: String): Result<String> = Result.failure(UnsupportedOperationException())
+    suspend fun sendMedia(roomId: String, media: PreparedChatMedia, caption: String, replyTo: String?): Result<String> = Result.failure(UnsupportedOperationException())
+    suspend fun react(roomId: String, messageId: String, reaction: String?): Result<Unit> = Result.failure(UnsupportedOperationException())
+    suspend fun deleteMessage(roomId: String, messageId: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+    suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean = false): Result<ByteArray> = Result.failure(UnsupportedOperationException())
+    suspend fun markRead(roomId: String, messageId: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+    fun loadOlder(roomId: String) {}
     fun retryRoom(roomId: String, owner: MatrixChatRoomOwner)
     fun close()
 }

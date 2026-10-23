@@ -151,5 +151,6 @@ class ChatFixtureRepository(initial: MatrixChatRoomState) : MatrixChatRepository
         return Result.success(Unit)
     }
     override fun retryRoom(roomId: String, owner: MatrixChatRoomOwner) = Unit
+    override suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean): Result<ByteArray> = Result.success(ChatRecoveryFixtures.image)
     override fun close() = Unit
 }

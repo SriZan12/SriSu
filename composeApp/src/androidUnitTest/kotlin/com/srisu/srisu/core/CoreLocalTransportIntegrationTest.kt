@@ -7,6 +7,7 @@ import com.srisu.srisu.core.config.ApiEnvironment
 import com.srisu.srisu.core.data.local.CatalogueDatabase
 import com.srisu.srisu.core.data.remote.*
 import com.srisu.srisu.core.session.*
+import com.srisu.srisu.features.moments.data.*
 import com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
 import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
@@ -85,6 +86,42 @@ class CoreLocalTransportIntegrationTest {
                 try {
                     val partner=com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(partnerClient,environment,partnerSessions)
                     val visitor=com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(visitorClient,environment,visitorSessions)
+                    // Moments use the real shared transport and disposable three-actor database.
+                    val mineMoments=MomentRepository(client,environment,couple)
+                    val partnerMoments=MomentRepository(partnerClient,environment,partner)
+                    val visitorMoments=MomentRepository(visitorClient,environment,visitor)
+                    suspend fun publishMoment(source: MomentSource, visibility: String): Moment {
+                        val request=java.util.UUID.randomUUID().toString()
+                        val photo=java.util.UUID.randomUUID().toString()
+                        val draft=assertNotNull(assertIs<NetworkAPIResult.Success<MomentDraft?>>(source.createDraft(request,current.id)).response)
+                        val uploaded=assertNotNull(assertIs<NetworkAPIResult.Success<MomentDraft?>>(source.upload(request,photo,imageBytes) {}).response)
+                        val body=PublishMoment(uploaded.revision,"Synthetic morning",visibility,listOf(photo))
+                        val created=assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(source.publish(request,body)).response)
+                        val replay=assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(source.publish(request,body)).response)
+                        assertEquals(created.id,replay.id);assertNotNull(source.image(created.photos.single().image))
+                        return created
+                    }
+                    val privateMoment=publishMoment(mineMoments,"private")
+                    val partnerRead=assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(partnerMoments.get(privateMoment.id)).response)
+                    assertTrue(partnerRead.canReply);assertFalse(partnerRead.hasOpened)
+                    assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(visitorMoments.get(privateMoment.id)).failure.status)
+                    assertNull(visitorMoments.image(privateMoment.photos.single().image))
+                    assertIs<NetworkAPIResult.Success<*>>(partnerMoments.viewed(privateMoment.id))
+                    assertIs<NetworkAPIResult.Success<*>>(partnerMoments.react(privateMoment.id,true))
+                    val receipt=assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(mineMoments.get(privateMoment.id)).response)
+                    assertNotNull(receipt.partnerSeenAt);assertTrue(receipt.partnerReacted)
+                    assertEquals(403,assertIs<NetworkAPIResult.Error<*>>(partnerMoments.edit(privateMoment.id,1,"No")).failure.status)
+                    val edited=assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(mineMoments.edit(privateMoment.id,1,"Updated synthetic caption")).response)
+                    assertEquals(privateMoment.expiresAt,edited.expiresAt)
+                    val publicMoment=publishMoment(partnerMoments,"public")
+                    val publicRead=assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(visitorMoments.get(publicMoment.id)).response)
+                    assertFalse(publicRead.canReply);assertFalse(publicRead.canEdit)
+                    val note=assertNotNull(assertIs<NetworkAPIResult.Success<MomentNote?>>(visitorMoments.note(publicMoment.id,"Synthetic appreciation")).response)
+                    assertEquals(note.id,assertNotNull(assertIs<NetworkAPIResult.Success<MomentNotePage?>>(partnerMoments.notes(publicMoment.id,1)).response).results.single().id)
+                    assertIs<NetworkAPIResult.Success<*>>(partnerMoments.noteReply(note.id,"Synthetic reply"))
+                    assertIs<NetworkAPIResult.Success<*>>(mineMoments.delete(privateMoment.id))
+                    assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(partnerMoments.get(privateMoment.id)).failure.status)
+                    assertNotNull(assertIs<NetworkAPIResult.Success<MomentHome?>>(mineMoments.home()).response?.couple)
                     val hidden=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(visitor.load(current.id)).response)
                     assertNull(hidden.song);assertNull(hidden.cover);assertFalse(hidden.canEdit)
                     assertNull(visitor.image(requireNotNull(cover.cover?.url)))

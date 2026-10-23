@@ -1,27 +1,21 @@
 package com.srisu.srisu.navigation.navhost
 
-import com.srisu.srisu.theme.transparent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.srisu.srisu.theme.pill
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.transparent
 
-
+/** Shared Home chrome. Conversation/composer/viewer routes keep their full-screen layout. */
 @Composable
 fun AppBottomBar(
     onSelect: (BottomDestination) -> Unit,
@@ -29,81 +23,28 @@ fun AppBottomBar(
     visible: Boolean
 ) {
     if (!visible) return
-
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        tonalElevation = 0.dp,
-    ) {
-        BottomDestination.entries.forEach { destination ->
-            val selected = currentDestination == destination
-
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    if (selected) return@NavigationBarItem
-
-                    onSelect(destination)
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.transparent
-                ),
-                icon = {
-                    BottomBarIcon(
-                        imageVector = destination.icon,
-                        contentDescription = destination.label,
-                        selected = selected
-                    )
-                },
-                label = {
-                    Text(destination.label)
+    val colors=MaterialTheme.colorScheme
+    val space=MaterialTheme.spacing
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=space.gutter,vertical=space.small),
+        contentAlignment=Alignment.Center) {
+        Surface(modifier=Modifier.widthIn(max=480.dp).fillMaxWidth(),shape=MaterialTheme.shapes.pill,
+            color=colors.surfaceContainer,tonalElevation=0.dp,shadowElevation=2.dp) {
+            Row(Modifier.selectableGroup().padding(space.tiny).heightIn(min=space.touchTarget),
+                verticalAlignment=Alignment.CenterVertically) {
+                BottomDestination.entries.forEach { destination ->
+                    val selected=currentDestination==destination
+                    val tint=if(selected) colors.onSurface else colors.onSurfaceVariant
+                    Column(Modifier.weight(1f).clip(MaterialTheme.shapes.pill)
+                        .background(if(selected) colors.surface else colors.transparent)
+                        .selectable(selected=selected,role=Role.Tab,onClick={if(!selected) onSelect(destination)})
+                        .heightIn(min=space.touchTarget).padding(horizontal=space.small,vertical=space.tiny),
+                        horizontalAlignment=Alignment.CenterHorizontally,
+                        verticalArrangement=Arrangement.spacedBy(space.tiny,Alignment.CenterVertically)) {
+                        Icon(destination.icon,null,Modifier.size(space.icon),tint=tint)
+                        Text(destination.label,color=tint,style=MaterialTheme.typography.bodySmall)
+                    }
                 }
-            )
+            }
         }
-    }
-}
-
-@Composable
-private fun BottomBarIcon(
-    imageVector: ImageVector,
-    contentDescription: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val iconScale by animateFloatAsState(
-        targetValue = if (selected) 1.08f else 1f,
-        animationSpec = tween(220),
-        label = "bottom_bar_icon_scale"
-    )
-
-    Box(
-        modifier = modifier.size(40.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        shape = CircleShape
-                    )
-            )
-        }
-
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier
-                .size(24.dp)
-                .graphicsLayer {
-                    scaleX = iconScale
-                    scaleY = iconScale
-                }
-        )
     }
 }

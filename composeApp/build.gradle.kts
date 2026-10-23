@@ -91,6 +91,12 @@ kotlin {
         commonMain { kotlin.srcDir(environmentSources) }
         
         androidMain.dependencies {
+            // Recovered media preparation/camera components; same versions as b0421d4.
+            implementation("androidx.media3:media3-muxer:1.10.1")
+            implementation("androidx.media3:media3-container:1.10.1")
+            implementation("androidx.camera:camera-camera2:1.5.3")
+            implementation("androidx.camera:camera-lifecycle:1.5.3")
+            implementation("androidx.camera:camera-view:1.5.3")
             implementation(libs.androidx.core.splashscreen)
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)

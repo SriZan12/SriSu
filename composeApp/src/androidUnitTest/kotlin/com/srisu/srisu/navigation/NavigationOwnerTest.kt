@@ -9,6 +9,8 @@ import com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestinatio
 import com.srisu.srisu.features.coupleprofile.navigation.CoupleSection
 import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileDestination
 import com.srisu.srisu.navigation.graph.*
+import com.srisu.srisu.navigation.navhost.BottomDestination
+import com.srisu.srisu.navigation.navhost.selectBottomDestination
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,6 +51,33 @@ class NavigationOwnerTest {
         compose.runOnIdle { probe = probes.getValue(controller.currentBackStackEntry!!.id); AppNavigator(controller).back() }
         compose.waitForIdle()
         compose.runOnIdle { assertTrue(probe.cleared) }
+    }
+    @Test fun bottomChatAndDiscoveryReturnToTheirOriginWithoutCoveringTheComposer() {
+        host()
+        compose.runOnIdle {AppNavigator(controller).selectBottomDestination(BottomDestination.PROFILE)}
+        compose.waitForIdle()
+        val profile=controller.currentBackStackEntry!!.id
+        compose.runOnIdle {AppNavigator(controller).selectBottomDestination(BottomDestination.CHAT)}
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertTrue(controller.currentDestination!!.hasRoute<ChatNav.CoupleConversation>())
+            assertNull(BottomDestination.fromDestination(controller.currentDestination))
+            AppNavigator(controller).back()
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(profile,controller.currentBackStackEntry!!.id)
+            AppNavigator(controller).selectBottomDestination(BottomDestination.HOME)
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {AppNavigator(controller).open(HomeNavigation.Explore)}
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertNull(BottomDestination.fromDestination(controller.currentDestination))
+            AppNavigator(controller).back()
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {assertEquals(BottomDestination.HOME,BottomDestination.fromDestination(controller.currentDestination))}
     }
     @Test fun librarySavedStateRestoresMinimalArguments() {
         val restoration = androidx.compose.ui.test.junit4.StateRestorationTester(compose)

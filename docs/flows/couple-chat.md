@@ -1,6 +1,6 @@
 # Couple Chat — Matrix cutover record
 
-Record updated: 2026-10-17. This is the frontend-owned implementation and release
+Record updated: 2026-10-19. This is the frontend-owned implementation and release
 record for Couple Chat. The KMP client is now Matrix-only and the custom Django
 message/WebSocket and ChatV2 transports have been removed. A local Compose
 control-plane interoperability run verified Django authorization, JWT exchange,
@@ -16,6 +16,15 @@ provisioning. Matrix specifications and the selected SDK are authoritative for
 message transport semantics; this document does not redefine either protocol.
 
 ## Decision and ownership
+
+Verification follow-up, 2026-10-23: the authenticated Moments flow exposed a
+secure-chat loading stall. Nested bootstrap/room-verification timeouts now become
+retryable errors, including foreground revalidation, instead of escaping as
+ordinary cancellation and retaining Loading. Parent cancellation and current
+room/account ownership remain enforced; sending still requires secure validation.
+A regression failed before the change and passed after it, including retry.
+See the [Moments validation record](../validation/moments/full-flow/README.md) for
+runtime evidence and limits; no underlying network cause is assumed from this test.
 
 SriSu will run a private, self-hosted Synapse homeserver and use Matrix as the
 only transport for new Couple Chat messages. The KMP client will use Trixnity and
@@ -92,6 +101,12 @@ The 2026-10-17 presentation refinement (header identity, grouping, timestamps, s
 icons, composer and state views) is recorded in
 [couple-chat-ui-revisit.md](couple-chat-ui-revisit.md).
 
+The 2026-10-19 recovery restores the October 12 presentation on
+`dev-core-architecture` while retaining Matrix. See the recovery section at the
+top of that review for Git provenance, implementation boundaries and current
+verification. The earlier text-only scope below is extended by this recovery;
+none of the retired Django message transports or custom crypto is reinstated.
+
 The first releasable slice is intentionally narrow: private encrypted text,
 timeline synchronization, durable retry/catch-up for sends already accepted into
 Trixnity's outbox, truthful offline/error state, current-relationship
@@ -103,15 +118,15 @@ not promise creation of new messages while offline.
 | --- | --- | --- |
 | Empty conversation and text thread | Trixnity timeline backed by the mapped encrypted Matrix room | Implemented and compile/unit verified; live two-device Synapse verification remains |
 | Send/retry/offline recovery | One Matrix transaction ID and Trixnity's gated durable outbox; never a parallel Django message operation | Implemented for retry/catch-up of already queued sends; sending is disabled while offline (the draft stays editable), and live restart verification remains |
-| Delivery/read state | Matrix receipt semantics exposed only when tested across both clients | Required only if the UI can report it truthfully; otherwise hide it |
-| Reply, edit, reaction and deletion | Standard Matrix relations/redactions plus SriSu product policy and current-membership gating | Deferred until each action is implemented and tested; controls stay absent |
-| Photo/video and viewer | Trixnity/Matrix encrypted media with bounded cache and current-room access | Unimplemented and disabled |
-| Voice recorder/playback | Platform recorder/player, interoperable codec and encrypted Matrix media | Unimplemented and disabled; the existing inert mic is not a feature |
+| Delivery/read state | Real Matrix read receipts | Single check means sent; double check means a known partner read receipt. Independent delivered/played receipts are not fabricated. Two-device runtime validation remains |
+| Reply, reaction and deletion | Matrix reply relations, encrypted message annotations, own-message redactions | Restored with current-room gating and outbox retry. Edit remains absent. Encrypted annotations have a readable text fallback on the prior client; see recovery record |
+| Photo/video and viewer | Trixnity/Matrix encrypted files and thumbnails | Restored compact bubbles, captions, real upload progress, picker/camera and typed full-screen viewer; one attachment, 16 MiB/120 s limits; live exchange remains unverified |
+| Voice recorder/playback | Recovered native recorder/player and encrypted Matrix audio | Restored inline single-owner playback with actual progress; no invented waveform or played receipt; native runtime recording/playback still needs device validation |
 | Spark | Separate versioned SriSu domain plus an encrypted Matrix reference/event | Unimplemented and disabled |
 | Ask/free response and polls | Separate versioned SriSu domain plus encrypted display content | Unimplemented and disabled |
 | Planner/Plan cards | `CouplePlanModel` remains domain authority; Matrix may carry an encrypted typed reference | Basic Plan data exists outside chat; rich type/location/reminder/checklist/card flow is unimplemented |
 | Story prompt cards | Couple Profile remains domain authority; a future Matrix card needs an encrypted typed reference | Unimplemented on Matrix; the retired legacy message side effect is not a fallback |
-| Conversation options/nickname | Future typed settings policy; not the legacy `ChatRoom.settings` JSON | Unimplemented and disabled |
+| Conversation appearance/nickname | Account/room-scoped secure local preferences | Five restored palettes, Iris default. Nickname/presence/privacy options remain absent; no legacy `ChatRoom.settings` calls |
 | Push notifications and voice/video calls | Separate future systems | Out of scope |
 
 Unknown Matrix event or content versions must render as inert/update-required
@@ -119,10 +134,31 @@ items rather than crash or grant an action. A Figma control is not enabled until
 its domain authority, encrypted representation, failure behavior, accessibility,
 and Android/iOS implementation are complete.
 
-The current text-only UI intentionally displays the newest 100 events and does
-not yet expose backwards pagination. This is a documented first-slice limitation,
-not a claim that older Matrix history is deleted; pagination and scroll-position
-retention require a separate UI/runtime verification pass.
+The timeline starts with 100 events and exposes Load earlier in 100-event steps,
+up to a bounded window of 2,000. Stable transaction keys survive local
+send acknowledgement. Messages from another device do not force scrolling while
+reading older messages. Live pagination under concurrent sync/media loading
+remains a runtime verification gap; the window cap is not a deletion policy.
+
+Message entrances (2026-10-20) use a 160 ms opacity-only transition: one reveal
+when a loaded timeline appears, then Compose lazy-item fades for newly inserted
+visible messages, including local sends. The existing stable transaction keys
+prevent replay on acknowledgement, receipts, reactions or thumbnail updates.
+Placement, size and exit animations are disabled, so they do not move reading
+anchors or animate media geometry. Alpha is read in the graphics layer; the
+initial reveal uses ModulateAlpha to avoid a full-list offscreen buffer. System
+motion-duration settings are respected, with an immediate visible state when
+motion is disabled. This is a user-requested motion refinement to the previously
+verified Figma thread `184:274`; a fresh Figma read hit the Starter-plan tool limit.
+
+Verification for this motion change: 26 focused Android tests/renders and 13 iOS
+simulator tests/renders passed, along with Android/iOS Kotlin compilation, theme
+audit and `git diff --check`. The paused-frame tests check the partial fade and
+completion, immediate reduced motion, stable send acknowledgement, unchanged
+pagination anchor, and no per-frame content recomposition/measurement during the
+initial reveal. Android midpoint and settled screen captures were visually
+reviewed. This is not physical-device frame-time profiling; no new animation
+library, blur, spring, staggered sequence or continuous effect was introduced.
 
 ## Bootstrap and client lifecycle
 

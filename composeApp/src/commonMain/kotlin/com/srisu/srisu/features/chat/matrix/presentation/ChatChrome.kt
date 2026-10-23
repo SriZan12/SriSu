@@ -93,6 +93,7 @@ internal fun ChatHeader(
     partner: ChatPartnerIdentity?,
     availability: MatrixChatAvailability,
     onBack: () -> Unit,
+    onAppearance: (() -> Unit)? = null,
 ) {
     val securityStatus = when (availability) {
         is MatrixChatAvailability.Ready -> Res.string.chat_secure_encrypted
@@ -114,6 +115,9 @@ internal fun ChatHeader(
                 )
             }
         },
+        actions = { if (onAppearance != null) IconButton(onClick = onAppearance) {
+            Icon(com.srisu.srisu.features.couplechat.presentation.ChatIcons.MoreHoriz, "Chat appearance")
+        } },
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

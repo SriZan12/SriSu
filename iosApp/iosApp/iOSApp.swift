@@ -5,6 +5,8 @@ import ComposeApp
 struct iOSApp: App {
     
     init(){
+        NativeChatMediaRuntime.shared.installFactory { IosChatMedia() }
+        NativeChatVideoRuntime.shared.install { native in (native as! IosChatMedia).videoViewController() }
         Platform_iosKt.debugBuild()
     }
     

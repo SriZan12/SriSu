@@ -40,7 +40,11 @@ sealed interface ChatNav : Route {
         val roomId: String? = null,
         val messageId: String? = null,
         val origin: String = "chat",
+        val momentId: Long? = null,
+        val momentCoupleId: Long? = null,
     ) : ChatNav
+
+    @Serializable data class MediaViewer(val roomId: String, val messageId: String, val draft: Boolean = false) : ChatNav
 
     @Serializable data object PartnerFlow : ChatNav
     @Serializable data object PartnerRequests : ChatNav
@@ -156,13 +160,29 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
             com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
         } else {
             val vm = koinViewModel<SecureChatViewModel>()
-            LaunchedEffect(roomId) { vm.openRoom(roomId) }
-            DisposableEffect(entry, roomId) {
-                onDispose { vm.closeRoom() }
+            LaunchedEffect(roomId,route.momentId,route.momentCoupleId) {
+                vm.openRoom(roomId)
+                if(route.momentId!=null && route.momentCoupleId!=null && route.momentId>0 && route.momentCoupleId>0)
+                    vm.openMomentReply(com.srisu.srisu.features.moments.data.MomentReference(route.momentId,route.momentCoupleId))
             }
-            SecureChatScreen(viewModel = vm, onBack = nav::back)
+            DisposableEffect(entry, roomId) {
+                onDispose { vm.leaveDestination() }
+            }
+            SecureChatScreen(viewModel = vm, onBack = nav::back,
+                onOpenMoment = { ref -> vm.coverWithMedia(); nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(ref.id,ref.couple)) }, onOpenMedia = { id, draft -> nav.open(ChatNav.MediaViewer(roomId, id, draft)) })
         }
     }
+    composable<ChatNav.MediaViewer> { entry ->
+        val route = entry.toRoute<ChatNav.MediaViewer>()
+        val nav = AppNavigator(controller, entry)
+        val parent = remember(entry) { runCatching { controller.getBackStackEntry<ChatNav.CoupleConversation>() }.getOrNull() }
+        if (parent == null) com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
+        else {
+            val vm = koinViewModel<SecureChatViewModel>(viewModelStoreOwner = parent)
+            com.srisu.srisu.features.couplechat.presentation.ChatMediaScreen(route, nav::back, vm)
+        }
+    }
+
 }
 
 @Composable

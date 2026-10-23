@@ -39,6 +39,8 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -157,6 +159,43 @@ class MatrixPresentationTest {
         assertEquals(null, viewModel.composerValidationError.value)
         viewModel.closeRoom()
         viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun bootstrapTimeoutShowsRetryInsteadOfRemainingLoading() = runTest(dispatcher) {
+        val lifetime = ApplicationLifetime()
+        var calls = 0
+        val repository = TrixnityMatrixChatRepository(
+            remote = object : MatrixSessionRemote {
+                override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> {
+                    if (++calls == 1) withTimeout(100) { awaitCancellation() }
+                    return NetworkAPIResult.Error(ApiError(
+                        kind = NetworkAPIResult.ErrorType.NOT_FOUND,
+                        code = "not_found", message = "Conversation unavailable.", status = 404,
+                    ))
+                }
+            },
+            sessions = coordinator(1),
+            environment = ApiEnvironment("https://api.example.test/"),
+            engine = MockEngine { respondOk() },
+            platformStore = UnusedPlatformStore,
+            lifetime = lifetime,
+        )
+        try {
+            runCurrent()
+            val owner = MatrixChatRoomOwner()
+            repository.openRoom(ROOM_A, owner)
+            advanceUntilIdle()
+            val failure = assertIs<MatrixChatAvailability.Error>(repository.observeRoom(ROOM_A).first().availability)
+            assertTrue(failure.retryable)
+            repository.retryRoom(ROOM_A, owner)
+            advanceUntilIdle()
+            assertEquals(2, calls)
+            assertIs<MatrixChatAvailability.Unavailable>(repository.observeRoom(ROOM_A).first().availability)
+        } finally {
+            repository.close()
+            lifetime.close()
+        }
     }
 
     @Test

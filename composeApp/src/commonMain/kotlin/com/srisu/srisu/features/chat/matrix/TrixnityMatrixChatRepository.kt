@@ -1,5 +1,19 @@
 package com.srisu.srisu.features.chat.matrix
 
+import com.srisu.srisu.features.couplechat.data.PreparedChatMedia
+import de.connect2x.trixnity.client.room.message.reply
+import de.connect2x.trixnity.client.media
+import de.connect2x.trixnity.client.room.message.redact
+import de.connect2x.trixnity.core.model.UserId
+import de.connect2x.trixnity.core.model.EventId
+import de.connect2x.trixnity.core.model.events.m.ReceiptType
+import de.connect2x.trixnity.core.model.events.m.RelatesTo
+import de.connect2x.trixnity.core.model.events.m.room.ImageInfo
+import de.connect2x.trixnity.core.model.events.m.room.VideoInfo
+import de.connect2x.trixnity.core.model.events.m.room.AudioInfo
+import de.connect2x.trixnity.utils.toByteArrayFlow
+import kotlin.io.encoding.Base64
+
 import com.srisu.srisu.core.config.ApiEnvironment
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
@@ -337,6 +351,132 @@ class TrixnityMatrixChatRepository(
         }
     }
 
+
+    private val timelineLimit = MutableStateFlow(TIMELINE_SIZE)
+
+    private suspend fun richRoom(roomId: String): Pair<MatrixClient, ActiveRoom> {
+        val normalized = validatedDjangoRoomId(roomId)
+        val active = activeRoom?.takeIf { it.djangoRoomId == normalized }
+            ?: error("Secure conversation is not ready.")
+        check(_state.value.roomId == normalized && _state.value.availability is MatrixChatAvailability.Ready)
+        sessions.ensureCurrent(active.stamp)
+        val current = checkNotNull(client)
+        requireSecureRoomNow(current, active)
+        ensureRichRoomCurrent(current, active)
+        return current to active
+    }
+
+    private fun ensureRichRoomCurrent(current: MatrixClient, active: ActiveRoom) {
+        sessions.ensureCurrent(active.stamp)
+        check(activeRoom == active && client === current && clientOutboxGate?.isEnabled() == true)
+    }
+
+    override suspend fun sendMomentReply(roomId: String, text: String, reference: com.srisu.srisu.features.moments.data.MomentReference): Result<String> = runCatching {
+        val (current, active) = richRoom(roomId)
+        require(reference.id > 0 && reference.couple == active.relationshipId)
+        require(text.isNotBlank() && text.encodeToByteArray().size <= MATRIX_TEXT_MAX_PLAINTEXT_BYTES)
+        ensureRichRoomCurrent(current, active)
+        // The optional external URL lives inside the encrypted Matrix event. It contains only IDs.
+        current.room.sendMessage(active.matrixRoomId) {
+            content(RoomMessageEventContent.TextBased.Text(body = text.trim(), externalUrl = reference.url))
+        }
+    }
+
+    override suspend fun sendReply(roomId: String, text: String, replyTo: String): Result<String> = runCatching {
+        val (current, active) = richRoom(roomId)
+        require(text.isNotBlank() && text.encodeToByteArray().size <= MATRIX_TEXT_MAX_PLAINTEXT_BYTES)
+        val original = current.room.getTimelineEvent(active.matrixRoomId, EventId(replyTo)).first()
+        check(original != null && original.event.sender.full in setOf(active.ownMatrixId, active.partnerMatrixId))
+        ensureRichRoomCurrent(current, active)
+        current.room.sendMessage(active.matrixRoomId) { reply(original); text(text.trim()) }
+    }
+
+    override suspend fun sendMedia(roomId: String, media: PreparedChatMedia, caption: String, replyTo: String?): Result<String> = runCatching {
+        val (current, active) = richRoom(roomId)
+        require(media.bytes.isNotEmpty() && media.bytes.size <= 16 * 1024 * 1024)
+        require(media.kind in setOf("photo", "video", "voice"))
+        require(caption.encodeToByteArray().size <= MATRIX_TEXT_MAX_PLAINTEXT_BYTES)
+        require(media.durationMs in 0..120_000)
+        val file = current.media.prepareUploadEncryptedMedia(media.bytes.toByteArrayFlow())
+        val thumbnail = media.thumbnail?.takeIf { it.length <= 8192 }?.let {
+            current.media.prepareUploadEncryptedMedia(Base64.decode(it).toByteArrayFlow())
+        }
+        // Never use the SDK's plaintext-media branch: couple attachments always carry an EncryptedFile.
+        val relation = replyTo?.let { RelatesTo.Reply(RelatesTo.ReplyTo(EventId(it))) }
+        val content = when (media.kind) {
+            "photo" -> RoomMessageEventContent.FileBased.Image(
+                body = caption.ifBlank { "Photo" }, fileName = "photo", file = file,
+                info = ImageInfo(width = media.width, height = media.height, mimeType = media.mime,
+                    size = media.bytes.size.toLong(), thumbnailFile = thumbnail), relatesTo = relation)
+            "video" -> RoomMessageEventContent.FileBased.Video(
+                body = caption.ifBlank { "Video" }, fileName = "video", file = file,
+                info = VideoInfo(width = media.width, height = media.height, duration = media.durationMs,
+                    mimeType = media.mime, size = media.bytes.size.toLong(), thumbnailFile = thumbnail), relatesTo = relation)
+            else -> RoomMessageEventContent.FileBased.Audio(
+                body = caption.ifBlank { "Voice message" }, fileName = "voice.wav", file = file,
+                info = AudioInfo(duration = media.durationMs, mimeType = media.mime, size = media.bytes.size.toLong()), relatesTo = relation)
+        }
+        ensureRichRoomCurrent(current, active)
+        current.room.sendMessage(active.matrixRoomId) { content(content) }
+    }
+
+    override suspend fun react(roomId: String, messageId: String, reaction: String?): Result<Unit> = runCatching {
+        val (current, active) = richRoom(roomId)
+        _state.value.messages.firstOrNull { it.id == messageId && !it.unavailable && !it.deleted }
+            ?: error("Message unavailable.")
+        require(reaction == null || reaction in setOf("❤️", "😂", "🥰", "😮", "😢", "👍"))
+        // Trixnity deliberately sends m.reaction in plaintext. Keep the annotation inside
+        // an encrypted room-message event instead; an empty key removes this sender's reaction.
+        current.room.sendMessage(active.matrixRoomId) {
+            content(RoomMessageEventContent.TextBased.Text(body = reaction?.let { "Reacted $it" } ?: "Removed a reaction", relatesTo = RelatesTo.Annotation(EventId(messageId), reaction.orEmpty())))
+        }
+    }
+
+    override suspend fun deleteMessage(roomId: String, messageId: String): Result<Unit> = runCatching {
+        val (current, active) = richRoom(roomId)
+        check(_state.value.messages.any { it.id == messageId && it.mine && it.delivery == MatrixMessageDelivery.SENT })
+        current.room.sendMessage(active.matrixRoomId) { redact(EventId(messageId)) }
+    }
+
+    override suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean): Result<ByteArray> = runCatching {
+        val (current, active) = richRoom(roomId)
+        val media = checkNotNull(_state.value.messages.firstOrNull { it.id == messageId }?.attachment)
+        val file = if (thumbnail) media.thumbnail ?: media.file.takeIf { media.kind == "photo" }
+            ?: error("No thumbnail.") else media.file
+        val limit = if (thumbnail) 512 * 1024L else 16 * 1024 * 1024L
+        val bytes = current.media.getEncryptedMedia(file, maxSize = limit).getOrThrow()
+            .toByteArray(maxSize = limit) ?: error("Attachment is too large.")
+        sessions.ensureCurrent(active.stamp)
+        check(activeRoom == active && client === current)
+        bytes
+    }
+
+    private val receiptMutex = Mutex()
+    private val lastRead = mutableMapOf<String, Long>()
+    override suspend fun markRead(roomId: String, messageId: String): Result<Unit> = runCatching {
+        receiptMutex.withLock {
+            val (current, active) = richRoom(roomId)
+            val message = _state.value.messages.firstOrNull { it.id == messageId && it.delivery == MatrixMessageDelivery.SENT }
+                ?: return@withLock
+            val key = active.ownMatrixId + active.matrixRoomId.full
+            val knownReceipt = current.user.getReceiptsById(active.matrixRoomId, UserId(active.ownMatrixId)).first()
+                ?.receipts?.get(ReceiptType.Read)?.eventId
+            val knownTime = knownReceipt?.let { id ->
+                kotlinx.coroutines.withTimeoutOrNull(1500) { current.room.getTimelineEvent(active.matrixRoomId, id).first()?.event?.originTimestamp }
+            }
+            if (knownReceipt != null && knownTime == null) return@withLock
+            if (message.timestampMillis <= maxOf(lastRead[key] ?: 0, knownTime ?: 0)) return@withLock
+            ensureRichRoomCurrent(current, active)
+            current.api.room.setReceipt(active.matrixRoomId, EventId(messageId), ReceiptType.Read).getOrThrow()
+            lastRead[key] = message.timestampMillis
+        }
+    }
+
+    override fun loadOlder(roomId: String) {
+        if (_state.value.roomId == roomId && _state.value.availability is MatrixChatAvailability.Ready)
+            timelineLimit.value = (timelineLimit.value + TIMELINE_SIZE).coerceAtMost(2000)
+    }
+
     override suspend fun retryMessage(roomId: String, transactionId: String): Result<Unit> = runCatching {
         val normalized = validatedDjangoRoomId(roomId)
         require(transactionId.isNotBlank())
@@ -453,6 +593,22 @@ class TrixnityMatrixChatRepository(
                         availability = MatrixChatAvailability.Error("Your session changed. Please retry."),
                     )
                 }
+            }
+        } catch (_: TimeoutCancellationException) {
+            // A nested connection/verification deadline is recoverable. Cancellation
+            // of the owning room operation must still propagate normally.
+            currentCoroutineContext().ensureActive()
+            if (operation == roomOperation &&
+                _state.value.roomId == djangoRoomId &&
+                sessions.stamp().accountId == accountId
+            ) {
+                _state.value = MatrixChatRoomState(
+                    djangoRoomId,
+                    availability = MatrixChatAvailability.Error(
+                        "Secure chat took too long to verify. Please retry.",
+                        retryable = true,
+                    ),
+                )
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -649,22 +805,26 @@ class TrixnityMatrixChatRepository(
 
     private fun observeClientRoom(matrixClient: MatrixClient, active: ActiveRoom) {
         val observedGate = checkNotNull(clientOutboxGate) { "Matrix outbox gate is unavailable." }
+        timelineLimit.value = TIMELINE_SIZE
         val timeline = matrixClient.room.getLastTimelineEvents(active.matrixRoomId) {
             minSize = 1
-            maxSize = TIMELINE_SIZE.toLong()
+            maxSize = 2000
             decryptionTimeout = TIMELINE_EVENT_TIMEOUT
             fetchTimeout = TIMELINE_EVENT_TIMEOUT
-        }.toFlowList(MutableStateFlow(TIMELINE_SIZE)).resolveTimeline()
-        val outbox = matrixClient.room.getOutbox(active.matrixRoomId).flatten()
+        }.toFlowList(timelineLimit).resolveTimeline()
+        val outbox = matrixClient.room.getOutbox(active.matrixRoomId).flatten().flatMapLatest { pending ->
+            if (pending.isEmpty()) flowOf(emptyList())
+            else combine(pending.map { it.mediaUploadProgress }) { pending }
+        }
+        val receipts = matrixClient.user.getReceiptsById(active.matrixRoomId, UserId(active.partnerMatrixId))
         val security = secureRoomState(matrixClient, active)
         roomJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             var hasVerifiedSnapshot = false
             var lastVerifiedMessages = emptyList<MatrixChatMessage>()
-            val observations = combine(timeline, outbox, matrixClient.syncState, security) { events, pending, sync, secure ->
+            val observations = combine(timeline, outbox, matrixClient.syncState, security, receipts) { events, pending, sync, secure, receipt ->
                 val ready = matrixOutboxAllowed(secure, sync, foreground = true)
-                val timelineMessages = if (ready) events.mapNotNull {
-                    it.toMessage(active.ownMatrixId, active.partnerMatrixId)
-                } else emptyList()
+                val timelineMessages = if (ready) matrixTimelineMessages(events, active.ownMatrixId, active.partnerMatrixId,
+                    receipt?.receipts?.get(ReceiptType.Read)?.eventId?.full) else emptyList()
                 val pendingMessages = if (ready) pending.mapNotNull { it.toMessage(active.ownMatrixId) }
                     .filter { candidate ->
                         timelineMessages.none { it.id == candidate.id || it.stableKey == candidate.stableKey }
@@ -676,6 +836,9 @@ class TrixnityMatrixChatRepository(
                     pendingTransactionIds = pending.map { it.transactionId },
                     state = MatrixChatRoomState(
                         roomId = active.djangoRoomId,
+                        accountId = active.stamp.accountId,
+                        hasOlder = events.size >= timelineLimit.value && timelineLimit.value < 2000,
+                        failedChangeIds = if (ready) pending.filter { it.sendError != null && it.toMessage(active.ownMatrixId) == null }.map { it.transactionId } else emptyList(),
                         messages = (timelineMessages + pendingMessages)
                             .distinctBy(MatrixChatMessage::id)
                             .distinctBy(MatrixChatMessage::stableKey)
@@ -815,6 +978,10 @@ class TrixnityMatrixChatRepository(
         } catch (_: SessionChangedException) {
             restartForegroundValidationAfterSessionChange(expected, accountId, allowSameAccountRestart)
             return
+        } catch (_: TimeoutCancellationException) {
+            currentCoroutineContext().ensureActive()
+            pauseAfterValidationFailure(expected, operation, "Secure chat took too long to verify. Please retry.")
+            return
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -889,6 +1056,9 @@ class TrixnityMatrixChatRepository(
             }
         } catch (_: SessionChangedException) {
             restartForegroundValidationAfterSessionChange(expected, accountId, allowSameAccountRestart)
+        } catch (_: TimeoutCancellationException) {
+            currentCoroutineContext().ensureActive()
+            pauseAfterValidationFailure(expected, operation, "Secure chat took too long to verify. Please retry.")
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -1314,40 +1484,6 @@ class TrixnityMatrixChatRepository(
             if (flows.isEmpty()) flowOf(emptyList())
             else combine(flows) { values -> values.toList() }
         }
-
-    private fun TimelineEvent.toMessage(ownMatrixId: String, partnerMatrixId: String): MatrixChatMessage? {
-        val sender = event.sender.full
-        if (!event.isEncrypted || sender !in setOf(ownMatrixId, partnerMatrixId)) return null
-        val body = (content?.getOrNull() as? RoomMessageEventContent.TextBased.Text)?.body
-        return MatrixChatMessage(
-            id = event.id.full,
-            body = body.orEmpty(),
-            senderMatrixId = sender,
-            mine = sender == ownMatrixId,
-            timestampMillis = event.originTimestamp,
-            delivery = MatrixMessageDelivery.SENT,
-            unavailable = body == null,
-            transactionId = event.unsigned?.transactionId?.takeIf { sender == ownMatrixId },
-        )
-    }
-
-    private fun RoomOutboxMessage<*>.toMessage(ownMatrixId: String): MatrixChatMessage? {
-        val body = (content as? RoomMessageEventContent.TextBased.Text)?.body ?: return null
-        return MatrixChatMessage(
-            id = eventId?.full ?: "txn:$transactionId",
-            body = body,
-            senderMatrixId = ownMatrixId,
-            mine = true,
-            timestampMillis = createdAt.toEpochMilliseconds(),
-            delivery = when {
-                sendError != null -> MatrixMessageDelivery.FAILED
-                eventId == null -> MatrixMessageDelivery.SENDING
-                else -> MatrixMessageDelivery.SENT
-            },
-            retryTransactionId = transactionId.takeIf { sendError != null },
-            transactionId = transactionId,
-        )
-    }
 
     private data class RoomObservation(
         val state: MatrixChatRoomState,

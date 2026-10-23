@@ -1,5 +1,126 @@
 # Couple Chat UI revisit — 2026-10-17
 
+## Recovery on dev-core-architecture — 2026-10-19
+
+This section supersedes the text-only presentation scope below. The user explicitly
+authorized switching to `dev-core-architecture`, keeping Matrix, and recovering
+our previous chat UI/features. No reset, commit, push or deployment was performed.
+
+### Git evidence and selected sources
+
+- Current frontend base: `98f17e769bf4d0a43b444919f6f81aac91b76b3b`,
+  `dev-core-architecture`; fetched before recovery.
+- PR #24 / merge `ccdf4cb` included the earlier chat implementation on October 10.
+- Later refinements `0900d30` and `b0421d47691f741a92ded9b1db41531d5de89227`
+  were retained on `dev-core-architecture-chat-system` and
+  `codex/consolidate-core-20261010`, but never merged into this branch. Both remote
+  refs were fetched and verified. `b0421d4` is the presentation recovery source.
+- The October 18 Matrix merge `b0e335e89cd9a884fd1cdd5d4ebe229ccf5f7944`
+  deleted `features/couplechat` and replaced its route with the narrower Matrix
+  screen. This was a route/implementation replacement, not lost Git history.
+- Backend inspected read-only: `codex/couple-chat-rebuild`,
+  `2a7d1f7d502bbaf3fb11b2330835a0d64bbe3ea5`. No backend files changed.
+- Live Figma context and screenshot: thread
+  [184:274](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=184-274).
+  Iris/Dawn, compact media and custom romantic effects are intentional recovered
+  product refinements, not claims of exact Figma fidelity. Existing Satoshi,
+  tokens and vector resources are reused.
+
+The original-source ZIP and unapplied reference patch remain under the ignored
+`composeApp/build/reports/chat-recovery/` directory. Existing unrelated patches,
+notification planning notes and backend `.DS_Store` were preserved. The Xcode
+project also contains nonfunctional synchronized-folder metadata changes observed
+during this session; they were not reset.
+
+### Findings, corrections and review
+
+| Finding and evidence | Impact / priority | Correction | Verification status |
+| --- | --- | --- | --- |
+| The active route reached the replacement text screen, while the requested design survived only on an unmerged branch; Git diff and baseline render | Major functional regression: themes, message actions and media entry points were inaccessible | Reconnect recovered presentation to the existing Matrix repository and `ChatNav.CoupleConversation`; keep its authorization/navigation fixes | Route/code verified; restored screen rendered on Android and iOS test runtimes |
+| Replacement screen omitted the recovered Iris palette and component family; same-fixture before/after renders | Aesthetic/product continuity, major refinement | Restore five appearance choices, Iris default, grouped avatars/corners, compact media, replies/reactions and original composer | Visually verified light/dark and 160% text; physical keyboard/safe-area behavior is not established by these renders |
+| Photo/video/voice and message actions were absent from the Matrix presentation; source and baseline | Blocking the previously requested workflows | SDK encrypted file events and thumbnails; bounded native preparation; inline voice owner; full-screen photo/video viewer; reply, reaction and own-message deletion | UI layouts and ownership/mapping tests pass; live two-client encrypted media and native capture/playback are unverified |
+| Original missing-composer report showed a disabled legacy device state; empty-state action was unreachable in that screenshot | Blocking conversation start | Composer remains present and editable; send/attachment actions follow real Matrix readiness. Empty ready state can type and send | Visually verified on Android/iOS; Android interaction test sends the first message |
+| A naive restoration would revive a 4,000-character UI limit, silently hide failed relation events, and follow own messages from another device | Usability and recovery defects, major | Use existing Matrix input validation; explicit retry for failed reaction/deletion outbox events; auto-follow only near latest or for this device’s transaction | Regression coverage for input/failed changes/identity/scroll decision; live concurrent pagination still unverified |
+| Draft restoration could overwrite text typed during opening; account switch could retain prepared bytes until async cleanup | Draft loss/privacy, blocking | Preserve typing during opening, persist text/reply/theme in existing secure storage, immediately clear private UI on account change, sanitize deleted reply previews | Focused VM tests; failures preserve editable text, accepted outbox sends clear only unchanged drafts |
+
+The correction pass checked photo/video captions, reaction spacing, voice controls,
+dark contrast and 160% text. Async image renders now wait for real decode completion;
+container dimensions depend on metadata rather than decode, avoiding a height jump.
+No new decorative redesign was introduced.
+
+### Transport and lifecycle boundaries
+
+Recovered `features/couplechat` files are presentation models/components and native
+media adapters only. There is no recovered legacy repository, database, websocket,
+API client, custom encryption key store or operation endpoint. Trixnity remains the
+only timeline, outbox and encrypted media transport.
+
+- Replies use Matrix reply relations. Photos/videos/audio use encrypted file
+  descriptors and encrypted thumbnails; a plaintext attachment URL is unavailable.
+  Private bytes and file keys never enter navigation arguments.
+- Trixnity 5.9.2 deliberately sends `m.reaction` unencrypted. SriSu therefore sends
+  the annotation relation inside a Megolm-encrypted `m.room.message`, with readable
+  fallback body `Reacted …` / `Removed a reaction`. Latest annotation per sender
+  wins; an empty key removes it. Old text-only clients display the fallback. This
+  is a SriSu client convention using Matrix relations, not generic Matrix-client
+  reaction interoperability. No new backend endpoint or crypto is introduced.
+- Read double checks require a real partner receipt whose event is known. Receipts
+  advance only after visible incoming content and do not move backward. Single
+  checks mean accepted by the server; independent delivery/played claims are absent.
+- Voice playback stays in its bubble with one owner, actual duration/progress,
+  cancellation and stale-callback guards. No synthetic waveform is sent. Viewer
+  handoff, backgrounding and account changes relinquish playback/private bytes.
+- Text, reply context and appearance use the existing KVault-backed SessionStorage,
+  scoped by account and room. Logout clears that storage. Unsent attachment bytes
+  are memory-only until accepted by the SDK outbox; process-durable media drafts
+  are not claimed. Selection is one attachment per message, bounded to 16 MiB/120 s.
+- Romantic matching and drawing are recovered separately. History, incremental
+  initial sync, pagination and duplicate acknowledgements cannot replay effects.
+  Custom paths provide hearts/bubbles without emoji particles; reduced motion
+  disables the overlay and it has no input handlers.
+
+### Evidence and remaining scope
+
+Screenshots in `docs/validation/chat-recovery/` use synthetic fixtures only. Android
+renders are Robolectric native graphics; iOS renders run Compose/Skia on the dedicated
+`SriSu Couple Chat Evaluation` simulator, with a layout-only media driver. These
+are not a signed-in app session, camera permission test or live Matrix exchange.
+
+| Final check | Actual result |
+| --- | --- |
+| `testDebugUnitTest` | 219 discovered: 218 passed, 0 failures/errors, 1 skipped. The existing `CoreLocalTransportIntegrationTest.pairedHttpDatabaseAndLogout` requires its live local services and was not exercised |
+| `compileDebugKotlinAndroid`, `compileKotlinIosSimulatorArm64` | Passed |
+| `assembleDebug` | Passed; Android debug APK built |
+| Xcode `iosApp` Debug build, Apple-silicon simulator, signing disabled | Passed against the final source, including `ChatMediaDriver.swift` and `ChatVideoPreparation.swift`; app was not installed over the user's existing app |
+| `iosSimulatorArm64Test --device 0055683D-7DBA-44C7-855D-4AA64123C522` with chat render/recovery/playback filters | 24 passed, 0 failures/errors/skips; includes 11 UI fixture renders |
+| `python3 tools/theme/check_theme.py` | Passed: 96 documented colors, 24 M3 role pairs at least 4.5:1, minimum 4.75:1, token audit passed |
+| `git diff --check` | Passed |
+
+The native Xcode build uses `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, matching the
+Matrix branch's supported simulator target. An earlier generic simulator build
+requested the removed Intel target and failed in `syncComposeResourcesForIos`;
+this did not require changing dependencies or the project build script.
+
+Evidence: [before conversation](../validation/chat-recovery/before-conversation.png),
+[recovered conversation](../validation/chat-recovery/after-conversation.png),
+[photo, voice and reply](../validation/chat-recovery/after-media.png),
+[video](../validation/chat-recovery/after-video.png),
+[dark media](../validation/chat-recovery/after-media-dark.png),
+[iOS empty with composer](../validation/chat-recovery/ios-empty.png),
+[iOS media](../validation/chat-recovery/ios-media.png),
+[iOS 160% text](../validation/chat-recovery/ios-large-text.png).
+
+Still outside this recovery: Spark/Ask/polls, Plan/Moment/story cards, nickname and
+presence/privacy settings, message editing, played receipts and independent delivery
+receipts. Those need compatible Matrix/domain contracts; invoking the retired Django
+message system to make them appear functional would violate the selected architecture.
+Two-device encrypted sends, attachment retries after process death, live pagination,
+native recorder/player output, keyboard transitions and platform back gestures remain
+release checks. No deployment or migration was performed and no old message history
+was imported.
+
+---
+
 ## Scope and baseline
 
 Frontend: SriZan12/SriSu, branch `codex/couple-chat-rebuild` (the user chose to work on
