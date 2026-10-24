@@ -201,12 +201,14 @@ kotlin {
         }
 
         iosTest.dependencies {
-            // Test-only: renders chat states on the iOS simulator for screenshot evidence.
-            // Matches the Compose UI version resolved transitively for iOS (1.10.2), not the plugin's 1.8.2.
-            implementation("org.jetbrains.compose.ui:ui-test:1.10.2")
+            implementation(libs.compose.ios.ui.test)
         }
 
         iosMain.dependencies {
+            // Fix disposed native accessibility elements without changing Android or Material3.
+            // Foundation brings the matching animation/runtime modules; keep UI tests aligned.
+            implementation(libs.compose.ios.ui)
+            implementation(libs.compose.ios.foundation)
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.darwin)
 

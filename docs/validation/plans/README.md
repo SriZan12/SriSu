@@ -225,7 +225,12 @@ survived. The iPhone is left on Plans, notifications enabled, local services run
 - [Calendar editor](qa/calendar-editor.png), [saved event](qa/calendar-saved.png), [persisted details](qa/calendar-details.png), [cancel feedback](qa/calendar-cancelled.png)
 - [Offline retained draft](qa/offline-retained-draft.png), [cancelled plan](qa/cancelled-plan.png)
 
-### Unresolved framework finding / coverage limits
+### Framework finding during this pass / coverage limits
+
+**Follow-up:** the subsequent [iOS accessibility fix and regression pass](../ios-accessibility/README.md)
+updates the iOS Compose core to 1.12.2, validates the other feature suites and
+rechecks iPhone 17 without recurrence. The diagnostic below records the earlier
+1.10.2 build; it is retained as the baseline.
 
 At 09:40:23, the first launch after a replacement install crashed while the
 accessibility inspector queried a Compose element. Diagnostic report:
@@ -235,13 +240,13 @@ CMPAccessibilityElement.accessibilityFrame → AXRuntime`. The fault was
 EXC_BAD_ACCESS at address 0x8. Subsequent reopening and final replacement launch
 succeeded, with no newer crash report during this QA pass.
 
-Dependency insight confirms effective Compose UI 1.10.2 and Material3 1.8.2 in
-this checkout. The stack resembles the upstream
+Dependency insight at that time confirmed effective Compose UI 1.10.2 and Material3
+1.8.2. The stack resembles the upstream
 [accessibility element disposal issue](https://github.com/JetBrains/compose-multiplatform/issues/5543),
 but this is an inference, not proof that every instance has the same cause.
-It is unresolved here; a framework fix requires coordinated dependency validation
-across the app. Accessibility was not disabled to hide the failure. This record
-is not a clean release sign-off.
+It was unresolved in that Plans QA pass and required coordinated dependency
+validation across the app, now recorded in the follow-up above. Accessibility
+was not disabled to hide the failure. This record is not a complete release sign-off.
 
 Both-partner coverage uses real authenticated native clients, not two humans
 operating two phones. Physical-device notification timing, VoiceOver navigation,

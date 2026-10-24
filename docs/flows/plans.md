@@ -121,8 +121,10 @@ agenda strip beneath the keyboard-open sheet.
 iOS calendar completion distinguishes saved and cancelled copies and shows its
 outcome immediately. Android reports only the external editor handoff. Copies
 remain independent of later plan edits. See the follow-up section of
-`docs/validation/plans/README.md` for actual OS delivery/calendar evidence and the
-separate unresolved Compose accessibility crash found during inspection.
+`docs/validation/plans/README.md` for actual OS delivery/calendar evidence.
+The separate Compose accessibility crash found during inspection is addressed by
+the iOS-only runtime update and regression pass in
+`docs/validation/ios-accessibility/README.md`.
 
 A missing individual plan clears only its own saved edit/pending operation.
 Unrelated drafts survive a stale detail link or refresh; the user can return to
