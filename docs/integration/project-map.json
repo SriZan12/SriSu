@@ -58,6 +58,20 @@
       "figma_page": "1:3",
       "migration": "social.0016_couplemomentmodel_revision_and_more",
       "status": "implemented-local-android-ios-postgres-http-verified-no-deployment"
+    },
+    "sparks": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "ee9742becd54bd1c30ad76e04e482085662d497b",
+      "backend_branch": "codex/couple-chat-rebuild",
+      "backend_start": "ace26f623db19858bce62392c9a905cb81d8ffb1",
+      "contract": "sparks-1",
+      "flow": "docs/flows/sparks.md",
+      "backend_guide": "../SriSu-backend/docs/sparks.md",
+      "figma_node": "184:1634",
+      "migration": "social.0017_sparksession_sparkanswer_and_more",
+      "status": "implemented-local-live-iphone-native-partners-and-encrypted-phone-recovery-verified",
+      "live_validation": "docs/validation/sparks/live-flow.md",
+      "recovery_validation": "docs/validation/sparks/recovery.md"
     }
   }
 }

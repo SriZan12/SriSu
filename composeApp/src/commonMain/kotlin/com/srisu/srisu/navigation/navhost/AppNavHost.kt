@@ -8,6 +8,7 @@ import com.srisu.srisu.core.session.Session
 import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileGraph
 import com.srisu.srisu.features.moments.navigation.momentGraph
+import com.srisu.srisu.features.sparks.navigation.sparkGraph
 
 /** Assembly only; each feature registers and owns its entry/flow scopes. */
 @Composable fun AppNavHost(
@@ -22,6 +23,7 @@ import com.srisu.srisu.features.moments.navigation.momentGraph
         if (protectedAccess) {
             homeGraph(navController)
             momentGraph(navController)
+            sparkGraph(navController)
             coupleProfileGraph(navController)
             profileGraph(navController)
             chatGraph(navController)

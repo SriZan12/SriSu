@@ -122,7 +122,7 @@ not promise creation of new messages while offline.
 | Reply, reaction and deletion | Matrix reply relations, encrypted message annotations, own-message redactions | Restored with current-room gating and outbox retry. Edit remains absent. Encrypted annotations have a readable text fallback on the prior client; see recovery record |
 | Photo/video and viewer | Trixnity/Matrix encrypted files and thumbnails | Restored compact bubbles, captions, real upload progress, picker/camera and typed full-screen viewer; one attachment, 16 MiB/120 s limits; live exchange remains unverified |
 | Voice recorder/playback | Recovered native recorder/player and encrypted Matrix audio | Restored inline single-owner playback with actual progress; no invented waveform or played receipt; native runtime recording/playback still needs device validation |
-| Spark | Separate versioned SriSu domain plus an encrypted Matrix reference/event | Unimplemented and disabled |
+| Spark | `sparks-1` ciphertext gate plus an encrypted Matrix question/reference card | Implemented locally; see [Sparks](sparks.md) |
 | Ask/free response and polls | Separate versioned SriSu domain plus encrypted display content | Unimplemented and disabled |
 | Planner/Plan cards | `CouplePlanModel` remains domain authority; Matrix may carry an encrypted typed reference | Basic Plan data exists outside chat; rich type/location/reminder/checklist/card flow is unimplemented |
 | Story prompt cards | Couple Profile remains domain authority; a future Matrix card needs an encrypted typed reference | Unimplemented on Matrix; the retired legacy message side effect is not a fallback |
@@ -611,3 +611,6 @@ The feature branch and integration merge were pushed normally; no deployment is
 implied. No Android physical-device run, authenticated live two-user Android↔iOS
 message exchange, production data migration or independent security review is
 claimed. Those remain release gates above.
+
+
+The historical text-only cutover notes above are superseded for Sparks by [the October 23 implementation](sparks.md): four decks, protected drafts and mutually revealed encrypted answers. Other unimplemented activities are unchanged.

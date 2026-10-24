@@ -2,6 +2,8 @@
 
 package com.srisu.srisu.features.couplechat.presentation
 
+import androidx.compose.material.icons.outlined.AutoAwesome
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -446,6 +448,8 @@ internal fun ChatAttachmentSheet(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text("Share something", style = MaterialTheme.typography.titleLarge)
+            if (onCard != null) ChatActionRow("A Spark for the two of you", androidx.compose.material.icons.Icons.Outlined.AutoAwesome,
+                { onDismiss(); onCard("spark") })
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
                 ShareTile(
                     "Photos",

@@ -22,6 +22,7 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
+    single<com.srisu.srisu.features.sparks.data.SparkSource> { com.srisu.srisu.features.sparks.data.SparkRepository(get(), get()) }
     single<com.srisu.srisu.features.moments.data.MomentSource> { com.srisu.srisu.features.moments.data.MomentRepository(get(), get(), get()) }
     single { com.srisu.srisu.core.config.ApiEnvironment.configured() }
     single { com.srisu.srisu.core.lifecycle.ApplicationLifetime() } onClose { it?.close() }
@@ -59,6 +60,7 @@ val sharedNetworkModule = module {
             engine = get(),
             platformStore = get(),
             lifetime = get(),
+            sparkSource = get(),
         )
     } onClose { it?.close() }
 

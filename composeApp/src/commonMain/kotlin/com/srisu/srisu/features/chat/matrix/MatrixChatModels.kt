@@ -32,10 +32,11 @@ data class MatrixChatMessage(
     val read: Boolean = false,
     val deleted: Boolean = false,
     val uploadProgress: Float? = null,
+    val sparkReference: com.srisu.srisu.features.sparks.data.SparkReference? = null,
     val momentReference: com.srisu.srisu.features.moments.data.MomentReference? = null,
 ) {
     /** List identity that stays stable while a local send is acknowledged by the server. */
-    val stableKey: String get() = transactionId?.let { "txn:$it" } ?: id
+    val stableKey: String get() = sparkReference?.let { "spark:${it.couple}:${it.id}:$senderMatrixId" } ?: transactionId?.let { "txn:$it" } ?: id
 }
 
 /** File keys are decrypted Matrix event content, held in memory; never route arguments. */
@@ -58,6 +59,7 @@ data class MatrixChatRoomState(
     val roomId: String,
     val messages: List<MatrixChatMessage> = emptyList(),
     val availability: MatrixChatAvailability = MatrixChatAvailability.Loading,
+    val sparkBackupPending: Boolean = false,
     val syncing: Boolean = false,
     val sending: Boolean = false,
     val composerError: String? = null,
@@ -80,6 +82,14 @@ interface MatrixChatRepository {
     fun openRoom(roomId: String, owner: MatrixChatRoomOwner)
     fun closeRoom(roomId: String, owner: MatrixChatRoomOwner)
     suspend fun sendText(roomId: String, text: String): Result<String>
+    suspend fun encryptSparkAnswer(session: com.srisu.srisu.features.sparks.data.SparkSession, text: String): Result<kotlinx.serialization.json.JsonObject> = Result.failure(UnsupportedOperationException())
+    suspend fun decryptSparkAnswer(session: com.srisu.srisu.features.sparks.data.SparkSession, answer: com.srisu.srisu.features.sparks.data.SparkAnswer): Result<String> = Result.failure(UnsupportedOperationException())
+    suspend fun sparkRecoveryStatus(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<SparkRecoveryStatus> = Result.success(SparkRecoveryStatus.NotSetUp)
+    suspend fun enableSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession, key: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+    suspend fun resumeSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<Unit> = Result.failure(UnsupportedOperationException())
+    suspend fun unlockSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession, key: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+    suspend fun backUpSparkAnswers(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<Int> = Result.failure(UnsupportedOperationException())
+    suspend fun publishSparkCard(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<String> = Result.failure(UnsupportedOperationException())
     suspend fun retryMessage(roomId: String, transactionId: String): Result<Unit>
     suspend fun sendMomentReply(roomId: String, text: String, reference: com.srisu.srisu.features.moments.data.MomentReference): Result<String> = Result.failure(UnsupportedOperationException())
     suspend fun sendReply(roomId: String, text: String, replyTo: String): Result<String> = Result.failure(UnsupportedOperationException())

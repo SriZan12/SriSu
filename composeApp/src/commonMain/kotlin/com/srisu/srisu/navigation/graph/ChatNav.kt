@@ -169,6 +169,7 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
                 onDispose { vm.leaveDestination() }
             }
             SecureChatScreen(viewModel = vm, onBack = nav::back,
+                onOpenSparks = { nav.open(com.srisu.srisu.features.sparks.navigation.SparksDestination(it, fromChat = true)) },
                 onOpenMoment = { ref -> vm.coverWithMedia(); nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(ref.id,ref.couple)) }, onOpenMedia = { id, draft -> nav.open(ChatNav.MediaViewer(roomId, id, draft)) })
         }
     }

@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.chat.matrix
 
+import okio.ByteString.Companion.encodeUtf8
+
 import com.srisu.srisu.features.couplechat.data.PreparedChatMedia
 import de.connect2x.trixnity.client.room.message.reply
 import de.connect2x.trixnity.client.media
@@ -69,6 +71,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -88,6 +91,8 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -102,6 +107,7 @@ class TrixnityMatrixChatRepository(
     private val now: () -> Instant = { Clock.System.now() },
     private val matrixClientCreator: suspend (createDefault: suspend () -> MatrixClient) -> MatrixClient =
         { createDefault -> createDefault() },
+    private val sparkSource: com.srisu.srisu.features.sparks.data.SparkSource? = null,
 ) : MatrixChatRepository {
     private val scope = CoroutineScope(lifetime.scope.coroutineContext + SupervisorJob(lifetime.scope.coroutineContext[Job]))
     private val clientMutex = Mutex()
@@ -353,6 +359,118 @@ class TrixnityMatrixChatRepository(
 
 
     private val timelineLimit = MutableStateFlow(TIMELINE_SIZE)
+
+    private suspend fun sparkRoom(session: com.srisu.srisu.features.sparks.data.SparkSession): Pair<MatrixClient, ActiveRoom> {
+        val pair = richRoom(session.roomId)
+        val active = pair.second
+        require(active.relationshipId == session.couple && active.membershipEpoch == session.epoch &&
+            active.matrixRoomId.full == session.matrixRoomId) { "This Spark belongs to an unavailable conversation." }
+        return pair
+    }
+
+    override suspend fun encryptSparkAnswer(session: com.srisu.srisu.features.sparks.data.SparkSession, text: String): Result<JsonObject> = sparkOperation {
+        val (current, active) = sparkRoom(session)
+        encryptSpark(current.di.getAll<de.connect2x.trixnity.client.room.RoomEventEncryptionService>(), session, active.ownMatrixId, text).also { ensureRichRoomCurrent(current, active) }
+    }
+
+    override suspend fun decryptSparkAnswer(session: com.srisu.srisu.features.sparks.data.SparkSession, answer: com.srisu.srisu.features.sparks.data.SparkAnswer): Result<String> = sparkOperation {
+        val (current, active) = sparkRoom(session)
+        require(answer.sender == if (answer.author == active.stamp.accountId) active.ownMatrixId else active.partnerMatrixId)
+        require(session.revealed || answer.author == active.stamp.accountId)
+        require(answer in session.answers)
+        val deviceId = answer.envelope["device_id"]?.jsonPrimitive?.contentOrNull
+        if (deviceId != null) {
+            val trust = current.di.get<de.connect2x.trixnity.crypto.olm.OlmStore>().getTrustLevel(UserId(answer.sender), deviceId)
+            require(trust !is de.connect2x.trixnity.crypto.key.DeviceTrustLevel.Invalid &&
+                trust != de.connect2x.trixnity.crypto.key.DeviceTrustLevel.Blocked && trust != de.connect2x.trixnity.crypto.key.DeviceTrustLevel.NotTrusted)
+        }
+        val key = savedSparkRecoveryKey(current, active)
+        val vault = sparkVault(current)
+        // A recovery copy is authenticated by the user-held secret, and bound to this
+        // exact backend-authorized envelope. Original Matrix trust checks stay intact.
+        val recovered = if (key != null) try { vault.recover(key, session, answer) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { _state.update { it.copy(sparkBackupPending = true) }; null } else null
+        ensureRichRoomCurrent(current, active)
+        val text = recovered ?: decryptSpark(current.di.getAll<de.connect2x.trixnity.client.room.RoomEventEncryptionService>(), current.di.get<de.connect2x.trixnity.crypto.olm.OlmStore>(), session, answer)
+        ensureRichRoomCurrent(current, active)
+        if (key != null && recovered == null) {
+            try { vault.backup(key, session, answer, text) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { _state.update { it.copy(sparkBackupPending = true) } }
+        }
+        ensureRichRoomCurrent(current, active)
+        text
+    }
+
+    private val sparkRecoveryMutex = Mutex()
+    private fun sparkVault(current: MatrixClient) = SparkRecoveryVault(MatrixSparkRecoveryTransport(current), current.userId.full)
+    private fun sparkRecoveryStorageKey(current: MatrixClient, active: ActiveRoom) =
+        "spark-recovery:${active.stamp.accountId}:" + "${environment.baseUrl}|${current.baseUrl}|${current.userId.full}".encodeUtf8().sha256().hex()
+    private fun savedSparkRecoveryKey(current: MatrixClient, active: ActiveRoom): String? {
+        ensureRichRoomCurrent(current, active)
+        return sessions.getSession(sparkRecoveryStorageKey(current, active))?.takeIf { it.isNotBlank() }
+    }
+    override suspend fun sparkRecoveryStatus(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<SparkRecoveryStatus> = sparkOperation {
+        val (current, active) = sparkRoom(session)
+        sparkVault(current).status(savedSparkRecoveryKey(current, active)).also { ensureRichRoomCurrent(current, active) }
+    }
+    override suspend fun enableSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession, key: String): Result<Unit> = sparkOperation {
+        sparkRecoveryMutex.withLock {
+            val (current, active) = sparkRoom(session)
+            recoveryKeyId(key) // validate before persisting or making any request
+            val storageKey = sparkRecoveryStorageKey(current, active)
+            val previous = savedSparkRecoveryKey(current, active)
+            require(previous == null || recoveryKeyId(previous) == recoveryKeyId(key))
+            // Persist BEFORE upload, so a timeout/process death can retry this exact vault.
+            sessions.saveSession(key, storageKey)
+            sparkVault(current).create(key)
+            ensureRichRoomCurrent(current, active)
+        }
+    }
+    override suspend fun resumeSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<Unit> = sparkOperation {
+        val (current, active) = sparkRoom(session)
+        val key = requireNotNull(savedSparkRecoveryKey(current, active))
+        enableSparkRecovery(session, key).getOrThrow()
+    }
+    override suspend fun unlockSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession, key: String): Result<Unit> = sparkOperation {
+        sparkRecoveryMutex.withLock {
+            val (current, active) = sparkRoom(session)
+            sparkVault(current).unlock(key) // wrong keys never replace the local saved key
+            ensureRichRoomCurrent(current, active)
+            sessions.saveSession(key, sparkRecoveryStorageKey(current, active))
+        }
+    }
+    override suspend fun backUpSparkAnswers(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<Int> = sparkOperation {
+        val (current, active) = sparkRoom(session)
+        val key = requireNotNull(savedSparkRecoveryKey(current, active))
+        val vault = sparkVault(current)
+        vault.unlock(key)
+        for (answer in session.answers) {
+            require(answer.sender == if (answer.author == active.stamp.accountId) active.ownMatrixId else active.partnerMatrixId)
+            require(session.revealed || answer.author == active.stamp.accountId)
+            val recovered = vault.recover(key, session, answer)
+            val text = recovered ?: decryptSpark(current.di.getAll<de.connect2x.trixnity.client.room.RoomEventEncryptionService>(), current.di.get<de.connect2x.trixnity.crypto.olm.OlmStore>(), session, answer)
+            ensureRichRoomCurrent(current, active)
+            vault.backup(key, session, answer, text)
+            ensureRichRoomCurrent(current, active)
+        }
+        _state.update { it.copy(sparkBackupPending = false) }
+        session.answers.size
+    }
+
+    override suspend fun publishSparkCard(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<String> = sparkOperation {
+        val (current, active) = sparkRoom(session)
+        require(session.creator == active.stamp.accountId)
+        sendSparkCard(current, session).also { ensureRichRoomCurrent(current, active) }
+    }
+
+    private suspend fun <T> sparkOperation(block: suspend () -> T): Result<T> = try {
+        Result.success(withTimeout(30.seconds) { block() })
+    } catch (timeout: TimeoutCancellationException) {
+        Result.failure(IllegalStateException("Secure chat is still syncing. Your answer is kept; try again."))
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (failure: Exception) { Result.failure(failure) }
 
     private suspend fun richRoom(roomId: String): Pair<MatrixClient, ActiveRoom> {
         val normalized = validatedDjangoRoomId(roomId)
@@ -803,6 +921,44 @@ class TrixnityMatrixChatRepository(
         created
     }
 
+    private suspend fun maintainSparkRecovery(current: MatrixClient, active: ActiveRoom) {
+        val source = sparkSource ?: return
+        val completed = mutableSetOf<Pair<String, Long>>()
+        var fullScan = true
+        while (currentCoroutineContext().isActive) {
+            if (_state.value.availability is MatrixChatAvailability.Ready && lifetime.foreground.value) {
+                try {
+                    ensureRichRoomCurrent(current, active)
+                    if (savedSparkRecoveryKey(current, active) != null) {
+                        val ids = mutableListOf<String>()
+                        if (fullScan) {
+                            var cursor: String? = null
+                            do {
+                                val page = (source.history(cursor) as? com.srisu.srisu.core.data.remote.NetworkAPIResult.Success)?.response ?: error("Recovery history unavailable")
+                                ids += page.ids
+                                require(page.next == null || page.next != cursor)
+                                cursor = page.next
+                            } while (cursor != null)
+                        } else {
+                            val home = (source.home() as? com.srisu.srisu.core.data.remote.NetworkAPIResult.Success)?.response ?: error("Recovery history unavailable")
+                            ids += (home.recent + listOfNotNull(home.active)).filter { (it.id to it.revision) !in completed }.map { it.id }
+                        }
+                        var failed = false
+                        for (id in ids.distinct()) {
+                            ensureRichRoomCurrent(current, active)
+                            val session = (source.get(id) as? com.srisu.srisu.core.data.remote.NetworkAPIResult.Success)?.response ?: error("Recovery answer unavailable")
+                            if (backUpSparkAnswers(session).isSuccess) completed += session.id to session.revision else failed = true
+                        }
+                        fullScan = failed
+                        _state.update { it.copy(sparkBackupPending = failed) }
+                    }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { _state.update { it.copy(sparkBackupPending = true) } }
+            }
+            delay(30.seconds)
+        }
+    }
+
     private fun observeClientRoom(matrixClient: MatrixClient, active: ActiveRoom) {
         val observedGate = checkNotNull(clientOutboxGate) { "Matrix outbox gate is unavailable." }
         timelineLimit.value = TIMELINE_SIZE
@@ -819,6 +975,7 @@ class TrixnityMatrixChatRepository(
         val receipts = matrixClient.user.getReceiptsById(active.matrixRoomId, UserId(active.partnerMatrixId))
         val security = secureRoomState(matrixClient, active)
         roomJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            launch { maintainSparkRecovery(matrixClient, active) }
             var hasVerifiedSnapshot = false
             var lastVerifiedMessages = emptyList<MatrixChatMessage>()
             val observations = combine(timeline, outbox, matrixClient.syncState, security, receipts) { events, pending, sync, secure, receipt ->
@@ -855,6 +1012,7 @@ class TrixnityMatrixChatRepository(
                                 retryable = true,
                             )
                         },
+                        sparkBackupPending = _state.value.sparkBackupPending,
                         syncing = sync == SyncState.INITIAL_SYNC || sync == SyncState.STARTED,
                         // Pending outbox work does not disable composing another message
                         // while this room remains securely synchronized.

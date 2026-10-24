@@ -69,10 +69,12 @@ import srisu.composeapp.generated.resources.chat_secure_unavailable_title
 import srisu.composeapp.generated.resources.chat_secure_yesterday
 import kotlin.time.Clock
 import androidx.compose.material.icons.outlined.Photo
+import androidx.compose.material.icons.outlined.AutoAwesome
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
+    onOpenSparks: (String?)->Unit = {},
     onOpenMoment: (com.srisu.srisu.features.moments.data.MomentReference)->Unit = {},
     onOpenMedia: (String, Boolean) -> Unit = { _, _ -> }) {
     val state by viewModel.state.collectAsState()
@@ -110,7 +112,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
                                 availability is MatrixChatAvailability.Loading -> ChatLoadingState(Modifier.fillMaxSize())
                                 state?.messages.isNullOrEmpty() -> ConversationEmpty(true, {}, viewModel::updateMessageInput, Modifier.fillMaxSize(), composing = ui.draft.isNotBlank())
                                 else -> ChatTimelineList(state!!.messages, viewModel, ui, media, partner,
-                                    onOpenMoment = onOpenMoment, onMenu = { selected = it }, jump = jump, onJump = { jump = it },
+                                    onOpenSparks = onOpenSparks, onOpenMoment = onOpenMoment, onMenu = { selected = it }, jump = jump, onJump = { jump = it },
                                     onMedia = { id -> keyboard?.hide(); media.handoffToViewer(); viewModel.coverWithMedia(); onOpenMedia(id, false) })
                             }
                         }
@@ -151,7 +153,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
         }
     }
     if (appearance) ChatAppearanceSheet(ui.preferences.chatTheme, { viewModel.chatTheme(it); appearance = false }, { appearance = false })
-    if (attachments) ChatAttachmentSheet(media, { attachments = false })
+    if (attachments) ChatAttachmentSheet(media, { attachments = false }, { onOpenSparks(null) })
     val message = ui.messages.firstOrNull { it.id == selected }
     if (message != null) ModalBottomSheet(onDismissRequest = { selected = null }) {
         Column(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.gutter).navigationBarsPadding()) {
@@ -181,6 +183,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
 @Composable
 private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: SecureChatViewModel,
     ui: ConversationState, media: ChatMediaController, partner: com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity?,
+    onOpenSparks: (String?)->Unit = {},
     onOpenMoment: (com.srisu.srisu.features.moments.data.MomentReference)->Unit, onMenu: (String) -> Unit, jump: String?, onJump: (String?) -> Unit, onMedia: (String) -> Unit) {
     val timeZone = remember { TimeZone.currentSystemDefault() }
     // Newest first, rendered bottom-up: the conversation anchors to the composer like other messengers.
@@ -261,6 +264,12 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
                             if (item.message.attachment?.kind in setOf("photo", "video")) LaunchedEffect(item.message.id, item.message.delivery) { viewModel.loadThumbnail(item.message.id) }
                             MessageBubble(display, item.message.mine, partner?.name ?: "Your partner", ui.accountId,
                                 item.joinsPrevious, cardContent = {
+                                    item.message.sparkReference?.let { reference ->
+                                        TextButton(onClick = { onOpenSparks(reference.id) }) {
+                                            Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.spark)
+                                            Spacer(Modifier.width(MaterialTheme.spacing.small)); Text("Open Spark")
+                                        }
+                                    }
                                     item.message.momentReference?.let { reference ->
                                         MomentChatReference(reference,viewModel,onOpenMoment)
                                     }

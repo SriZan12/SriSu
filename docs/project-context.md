@@ -250,3 +250,12 @@ replace older descriptions of the root/account-wide feature ViewModels and legac
 JSON route arguments. Both working branches remain `dev-core-architecture`; changes
 are uncommitted under the current request. Dating endpoint retirement is paired with
 client removal, while phone partner invitations, individual profiles and Faves remain.
+
+## Sparks (local, 2026-10-23)
+
+[Sparks implementation and verification](flows/sparks.md) adds four curated decks,
+protected drafts and a mutually revealed pair of Matrix-encrypted answers. Django
+holds ciphertext until both submit; its release gate remains a trusted server
+boundary. The paired `sparks-1` contract and backend migration are additive.
+See the feature map and validation record for the exact bases and remaining live
+exchange coverage.

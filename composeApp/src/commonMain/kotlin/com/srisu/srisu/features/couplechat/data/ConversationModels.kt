@@ -11,6 +11,8 @@ data class ChatQuote(val messageId: String, val authorId: Long, val preview: Str
 sealed interface ChatContent {
     @Serializable @SerialName("text")
     data class Text(val body: String, val quote: ChatQuote? = null) : ChatContent
+    @Serializable @SerialName("spark")
+    data class Spark(val body: String, val reference: com.srisu.srisu.features.sparks.data.SparkReference) : ChatContent
     @Serializable @SerialName("moment")
     data class Moment(val body: String, val reference: com.srisu.srisu.features.moments.data.MomentReference) : ChatContent
     @Serializable @SerialName("media")

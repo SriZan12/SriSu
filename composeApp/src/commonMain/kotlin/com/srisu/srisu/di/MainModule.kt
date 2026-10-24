@@ -10,6 +10,8 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
+    viewModel { com.srisu.srisu.features.sparks.presentation.SparkViewModel(get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.sparks.presentation.HomeSparksViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.HomeMomentsViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentComposerViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentViewerViewModel(get(), get()) }
