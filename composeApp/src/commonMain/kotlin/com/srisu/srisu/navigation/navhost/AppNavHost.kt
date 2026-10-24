@@ -9,6 +9,7 @@ import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileGraph
 import com.srisu.srisu.features.moments.navigation.momentGraph
 import com.srisu.srisu.features.sparks.navigation.sparkGraph
+import com.srisu.srisu.features.challenges.navigation.challengeGraph
 
 /** Assembly only; each feature registers and owns its entry/flow scopes. */
 @Composable fun AppNavHost(
@@ -24,6 +25,7 @@ import com.srisu.srisu.features.sparks.navigation.sparkGraph
             homeGraph(navController)
             momentGraph(navController)
             sparkGraph(navController)
+            challengeGraph(navController)
             coupleProfileGraph(navController)
             profileGraph(navController)
             chatGraph(navController)

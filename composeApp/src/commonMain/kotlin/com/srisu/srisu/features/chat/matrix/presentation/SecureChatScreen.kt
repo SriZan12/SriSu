@@ -1,6 +1,8 @@
 @file:OptIn(kotlinx.coroutines.FlowPreview::class)
 package com.srisu.srisu.features.chat.matrix.presentation
 
+import androidx.compose.material.icons.outlined.WbSunny
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -74,6 +76,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
+    onOpenChallenges: (String?)->Unit = {},
     onOpenSparks: (String?)->Unit = {},
     onOpenMoment: (com.srisu.srisu.features.moments.data.MomentReference)->Unit = {},
     onOpenMedia: (String, Boolean) -> Unit = { _, _ -> }) {
@@ -112,7 +115,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
                                 availability is MatrixChatAvailability.Loading -> ChatLoadingState(Modifier.fillMaxSize())
                                 state?.messages.isNullOrEmpty() -> ConversationEmpty(true, {}, viewModel::updateMessageInput, Modifier.fillMaxSize(), composing = ui.draft.isNotBlank())
                                 else -> ChatTimelineList(state!!.messages, viewModel, ui, media, partner,
-                                    onOpenSparks = onOpenSparks, onOpenMoment = onOpenMoment, onMenu = { selected = it }, jump = jump, onJump = { jump = it },
+                                    onOpenChallenges = onOpenChallenges, onOpenSparks = onOpenSparks, onOpenMoment = onOpenMoment, onMenu = { selected = it }, jump = jump, onJump = { jump = it },
                                     onMedia = { id -> keyboard?.hide(); media.handoffToViewer(); viewModel.coverWithMedia(); onOpenMedia(id, false) })
                             }
                         }
@@ -153,7 +156,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
         }
     }
     if (appearance) ChatAppearanceSheet(ui.preferences.chatTheme, { viewModel.chatTheme(it); appearance = false }, { appearance = false })
-    if (attachments) ChatAttachmentSheet(media, { attachments = false }, { onOpenSparks(null) })
+    if (attachments) ChatAttachmentSheet(media, { attachments = false }, { onOpenSparks(null) }, { onOpenChallenges(null) })
     val message = ui.messages.firstOrNull { it.id == selected }
     if (message != null) ModalBottomSheet(onDismissRequest = { selected = null }) {
         Column(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.gutter).navigationBarsPadding()) {
@@ -183,6 +186,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
 @Composable
 private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: SecureChatViewModel,
     ui: ConversationState, media: ChatMediaController, partner: com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity?,
+    onOpenChallenges: (String?)->Unit = {},
     onOpenSparks: (String?)->Unit = {},
     onOpenMoment: (com.srisu.srisu.features.moments.data.MomentReference)->Unit, onMenu: (String) -> Unit, jump: String?, onJump: (String?) -> Unit, onMedia: (String) -> Unit) {
     val timeZone = remember { TimeZone.currentSystemDefault() }
@@ -264,6 +268,12 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
                             if (item.message.attachment?.kind in setOf("photo", "video")) LaunchedEffect(item.message.id, item.message.delivery) { viewModel.loadThumbnail(item.message.id) }
                             MessageBubble(display, item.message.mine, partner?.name ?: "Your partner", ui.accountId,
                                 item.joinsPrevious, cardContent = {
+                                    item.message.challengeReference?.let { reference ->
+                                        TextButton(onClick = { onOpenChallenges(reference.id) }) {
+                                            Icon(Icons.Outlined.WbSunny, null, tint = MaterialTheme.colorScheme.reminder)
+                                            Spacer(Modifier.width(MaterialTheme.spacing.small)); Text("Open Challenge")
+                                        }
+                                    }
                                     item.message.sparkReference?.let { reference ->
                                         TextButton(onClick = { onOpenSparks(reference.id) }) {
                                             Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.spark)

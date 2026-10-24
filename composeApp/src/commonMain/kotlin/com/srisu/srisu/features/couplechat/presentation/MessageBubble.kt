@@ -158,6 +158,7 @@ internal fun MessageBubble(
                             message.unavailable -> UnavailableMessage("Message unavailable on this device")
                             else -> when (val content = message.content) {
                                 is ChatContent.Moment -> { cardContent(); MessageText(content.body) }
+                                is ChatContent.Challenge -> { cardContent(); MessageText(content.body) }
                                 is ChatContent.Spark -> { cardContent(); MessageText(content.body) }
                                 is ChatContent.Text -> {
                                     content.quote?.let {

@@ -259,3 +259,12 @@ holds ciphertext until both submit; its release gate remains a trusted server
 boundary. The paired `sparks-1` contract and backend migration are additive.
 See the feature map and validation record for the exact bases and remaining live
 exchange coverage.
+
+## Challenges (local, 2026-10-24)
+
+[Challenges flow and design decisions](flows/challenges.md) adds four activity
+collections, mutual acceptance/completion, individual pause ownership and private
+history. Home and encrypted chat cards open the same authorized feature. The
+additive `challenges-1` contract and migrations 0018/0019 are applied locally.
+See [verification and screenshots](validation/challenges/README.md) for native
+two-partner testing, PostgreSQL coverage and Figma access limitations.

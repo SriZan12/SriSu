@@ -439,7 +439,8 @@ internal fun MediaDraftPreview(
 internal fun ChatAttachmentSheet(
     controller: ChatMediaController,
     onDismiss: () -> Unit,
-    onCard: ((String) -> Unit)? = null
+    onCard: ((String) -> Unit)? = null,
+    onChallenge: (() -> Unit)? = null
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -448,6 +449,8 @@ internal fun ChatAttachmentSheet(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text("Share something", style = MaterialTheme.typography.titleLarge)
+            if (onChallenge != null) ChatActionRow("Try a Challenge together", androidx.compose.material.icons.Icons.Outlined.WbSunny,
+                { onDismiss(); onChallenge() })
             if (onCard != null) ChatActionRow("A Spark for the two of you", androidx.compose.material.icons.Icons.Outlined.AutoAwesome,
                 { onDismiss(); onCard("spark") })
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {

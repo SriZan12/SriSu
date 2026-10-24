@@ -29,7 +29,9 @@
       "message_ask": "185:2",
       "message_planner": "185:781",
       "message_options_nickname": "185:1624",
-      "home_moments_page": "1:3"
+      "home_moments_page": "1:3",
+      "home_challenge_title": "193:110",
+      "shared_space_challenge": "158:13166"
     }
   },
   "features": {
@@ -40,7 +42,7 @@
       "status": "matrix-chat-ui-recovered-media-replies-reactions-local-verified-live-exchange-pending",
       "flow": "docs/flows/couple-chat.md",
       "backend_guide": "../SriSu-backend/docs/chat-v2.md",
-      "challenges": "matrix-domain-events-unimplemented-and-disabled",
+      "challenges": "encrypted-matrix-reference-card-opens-authorized-challenge",
       "related_prs": [
         "SriZan12/SriSu#23",
         "SriZan12/SriSu#24",
@@ -72,6 +74,26 @@
       "status": "implemented-local-live-iphone-native-partners-and-encrypted-phone-recovery-verified",
       "live_validation": "docs/validation/sparks/live-flow.md",
       "recovery_validation": "docs/validation/sparks/recovery.md"
+    },
+    "challenges": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "f0969a00c2329fd34187ef802390ef4a5ab4f01e",
+      "backend_branch": "codex/couple-chat-rebuild",
+      "backend_start": "a542c87053b3dd52551da8c794367b8d97666fb5",
+      "contract": "challenges-1",
+      "flow": "docs/flows/challenges.md",
+      "backend_guide": "../SriSu-backend/docs/challenges.md",
+      "figma_nodes": [
+        "193:110",
+        "158:13166"
+      ],
+      "migrations": [
+        "social.0018_challengetemplate_couplechallenge_challengeoperation_and_more",
+        "social.0019_challenge_catalogue"
+      ],
+      "status": "implemented-local-native-two-partner-flow-verified-uncommitted",
+      "validation": "docs/validation/challenges/README.md",
+      "qa_validation": "docs/validation/challenges/qa.md"
     }
   }
 }
