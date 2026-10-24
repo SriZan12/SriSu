@@ -20,6 +20,7 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 actual val platformNetworkModule = module {
+    single<com.srisu.srisu.features.plans.data.PlanDevice> { checkNotNull(com.srisu.srisu.features.plans.data.NativePlanRuntime.device) }
     single<HttpClientEngine> { Darwin.create() } onClose { it?.close() }
     single {
         val directory = NSFileManager.defaultManager.URLForDirectory(

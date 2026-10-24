@@ -9,6 +9,8 @@ data class ChatQuote(val messageId: String, val authorId: Long, val preview: Str
 /** Presentation content only; Matrix owns serialization on the wire. */
 @Serializable
 sealed interface ChatContent {
+    @Serializable @SerialName("plan")
+    data class Plan(val body: String, val reference: com.srisu.srisu.features.plans.data.PlanReference) : ChatContent
     @Serializable @SerialName("challenge")
     data class Challenge(val body: String, val reference: com.srisu.srisu.features.challenges.data.ChallengeReference) : ChatContent
     @Serializable @SerialName("text")

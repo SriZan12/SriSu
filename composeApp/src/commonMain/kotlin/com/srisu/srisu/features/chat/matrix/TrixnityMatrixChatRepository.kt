@@ -465,6 +465,15 @@ class TrixnityMatrixChatRepository(
         sendSparkCard(current, session).also { ensureRichRoomCurrent(current, active) }
     }
 
+    override suspend fun publishPlanCard(session: com.srisu.srisu.features.plans.data.Plan): Result<String> = sparkOperation {
+        val (current, active) = richRoom(requireNotNull(session.roomId))
+        require(active.relationshipId == session.couple && active.membershipEpoch == session.epoch &&
+            active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
+        val eventId = sendPlanCard(current, session)
+        ensureRichRoomCurrent(current, active)
+        eventId
+    }
+
     override suspend fun publishChallengeCard(session: com.srisu.srisu.features.challenges.data.ChallengeSession): Result<String> = sparkOperation {
         val (current, active) = richRoom(requireNotNull(session.roomId))
         require(active.relationshipId == session.couple && active.membershipEpoch == session.epoch &&

@@ -268,3 +268,13 @@ history. Home and encrypted chat cards open the same authorized feature. The
 additive `challenges-1` contract and migrations 0018/0019 are applied locally.
 See [verification and screenshots](validation/challenges/README.md) for native
 two-partner testing, PostgreSQL coverage and Figma access limitations.
+
+## Plans (local, 2026-10-24)
+
+[Plans flow and design decisions](flows/plans.md) adds the agenda, invitations,
+mutually accepted rescheduling, cancellation/history, shared checklists and
+personal device reminders. Existing CouplePlanModel records and compatibility
+routes remain. Figma Planner `185:781`, contract `plans-1`, additive migration
+`social.0020_coupleplanmodel_cancelled_at_and_more`. Plan metadata remains private
+server-held couple data; Matrix invitation cards and conversation are encrypted.
+See [verification](validation/plans/README.md) for actual platform/live coverage.

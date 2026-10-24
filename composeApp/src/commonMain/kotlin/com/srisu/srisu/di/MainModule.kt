@@ -10,6 +10,8 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
+    viewModel { com.srisu.srisu.features.plans.presentation.PlanViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.plans.presentation.HomePlansViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.challenges.presentation.ChallengeViewModel(get(), get(), get(), get()) }
     viewModel { com.srisu.srisu.features.challenges.presentation.HomeChallengesViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.sparks.presentation.SparkViewModel(get(), get(), get()) }

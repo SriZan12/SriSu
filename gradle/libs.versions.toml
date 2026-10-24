@@ -14,7 +14,8 @@ composeMultiplatform = "1.8.2"
 junit = "4.13.2"
 kotlin = "2.3.21"
 kotlinxCoroutinesCore = "1.11.0"
-kotlinxDatetime = "0.7.1-0.6.x-compat"
+# Compose 1.8 date pickers still need the old Instant ABI; retain the API level selected by Lognity.
+kotlinxDatetime = { strictly = "0.8.0-0.6.x-compat" }
 kotlinxSerializationJson = "1.11.0"
 kotlinSerilization = "2.3.21"
 ktorClientCore = "3.5.2"

@@ -2,6 +2,8 @@
 
 package com.srisu.srisu.features.couplechat.presentation
 
+import androidx.compose.material.icons.outlined.CalendarMonth
+
 import androidx.compose.material.icons.outlined.AutoAwesome
 
 import androidx.compose.foundation.Canvas
@@ -440,7 +442,8 @@ internal fun ChatAttachmentSheet(
     controller: ChatMediaController,
     onDismiss: () -> Unit,
     onCard: ((String) -> Unit)? = null,
-    onChallenge: (() -> Unit)? = null
+    onChallenge: (() -> Unit)? = null,
+    onPlan: (() -> Unit)? = null
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -449,6 +452,7 @@ internal fun ChatAttachmentSheet(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text("Share something", style = MaterialTheme.typography.titleLarge)
+            if (onPlan != null) ChatActionRow("Plan something together", androidx.compose.material.icons.Icons.Outlined.CalendarMonth, { onDismiss(); onPlan() })
             if (onChallenge != null) ChatActionRow("Try a Challenge together", androidx.compose.material.icons.Icons.Outlined.WbSunny,
                 { onDismiss(); onChallenge() })
             if (onCard != null) ChatActionRow("A Spark for the two of you", androidx.compose.material.icons.Icons.Outlined.AutoAwesome,

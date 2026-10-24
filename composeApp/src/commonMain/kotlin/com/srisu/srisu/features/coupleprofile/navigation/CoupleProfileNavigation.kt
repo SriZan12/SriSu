@@ -56,7 +56,13 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
             com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
             return@coupleProfileDestination
         }
+        if (route.section in listOf(CoupleSection.PLANS, CoupleSection.PLAN, CoupleSection.NEW_PLAN)) {
+            com.srisu.srisu.features.plans.presentation.PlanScreen(route.planId, nav::back,
+                { nav.open(ChatNav.CoupleConversation(origin = "plan")) }, { nav.open(com.srisu.srisu.features.moments.navigation.MomentComposerDestination(it)) }, initialCreate=route.section==CoupleSection.NEW_PLAN)
+            return@coupleProfileDestination
+        }
         CoupleProfileScreen(route.coupleId, onBack = nav::back, initialPage = route.section.name, planId = route.planId,
+            onPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination()) },
             onOpenCouple = { nav.open(CoupleProfileDestination(it)) },
             onMessage = { nav.open(ChatNav.CoupleConversation(origin = "couple_profile")) })
     }

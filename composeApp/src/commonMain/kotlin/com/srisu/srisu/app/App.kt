@@ -22,6 +22,7 @@ fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
     KoinMultiplatformApplication(config = createKoinConfiguration()) {
         val sessions: SessionCoordinator = koinInject()
         val lifetime: ApplicationLifetime = koinInject()
+        val planReminders: com.srisu.srisu.features.plans.data.PlanReminders = koinInject()
         val session by sessions.state.collectAsState()
         val owner = LocalLifecycleOwner.current
         DisposableEffect(owner, lifetime) {

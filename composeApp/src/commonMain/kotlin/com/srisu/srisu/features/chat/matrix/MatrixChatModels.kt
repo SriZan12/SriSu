@@ -32,12 +32,13 @@ data class MatrixChatMessage(
     val read: Boolean = false,
     val deleted: Boolean = false,
     val uploadProgress: Float? = null,
+    val planReference: com.srisu.srisu.features.plans.data.PlanReference? = null,
     val challengeReference: com.srisu.srisu.features.challenges.data.ChallengeReference? = null,
     val sparkReference: com.srisu.srisu.features.sparks.data.SparkReference? = null,
     val momentReference: com.srisu.srisu.features.moments.data.MomentReference? = null,
 ) {
     /** List identity that stays stable while a local send is acknowledged by the server. */
-    val stableKey: String get() = challengeReference?.let { "challenge:${it.couple}:${it.id}:$senderMatrixId" } ?: sparkReference?.let { "spark:${it.couple}:${it.id}:$senderMatrixId" } ?: transactionId?.let { "txn:$it" } ?: id
+    val stableKey: String get() = planReference?.let { "plan:${it.couple}:${it.id}:$senderMatrixId" } ?: challengeReference?.let { "challenge:${it.couple}:${it.id}:$senderMatrixId" } ?: sparkReference?.let { "spark:${it.couple}:${it.id}:$senderMatrixId" } ?: transactionId?.let { "txn:$it" } ?: id
 }
 
 /** File keys are decrypted Matrix event content, held in memory; never route arguments. */
@@ -90,6 +91,7 @@ interface MatrixChatRepository {
     suspend fun resumeSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<Unit> = Result.failure(UnsupportedOperationException())
     suspend fun unlockSparkRecovery(session: com.srisu.srisu.features.sparks.data.SparkSession, key: String): Result<Unit> = Result.failure(UnsupportedOperationException())
     suspend fun backUpSparkAnswers(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<Int> = Result.failure(UnsupportedOperationException())
+    suspend fun publishPlanCard(plan: com.srisu.srisu.features.plans.data.Plan): Result<String> = Result.failure(UnsupportedOperationException())
     suspend fun publishChallengeCard(session: com.srisu.srisu.features.challenges.data.ChallengeSession): Result<String> = Result.failure(UnsupportedOperationException())
     suspend fun publishSparkCard(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<String> = Result.failure(UnsupportedOperationException())
     suspend fun retryMessage(roomId: String, transactionId: String): Result<Unit>

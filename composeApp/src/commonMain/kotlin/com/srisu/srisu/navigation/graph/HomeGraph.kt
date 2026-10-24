@@ -18,6 +18,7 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
         HomeScreen(onFindPartner = { nav.open(ChatNav.PartnerFlow) },
             onExplore = { nav.open(HomeNavigation.Explore) },
             onCoupleProfile = { nav.open(CoupleProfileDestination()) },
+            onPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination(it)) },
             onChallenges = { nav.open(com.srisu.srisu.features.challenges.navigation.ChallengesDestination(it)) },
             onSparks = { nav.open(com.srisu.srisu.features.sparks.navigation.SparksDestination(it)) },
             onInvitations = { nav.open(ChatNav.PartnerRequests) },

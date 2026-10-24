@@ -94,6 +94,19 @@
       "status": "implemented-local-native-two-partner-flow-verified-uncommitted",
       "validation": "docs/validation/challenges/README.md",
       "qa_validation": "docs/validation/challenges/qa.md"
+    },
+    "plans": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "93fff640dd180614e78d9185355fbb287b2dc43a",
+      "backend_branch": "codex/couple-chat-rebuild",
+      "backend_start": "04f5652fd843daf1dc653f08a19c10f149b219fb",
+      "contract": "plans-1",
+      "flow": "docs/flows/plans.md",
+      "backend_guide": "../SriSu-backend/docs/plans.md",
+      "figma_node": "185:781",
+      "migration": "social.0020_coupleplanmodel_cancelled_at_and_more",
+      "status": "implemented-local-native-two-partner-flow-verified-uncommitted",
+      "validation": "docs/validation/plans/README.md"
     }
   }
 }

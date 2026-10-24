@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 /** Deliberately small allowlist. URLs never name internal classes or execute mutations. */
 fun parseExternalEntry(url: String): Route? {
     if (url.length > 512) return null
+    val plan = Regex("^srisu://plans/([1-9][0-9]{0,18})/([1-9][0-9]{0,18})/?$").matchEntire(url)
+    if (plan != null && plan.groupValues[1].toLongOrNull() != null) return plan.groupValues[2].toLongOrNull()?.let { com.srisu.srisu.features.plans.navigation.PlansDestination(it) }
     val couple = Regex("^srisu://couples/([1-9][0-9]{0,18})/?$").matchEntire(url)
     if (couple != null) return couple.groupValues[1].toLongOrNull()?.let { CoupleProfileDestination(it) }
     val chat = Regex("^srisu://chats/([^/?#]+)/?$").matchEntire(url)

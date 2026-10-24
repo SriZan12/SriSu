@@ -28,20 +28,21 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Clock
 
 @Composable fun HomeScreen(onFindPartner: ()->Unit={}, onCoupleProfile: ()->Unit={}, onExplore: ()->Unit={},
-    onChat: ()->Unit={}, onChallenges: (String?)->Unit={}, onSparks: (String?)->Unit={}, onInvitations: ()->Unit={}, onCreateMoment: (Long)->Unit={},
+    onChat: ()->Unit={}, onPlans: (Long?)->Unit={}, onChallenges: (String?)->Unit={}, onSparks: (String?)->Unit={}, onInvitations: ()->Unit={}, onCreateMoment: (Long)->Unit={},
     onViewMoments: (Long,Long)->Unit={_,_->}, viewModel: HomeMomentsViewModel=koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     MomentLifecycle(viewModel::visible)
     HomeMomentsContent(state,viewModel::image,viewModel::refresh,onFindPartner,onCoupleProfile,onExplore,
         onChat,onInvitations,onCreateMoment,onViewMoments, sparks = { com.srisu.srisu.features.sparks.presentation.HomeSparks(onSparks) },
-        challenges = { com.srisu.srisu.features.challenges.presentation.HomeChallenges(onChallenges) })
+        challenges = { com.srisu.srisu.features.challenges.presentation.HomeChallenges(onChallenges) },
+        plans = { com.srisu.srisu.features.plans.presentation.HomePlans(onPlans) })
 }
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 @Composable internal fun HomeMomentsContent(state: HomeMomentsState, image: suspend (String)->ByteArray?, onRefresh: ()->Unit,
     onFindPartner: ()->Unit, onCoupleProfile: ()->Unit, onExplore: ()->Unit, onChat: ()->Unit,
     onInvitations: ()->Unit, onCreate: (Long)->Unit, onView: (Long,Long)->Unit,
-    hour: Int=Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour, sparks: @Composable ()->Unit = {}, challenges: @Composable ()->Unit = {}) {
+    hour: Int=Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour, sparks: @Composable ()->Unit = {}, challenges: @Composable ()->Unit = {}, plans: @Composable ()->Unit = {}) {
     val space=MaterialTheme.spacing
     val colors=MaterialTheme.colorScheme
     val couple=state.home?.couple
@@ -106,6 +107,7 @@ import kotlin.time.Clock
             }
             item("sparks") { sparks() }
             item("challenges") { challenges() }
+            item("plans") { plans() }
             item("chat") { HomeAction("Your conversation","Pick up where you left off",Icons.AutoMirrored.Outlined.Chat,onChat) }
             item("profile") { HomeAction("Our profile","Your story together",Icons.Outlined.People,onCoupleProfile) }
         } else if(!state.loading && state.error==null) item("linking") {

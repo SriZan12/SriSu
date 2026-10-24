@@ -11,6 +11,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.srisu.srisu.app.App
 
 class MainActivity : ComponentActivity() {
+    private var planPermissionResult: ((String)->Unit)? = null
+    private val planPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+        planPermissionResult?.invoke(if(granted) "granted" else "denied"); planPermissionResult = null
+    }
+    override fun onDestroy() {
+        com.srisu.srisu.features.plans.data.PlanPermissionHost.request = null
+        planPermissionResult?.invoke("denied"); planPermissionResult = null
+        super.onDestroy()
+    }
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -22,6 +31,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         if (savedInstanceState == null) intent?.dataString?.let(com.srisu.srisu.navigation.PlatformEntry::openUrl)
+        com.srisu.srisu.features.plans.data.PlanPermissionHost.request = { result ->
+            if(android.os.Build.VERSION.SDK_INT >= 33 && planPermissionResult == null) {
+                planPermissionResult = result; planPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            } else result("denied")
+        }
         setContent {
             App(
                 darkTheme = isSystemInDarkTheme(),

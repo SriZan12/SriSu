@@ -93,7 +93,7 @@ import srisu.composeapp.generated.resources.*
     }
 }
 
-@Composable internal fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, accentMotion: ProfileAccentMotion, preview: Boolean = false) {
+@Composable internal fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, accentMotion: ProfileAccentMotion, preview: Boolean = false, onPlans: (() -> Unit)? = null) {
     val profile = state.profile ?: return
     val editable = profile.canEdit && !preview
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)) {
@@ -150,7 +150,7 @@ import srisu.composeapp.generated.resources.*
         }
         if (profile.canEdit) ProfileSection(Res.string.cp_together) {
             if (preview) SectionCard { PlanSummary(profile) }
-            else Surface(onClick = { vm.open(ProfilePage.PLANS) }, shape = MaterialTheme.shapes.large,
+            else Surface(onClick = { onPlans?.invoke() ?: vm.open(ProfilePage.PLANS) }, shape = MaterialTheme.shapes.large,
                 color = CoupleProfileTokens.sectionSurface(MaterialTheme.colorScheme)) {
                 Row(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {

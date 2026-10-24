@@ -13,6 +13,7 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 actual val platformNetworkModule = module {
+    single<com.srisu.srisu.features.plans.data.PlanDevice> { com.srisu.srisu.features.plans.data.AndroidPlanDevice(get()) }
     single<HttpClientEngine> { OkHttp.create { config { retryOnConnectionFailure(false); pingInterval(25, java.util.concurrent.TimeUnit.SECONDS) } } } onClose { it?.close() }
     single {
         val context: Context = get()
