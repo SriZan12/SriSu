@@ -83,6 +83,10 @@ internal fun MessageBubble(
             .padding(top = if (grouped || afterReactions) MaterialTheme.spacing.tiny else MaterialTheme.spacing.compact)
     ) {
         val visualMedia = attachmentMessage?.items?.any { it.kind != "voice" } == true
+        // A bare voice note renders as a slim pill card; metadata sits under it instead of inside.
+        val voiceOnly = attachmentMessage != null && attachmentMessage.items.all { it.kind == "voice" } &&
+                attachmentMessage.caption.isBlank() && attachmentMessage.quote == null &&
+                (uploadProgress == null || message.transport == ChatTransport.SENT)
         val width = (maxWidth * if (visualMedia) .64f else .82f).coerceAtMost(
             when {
                 attachmentMessage == null -> ChatMessageLayout.maxWidth
@@ -109,7 +113,8 @@ internal fun MessageBubble(
             ) {
                 val shapes = MaterialTheme.shapes
                 val corner = shapes.extraSmall.topStart
-                val shape = if (own) shapes.medium.copy(
+                val shape = if (voiceOnly) shapes.pill
+                else if (own) shapes.medium.copy(
                     topEnd = if (grouped) corner else shapes.medium.topEnd,
                     bottomEnd = if (groupContinues) corner else shapes.medium.bottomEnd
                 )
@@ -151,6 +156,7 @@ internal fun MessageBubble(
                                 horizontal = if (visualMedia) 0.dp else if (attachmentMessage != null) MaterialTheme.spacing.tiny else MaterialTheme.spacing.compact,
                                 vertical = if (visualMedia) 0.dp else if (attachmentMessage != null) MaterialTheme.spacing.tiny else MaterialTheme.spacing.small
                             )
+                            .then(if (voiceOnly) Modifier.padding(end = MaterialTheme.spacing.small) else Modifier)
                     ) {
                         when {
                             message.hidden -> UnavailableMessage("Deleted for you")
@@ -185,8 +191,8 @@ internal fun MessageBubble(
                                     content.items.forEachIndexed { index, media ->
                                         val request =
                                             mediaRequest?.messageId == message.id && mediaRequest.attachmentId == media.descriptor.id
-                                        val inset = Modifier.padding(MaterialTheme.spacing.small)
-                                            .fillMaxWidth()
+                                        val inset = if (voiceOnly) Modifier.fillMaxWidth()
+                                        else Modifier.padding(MaterialTheme.spacing.small).fillMaxWidth()
                                         if (media.kind == "voice" && voiceContent != null) voiceContent(
                                             media,
                                             inset
@@ -250,7 +256,7 @@ internal fun MessageBubble(
                                 Modifier.weight(1f),
                                 contentAlignment = Alignment.CenterEnd
                             ) { MessageMetadata(message, own) }
-                        } else MessageMetadata(
+                        } else if (!voiceOnly) MessageMetadata(
                             message, own, Modifier.align(Alignment.End)
                                 .padding(top = MaterialTheme.spacing.tiny)
                                 .then(
@@ -260,6 +266,10 @@ internal fun MessageBubble(
                         )
                     }
                 }
+                if (voiceOnly) MessageMetadata(
+                    message, own, Modifier.padding(horizontal = MaterialTheme.spacing.small)
+                        .padding(top = MaterialTheme.spacing.tiny)
+                )
                 if (available && message.reactions.isNotEmpty()) FlowRow(
                     Modifier.padding(top = MaterialTheme.spacing.tiny),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)
