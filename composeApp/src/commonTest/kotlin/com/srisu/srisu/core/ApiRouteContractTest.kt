@@ -85,6 +85,11 @@ class ApiRouteContractTest {
             check("couple-fave-remove") { ResultHandler(couple.fave(1,false)) }
             expected = "couple-profile-cover-read"; couple.image(environment.baseUrl + "api/social/profiles/1/cover/")
             expected = "couple-profile-member-photo"; couple.image(environment.baseUrl + "api/social/profiles/1/members/1/photo/")
+            val explore = com.srisu.srisu.features.explore.data.ExploreRepository(client,environment,couple)
+            check("explore-feed") {ResultHandler(explore.feed("global","local",null))}
+            check("explore-visible") {ResultHandler(explore.validate(listOf(1),"global"))}
+            check("fave-library") {ResultHandler(explore.saved(null))}
+            check("fave-state") {ResultHandler(explore.faveState(1))}
             val moments = com.srisu.srisu.features.moments.data.MomentRepository(client,environment,couple)
             check("moment-home") {ResultHandler(moments.home())}
             check("moment-get") {ResultHandler(moments.get(1))}

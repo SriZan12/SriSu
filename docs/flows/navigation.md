@@ -152,3 +152,17 @@ on detail routes, and discovery returning to Home. Exact Figma metadata/assets
 were quota-blocked; Material icons and existing accessible theme tokens are used.
 See [Moments follow-up](moments.md#gallery-multi-selection-and-bottom-navigation-2026-10-23)
 for builds, renders and platform coverage.
+
+## Explore shell update — 26 October 2026
+
+The root bar now orders Home, Explore, Chat, Profile. Explore uses the existing
+`HomeNavigation.Explore` route and saved-tab navigation through AppNavigator. Home's
+Explore shortcut selects that same tab. Profile/Moment detail pushes preserve the root's
+selection and list position on Back; Chat remains full screen so bottom chrome never
+covers its composer. The pill adapts its horizontal padding for larger text to keep the
+four labels on one line; complete labels remain in accessibility semantics.
+
+Explore uses its own feature ViewModel and the shared account-scoped FaveStore, also used
+by Couple Profile. See the [Moments/Explore flow](moments.md#explore-and-personal-faves--26-october-2026)
+and [validation](../validation/explore/README.md). Historical inventories above describe
+the migration at that date, not the current feature coverage.

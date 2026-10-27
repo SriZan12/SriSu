@@ -70,10 +70,10 @@ class NavigationOwnerTest {
             AppNavigator(controller).selectBottomDestination(BottomDestination.HOME)
         }
         compose.waitForIdle()
-        compose.runOnIdle {AppNavigator(controller).open(HomeNavigation.Explore)}
+        compose.runOnIdle {AppNavigator(controller).selectBottomDestination(BottomDestination.EXPLORE)}
         compose.waitForIdle()
         compose.runOnIdle {
-            assertNull(BottomDestination.fromDestination(controller.currentDestination))
+            assertEquals(BottomDestination.EXPLORE, BottomDestination.fromDestination(controller.currentDestination))
             AppNavigator(controller).back()
         }
         compose.waitForIdle()

@@ -22,6 +22,8 @@ import org.koin.dsl.onClose
 import org.koin.dsl.module
 
 val sharedNetworkModule = module {
+    single<com.srisu.srisu.features.explore.data.ExploreSource> { com.srisu.srisu.features.explore.data.ExploreRepository(get(), get(), get()) }
+    single { com.srisu.srisu.features.explore.data.FaveStore(get(), get(), get()) }
     single<com.srisu.srisu.features.plans.data.PlanSource> { com.srisu.srisu.features.plans.data.PlanRepository(get(), get()) }
     single { com.srisu.srisu.features.plans.data.PlanReminders(get(), get(), get(), get(), get()) }
     single<com.srisu.srisu.features.challenges.data.ChallengeSource> { com.srisu.srisu.features.challenges.data.ChallengeRepository(get(), get()) }

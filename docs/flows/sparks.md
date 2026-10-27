@@ -8,9 +8,14 @@ Backend contract: `sparks-1`; migration:
 
 ## Experience
 
-Home has a compact Sparks entry after Moments; it resumes the active Spark, or
-shows the latest revealed Spark. Chat's attachment sheet opens the same feature.
-The existing Home/Chat/Profile navigation stays unchanged.
+Home has a compact Sparks entry after Moments; its card resumes the active Spark,
+or shows the latest revealed Spark. **Show more** in the section header opens the
+full Sparks catalogue, with all four decks and recent history, even when a Spark
+is in progress. The catalogue offers the current Spark as a separate card and
+changes its primary action to **Continue current Spark** until that Spark finishes
+or is skipped. Refreshing the catalogue does not redirect into an answer screen.
+Chat's attachment sheet opens the same feature; existing chat cards still open
+their specific Spark. This uses the existing navigation without a new bottom tab.
 
 Choose Deep, Memories, Playful or Future. Each contains six curated, versioned
 questions. Previous/next/shuffle stay within a deck. Send creates one active Spark
@@ -88,6 +93,9 @@ screens/larger text, so the fourth deck never clips.
 
 [Validation and screenshots](../validation/sparks/README.md) distinguish native
 cipher/component tests from full-device/live-account coverage. The subsequent
+[Home Show more check](../validation/sparks/show-more/README.md) verifies direct
+catalogue navigation on iPhone 17 and active-Spark/draft regression coverage.
+The
 [live flow check](../validation/sparks/live-flow.md) covers iPhone 17 plus a second
 native SDK client, real Synapse key exchange, both answer orders, drafts/retries
 and native keyboard layout. [Phone-change recovery](../validation/sparks/recovery.md) now verifies both partners on fresh native devices using encrypted answer backups. Answers never backed up remain dependent on a surviving device. Two interactive phone UIs are not claimed.

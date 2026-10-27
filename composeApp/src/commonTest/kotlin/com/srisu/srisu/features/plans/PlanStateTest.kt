@@ -22,6 +22,18 @@ class PlanStateTest {
     private fun reminders(source:FakePlans,sessions:SessionCoordinator,device:FakePlanDevice)=PlanReminders(source,sessions,environment,device,ApplicationLifetime().also {lives+=it})
     private fun vm(source:FakePlans=FakePlans(),sessions:SessionCoordinator=MomentFixtures.sessions(),device:FakePlanDevice=FakePlanDevice()):PlanViewModel =
         PlanViewModel(source,FakeSparkMatrix(),sessions,environment,reminders(source,sessions,device),device).also {models+=it}
+    @Test fun invitationEntryLoadsInvitationsAndDoesNotOverrideLaterTabSelection()=runTest {
+        val requested=mutableListOf<String>()
+        val source=object:FakePlans(){override suspend fun list(mode:String,cursor:String?):com.srisu.srisu.core.data.remote.NetworkAPIResult.Success<PlanPage?> {
+            requested+=mode;return super.list(mode,cursor)
+        }}
+        val model=vm(source);model.open(null,showInvitations=true);runCurrent()
+        assertEquals("invitations",model.state.value.tab);assertEquals(listOf("invitations"),requested)
+        model.browse("past");runCurrent();model.open(null,showInvitations=true);runCurrent()
+        assertEquals("past",model.state.value.tab);assertEquals(listOf("invitations","past"),requested)
+        val normal=vm();normal.open(null);runCurrent();assertEquals("upcoming",normal.state.value.tab)
+        val detail=vm();detail.open(7,showInvitations=true);runCurrent();assertEquals(7,detail.state.value.plan?.id)
+    }
     @Test fun draftSurvivesCloseAndViewModelRecreation()=runTest {
         val sessions=MomentFixtures.sessions();val source=FakePlans();val one=vm(source,sessions)
         one.open(null);runCurrent();one.editPlan();one.edit(requireNotNull(one.state.value.draft).copy(title="Dinner",startsAt="2099-11-03T12:00:00Z",place="Home"));one.closeEditor();one.viewModelScope.cancel()

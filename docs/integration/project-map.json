@@ -107,6 +107,23 @@
       "migration": "social.0020_coupleplanmodel_cancelled_at_and_more",
       "status": "implemented-local-native-two-partner-flow-verified-uncommitted",
       "validation": "docs/validation/plans/README.md"
+    },
+    "explore": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "b6b1576b9ed26b270e9843f3ea4309a4ee3a93cb",
+      "backend_branch": "codex/couple-chat-rebuild",
+      "backend_start": "6e0935c1c4f24267b9a956d259db5d113e9bb903",
+      "contract": "core-1: couple-feed + personal Faves conditional revision",
+      "flow": "docs/flows/moments.md#explore-and-personal-faves--26-october-2026",
+      "backend_guide": "../SriSu-backend/docs/couple_recommendations.md",
+      "figma_nodes": [
+        "0:1",
+        "1:3",
+        "34:1008"
+      ],
+      "migration": "social.0021_couplefaveversion",
+      "status": "implemented-local-iphone17-android-ios-postgres-http-verified-uncommitted",
+      "validation": "docs/validation/explore/README.md"
     }
   }
 }

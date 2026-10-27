@@ -16,9 +16,10 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
     composable<HomeNavigation.Home> { entry ->
         val nav = AppNavigator(controller, entry)
         HomeScreen(onFindPartner = { nav.open(ChatNav.PartnerFlow) },
-            onExplore = { nav.open(HomeNavigation.Explore) },
+            onExplore = { nav.switchTab(HomeNavigation.Explore) },
             onCoupleProfile = { nav.open(CoupleProfileDestination()) },
             onPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination(it)) },
+            onPlanInvitations = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination(showInvitations = true)) },
             onChallenges = { nav.open(com.srisu.srisu.features.challenges.navigation.ChallengesDestination(it)) },
             onSparks = { nav.open(com.srisu.srisu.features.sparks.navigation.SparksDestination(it)) },
             onInvitations = { nav.open(ChatNav.PartnerRequests) },

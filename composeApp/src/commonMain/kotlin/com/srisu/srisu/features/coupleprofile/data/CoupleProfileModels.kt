@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
     @SerialName("can_fave") val canFave: Boolean = false,
     @SerialName("can_view_moments") val canViewMoments: Boolean = false,
     @SerialName("is_faved") val isFaved: Boolean = false,
+    @SerialName("fave_version") val faveVersion: Long = 0,
     @SerialName("published_sections") val publishedSections: List<String> = emptyList(),
     val members: List<CoupleMember>? = null,
     val story: List<StoryAnswer>? = null,

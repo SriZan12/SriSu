@@ -42,7 +42,7 @@ class HomePlansViewModel(private val source: PlanSource, private val sessions: S
         }
     }
 }
-@Composable internal fun HomePlans(onOpen: (Long?) -> Unit, vm: HomePlansViewModel = koinViewModel()) {
+@Composable internal fun HomePlans(onOpen: (Long?) -> Unit, onInvitations: () -> Unit, vm: HomePlansViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     MomentLifecycle(vm::visible)
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
@@ -50,7 +50,10 @@ class HomePlansViewModel(private val source: PlanSource, private val sessions: S
             Text("Coming up", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(top = MaterialTheme.spacing.compact))
             TextButton(onClick = { onOpen(null) }) { Text("See all") }
         }
-        if ((state.home?.invitations ?: 0) > 0) TextButton(onClick = { onOpen(null) }) { Text("${state.home?.invitations} invitation or change${if(state.home?.invitations == 1) "" else "s"} to review") }
+        val invitations = state.home?.invitations ?: 0
+        if (invitations > 0) TextButton(onClick = onInvitations) {
+            Text(if (invitations == 1) "1 invitation or change to review" else "$invitations invitations or changes to review")
+        }
         val current = state.home?.nextPlan
         if (current != null) PlanSummary(current, { onOpen(current.id) })
         else Surface(onClick = { if (state.failed) vm.refresh() else onOpen(null) }, shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {

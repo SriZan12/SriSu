@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import com.srisu.srisu.theme.pill
 import com.srisu.srisu.theme.spacing
 import com.srisu.srisu.theme.transparent
@@ -25,7 +27,8 @@ fun AppBottomBar(
     if (!visible) return
     val colors=MaterialTheme.colorScheme
     val space=MaterialTheme.spacing
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=space.gutter,vertical=space.small),
+    val largeText=LocalDensity.current.fontScale>1.3f
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=if(largeText) space.small else space.gutter,vertical=space.small),
         contentAlignment=Alignment.Center) {
         Surface(modifier=Modifier.widthIn(max=480.dp).fillMaxWidth(),shape=MaterialTheme.shapes.pill,
             color=colors.surfaceContainer,tonalElevation=0.dp,shadowElevation=2.dp) {
@@ -37,11 +40,11 @@ fun AppBottomBar(
                     Column(Modifier.weight(1f).clip(MaterialTheme.shapes.pill)
                         .background(if(selected) colors.surface else colors.transparent)
                         .selectable(selected=selected,role=Role.Tab,onClick={if(!selected) onSelect(destination)})
-                        .heightIn(min=space.touchTarget).padding(horizontal=space.small,vertical=space.tiny),
+                        .heightIn(min=space.touchTarget).padding(horizontal=if(largeText) 0.dp else space.small,vertical=space.tiny),
                         horizontalAlignment=Alignment.CenterHorizontally,
                         verticalArrangement=Arrangement.spacedBy(space.tiny,Alignment.CenterVertically)) {
                         Icon(destination.icon,null,Modifier.size(space.icon),tint=tint)
-                        Text(destination.label,color=tint,style=MaterialTheme.typography.bodySmall)
+                        Text(destination.label,color=tint,style=MaterialTheme.typography.bodySmall,maxLines=1,softWrap=false,overflow=TextOverflow.Ellipsis)
                     }
                 }
             }

@@ -76,7 +76,9 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
         val home = source.home().required(); sessions.ensureCurrent(stamp)
         val intent = read<SparkStartIntent>(intentKey)
         mutable.update { it.copy(home = home, startPending = intent != null, fresh = true) }
-        val id = state.value.session?.id ?: initialId ?: home.active?.id
+        // A destination without an ID is the catalogue, even with a Spark in progress.
+        // Only an explicit card/session selection opens the private answer screen.
+        val id = state.value.session?.id ?: initialId
         initialId = null
         if (id != null) accept(source.get(id).required())
     }
@@ -95,6 +97,9 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
     }
     fun startSpark() = runWork {
         val current = state.value
+        current.home?.active?.takeIf { it.open }?.let {
+            accept(source.get(it.id).required()); return@runWork
+        }
         val couple = current.home?.couple ?: return@runWork
         val question = current.selectedQuestion ?: return@runWork
         val intent = read<SparkStartIntent>(intentKey)?.takeIf { it.couple == couple }

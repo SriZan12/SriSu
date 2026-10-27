@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.srisu.srisu.features.moments.data.MomentReference
 import com.srisu.srisu.theme.*
+import com.srisu.srisu.components.DraftOutlinedTextField
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Instant
 
@@ -160,7 +161,7 @@ import kotlin.time.Instant
                     note.replies.forEach {Text(it.message,style=MaterialTheme.typography.bodyMedium,color=colors.onSurfaceVariant)}
                     if(moment?.canReply==true || moment?.canEdit==true) {
                         if(state.noteReplyId==note.id) {
-                            OutlinedTextField(state.noteReplyDraft,{onNoteReply(note.id,it)},label={Text("Private reply")},modifier=Modifier.fillMaxWidth(),maxLines=4)
+                            DraftOutlinedTextField(state.noteReplyDraft,{onNoteReply(note.id,it)},label={Text("Private reply")},modifier=Modifier.fillMaxWidth(),maxLines=4,maxLength=1000)
                             TextButton(onClick=onSendNoteReply,enabled=!state.busy && state.noteReplyDraft.isNotBlank()) {Text("Send reply")}
                         } else TextButton(onClick={onNoteReply(note.id,"")}) {Text("Reply privately")}
                     }

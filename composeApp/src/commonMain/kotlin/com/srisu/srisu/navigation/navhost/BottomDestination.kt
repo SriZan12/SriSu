@@ -2,6 +2,7 @@ package com.srisu.srisu.navigation.navhost
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -28,6 +29,7 @@ enum class BottomDestination(
         label = "Home",
         route = HomeNavigation.Home
     ),
+    EXPLORE(Icons.Filled.Explore, "Explore", HomeNavigation.Explore),
     CHAT(
         icon = Icons.Filled.Forum,
         label = "Chat",
@@ -44,6 +46,7 @@ enum class BottomDestination(
             return when {
                 destination?.hasRoute<HomeNavigation.Home>() == true -> HOME
                 destination?.hasRoute<ProfileNav.EditProfile>() == true -> PROFILE
+                destination?.hasRoute<HomeNavigation.Explore>() == true -> EXPLORE
                 else -> null
             }
         }

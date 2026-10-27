@@ -104,8 +104,9 @@ import srisu.composeapp.generated.resources.*
                 Text(stringResource(Res.string.cp_private_title), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(Res.string.cp_private), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (profile.canFave) SriSuButton(stringResource(if (profile.isFaved) Res.string.cp_unfave else Res.string.cp_fave), vm::fave,
-                enabled = !state.saving, modifier = Modifier.fillMaxWidth(), variant = SriSuButtonVariant.Outline)
+            if (profile.canFave) SriSuButton(if(state.favePending) "Saving…" else stringResource(if (profile.isFaved) Res.string.cp_unfave else Res.string.cp_fave), vm::fave,
+                enabled = !state.saving && !state.favePending, modifier = Modifier.fillMaxWidth(), variant = SriSuButtonVariant.Outline)
+            state.faveError?.let { com.srisu.srisu.features.moments.presentation.MomentError(it,vm::retryFave) }
             ProfileMetrics(profile, accentMotion, motionEnabled = state.page != ProfilePage.ANSWER)
         }
         if (profile.story != null || profile.canEdit) ProfileSection(Res.string.cp_story,

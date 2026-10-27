@@ -29,13 +29,13 @@ import kotlin.time.Clock
 
 @Composable fun HomeScreen(onFindPartner: ()->Unit={}, onCoupleProfile: ()->Unit={}, onExplore: ()->Unit={},
     onChat: ()->Unit={}, onPlans: (Long?)->Unit={}, onChallenges: (String?)->Unit={}, onSparks: (String?)->Unit={}, onInvitations: ()->Unit={}, onCreateMoment: (Long)->Unit={},
-    onViewMoments: (Long,Long)->Unit={_,_->}, viewModel: HomeMomentsViewModel=koinViewModel()) {
+    onViewMoments: (Long,Long)->Unit={_,_->}, viewModel: HomeMomentsViewModel=koinViewModel(), onPlanInvitations: ()->Unit={}) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     MomentLifecycle(viewModel::visible)
     HomeMomentsContent(state,viewModel::image,viewModel::refresh,onFindPartner,onCoupleProfile,onExplore,
         onChat,onInvitations,onCreateMoment,onViewMoments, sparks = { com.srisu.srisu.features.sparks.presentation.HomeSparks(onSparks) },
         challenges = { com.srisu.srisu.features.challenges.presentation.HomeChallenges(onChallenges) },
-        plans = { com.srisu.srisu.features.plans.presentation.HomePlans(onPlans) })
+        plans = { com.srisu.srisu.features.plans.presentation.HomePlans(onPlans, onPlanInvitations) })
 }
 
 @OptIn(kotlin.time.ExperimentalTime::class)

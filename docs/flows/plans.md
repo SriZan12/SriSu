@@ -32,7 +32,9 @@ See [Kotlin’s compatibility guidance](https://github.com/Kotlin/kotlinx-dateti
 
 ## Flow
 
-- Home → Coming up → nearest agreed future plan. Invitations have their own count.
+- Home → Coming up → nearest agreed future plan. The invitations/change count opens
+  the Invitations tab directly; See all opens Upcoming. Opening a specific plan
+  continues to take precedence over the initial tab.
 - Plans agenda: Upcoming / Invitations / Past, chronological cursor pagination.
   Updates reconcile loaded pages and stable IDs without resetting the scroll position.
 - Plan something: idea shortcuts; title, date/time, optional place or HTTPS call link.
@@ -129,3 +131,11 @@ the iOS-only runtime update and regression pass in
 A missing individual plan clears only its own saved edit/pending operation.
 Unrelated drafts survive a stale detail link or refresh; the user can return to
 the agenda. Authentication or couple permission loss still clears private state.
+
+### Integrated QA follow-up (2026-10-24)
+
+Plan title/place fields preserve local IME selection and composition while the
+ViewModel continues to own saved draft text. Model replacements still update the
+editor; length limits and Next/Done behavior remain. This fixes a reproduced iOS
+first-character caret jump. Home invitation counts open Invitations directly.
+See [integrated QA evidence and remaining gaps](../validation/full-app-qa/README.md).

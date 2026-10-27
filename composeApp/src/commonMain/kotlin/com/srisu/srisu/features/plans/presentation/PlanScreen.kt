@@ -34,18 +34,19 @@ import com.srisu.srisu.features.moments.presentation.MomentLifecycle
 import com.srisu.srisu.features.moments.presentation.MomentError
 import com.srisu.srisu.features.plans.data.*
 import com.srisu.srisu.theme.*
+import com.srisu.srisu.components.DraftOutlinedTextField
 import kotlinx.datetime.*
 import kotlinx.serialization.json.*
 import kotlin.time.Clock
 import kotlin.time.Instant
 import org.koin.compose.viewmodel.koinViewModel
 
-@Composable fun PlanScreen(id:Long?,onBack:()->Unit,onChat:()->Unit,onMoment:(Long)->Unit,vm:PlanViewModel=koinViewModel(),initialCreate:Boolean=false) {
+@Composable fun PlanScreen(id:Long?,onBack:()->Unit,onChat:()->Unit,onMoment:(Long)->Unit,vm:PlanViewModel=koinViewModel(),initialCreate:Boolean=false,initialInvitations:Boolean=false) {
     val state by vm.state.collectAsStateWithLifecycle()
     val reminders by vm.reminders.state.collectAsStateWithLifecycle()
     var creationOpened by rememberSaveable {mutableStateOf(false)}
     LaunchedEffect(state.canAct) {if(initialCreate && state.canAct && !creationOpened) {creationOpened=true;vm.editPlan()}}
-    LaunchedEffect(id) { vm.open(id) };MomentLifecycle(vm::visible);ProtectConversation()
+    LaunchedEffect(id,initialInvitations) { vm.open(id,initialInvitations) };MomentLifecycle(vm::visible);ProtectConversation()
     PlanContent(state,reminders,onBack,onChat,onMoment,vm::retry,vm::browse,vm::detail,vm::more,vm::editPlan,
         vm::resumeDraft,vm::action,vm::reminder,vm::calendar,vm::place,vm::publishCard)
     if(state.editing && state.draft!=null) PlanEditor(state,vm::edit,vm::save,vm::closeEditor,vm::discardDraft,vm::retry)
@@ -274,12 +275,12 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
             if(draft.planId==null) FlowRow(horizontalArrangement=Arrangement.spacedBy(space.small)) {
                 listOf("Dinner together","A little walk","Movie night","A video date").forEach {idea->SuggestionChip(onClick={onEdit(draft.copy(title=idea))},label={Text(idea)},enabled=state.canAct)}
             }
-            OutlinedTextField(draft.title,{if(it.length<=120)onEdit(draft.copy(title=it))},label={Text("What would you like to do?")},modifier=Modifier.fillMaxWidth(),enabled=!state.busy && state.pending==null,
+            DraftOutlinedTextField(draft.title,{onEdit(draft.copy(title=it))},maxLength=120,label={Text("What would you like to do?")},modifier=Modifier.fillMaxWidth(),enabled=!state.busy && state.pending==null,
                 keyboardOptions=KeyboardOptions(imeAction=ImeAction.Next),keyboardActions=KeyboardActions(onNext={placeFocus.requestFocus()}),maxLines=3)
             OutlinedButton(onClick={finishTyping();datePicker=true},modifier=Modifier.fillMaxWidth(),enabled=state.canAct) {Icon(Icons.Outlined.CalendarMonth,null);Spacer(Modifier.width(space.small));Text(if(draft.startsAt.isBlank()) "Choose a date" else current.date.toString())}
             OutlinedButton(onClick={finishTyping();timePicker=true},modifier=Modifier.fillMaxWidth(),enabled=state.canAct) {Icon(Icons.Outlined.Schedule,null);Spacer(Modifier.width(space.small));Text(if(draft.startsAt.isBlank()) "Choose a time" else "${current.hour.toString().padStart(2,'0')}:${current.minute.toString().padStart(2,'0')}")}
             Text("Time zone: ${zone.id}. Your partner sees their local time.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(draft.place,{if(it.length<=240)onEdit(draft.copy(place=it))},label={Text("Place or https link (optional)")},modifier=Modifier.fillMaxWidth().focusRequester(placeFocus),enabled=!state.busy && state.pending==null,
+            DraftOutlinedTextField(draft.place,{onEdit(draft.copy(place=it))},maxLength=240,label={Text("Place or https link (optional)")},modifier=Modifier.fillMaxWidth().focusRequester(placeFocus),enabled=!state.busy && state.pending==null,
                 keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={finishTyping()}),maxLines=3)
             state.notice?.let {Text(it,style=MaterialTheme.typography.bodyMedium)}
             (dateError ?: state.error)?.let {MomentError(it,onRetry)}

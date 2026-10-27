@@ -15,6 +15,47 @@ import kotlin.test.*
 class SparkStateTest {
     @BeforeTest fun before() { Dispatchers.setMain(StandardTestDispatcher()) }
     @AfterTest fun after() { Dispatchers.resetMain() }
+    @Test fun catalogueStaysOpenWithAnActiveSparkIncludingAfterRefresh() = runTest {
+        var detailRequests = 0
+        val source = object : FakeSparks() {
+            override suspend fun home() = com.srisu.srisu.core.data.remote.NetworkAPIResult.Success<SparkHome?>(SparkFixtures.home.copy(active = session))
+            override suspend fun get(id: String): com.srisu.srisu.core.data.remote.NetworkAPIResult.Success<SparkSession?> {
+                detailRequests++
+                return super.get(id)
+            }
+        }
+        val vm = SparkViewModel(source, FakeSparkMatrix(), MomentFixtures.sessions())
+        vm.open(null); runCurrent()
+        assertNull(vm.state.value.session)
+        assertEquals(4, vm.state.value.home!!.decks.size)
+        assertEquals(source.session.id, vm.state.value.home!!.active?.id)
+        vm.selectDeck(2); vm.refresh(); runCurrent()
+        assertNull(vm.state.value.session)
+        assertEquals("playful", vm.state.value.selectedDeck?.id)
+        assertEquals(0, detailRequests)
+        vm.viewModelScope.cancel()
+    }
+    @Test fun catalogueContinuesCurrentSparkWithoutCreatingAnotherAndRestoresDraft() = runTest {
+        val sessions = MomentFixtures.sessions()
+        var starts = 0
+        val source = object : FakeSparks() {
+            override suspend fun home() = com.srisu.srisu.core.data.remote.NetworkAPIResult.Success<SparkHome?>(SparkFixtures.home.copy(active = session))
+            override suspend fun start(intent: SparkStartIntent): com.srisu.srisu.core.data.remote.NetworkAPIResult.Success<SparkSession?> {
+                starts++
+                return super.start(intent)
+            }
+        }
+        val detail = SparkViewModel(source, FakeSparkMatrix(), sessions)
+        detail.open(source.session.id); runCurrent(); detail.draft("A thought to finish later")
+        detail.viewModelScope.cancel()
+        val catalogue = SparkViewModel(source, FakeSparkMatrix(), sessions)
+        catalogue.open(null); runCurrent(); catalogue.selectDeck(2)
+        catalogue.startSpark(); runCurrent()
+        assertEquals(0, starts)
+        assertEquals(source.session.id, catalogue.state.value.session?.id)
+        assertEquals("A thought to finish later", catalogue.state.value.draft.text)
+        catalogue.viewModelScope.cancel()
+    }
     @Test fun submissionRetryAndRestartReuseExactCiphertextAndPreserveDraft() = runTest {
         val storage = mutableMapOf<String, String>(); val sessions = MomentFixtures.sessions(storage)
         val source = FakeSparks().apply { failAnswer = true }; val crypto = FakeSparkMatrix()

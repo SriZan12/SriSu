@@ -86,6 +86,13 @@ import org.koin.compose.viewmodel.koinViewModel
                             Text("Choose a Spark, answer in your own time, then discover each other’s answer together.",
                                 style = MaterialTheme.typography.bodyLarge, color = colors.onSurfaceVariant)
                         }
+                        state.home.active?.takeIf { it.open }?.let { active ->
+                            Column(verticalArrangement = Arrangement.spacedBy(space.small)) {
+                                HomeSparkCard(active, { onOpen(active.id) })
+                                Text("Finish or skip your current Spark before sending another.",
+                                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                            }
+                        }
                         SparkDeckSelector(state.home.decks, state.deck, !state.busy && !state.startPending, onDeck)
                         state.selectedQuestion?.let { question ->
                             SparkQuestionCard(question.text, question.deck, compact = false,
@@ -186,6 +193,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 }
             }
             val action = when {
+                session == null && state.home?.active?.open == true -> "Continue current Spark"
                 session == null && state.home?.couple != null -> if (state.startPending) "Retry sending Spark" else "Send into chat"
                 session?.revealed == true -> "Continue in chat"
                 session?.state == "skipped" -> "Choose another Spark"
@@ -198,7 +206,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     when { session == null -> onStart(); session.state == "skipped" -> onBrowse(); session.revealed || session.submitted(state.account) -> onChat(); else -> onSubmit() }
                 }, modifier = Modifier.fillMaxWidth().padding(horizontal = space.gutter, vertical = space.medium), size = SriSuButtonSize.Large,
                     enabled = !state.busy && !state.loading && when {
-                        session == null -> state.fresh && state.home?.unavailable == null
+                        session == null -> state.fresh && (state.home?.active?.open == true || state.home?.unavailable == null)
                         session.revealed || session.state == "skipped" || session.submitted(state.account) -> true
                         else -> state.secure && state.draft.text.isNotBlank()
                     })

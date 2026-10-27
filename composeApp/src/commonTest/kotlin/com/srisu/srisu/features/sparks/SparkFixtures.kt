@@ -28,6 +28,7 @@ internal object SparkFixtures {
     val session = SparkFixtures.session
     val base = SparkState(home = SparkFixtures.home, account = 1, loading = false, fresh = true, secure = true)
     val state = when {
+        name.startsWith("catalogue-active") -> base.copy(home = SparkFixtures.home.copy(active = session))
         name.startsWith("answer") -> base.copy(session = session.copy(submittedBy = listOf(2)), draft = SparkDraft("The way you make room for people. You listen with your whole heart, even on the busiest days."))
         name.startsWith("waiting") -> base.copy(session = session.copy(submittedBy = listOf(1)), answers = mapOf(1L to "You make the little things feel important."))
         name.startsWith("reveal") -> base.copy(session = session.copy(state = "revealed", submittedBy = listOf(1, 2)), answers = mapOf(

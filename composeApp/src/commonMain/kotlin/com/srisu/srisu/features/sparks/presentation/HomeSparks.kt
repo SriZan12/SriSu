@@ -49,7 +49,13 @@ class HomeSparksViewModel(private val source: SparkSource, private val sessions:
     val home by vm.home.collectAsStateWithLifecycle()
     MomentLifecycle(vm::visible)
     val latest = home?.active ?: home?.recent?.firstOrNull { it.revealed }
-    HomeSparkCard(latest, { onOpen(latest?.id) })
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Sparks", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { onOpen(null) }) { Text("Show more") }
+        }
+        HomeSparkCard(latest, { onOpen(latest?.id) })
+    }
 }
 @Composable internal fun HomeSparkCard(active: SparkSession?, onOpen: () -> Unit) {
     Surface(onClick = onOpen, shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {

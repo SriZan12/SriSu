@@ -32,12 +32,25 @@ class CoupleProfileStateTest {
         val client=HttpClientFactory.create(sessions,environment,MockEngine(MockEngineConfig().apply{dispatcher=this@CoupleProfileStateTest.dispatcher;addHandler(handler)}))
         val repo=CoupleProfileRepository(client,environment,sessions)
         val catalogue=InterestCatalogueRepository(MemoryCatalogue(),ProfileApiService(client,environment),environment,sessions)
-        val vm=CoupleProfileViewModel(repo,sessions,catalogue,lifetime)
+        val faves=com.srisu.srisu.features.explore.data.FaveStore(com.srisu.srisu.features.explore.data.ExploreRepository(client,environment,repo),sessions,lifetime)
+        val vm=CoupleProfileViewModel(repo,sessions,catalogue,lifetime,faves)
         val store=ViewModelStore();store.put("profile",vm)
-        return Harness(vm,sessions){store.clear();lifetime.close();client.close()}
+        return Harness(vm,sessions,faves){store.clear();lifetime.close();client.close()}
     }
-    private data class Harness(val vm: CoupleProfileViewModel,val sessions: com.srisu.srisu.core.session.SessionCoordinator,val close:()->Unit)
+    private data class Harness(val vm: CoupleProfileViewModel,val sessions: com.srisu.srisu.core.session.SessionCoordinator,val faves:com.srisu.srisu.features.explore.data.FaveStore,val close:()->Unit)
 
+    @Test fun openingProfileDuringExploreMutationKeepsPendingFeedback()=runTest(dispatcher) {
+        val gate=CompletableDeferred<Unit>()
+        val h=harness { request->
+            if(request.url.encodedPath.contains("couple-faves")) gate.await()
+            respond(fixture(),headers=headers)
+        }
+        try {
+            runCurrent();h.faves.set(1,true);runCurrent();h.vm.enter(1);runCurrent()
+            assertTrue(h.vm.state.value.favePending)
+            assertFalse(requireNotNull(h.vm.state.value.profile).isFaved)
+        } finally {h.close()}
+    }
     @Test fun failedSaveKeepsDraftAndOnlyConfirmedSaveClosesEditor()=runTest(dispatcher){
         var status=HttpStatusCode.Conflict;var calls=0
         val h=harness { request -> if(request.method==HttpMethod.Patch){calls++;respond(if(status==HttpStatusCode.OK) fixture(song="Saved") else "",status,headers)}else respond(fixture(),headers=headers) }

@@ -45,10 +45,11 @@ class PlanViewModel(private val source: PlanSource, private val matrix: MatrixCh
         work?.cancel();poll?.cancel();cardWork?.cancel();closeRoom()
         mutable.value=PlanState(loading=false,error="Sign in again to open your Plans.")
     } } } }
-    fun open(id:Long?) {
+    fun open(id:Long?,showInvitations:Boolean=false) {
         if(started) return
         started=true;desiredId=id
-        mutable.update { it.copy(draft=runCatching { json.decodeFromString<PlanDraft>(sessions.getSession("$key:draft").orEmpty()) }.getOrNull(),
+        mutable.update { it.copy(tab=if(id==null && showInvitations) "invitations" else "upcoming",
+            draft=runCatching { json.decodeFromString<PlanDraft>(sessions.getSession("$key:draft").orEmpty()) }.getOrNull(),
             pending=runCatching { json.decodeFromString<PlanIntent>(sessions.getSession("$key:pending").orEmpty()) }.getOrNull()) }
         refresh()
     }

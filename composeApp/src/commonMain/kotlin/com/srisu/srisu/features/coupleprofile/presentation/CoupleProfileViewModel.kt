@@ -32,6 +32,7 @@ data class CoupleProfileState(
     val draft: ProfileDraft? = null, val discardPrompt: Boolean = false,
     val images: Map<String, ByteArray> = emptyMap(), val history: List<ProfileChange> = emptyList(),
     val historyBefore: Long? = null, val covers: List<CoverChoice> = emptyList(), val coversBefore: Long? = null,
+    val favePending: Boolean=false, val faveError: String?=null,
     val plans: List<CouplePlan> = emptyList(), val plansBefore: Long? = null, val past: Boolean = false,
     val discovery: List<DiscoveryCard> = emptyList(), val discoveryCursor: String? = null,
     val inviteSent: Set<String> = emptySet(),
@@ -44,6 +45,7 @@ class CoupleProfileViewModel(
     private val sessions: SessionCoordinator,
     private val catalogue: InterestCatalogueRepository,
     lifetime: ApplicationLifetime,
+    private val faves: com.srisu.srisu.features.explore.data.FaveStore,
 ) : ViewModel() {
     private val mutable = MutableStateFlow(CoupleProfileState())
     val state = mutable.asStateFlow()
@@ -64,6 +66,12 @@ class CoupleProfileViewModel(
     private var planRequest = Uuid.random().toString()
 
     init {
+        viewModelScope.launch { faves.state.collect { values ->
+            val profile=state.value.profile ?: return@collect
+            val saved=values[profile.id] ?: return@collect
+            mutable.update { it.copy(profile=it.profile?.copy(isFaved=saved.confirmed),
+                favePending=saved.pending, faveError=saved.error) }
+        } }
         viewModelScope.launch {
             sessions.state.drop(1).collect {
                 generation++; inviteRequests.clear(); loadJob?.cancel(); saveJob?.cancel(); pageJob?.cancel()
@@ -116,12 +124,15 @@ class CoupleProfileViewModel(
             }
         }
     }
-    private fun accept(profile: CoupleProfile) {
+    private fun accept(incoming: CoupleProfile) {
+        faves.accept(incoming.id,incoming.isFaved,incoming.faveVersion)
+        val saved=faves.state.value[incoming.id]
+        val profile=incoming.copy(isFaved=saved?.confirmed ?: incoming.isFaved)
         val previous = state.value.profile
         mediaGeneration++; mediaJobs.values.forEach { it.cancel() }; mediaJobs.clear()
         if (previous != null && (previous.id != profile.id || (previous.canEdit && !profile.canEdit))) {
-            pageJob?.cancel(); mutable.value = CoupleProfileState(profile = profile)
-        } else mutable.update { it.copy(profile = profile, error = null) }
+            pageJob?.cancel(); mutable.value = CoupleProfileState(profile = profile, favePending=saved?.pending==true, faveError=saved?.error)
+        } else mutable.update { it.copy(profile = profile, error = null, favePending=saved?.pending==true, faveError=saved?.error) }
         val urls = (profile.members.orEmpty().mapNotNull { it.photoUrl } + listOfNotNull(profile.cover?.url)).toSet()
         mutable.update { it.copy(images = it.images.filterKeys { url -> url in urls || it.covers.any { c -> c.url == url } }) }
         // Conditional saves can replace media at the same guarded URL.
@@ -384,19 +395,10 @@ class CoupleProfileViewModel(
         }
     }
     fun fave() {
-        val profile = state.value.profile ?: return
-        if (!profile.canFave || state.value.saving) return
-        val stamp = sessions.stamp(); val gen = generation
-        mutable.update { it.copy(saving = true) }
-        saveJob = viewModelScope.launch {
-            val result = repository.fave(profile.id, !profile.isFaved)
-            if (stamp != sessions.stamp() || gen != generation) return@launch
-            when (result) {
-                is NetworkAPIResult.Success -> { mutable.update { it.copy(saving = false) }; refresh() }
-                is NetworkAPIResult.Error -> failure(result.failure)
-            }
-        }
+        val profile=state.value.profile ?: return
+        if(profile.canFave && !state.value.favePending) faves.set(profile.id,!profile.isFaved)
     }
+    fun retryFave() {state.value.profile?.id?.let(faves::retry)}
     private fun missingSave() = ApiError(NetworkAPIResult.ErrorType.SERIALIZATION, "missing_saved_resource", "Please refresh to check whether your change was saved.")
     companion object { val PROMPTS = listOf("how_met", "first_move", "first_impression") }
 }

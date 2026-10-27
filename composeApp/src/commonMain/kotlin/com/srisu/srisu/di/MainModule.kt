@@ -19,8 +19,8 @@ val mainModule = module {
     viewModel { com.srisu.srisu.features.moments.presentation.HomeMomentsViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentComposerViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentViewerViewModel(get(), get()) }
-    viewModel { com.srisu.srisu.features.moments.presentation.MomentDiscoveryViewModel(get(), get()) }
-    viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.explore.presentation.ExploreViewModel(get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get(), get()) }
 
 
     viewModel { ProfileViewModel() }

@@ -301,3 +301,72 @@ parent cancellation, room/account ownership checks and the closed sender gate.
 73 targeted client tests, the real client-to-disposable-server integration, 245
 isolated PostgreSQL tests, iOS shared compilation and native Xcode build passed.
 No backend source/API/migration change was needed for this verification follow-up.
+
+### Integrated QA follow-up (2026-10-24)
+
+Private appreciation replies preserve local IME selection/composition while
+keeping text in the existing ViewModel state, fixing a reproduced iOS caret jump
+that reordered typed characters. Reply permission, sending, retry and persistence
+contracts are unchanged. Both partners replied in the installed iPhone app;
+multi-photo publication, private media and cross-feature chat were also checked.
+See [integrated QA evidence and remaining gaps](../validation/full-app-qa/README.md).
+
+## Explore and personal Faves — 26 October 2026
+
+Explore is now a root destination in the existing shell: **Home → Explore → Chat →
+Profile**. `HomeNavigation.Explore` remains the stable route owned by the existing graph;
+Home's discovery shortcut selects the same saved tab. Chat stays full screen and Back
+returns to its originating root. No extra NavController, viewer or profile was added.
+
+`features/explore` owns the two retained Global/Faves lists and paginated Manage Faves
+sheet. Global cards use the current public identity consent and eligible Moment preview.
+Identity opens `CoupleProfileDestination(id)`; media opens `MomentViewerDestination(coupleId)`
+with no forced preview ID, preserving the viewer's chronological/first-unseen behavior.
+Bookmark actions clearly save the **couple**, separately from a Moment heart.
+
+Faves is personal to the signed-in account. The active feed never includes unsaved couples;
+the saved library remains available without active Moments and permits removal of
+unavailable entries without explaining private reasons. No count, public membership list,
+partner notification, reciprocal relationship or additional media access is introduced.
+No-Faves, no-active-content, all-seen, offline/error, loading and exhausted states are distinct.
+
+`FaveStore` is the one application-lifetime source for Explore and Couple Profile. Only
+server-confirmed state displays as Faved; an in-flight operation says Saving, and uncertainty
+shows Retry. Writes are serialized, opposite desires are coalesced, and every write uses
+the account revision in `If-Match`, then confirms through GET. Backend conditional no-ops
+advance the revision too, preventing an old delayed opposite operation from committing.
+There is no unsafe offline queue. Session changes cancel writers and clear private state.
+
+Lists have independent scroll state. A mutation invalidates continuation cursors without
+reordering visible Global cards; the next Faves request uses current membership. A newer
+mutation cancels an obsolete in-flight Faves/library load. On returning from a viewer or
+background, protected pixels/actions/semantics stay hidden until a bounded visible-ID
+revalidation completes; keyed geometry stays in layout to preserve reading position.
+Every 30 seconds the visible feed is reauthorized, and server-time/monotonic deadlines
+remove expired previews each second. Existing detail/photo endpoints remain authoritative.
+These controls cannot recall bytes already delivered to a device.
+
+Follow-up review: switching back to a loaded Explore tab reauthorizes its retained IDs;
+an empty feed performs a fresh request on return and periodic recheck. If revalidation
+removes every card, a fresh request obtains the correct empty reason or new supply.
+Manage Faves refreshes on reopening and Retry, and restarts pagination if the server
+revision changed between pages. Cancelled requests cannot overwrite newer scope results.
+Saving a different city/country/interest set causes a new Global ranking on return;
+the backend also rejects continuation of a Global session with changed preferences.
+
+The existing rules ranker now retrieves/composes selected-city, country and broader tiers
+before its 500-couple cap. Explicit broader discovery changes scope. Faves has no geography
+filter or Global cap. Available signals remain interest overlap, coarse locality, own Fave
+membership and freshness; the weights are configurable hypotheses, not proven optimal.
+See the updated [backend recommendation contract](../../../SriSu-backend/docs/couple_recommendations.md).
+
+Design: existing system `0:1`, Home `1:3`, bottom pill `34:1008`, Figma file
+`LztysD1YvINX7RwZpnhhTt`. Live Home metadata was accessible but screenshot/design-context
+calls hit the connector's Starter-plan quota. No Explore frame was found in that metadata;
+this is an intentional extension of existing tokens/components, not claimed exact frame
+fidelity. The earlier recommendation PDF was unavailable in the workspace.
+
+Migration `social.0021_couplefaveversion` is additive and preserves Faves. Deploy backend
+migration/endpoints before the new client; existing unconditional PUT/DELETE contracts
+remain compatible. No dependency, production configuration or Figma changes.
+See [render and validation evidence](../validation/explore/README.md).

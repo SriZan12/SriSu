@@ -60,6 +60,17 @@ class SparkRenderTest {
     @Test fun recoveryReady()=render("recovery-ready")
     @Test fun recoveryErrorLargeText()=render("recovery-error-small",fontScale=1.6f,small=true)
     @Test fun decks()=render("decks")
+    @Test fun catalogueWithActiveSpark() {
+        render("catalogue-active")
+        compose.onNodeWithText("Continue current Spark").assertIsDisplayed()
+        compose.onNodeWithText("Send into chat").assertDoesNotExist()
+        compose.onNodeWithText("Future").assertIsDisplayed()
+    }
+    @Test fun catalogueWithActiveSparkLargeText() {
+        render("catalogue-active-small",fontScale=1.6f,small=true)
+        compose.onNodeWithText("Continue current Spark").assertIsDisplayed()
+        compose.onNodeWithText("Future").assertExists()
+    }
     @Test fun answer()=render("answer")
     @Test fun waiting()=render("waiting")
     @Test fun reveal()=render("reveal")

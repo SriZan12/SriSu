@@ -8,6 +8,7 @@ import com.srisu.srisu.core.data.local.CatalogueDatabase
 import com.srisu.srisu.core.data.remote.*
 import com.srisu.srisu.core.session.*
 import com.srisu.srisu.features.moments.data.*
+import com.srisu.srisu.features.explore.data.*
 import com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
 import com.srisu.srisu.features.auth.data.remote.api.AuthApiService
@@ -119,6 +120,27 @@ class CoreLocalTransportIntegrationTest {
                     val note=assertNotNull(assertIs<NetworkAPIResult.Success<MomentNote?>>(visitorMoments.note(publicMoment.id,"Synthetic appreciation")).response)
                     assertEquals(note.id,assertNotNull(assertIs<NetworkAPIResult.Success<MomentNotePage?>>(partnerMoments.notes(publicMoment.id,1)).response).results.single().id)
                     assertIs<NetworkAPIResult.Success<*>>(partnerMoments.noteReply(note.id,"Synthetic reply"))
+                    // Real Explore transport, conditional writes and shared Profile state.
+                    val explore=ExploreRepository(visitorClient,environment,visitor)
+                    val discovery=assertNotNull(assertIs<NetworkAPIResult.Success<ExplorePage?>>(explore.feed("global","local",null)).response)
+                    assertEquals(listOf(current.id),discovery.results.map {it.couple.id})
+                    assertNull(discovery.results.single().couple.displayName)
+                    assertNotNull(explore.image(publicMoment.photos.single().image))
+                    val before=assertNotNull(assertIs<NetworkAPIResult.Success<FaveSnapshot?>>(explore.faveState(current.id)).response)
+                    assertIs<NetworkAPIResult.Success<*>>(explore.setFave(current.id,true,before.version))
+                    assertEquals(409,assertIs<NetworkAPIResult.Error<*>>(explore.setFave(current.id,false,before.version)).failure.status)
+                    val savedState=assertNotNull(assertIs<NetworkAPIResult.Success<FaveSnapshot?>>(explore.faveState(current.id)).response)
+                    assertTrue(savedState.isFaved)
+                    assertTrue(assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.coupleprofile.data.CoupleProfile?>>(visitor.load(current.id)).response).isFaved)
+                    assertEquals(1,assertNotNull(assertIs<NetworkAPIResult.Success<ExplorePage?>>(explore.feed("faves","local",null)).response).results.size)
+                    assertEquals(1,assertNotNull(assertIs<NetworkAPIResult.Success<ExplorePage?>>(explore.validate(listOf(current.id),"faves")).response).results.size)
+                    assertIs<NetworkAPIResult.Success<*>>(partnerMoments.delete(publicMoment.id))
+                    assertTrue(assertNotNull(assertIs<NetworkAPIResult.Success<ExplorePage?>>(explore.feed("faves","local",null)).response).results.isEmpty())
+                    val library=assertNotNull(assertIs<NetworkAPIResult.Success<SavedPage?>>(explore.saved(null)).response)
+                    assertEquals(current.id,library.results.single().coupleId)
+                    assertFalse(library.results.single().hasActiveContent)
+                    assertIs<NetworkAPIResult.Success<*>>(explore.setFave(current.id,false,savedState.version))
+                    assertFalse(assertNotNull(assertIs<NetworkAPIResult.Success<FaveSnapshot?>>(explore.faveState(current.id)).response).isFaved)
                     assertIs<NetworkAPIResult.Success<*>>(mineMoments.delete(privateMoment.id))
                     assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(partnerMoments.get(privateMoment.id)).failure.status)
                     assertNotNull(assertIs<NetworkAPIResult.Success<MomentHome?>>(mineMoments.home()).response?.couple)

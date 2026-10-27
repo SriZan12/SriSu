@@ -96,7 +96,8 @@ class CoupleProfileRenderTest {
             }
             respond(body,headers=headers)
         })
-        val vm=CoupleProfileViewModel(CoupleProfileRepository(client,environment,sessions),sessions,InterestCatalogueRepository(MemoryCatalogue(),ProfileApiService(client,environment),environment,sessions),lifetime)
+        val repo=CoupleProfileRepository(client,environment,sessions)
+        val vm=CoupleProfileViewModel(repo,sessions,InterestCatalogueRepository(MemoryCatalogue(),ProfileApiService(client,environment),environment,sessions),lifetime,com.srisu.srisu.features.explore.data.FaveStore(com.srisu.srisu.features.explore.data.ExploreRepository(client,environment,repo),sessions,lifetime))
         store.put("profile",vm)
         try {
             compose.setContent {
