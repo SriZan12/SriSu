@@ -46,6 +46,8 @@ data class MatrixChatAttachment(
     val kind: String, val mime: String, val file: EncryptedFile,
     val width: Int = 0, val height: Int = 0, val durationMs: Long = 0,
     val thumbnail: EncryptedFile? = null,
+    /** Voice levels 0–100 from MSC1767; empty when the sender included none. */
+    val waveform: List<Int> = emptyList(),
 )
 
 sealed interface MatrixChatAvailability {
