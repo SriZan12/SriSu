@@ -31,7 +31,7 @@ import com.srisu.srisu.features.moments.presentation.*
                 loading=false,photos=if(empty) emptyList() else listOf(LocalMomentPhoto("one",MomentFixtures.image),LocalMomentPhoto("two",MomentFixtures.image)),
                 busy=name.contains("progress"),stage="Uploading photo 1 of 2",progress=if(name.contains("progress")) .35f else null,
                 error=if(name.contains("failure")) "Upload interrupted. Your photos and caption are kept. Try again." else null)
-            MomentComposerContent(state,source,{},{},{},{_,_->},{},{},{},{},{},initialAudienceSheet=name.contains("audience"))
+            MomentComposerContent(state,source,{},{},{},{_,_->},{},{},{},{},{},initialCaptionEditing=name.contains("caption"))
         }
         else->{
             val mine=name.contains("creator")
