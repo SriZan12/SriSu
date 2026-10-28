@@ -25,6 +25,9 @@ internal class ChatPlaybackOwner(private val native: NativeChatMedia, private va
         private set
     var activeAttachmentId by mutableStateOf<String?>(null)
         private set
+    /** Session-wide voice speed; a new native player starts at 1x, so it is re-applied on each start. */
+    var speed by mutableFloatStateOf(1f)
+        private set
     private var playbackGeneration = 0
     private var playbackEnded = false
     private val observer = scope.launch {
@@ -53,7 +56,7 @@ internal class ChatPlaybackOwner(private val native: NativeChatMedia, private va
             try {
                 val value=ChatJson.parseToJsonElement(raw).jsonObject
                 when(value["event"]?.jsonPrimitive?.content) {
-                    "playing" -> { playing=true; playbackLoading=false; playbackEnded=false; if(target.kind=="voice")onPlayed(target.messageId) }
+                    "playing" -> { playing=true; playbackLoading=false; playbackEnded=false; if(target.kind=="voice") { onPlayed(target.messageId); if(speed!=1f)native.playback("speed",speed.toDouble()) } }
                     "position" -> { position=value["positionMs"]!!.jsonPrimitive.long.coerceAtLeast(0); duration=value["durationMs"]!!.jsonPrimitive.long.coerceAtLeast(0) }
                     "buffering" -> {playbackLoading=true}
                     "paused" -> {playing=false; playbackLoading=false}
@@ -67,7 +70,13 @@ internal class ChatPlaybackOwner(private val native: NativeChatMedia, private va
         if(playbackEnded) {native.playback("seek",0.0);playbackEnded=false}
         native.playback(if(playing) "pause" else "resume",0.0)
     }
+    fun cycleSpeed() {
+        speed=VOICE_SPEEDS[(VOICE_SPEEDS.indexOf(speed)+1)%VOICE_SPEEDS.size]
+        if(activeMessageId!=null && playing) native.playback("speed",speed.toDouble())
+    }
     fun seek(fraction: Float) { if (duration > 0 && !playbackLoading) { playbackEnded=false; native.playback("seek",duration*fraction.coerceIn(0f,1f).toDouble()) } }
     fun stop() { playbackGeneration++; activeMessageId=null; activeAttachmentId=null; native.playback("stop",0.0); playing=false; position=0; duration=0; playbackLoading=false; playbackError=null; playbackEnded=false }
     fun close() { observer.cancel(); stop() }
 }
+
+private val VOICE_SPEEDS = listOf(1f, 1.5f, 2f)

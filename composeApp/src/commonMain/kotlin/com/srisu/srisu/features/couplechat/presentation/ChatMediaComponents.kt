@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 
 import androidx.compose.material.icons.outlined.AutoAwesome
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.features.couplechat.data.*
 import com.srisu.srisu.theme.*
@@ -99,7 +101,7 @@ internal fun MediaPreview(
     edgeToEdge: Boolean = false, showDownloadBadge: Boolean = true
 ) {
     if (media.kind == "voice") {
-        InlineVoicePlayer(media, false, 0, 0, loading, error, savedOffline, onOpen, {}, modifier)
+        InlineVoicePlayer(media, false, 0, 0, loading, error, onOpen, {}, modifier)
         return
     }
     val bytes = remember(media.thumbnail) { thumbnail(media) }
@@ -213,7 +215,6 @@ internal fun InlineVoiceMessage(
     messageId: String,
     media: ChatMedia,
     controller: ChatMediaController,
-    savedOffline: Boolean,
     loading: Boolean,
     error: String?,
     modifier: Modifier = Modifier,
@@ -228,12 +229,29 @@ internal fun InlineVoiceMessage(
         if (active) controller.player.duration else 0,
         loading || active && controller.player.playbackLoading,
         error ?: if (active) controller.player.playbackError else null,
-        savedOffline,
         { controller.openVoice(messageId, media.descriptor.id, draft) },
         controller.player::seek,
-        modifier
+        modifier,
+        speed = controller.player.speed,
+        onSpeed = controller.player::cycleSpeed
     )
 }
+
+/** Compact voice card geometry; the play disc keeps a 48dp touch target around its visual size. */
+internal object ChatVoiceLayout {
+    val playButton = 44.dp
+    val playIcon = 22.dp
+    val loader = 18.dp
+    val track = 32.dp
+    val bar = 3.dp
+    val barGap = 3.dp
+    val barMin = 4.dp
+    val thumb = DpSize(4.dp, 24.dp)
+    const val placeholderLevel = 40
+}
+
+internal fun speedLabel(speed: Float): String =
+    (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()) + "×"
 
 @Composable
 internal fun InlineVoicePlayer(
@@ -243,19 +261,21 @@ internal fun InlineVoicePlayer(
     duration: Long,
     loading: Boolean,
     error: String?,
-    savedOffline: Boolean,
     onPlay: () -> Unit,
     onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    speed: Float = 1f,
+    onSpeed: (() -> Unit)? = null
 ) {
     val fraction = if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f
+    val canSeek = duration > 0 && !loading && error == null
     Column(modifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             FilledIconButton(
-                onClick = onPlay, enabled = !loading, modifier = Modifier.size(48.dp),
+                onClick = onPlay, enabled = !loading, modifier = Modifier.size(ChatVoiceLayout.playButton),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -264,75 +284,85 @@ internal fun InlineVoicePlayer(
                 )
             ) {
                 if (loading) CircularProgressIndicator(
-                    Modifier.size(20.dp).semantics { contentDescription = "Opening voice message" },
+                    Modifier.size(ChatVoiceLayout.loader).semantics { contentDescription = "Opening voice message" },
                     strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 else Icon(
                     if (error != null) Icons.Outlined.Refresh else if (playing) ChatIcons.Pause else Icons.Outlined.PlayArrow,
-                    if (error != null) "Retry playback" else if (playing) "Pause voice message" else "Play voice message"
+                    if (error != null) "Retry playback" else if (playing) "Pause voice message" else "Play voice message",
+                    Modifier.size(ChatVoiceLayout.playIcon)
                 )
             }
-            Column(Modifier.weight(1f)) {
-                Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
-                    if (media.waveform.isNotEmpty()) VoiceWaveform(
-                        media.waveform,
-                        Modifier.fillMaxWidth().height(24.dp),
-                        fraction
-                    )
-                    val canSeek = duration > 0 && !loading && error == null
-                    if (canSeek) Slider(
-                        value = fraction, onValueChange = onSeek,
-                        thumb = {
-                            Box(
-                                Modifier.size(8.dp, 20.dp).background(
-                                    if (duration > 0 && !loading && error == null) MaterialTheme.colorScheme.secondary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .4f),
-                                    MaterialTheme.shapes.pill
-                                )
-                            )
-                        },
-                        track = {
-                            if (media.waveform.isEmpty()) LinearProgressIndicator(
-                                progress = { fraction },
-                                modifier = Modifier.fillMaxWidth().height(3.dp),
-                                color = MaterialTheme.colorScheme.secondary,
-                                trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .25f),
-                                drawStopIndicator = {})
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                            .semantics { contentDescription = "Seek voice message" })
-                    else if (media.waveform.isEmpty()) LinearProgressIndicator(
-                        progress = { fraction },
-                        modifier = Modifier.fillMaxWidth().height(3.dp),
-                        color = MaterialTheme.colorScheme.secondary,
-                        trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .25f),
-                        drawStopIndicator = {})
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        if (loading) "Opening…" else if (duration > 0) "${mediaTime(position)} / ${
-                            mediaTime(
-                                duration
-                            )
-                        }"
-                        else if (media.durationMs > 0) mediaTime(media.durationMs) else "Voice message",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (!savedOffline && !loading) Icon(
-                        ChatIcons.Download,
-                        "Download voice message",
-                        Modifier.size(16.dp)
-                    )
-                }
+            Box(Modifier.weight(1f).height(ChatVoiceLayout.track), contentAlignment = Alignment.Center) {
+                // Matrix voice events carry no levels yet; uniform low bars show progress without faking a waveform.
+                VoiceBars(
+                    media.waveform.ifEmpty { listOf(ChatVoiceLayout.placeholderLevel) },
+                    fraction,
+                    Modifier.fillMaxSize().clearAndSetSemantics {}
+                )
+                if (canSeek) Slider(
+                    value = fraction, onValueChange = onSeek,
+                    // Bars already show progress; the invisible thumb keeps drag-to-seek.
+                    thumb = { Box(Modifier.size(ChatVoiceLayout.thumb)) },
+                    track = {},
+                    modifier = Modifier.fillMaxWidth()
+                        .semantics { contentDescription = "Seek voice message" })
             }
+            if (onSpeed != null) Surface(
+                onClick = onSpeed,
+                shape = MaterialTheme.shapes.pill,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.chatColors.text,
+                border = BorderStroke(MaterialTheme.spacing.hairline, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.semantics { contentDescription = "Playback speed ${speedLabel(speed)}" }
+            ) {
+                Text(
+                    speedLabel(speed),
+                    Modifier.padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.tiny),
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1
+                )
+            }
+            Text(
+                if (loading) "…" else if (duration > 0) mediaTime(if (playing || position > 0) position else duration)
+                else if (media.durationMs > 0) mediaTime(media.durationMs) else "0:00",
+                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.chatColors.metadata,
+                maxLines = 1
+            )
         }
         error?.let {
             Text(
                 it,
+                Modifier.padding(horizontal = MaterialTheme.spacing.compact),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+/** Rounded bars resampled to the available width; bars before [progress] use the accent. */
+@Composable
+internal fun VoiceBars(levels: List<Int>, progress: Float, modifier: Modifier = Modifier) {
+    val played = MaterialTheme.colorScheme.primary
+    val remaining = MaterialTheme.chatColors.metadata.copy(alpha = .4f)
+    Canvas(modifier) {
+        val bar = ChatVoiceLayout.bar.toPx()
+        val pitch = bar + ChatVoiceLayout.barGap.toPx()
+        val count = ((size.width + ChatVoiceLayout.barGap.toPx()) / pitch).toInt().coerceAtLeast(1)
+        val minimum = ChatVoiceLayout.barMin.toPx()
+        repeat(count) { index ->
+            val level = levels[(index * levels.size / count).coerceAtMost(levels.lastIndex)].coerceIn(0, 100)
+            val height = (level / 100f * size.height).coerceIn(minimum, size.height)
+            val x = index * pitch + bar / 2
+            drawLine(
+                if ((index + .5f) / count <= progress) played else remaining,
+                Offset(x, (size.height - height) / 2 + bar / 2),
+                Offset(x, (size.height + height) / 2 - bar / 2),
+                strokeWidth = bar,
+                cap = StrokeCap.Round
             )
         }
     }
@@ -420,7 +450,6 @@ internal fun MediaDraftPreview(
                             draft.messageId,
                             media,
                             controller,
-                            savedOffline = true,
                             loading = false,
                             error = state.mediaRequestError.takeIf { state.mediaRequest?.attachmentId == media.descriptor.id },
                             draft = true

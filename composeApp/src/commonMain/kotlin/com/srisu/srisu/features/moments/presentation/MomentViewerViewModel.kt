@@ -212,6 +212,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
             } else mutable.update {it.copy(busy=false,error=(result as? NetworkAPIResult.Error)?.failure?.message)}
         }
     }
+    suspend fun image(url: String) = source.image(url)
     fun note(value: String) { mutable.update { it.copy(note=value.take(1000),noteSent=false) } }
     fun sendNote() {
         val moment=state.value.moment ?: return

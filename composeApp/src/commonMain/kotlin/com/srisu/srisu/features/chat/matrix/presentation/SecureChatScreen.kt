@@ -299,7 +299,7 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
                                 groupContinues = item.joinsNext, mediaRequest = ui.mediaRequest, mediaLoading = ui.mediaLoading, mediaError = ui.mediaRequestError,
                                 modifier = chatMessageEntrance(motionEnabled),
                                 avatar = partner?.let { { PartnerAvatar(it, ChatMessageLayout.avatarSize, MaterialTheme.typography.bodySmall) } },
-                                voiceContent = { voice, modifier -> InlineVoiceMessage(display.id, voice, media, false,
+                                voiceContent = { voice, modifier -> InlineVoiceMessage(display.id, voice, media,
                                     ui.mediaLoading && ui.mediaRequest?.messageId == display.id, ui.mediaRequestError.takeIf { ui.mediaRequest?.messageId == display.id }, modifier) })
                         }
                     }
