@@ -6,6 +6,8 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import com.srisu.srisu.theme.planner
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.NorthEast
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
@@ -103,7 +105,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
     PrivateChatClipboard {
         SriSuChatTheme(ChatThemePreset.fromId(ui.preferences.chatTheme)) {
             Box(Modifier.fillMaxSize()) {
-                Scaffold(topBar = { ChatHeader(partner, availability, onBack) { keyboard?.hide(); appearance = true } },
+                Scaffold(topBar = { ChatHeader(partner, availability, onBack, presence = state?.partnerPresence ?: com.srisu.srisu.features.chat.matrix.MatrixPartnerPresence.UNKNOWN) { viewModel.stopTyping(); keyboard?.hide(); appearance = true } },
                     containerColor = MaterialTheme.colorScheme.background) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
                         (availability as? MatrixChatAvailability.Offline)?.let { ChatOfflineBanner(it.message, viewModel::retry) }
@@ -116,8 +118,8 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
                                     stringResource(Res.string.chat_secure_unavailable_title), availability.message,
                                     vector = Icons.Filled.Lock, modifier = Modifier.fillMaxSize())
                                 availability is MatrixChatAvailability.Loading -> ChatLoadingState(Modifier.fillMaxSize())
-                                state?.messages.isNullOrEmpty() -> ConversationEmpty(true, {}, viewModel::updateMessageInput, Modifier.fillMaxSize(), composing = ui.draft.isNotBlank())
-                                else -> ChatTimelineList(state!!.messages, viewModel, ui, media, partner,
+                                state?.messages.isNullOrEmpty() && state?.partnerTyping != true -> ConversationEmpty(true, {}, viewModel::updateMessageInput, Modifier.fillMaxSize(), composing = ui.draft.isNotBlank())
+                                else -> ChatTimelineList(state!!.messages, viewModel, ui, media, partner, partnerTyping = ready && state?.partnerTyping == true,
                                     onOpenPlans = onOpenPlans, onOpenChallenges = onOpenChallenges, onOpenSparks = onOpenSparks, onOpenMoment = onOpenMoment, onMenu = { selected = it }, jump = jump, onJump = { jump = it },
                                     onMedia = { id -> keyboard?.hide(); media.handoffToViewer(); viewModel.coverWithMedia(); onOpenMedia(id, false) })
                             }
@@ -142,8 +144,8 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
                         }
                         ConversationComposer(ui, busy = !ready || media.preparing || state?.sending == true, recording = media.recording,
                             onDraft = viewModel::updateMessageInput, onSend = viewModel::sendMessage,
-                            onAttach = { keyboard?.hide(); attachments = true }, onCancelReply = { viewModel.setReply(null) },
-                            voice = { VoiceRecordControl(media, ready && !media.preparing) }) {
+                            onAttach = { viewModel.stopTyping(); keyboard?.hide(); attachments = true }, onCancelReply = { viewModel.setReply(null) },
+                            voice = { VoiceRecordControl(media, ready && !media.preparing) }, onFocusChanged = viewModel::composerFocusChanged) {
                             if (media.recording) RecordingPanel(media)
                             if (media.preparing) { Text("Preparing attachment…", style = MaterialTheme.typography.bodySmall); LinearProgressIndicator(Modifier.fillMaxWidth()) }
                             MediaDraftPreview(ui, viewModel, media) { id, _ ->
@@ -158,8 +160,11 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
             }
         }
     }
+    LaunchedEffect(media.recording) { if (media.recording) viewModel.stopTyping() }
     if (appearance) ChatAppearanceSheet(ui.preferences.chatTheme, { viewModel.chatTheme(it); appearance = false }, { appearance = false })
-    if (attachments) ChatAttachmentSheet(media, { attachments = false }, { onOpenSparks(null) }, { onOpenChallenges(null) }, { onOpenPlans(null) })
+    if (attachments) SriSuChatTheme(ChatThemePreset.fromId(ui.preferences.chatTheme)) {
+        ChatAttachmentSheet(media, { attachments = false }, { onOpenSparks(null) }, { onOpenChallenges(null) }, { onOpenPlans(null) })
+    }
     val message = ui.messages.firstOrNull { it.id == selected }
     if (message != null) ModalBottomSheet(onDismissRequest = { selected = null }) {
         Column(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.gutter).navigationBarsPadding()) {
@@ -189,13 +194,16 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
 @Composable
 private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: SecureChatViewModel,
     ui: ConversationState, media: ChatMediaController, partner: com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity?,
+    partnerTyping: Boolean,
     onOpenPlans: (Long?)->Unit = {},
     onOpenChallenges: (String?)->Unit = {},
     onOpenSparks: (String?)->Unit = {},
     onOpenMoment: (com.srisu.srisu.features.moments.data.MomentReference)->Unit, onMenu: (String) -> Unit, jump: String?, onJump: (String?) -> Unit, onMedia: (String) -> Unit) {
     val timeZone = remember { TimeZone.currentSystemDefault() }
     // Newest first, rendered bottom-up: the conversation anchors to the composer like other messengers.
-    val items = remember(messages, timeZone) { buildChatTimeline(messages, timeZone).asReversed() }
+    val items = remember(messages, timeZone, partnerTyping) {
+        (if (partnerTyping) listOf(ChatTimelineItem.Typing) else emptyList()) + buildChatTimeline(messages, timeZone).asReversed()
+    }
     val displayMessages = remember(ui.messages) { ui.messages.associateBy { it.id } }
     val today = remember(messages, timeZone) { Clock.System.now().toLocalDateTime(timeZone).date }
     val listState = rememberLazyListState()
@@ -224,6 +232,9 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
                 .count { it is ChatTimelineItem.Message && !it.message.mine }
         }
     }
+    LaunchedEffect(partnerTyping) {
+        if (partnerTyping && wasAtLatest) listState.animateScrollToItem(0)
+    }
     LaunchedEffect(atLatest) { if (atLatest) unseen = 0 }
 
     LaunchedEffect(jump) {
@@ -233,32 +244,33 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
     }
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val lifecycleState by lifecycle.currentStateFlow.collectAsState()
-    LaunchedEffect(listState, lifecycleState, messages.lastOrNull()?.id) {
+    LaunchedEffect(listState, lifecycleState, messages.lastOrNull()?.id, partnerTyping) {
         if (lifecycleState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) snapshotFlow {
             listState.layoutInfo.visibleItemsInfo.mapNotNull { visible -> (items.getOrNull(visible.index) as? ChatTimelineItem.Message)?.message }
                 .firstOrNull { !it.mine && it.delivery == com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery.SENT }?.id
         }.filterNotNull().distinctUntilChanged().debounce(500).collect(viewModel::markVisible)
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val contentWidth = maxWidth - MaterialTheme.spacing.medium * 2
-        val maxBubbleWidth = minOf(contentWidth * ChatTokens.bubbleMaxWidthFraction, ChatTokens.bubbleMaxWidth)
+        val gutter = if (maxWidth < 370.dp) PureChatTokens.smallGutter else PureChatTokens.gutter
         LazyColumn(
             state = listState,
             reverseLayout = true,
+            verticalArrangement = Arrangement.Top,
             modifier = Modifier.fillMaxSize().graphicsLayer {
                 // Draw-phase reads avoid per-frame recomposition/layout and a full-list offscreen buffer.
                 alpha = loadAlpha.value
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
             contentPadding = PaddingValues(
-                start = MaterialTheme.spacing.medium,
-                end = MaterialTheme.spacing.medium,
-                top = MaterialTheme.spacing.small,
-                bottom = MaterialTheme.spacing.compact,
+                start = gutter,
+                end = gutter,
+                top = 0.dp,
+                bottom = 20.dp,
             ),
         ) {
             items(items, key = ChatTimelineItem::key, contentType = { it::class }) { item ->
                 when (item) {
+                    ChatTimelineItem.Typing -> PartnerTypingBubble(partner?.name ?: "Your partner", motionEnabled)
                     is ChatTimelineItem.DayHeader -> ChatDayHeader(
                         when (chatDayLabel(item.date, today)) {
                             ChatDayLabel.TODAY -> stringResource(Res.string.chat_secure_today)
@@ -273,22 +285,19 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
                             MessageBubble(display, item.message.mine, partner?.name ?: "Your partner", ui.accountId,
                                 item.joinsPrevious, cardContent = {
                                     item.message.planReference?.let { reference ->
-                                        TextButton(onClick = { onOpenPlans(reference.id) }) {
-                                            Icon(Icons.Outlined.CalendarMonth, null, tint = MaterialTheme.colorScheme.planner)
+                                        TextButton(onClick = { onOpenPlans(reference.id) }, colors = ButtonDefaults.textButtonColors(contentColor = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.primary)) {
+                                            Icon(Icons.Outlined.CalendarMonth, null, tint = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.planner)
                                             Spacer(Modifier.width(MaterialTheme.spacing.small)); Text("Open Plan")
                                         }
                                     }
                                     item.message.challengeReference?.let { reference ->
-                                        TextButton(onClick = { onOpenChallenges(reference.id) }) {
-                                            Icon(Icons.Outlined.WbSunny, null, tint = MaterialTheme.colorScheme.reminder)
+                                        TextButton(onClick = { onOpenChallenges(reference.id) }, colors = ButtonDefaults.textButtonColors(contentColor = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.primary)) {
+                                            Icon(Icons.Outlined.WbSunny, null, tint = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.reminder)
                                             Spacer(Modifier.width(MaterialTheme.spacing.small)); Text("Open Challenge")
                                         }
                                     }
                                     item.message.sparkReference?.let { reference ->
-                                        TextButton(onClick = { onOpenSparks(reference.id) }) {
-                                            Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.spark)
-                                            Spacer(Modifier.width(MaterialTheme.spacing.small)); Text("Open Spark")
-                                        }
+                                        PureSparkCard(item.message.body) { onOpenSparks(reference.id) }
                                     }
                                     item.message.momentReference?.let { reference ->
                                         MomentChatReference(reference,viewModel,onOpenMoment)
@@ -329,8 +338,24 @@ private fun LazyListState.isNearLatest(thresholdPx: Int): Boolean =
     DisposableEffect(reference) { vm.momentReferences.retain(reference); onDispose { vm.momentReferences.release(reference) } }
     val available=status==com.srisu.srisu.features.moments.presentation.MomentReferenceState.AVAILABLE
     val retry=status==com.srisu.srisu.features.moments.presentation.MomentReferenceState.RETRY
-    TextButton(onClick={if(available) open(reference) else vm.momentReferences.refresh(reference)}, enabled=available || retry) {
+    TextButton(onClick={if(available) open(reference) else vm.momentReferences.refresh(reference)}, enabled=available || retry, colors = ButtonDefaults.textButtonColors(contentColor = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.primary)) {
         Icon(androidx.compose.material.icons.Icons.Outlined.Photo, null,Modifier.size(20.dp))
         Spacer(Modifier.width(MaterialTheme.spacing.small)); Text(status.label)
+    }
+}
+
+/** The encrypted Matrix body is the real question; answer state is resolved by the existing Spark destination. */
+@Composable private fun PureSparkCard(question: String, onOpen: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(15.dp), tint = MaterialTheme.chatColors.sparkInk)
+            Text("A little Spark", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.chatColors.sparkInk)
+        }
+        Text(question, Modifier.padding(top = 8.dp, bottom = 11.dp), style = pureChatSerif())
+        Row(Modifier.fillMaxWidth().heightIn(min = 32.dp).clickable(onClickLabel = "Open Spark", onClick = onOpen),
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Open Spark", style = pureChatFooter(MaterialTheme.typography.bodySmall), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(PureChatIcons.Open, null, Modifier.size(15.dp), tint = MaterialTheme.chatColors.metadata)
+        }
     }
 }

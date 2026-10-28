@@ -84,13 +84,14 @@ data class ChatMediaRequest(val messageId: String, val attachmentId: String, val
 
 /** Personal chat palette; independent of system light/dark appearance. Unknown saved IDs fall back without migration. */
 enum class ChatThemePreset(val id: String, val label: String, val description: String) {
+    PURE("pure", "Pure", "White · quiet charcoal"),
     ORIGINAL("original", "Original SriSu", "Warm neutrals · soft violet"),
     BLEND("blend", "SriSu Blend", "Violet flowing into warm peach"),
     CALM("calm", "SriSu Calm", "Quiet blue · gentle contrast"),
     IRIS("iris", "SriSu Iris", "Soft lavender blending into mist blue"),
     DAWN("dawn", "SriSu Dawn", "Warm peach blending into cream");
     companion object {
-        val DEFAULT = IRIS
+        val DEFAULT = PURE
         fun fromId(id: String) = entries.firstOrNull { it.id == id } ?: ORIGINAL
     }
 }

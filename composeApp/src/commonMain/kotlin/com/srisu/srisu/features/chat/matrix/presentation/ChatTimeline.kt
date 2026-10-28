@@ -14,6 +14,8 @@ internal const val CHAT_GROUP_WINDOW_MILLIS = 5 * 60_000L
 internal sealed interface ChatTimelineItem {
     val key: String
 
+    data object Typing : ChatTimelineItem { override val key: String = "partner-typing" }
+
     data class DayHeader(val date: LocalDate) : ChatTimelineItem {
         override val key: String get() = "day:$date"
     }
@@ -45,7 +47,12 @@ internal fun buildChatTimeline(messages: List<MatrixChatMessage>, timeZone: Time
         if (a !in unique.indices || b !in unique.indices) return false
         val first = unique[a]
         val second = unique[b]
-        return first.mine == second.mine &&
+        return first.attachment == null && second.attachment == null &&
+            first.sparkReference == null && second.sparkReference == null &&
+            first.planReference == null && second.planReference == null &&
+            first.challengeReference == null && second.challengeReference == null &&
+            first.momentReference == null && second.momentReference == null &&
+            first.mine == second.mine &&
             times[a].date == times[b].date &&
             second.timestampMillis - first.timestampMillis in 0..CHAT_GROUP_WINDOW_MILLIS &&
             first.delivery != MatrixMessageDelivery.FAILED

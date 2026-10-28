@@ -52,6 +52,17 @@ class ChatTimelineTest {
     }
 
     @Test
+    fun standaloneCardsAndVoiceDoNotJoinTextGroups() {
+        val timeline = messages(buildChatTimeline(ChatFixtures.pure().messages, zone))
+        val spark = timeline.single { it.message.sparkReference != null }
+        val voice = timeline.single { it.message.attachment != null }
+        assertFalse(spark.joinsPrevious)
+        assertFalse(spark.joinsNext)
+        assertFalse(voice.joinsPrevious)
+        assertTrue(timeline.single { it.message.id == "pure-4" }.joinsPrevious)
+    }
+
+    @Test
     fun insertsOneDayHeaderPerLocalDate() {
         val items = buildChatTimeline(ChatFixtures.conversationMessages(), zone)
         val headers = items.filterIsInstance<ChatTimelineItem.DayHeader>().map { it.date }

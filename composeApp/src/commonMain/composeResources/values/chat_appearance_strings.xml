@@ -1,0 +1,18 @@
+<resources>
+    <string name="chat_theme_title">Chat theme</string>
+    <string name="chat_theme_close">Close theme picker</string>
+    <string name="chat_theme_preview">Preview</string>
+    <string name="chat_theme_default">%1$s · Default</string>
+    <string name="chat_theme_default_accessibility">Default theme</string>
+    <string name="chat_theme_apply">Apply theme</string>
+    <string name="chat_theme_note">Only for you · Follows device appearance</string>
+    <string name="chat_theme_pure">Pure</string>
+    <string name="chat_theme_original">Original</string>
+    <string name="chat_theme_blend">Blend</string>
+    <string name="chat_theme_calm">Calm</string>
+    <string name="chat_theme_iris">Iris</string>
+    <string name="chat_theme_dawn">Dawn</string>
+    <string name="chat_theme_incoming">A little time together?</string>
+    <string name="chat_theme_outgoing">Always. See you soon.</string>
+    <string name="chat_theme_time">Read  10:00 AM</string>
+</resources>

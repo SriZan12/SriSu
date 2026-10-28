@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="chat_partner_online">Online</string>
+    <string name="chat_partner_offline">Offline</string>
+    <string name="chat_partner_away">Away</string>
+    <string name="chat_partner_status_unavailable">Status unavailable</string>
+    <string name="chat_partner_typing">%1$s is typing</string>
     <string name="chat_secure_title">Conversation</string>
     <string name="chat_secure_back">Back to conversations</string>
     <string name="chat_secure_loading">Opening your encrypted conversation…</string>
