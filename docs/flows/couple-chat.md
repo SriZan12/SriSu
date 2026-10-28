@@ -1,6 +1,6 @@
 # Couple Chat — Matrix cutover record
 
-Record updated: 2026-10-19. This is the frontend-owned implementation and release
+Record updated: 2026-10-28. This is the frontend-owned implementation and release
 record for Couple Chat. The KMP client is now Matrix-only and the custom Django
 message/WebSocket and ChatV2 transports have been removed. A local Compose
 control-plane interoperability run verified Django authorization, JWT exchange,
@@ -14,6 +14,110 @@ libsignal design remains in ADR 002 as historical decision context only. Backend
 code and tested contracts remain authoritative for Django authorization and
 provisioning. Matrix specifications and the selected SDK are authoritative for
 message transport semantics; this document does not redefine either protocol.
+
+## Pure conversation appearance (2026-10-28)
+
+The visible conversation now defaults to the approved **Pure** preview: white light
+background, neutral incoming bubbles, charcoal outgoing bubbles, centered identity,
+grouped timestamps, compact Spark question, voice note and composer. Explicitly saved
+appearance choices remain selectable; the Palette grid follow-up below replaces the
+original appearance sheet layout.
+Pure is scoped through `SriSuChatTheme`; the rest of the app keeps its existing theme.
+
+Messages still come from `SecureChatViewModel` and the Matrix repository. Sending,
+replies, reactions, upload/recording progress, playback/seek/retry, pagination, receipt
+handling and encryption use the existing callbacks. Standalone feature cards and voice
+notes break text groups. Timestamps sit outside the final bubble of each group;
+pending/failed messages always keep their status. The displayed time is the message
+creation time, never an invented receipt time. Tapping the voice duration retains
+the existing playback-speed action (also exposed to accessibility).
+
+Spark uses the encrypted event's question and existing authorized destination. The
+card says **Open Spark**, since chat does not own the live submitted/revealed state.
+No extra Spark request, endpoint, response field, or feature was introduced.
+
+[Pure implementation, source and verification](../validation/chat-pure/README.md)
+includes same-size comparisons, intentional deviations and the native keyboard gap.
+
+## Presence, typing and shared palette structure (2026-10-28)
+
+All six chat presets (Pure, Original, Blend, Calm, Iris, Dawn) now share Pure's
+header, typography, grouping, bubble corners, external 12-hour timestamps/read
+labels, compact Spark/voice layout and composer. Existing preset backgrounds,
+accents, incoming colors and outgoing gradients are retained in light and dark.
+The appearance picker shows a miniature of this shared structure.
+
+The header shows the authorized partner's Matrix presence: **Online**, **Offline**,
+**Away**, or **Status unavailable** when absent, stale or disconnected. It no longer
+shows the encryption subtitle. Presence does not come from the local connection
+state, and encryption and room authorization are unchanged. Sync advertises online
+while the existing foreground conversation session runs; this is Matrix activity,
+not an app-wide Home-screen heartbeat. Offline/away timing follows the homeserver
+and other active devices. We do not force an account offline when one screen closes.
+
+Incoming `m.typing` events are held only in memory, scoped to the authorized Matrix
+room and partner. The initial sync snapshot is retained; disconnect/background
+clears it so reconnect cannot revive a stale bubble. The three-dot bubble respects
+reduced motion, announces its meaning to accessibility and has no message/receipt
+identity. It follows the latest messages without pulling a reader out of history.
+
+Actual composer edits publish Matrix typing without draft content: first edit,
+then at most every 3 seconds while editing, a 10-second server lease, and stop after
+5 seconds idle. Empty draft, send, blur, recording, overlays, leaving, account/room
+changes, loss of authorization and background stop the publisher. Requests are
+serialized, bounded to 2 seconds, best effort and independent of send errors.
+Screen-owner/session guards reject superseded owners; the server lease handles
+failed stops. Older clients without this publisher cannot emit typing indicators.
+
+Backend `deploy/synapse/render_config.py` enables presence (previously disabled).
+No Django route, DTO, persistence migration or message protocol changes. Apply that
+config on each homeserver; client code remains compatible with disabled presence
+and older clients. Visibility stays governed by Matrix membership/authorization.
+See [activity validation](../validation/chat-pure/activity/README.md) for platform
+coverage, isolated live Synapse checks and deployment state.
+
+## Illustrated Quick Share menu (2026-10-28)
+
+The composer plus button opens the approved Quick Share sheet: Photos, Camera,
+Video and Voice first, followed by Spark, Challenge and Plan under Together.
+The exact approved illustrated artwork is bundled locally, retains its own colors,
+and is not tinted by the theme. The sheet uses the selected chat palette and the
+Pure typography/spacing; other menus and feature destinations are unchanged.
+Ask and Poll remain preview concepts and are not exposed in the app.
+
+Every option dismisses the sheet before calling the existing media controller or
+navigation callback. Photos/video/camera still use their native picker/capture
+paths; Voice starts the existing locked draft recorder. Permission errors,
+cancellation, media limits, photo metadata removal, encryption and upload handling
+remain owned by those existing paths. The old static limits paragraph is omitted
+from this compact menu; validation and contextual errors remain active.
+
+The sheet opens fully expanded, has an explicit close control and retains native
+backdrop/back/swipe dismissal. Its heading stays visible while its content scrolls.
+At 130% text and above, media actions reflow to two columns; labels and activity
+descriptions wrap. System safe-area insets replace the preview's fake home bar.
+See [source, platform checks and screenshots](../validation/chat-pure/quick-share/README.md).
+
+## Palette grid theme picker (2026-10-28)
+
+The chat appearance control opens the approved Palette grid: a single live sample
+conversation above all six presets, labeled Pure, Original, Blend, Calm, Iris and
+Dawn. Selected swatches have an outline/check and native radio-button semantics.
+The picker stays neutral Pure light/dark; each preview uses the existing preset
+colors resolved from the app's base palette. Preset IDs, gradients and saved
+account/room-scoped preferences are unchanged.
+
+Tapping a swatch changes only the sample. Apply calls the existing `chatTheme(id)`
+path and closes; the close button, back, backdrop and swipe dismissal cancel without
+applying. The unchanged selection keeps Apply disabled. The sample text and Read
+label are demonstration content, never messages or receipts inserted into the room.
+The draft and reply remain untouched by this menu.
+
+The normal layout shows three columns and two rows. At 130% text the grid uses two
+columns; at 250% it uses one. Content scrolls when necessary while heading, Close,
+Apply and the local-only/device-appearance note remain available. Native safe-area
+insets replace the preview's synthetic system bars. [Reference and platform
+validation](../validation/chat-pure/theme-picker/README.md).
 
 ## Decision and ownership
 
@@ -118,7 +222,7 @@ not promise creation of new messages while offline.
 | --- | --- | --- |
 | Empty conversation and text thread | Trixnity timeline backed by the mapped encrypted Matrix room | Implemented and compile/unit verified; live two-device Synapse verification remains |
 | Send/retry/offline recovery | One Matrix transaction ID and Trixnity's gated durable outbox; never a parallel Django message operation | Implemented for retry/catch-up of already queued sends; sending is disabled while offline (the draft stays editable), and live restart verification remains |
-| Delivery/read state | Real Matrix read receipts | Single check means sent; double check means a known partner read receipt. Independent delivered/played receipts are not fabricated. Two-device runtime validation remains |
+| Delivery/read state | Real Matrix read receipts | Pure-style external time and Read label from a known partner receipt. Independent delivered/played receipts are not fabricated. Two-device runtime validation remains |
 | Reply, reaction and deletion | Matrix reply relations, encrypted message annotations, own-message redactions | Restored with current-room gating and outbox retry. Edit remains absent. Encrypted annotations have a readable text fallback on the prior client; see recovery record |
 | Photo/video and viewer | Trixnity/Matrix encrypted files and thumbnails | Restored compact bubbles, captions, real upload progress, picker/camera and typed full-screen viewer; one attachment, 16 MiB/120 s limits; live exchange remains unverified |
 | Voice recorder/playback | Recovered native recorder/player and encrypted Matrix audio | Restored inline single-owner playback with actual progress; the recorded waveform travels inside the encrypted `m.audio` content as MSC3245/MSC1767 (see below); no played receipt; native runtime recording/playback still needs device validation |
@@ -126,7 +230,7 @@ not promise creation of new messages while offline.
 | Ask/free response and polls | Separate versioned SriSu domain plus encrypted display content | Unimplemented and disabled |
 | Planner/Plan cards | `CouplePlanModel` remains domain authority; Matrix may carry an encrypted typed reference | Basic Plan data exists outside chat; rich type/location/reminder/checklist/card flow is unimplemented |
 | Story prompt cards | Couple Profile remains domain authority; a future Matrix card needs an encrypted typed reference | Unimplemented on Matrix; the retired legacy message side effect is not a fallback |
-| Conversation appearance/nickname | Account/room-scoped secure local preferences | Five restored palettes, Iris default. Nickname/presence/privacy options remain absent; no legacy `ChatRoom.settings` calls |
+| Conversation appearance/nickname | Account/room-scoped secure local preferences | Six palettes, Pure default and shared structure. Header presence uses Matrix. Nickname/privacy options remain absent; no legacy `ChatRoom.settings` calls |
 | Push notifications and voice/video calls | Separate future systems | Out of scope |
 
 Unknown Matrix event or content versions must render as inert/update-required
