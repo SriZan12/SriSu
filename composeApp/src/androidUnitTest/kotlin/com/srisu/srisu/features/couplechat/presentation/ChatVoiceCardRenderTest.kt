@@ -96,10 +96,10 @@ class ChatVoiceCardRenderTest {
         }
         compose.onNodeWithContentDescription("Pause voice message").assertExists()
         compose.onNodeWithContentDescription("Seek voice message").assertExists()
-        compose.onNodeWithContentDescription("Playback speed 1.5×").performClick()
+        compose.onNode(androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "Playback speed 1.5×")).performClick()
         compose.waitForIdle()
         assertEquals(1, speedClicks)
-        compose.onNodeWithContentDescription("Playback speed 2×").assertExists()
+        compose.onNode(androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "Playback speed 2×")).assertExists()
         compose.onNodeWithContentDescription("Retry playback").assertExists()
         val output = File("build/reports/chat-voice/$name.png").apply { parentFile?.mkdirs() }
         compose.runOnIdle {

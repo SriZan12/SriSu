@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.*
@@ -108,7 +109,7 @@ internal fun QuotePreview(
         onClick = onOriginal,
         modifier = modifier.semantics { contentDescription = "Quoted message. Open original" },
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = .04f),
+        color = if (MaterialTheme.chatColors.pure) MaterialTheme.chatColors.incoming else MaterialTheme.colorScheme.onSurface.copy(alpha = .04f),
         content = content
     )
     else Surface(
@@ -121,7 +122,7 @@ internal fun QuotePreview(
 internal fun ConversationComposer(
     state: ConversationState, busy: Boolean, recording: Boolean,
     onDraft: (String) -> Unit, onSend: () -> Unit, onAttach: () -> Unit, onCancelReply: () -> Unit,
-    voice: @Composable () -> Unit, extras: @Composable ColumnScope.() -> Unit = {}
+    voice: @Composable () -> Unit, onFocusChanged: (Boolean) -> Unit = {}, extras: @Composable ColumnScope.() -> Unit = {}
 ) {
     val inputFocus = remember { FocusRequester() }
     var previousReply by remember { mutableStateOf(state.reply?.messageId) }
@@ -137,7 +138,6 @@ internal fun ConversationComposer(
                 Modifier.navigationBarsPadding()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
             ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f))
                 Column(
                     Modifier.widthIn(max = 840.dp).fillMaxWidth()
                         .align(Alignment.CenterHorizontally)
@@ -174,17 +174,18 @@ internal fun ConversationComposer(
                             enabled = !recording,
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             maxLines = if (compact || largeType) 2 else 5,
-                            modifier = modifier.heightIn(min = MaterialTheme.spacing.touchTarget)
+                            modifier = modifier.heightIn(min = PureChatTokens.control)
                                 .focusRequester(inputFocus)
+                                .onFocusChanged { onFocusChanged(it.isFocused) }
                                 .semantics { contentDescription = "Message" }
                                 .padding(
-                                    horizontal = MaterialTheme.spacing.compact,
-                                    vertical = MaterialTheme.spacing.compact
+                                    horizontal = 4.dp,
+                                    vertical = 8.dp
                                 ),
                             decorationBox = { input ->
                                 Box {
                                     if (recording || state.draft.isEmpty()) Text(
-                                        if (recording) "Recording a voice message…" else if (state.mediaDraft == null) "Message" else "Add a caption…",
+                                        if (recording) "Recording a voice message…" else if (state.mediaDraft == null) "Message ${state.preferences.nickname.ifBlank { state.partnerName }}" else "Add a caption…",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -195,8 +196,9 @@ internal fun ConversationComposer(
                     val attach: @Composable () -> Unit = {
                         IconButton(
                             onClick = onAttach,
-                            enabled = !busy && !recording
-                        ) { Icon(Icons.Outlined.Add, "Attach or share") }
+                            enabled = !busy && !recording,
+                            modifier = Modifier.size(PureChatTokens.control)
+                        ) { Icon(PureChatIcons.Add, "Attach or share", Modifier.size(PureChatTokens.icon)) }
                     }
                     val submit: @Composable () -> Unit = {
                         if (state.draft.isBlank() && state.mediaDraft == null) voice()
@@ -207,11 +209,11 @@ internal fun ConversationComposer(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
-                            modifier = Modifier.size(MaterialTheme.spacing.touchTarget)
-                        ) { Icon(Icons.AutoMirrored.Filled.Send, "Send message") }
+                            modifier = Modifier.size(PureChatTokens.control)
+                        ) { Icon(PureChatIcons.Send, "Send message", Modifier.size(PureChatTokens.icon)) }
                     }
                     Surface(
-                        shape = MaterialTheme.shapes.large,
+                        shape = PureChatTokens.composerShape,
                         color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         if (largeType) Column {
@@ -224,7 +226,7 @@ internal fun ConversationComposer(
                             ) { attach(); submit() }
                         } else Row(
                             Modifier.fillMaxWidth().padding(MaterialTheme.spacing.tiny),
-                            verticalAlignment = Alignment.Bottom
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             attach()
                             input(Modifier.weight(1f))

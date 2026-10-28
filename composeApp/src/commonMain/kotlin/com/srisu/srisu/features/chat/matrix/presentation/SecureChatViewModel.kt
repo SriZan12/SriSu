@@ -60,8 +60,8 @@ class SecureChatViewModel(
     private val _composerValidationError = MutableStateFlow<String?>(null)
     val composerValidationError: StateFlow<String?> = _composerValidationError.asStateFlow()
     private var mediaNavigation = false
-    fun coverWithMedia() { mediaNavigation = true }
-    fun destinationVisible(visible: Boolean) { if(visible) mediaNavigation=false; momentReferences.active(visible) }
+    fun coverWithMedia() { stopTyping(); mediaNavigation = true }
+    fun destinationVisible(visible: Boolean) { if (!visible) stopTyping(); if(visible) mediaNavigation=false; momentReferences.active(visible) }
     fun leaveDestination() { if (!mediaNavigation) closeRoom() }
     fun returnFromMedia() { mediaNavigation = false; dismissMedia() }
     private var roomId: String? = null
@@ -245,8 +245,12 @@ class SecureChatViewModel(
         }
     }
 
+    fun stopTyping() { roomId?.let { repository.setTyping(it, roomOwner, false) } }
+    fun composerFocusChanged(focused: Boolean) { if (!focused) stopTyping() }
+
     fun updateMessageInput(value: String) {
         if (value.encodeToByteArray().size <= MATRIX_TEXT_MAX_PLAINTEXT_BYTES) {
+            if (_messageInput.value != value) roomId?.let { repository.setTyping(it, roomOwner, value.isNotBlank()) }
             editedDuringOpening = true
             _messageInput.value = value
             _composerValidationError.value = null
@@ -265,6 +269,7 @@ class SecureChatViewModel(
         val reply = local.value.reply
         val moment = pendingMoment.value
         if (body.isEmpty() && media == null) return
+        stopTyping()
         sendJob = viewModelScope.launch {
             val result = when {
                 moment != null -> {

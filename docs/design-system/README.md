@@ -118,3 +118,36 @@ derivation and raw-token regressions. Compile with
 Android Studio theme previews are in `ThemePreviews.kt`.
 
 Sources: [Material HCT color schemes](https://github.com/material-foundation/material-color-utilities/blob/main/concepts/dynamic_color_scheme.md), [Satoshi](https://www.fontshare.com/fonts/satoshi), [Instrument Serif](https://github.com/google/fonts/tree/main/ofl/instrumentserif).
+
+
+## Chat-only Pure variant (2026-10-28)
+
+The user-approved `srisu-chat-options.html` Pure preview overrides the older thread
+styling for this conversation variant. [Reference and checks](../validation/chat-pure/README.md).
+`ChatTheme.kt`, `PureChatTokens` and the local Pure typography/outlined icons contain
+its values. The global SriSu palette, typography and component shapes are unchanged.
+Light colors: white background, `#F2F3F5` incoming/composer, `#2C2E34` outgoing,
+`#252629` text, `#707278` metadata on white, `#F7F5FB` Spark, `#6A587E` Spark accent.
+Muted text on gray/lilac surfaces uses derived `#6D6F75` to meet 4.5:1 contrast;
+the reference's `#707278` is only 4.33:1 on gray. Dark colors come from the same
+approved preview. No new global color role or Figma synchronization is implied.
+
+All six chat presets now use Pure's structure, chat typography and outlined controls.
+`ChatColors.pure` selects color treatment only; it no longer selects a separate
+layout. Existing non-Pure light/dark swatches and gradients are unchanged. Header
+presence and the temporary partner typing bubble are intentional requested additions
+to the original preview. See [palette renders and activity checks](../validation/chat-pure/activity/README.md).
+
+The approved illustrated Quick Share follow-up adds `ChatShareTokens` and local
+`chatShareTypography` for the attachment sheet. The generated atlas is bundled as
+`chat_share_illustrations.webp`; artwork keeps its own colors in all chat palettes.
+Surface, text, dividers and close control use the selected chat theme. This is an
+intentional user-approved extension, not a new Figma export or global icon system.
+See [the exact reference and verification](../validation/chat-pure/quick-share/README.md).
+
+The approved Palette grid theme picker uses `ChatAppearanceTokens` and local
+`chatAppearanceTypography`. Its neutral chrome is Pure; swatches and the live
+preview are calculated from the original app base scheme before the picker theme
+is installed, preserving all six preset colors. Short labels are presentation-only;
+stored IDs and global theme definitions remain unchanged. See [the reference and
+checks](../validation/chat-pure/theme-picker/README.md).

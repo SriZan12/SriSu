@@ -70,6 +70,9 @@ internal fun MessageBubble(
     cardContent: @Composable () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val pure = MaterialTheme.chatColors.pure
+    val spark = message.content is ChatContent.Spark && !message.hidden && !message.deleted && !message.unavailable
+    val showMeta = !groupContinues || message.transport != ChatTransport.SENT
     val available = !message.hidden && !message.deleted && !message.unavailable
     val attachmentMessage = (message.content as? ChatContent.Media)?.takeIf { available }
     BoxWithConstraints(
@@ -80,52 +83,34 @@ internal fun MessageBubble(
                 ),
                 MaterialTheme.shapes.medium
             )
-            .padding(top = if (grouped || afterReactions) MaterialTheme.spacing.tiny else MaterialTheme.spacing.compact)
+            .padding(top = if (grouped) PureChatTokens.groupedGap else PureChatTokens.groupGap)
     ) {
         val visualMedia = attachmentMessage?.items?.any { it.kind != "voice" } == true
         // A bare voice note renders as a slim pill card; metadata sits under it instead of inside.
         val voiceOnly = attachmentMessage != null && attachmentMessage.items.all { it.kind == "voice" } &&
                 attachmentMessage.caption.isBlank() && attachmentMessage.quote == null &&
                 (uploadProgress == null || message.transport == ChatTransport.SENT)
-        val width = (maxWidth * if (visualMedia) .64f else .82f).coerceAtMost(
+        val width = (maxWidth * if (spark) .85f else if (visualMedia) .64f else .82f).coerceAtMost(
             when {
                 attachmentMessage == null -> ChatMessageLayout.maxWidth
-                attachmentMessage.items.all { it.kind == "voice" } -> ChatMessageLayout.voiceWidth
+                attachmentMessage.items.all { it.kind == "voice" } -> if (voiceOnly) PureChatTokens.voiceWidth else ChatMessageLayout.voiceWidth
                 else -> ChatMessageLayout.mediaWidth
             })
         Row(
             Modifier.align(if (own) Alignment.TopEnd else Alignment.TopStart),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
-            if (!own) {
-                if (!grouped && avatar != null) avatar()
-                else if (!grouped) ParticipantAvatar(
-                    partner,
-                    partnerPhoto,
-                    Modifier.padding(top = MaterialTheme.spacing.tiny)
-                        .size(ChatMessageLayout.avatarSize)
-                )
-                else Spacer(Modifier.width(ChatMessageLayout.avatarSize))
-            }
             Column(
                 Modifier.widthIn(max = width),
                 horizontalAlignment = if (own) Alignment.End else Alignment.Start
             ) {
-                val shapes = MaterialTheme.shapes
-                val corner = shapes.extraSmall.topStart
-                val shape = if (voiceOnly) shapes.pill
-                else if (own) shapes.medium.copy(
-                    topEnd = if (grouped) corner else shapes.medium.topEnd,
-                    bottomEnd = if (groupContinues) corner else shapes.medium.bottomEnd
-                )
-                else shapes.medium.copy(
-                    topStart = if (grouped) corner else shapes.medium.topStart,
-                    bottomStart = if (groupContinues) corner else shapes.medium.bottomStart
-                )
+                val shape = if (spark) PureChatTokens.sparkShape
+                else if (voiceOnly) PureChatTokens.voiceShape
+                else PureChatTokens.bubbleShape(own, grouped)
                 Surface(
                     shape = shape,
-                    color = MaterialTheme.chatColors.incoming,
-                    contentColor = MaterialTheme.chatColors.text,
+                    color = if (spark && pure) MaterialTheme.chatColors.sparkSurface else MaterialTheme.chatColors.incoming,
+                    contentColor = if (own && !(spark && pure)) MaterialTheme.chatColors.outgoingText else MaterialTheme.chatColors.text,
                     modifier = Modifier.combinedClickable(
                         onClick = {},
                         onLongClickLabel = "Message options",
@@ -150,13 +135,13 @@ internal fun MessageBubble(
                                 })
                         }) {
                     Column(
-                        Modifier.then(if (own) Modifier.background(MaterialTheme.chatColors.outgoing) else Modifier)
-                            .then(if (attachmentMessage != null) Modifier.width(width) else Modifier)
+                        Modifier.then(if (own && !(spark && pure)) Modifier.background(MaterialTheme.chatColors.outgoing) else Modifier)
+                            .then(if (attachmentMessage != null || spark) Modifier.width(width) else Modifier)
                             .padding(
-                                horizontal = if (visualMedia) 0.dp else if (attachmentMessage != null) MaterialTheme.spacing.tiny else MaterialTheme.spacing.compact,
-                                vertical = if (visualMedia) 0.dp else if (attachmentMessage != null) MaterialTheme.spacing.tiny else MaterialTheme.spacing.small
+                                horizontal = if (visualMedia || spark) 0.dp else if (voiceOnly) 6.dp else if (attachmentMessage != null) MaterialTheme.spacing.tiny else ChatTokens.bubbleHorizontalPadding,
+                                vertical = if (visualMedia || spark) 0.dp else if (voiceOnly) 5.dp else if (attachmentMessage != null) MaterialTheme.spacing.tiny else ChatTokens.bubbleVerticalPadding
                             )
-                            .then(if (voiceOnly) Modifier.padding(end = MaterialTheme.spacing.small) else Modifier)
+                            .then(if (voiceOnly) Modifier.padding(end = 6.dp) else Modifier)
                     ) {
                         when {
                             message.hidden -> UnavailableMessage("Deleted for you")
@@ -166,7 +151,7 @@ internal fun MessageBubble(
                                 is ChatContent.Moment -> { cardContent(); MessageText(content.body) }
                                 is ChatContent.Plan -> { cardContent(); MessageText(content.body) }
                                 is ChatContent.Challenge -> { cardContent(); MessageText(content.body) }
-                                is ChatContent.Spark -> { cardContent(); MessageText(content.body) }
+                                is ChatContent.Spark -> cardContent()
                                 is ChatContent.Text -> {
                                     content.quote?.let {
                                         QuotePreview(
@@ -236,39 +221,10 @@ internal fun MessageBubble(
                                 else -> UnavailableMessage("Unsupported message")
                             }
                         }
-                        if (visualMedia) Row(
-                            Modifier.fillMaxWidth()
-                                .padding(horizontal = MaterialTheme.spacing.compact)
-                                .padding(
-                                    top = if (attachmentMessage!!.caption.isNotBlank()) MaterialTheme.spacing.tiny else MaterialTheme.spacing.small,
-                                    bottom = MaterialTheme.spacing.small
-                                ), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)
-                        ) {
-                            if (message.transport == ChatTransport.SENT && attachmentMessage.items.any { it.descriptor.id !in offlineMedia })
-                                Icon(
-                                    ChatIcons.Download,
-                                    "Downloads when opened",
-                                    Modifier.size(16.dp),
-                                    tint = MaterialTheme.chatColors.metadata
-                                )
-                            Box(
-                                Modifier.weight(1f),
-                                contentAlignment = Alignment.CenterEnd
-                            ) { MessageMetadata(message, own) }
-                        } else if (!voiceOnly) MessageMetadata(
-                            message, own, Modifier.align(Alignment.End)
-                                .padding(top = MaterialTheme.spacing.tiny)
-                                .then(
-                                    if (attachmentMessage != null) Modifier.padding(horizontal = MaterialTheme.spacing.small)
-                                        .padding(bottom = MaterialTheme.spacing.tiny) else Modifier
-                                )
-                        )
                     }
                 }
-                if (voiceOnly) MessageMetadata(
-                    message, own, Modifier.padding(horizontal = MaterialTheme.spacing.small)
-                        .padding(top = MaterialTheme.spacing.tiny)
+                if (showMeta) MessageMetadata(
+                    message, own, Modifier.padding(horizontal = 4.dp).padding(top = 5.dp)
                 )
                 if (available && message.reactions.isNotEmpty()) FlowRow(
                     Modifier.padding(top = MaterialTheme.spacing.tiny),
@@ -320,7 +276,7 @@ internal fun MessageBubble(
 @Composable
 private fun MessageText(body: String) {
     val linkStyle = SpanStyle(
-        color = MaterialTheme.colorScheme.secondary,
+        color = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.secondary,
         textDecoration = TextDecoration.Underline
     )
     val text = remember(body, linkStyle) {
@@ -356,6 +312,7 @@ internal fun MessageMetadata(
     own: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val time = chatLocalTime(message.createdAt, twelveHour = true)
     val failed = own && message.transport == ChatTransport.FAILED
     val color =
         if (failed) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.chatColors.metadata
@@ -365,7 +322,7 @@ internal fun MessageMetadata(
         )
     FlowRow(
         modifier.clearAndSetSemantics {
-            contentDescription = chatLocalTime(message.createdAt) + if (own) ", $status" else ""
+            contentDescription = time + if (own) ", $status" else ""
         }.then(
             if (failed) Modifier.background(
                 MaterialTheme.colorScheme.errorContainer,
@@ -379,32 +336,13 @@ internal fun MessageMetadata(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
         verticalArrangement = Arrangement.Center
     ) {
+        if (own && status != "Sent") Text(status, style = MaterialTheme.typography.bodySmall, color = color)
         Text(
-            chatLocalTime(message.createdAt),
+            time,
             style = MaterialTheme.typography.bodySmall,
             color = color
         )
-        if (own) {
-            Icon(
-                when (message.transport) {
-                    ChatTransport.QUEUED -> Icons.Outlined.Schedule
-                    ChatTransport.SENDING -> Icons.Outlined.CloudUpload
-                    ChatTransport.FAILED -> Icons.Outlined.ErrorOutline
-                    ChatTransport.SENT -> when {
-                        message.played -> Icons.Outlined.PlayCircleOutline
-                        message.read -> Icons.Outlined.DoneAll
-                        message.delivered -> Icons.Outlined.DoneAll
-                        else -> Icons.Outlined.Done
-                    }
-                }, null, Modifier.size(16.dp).align(Alignment.CenterVertically),
-                tint = if (message.transport == ChatTransport.SENT && (message.read || message.played)) MaterialTheme.chatColors.receipt else color
-            )
-            if (message.transport != ChatTransport.SENT) Text(
-                status,
-                style = MaterialTheme.typography.bodySmall,
-                color = color
-            )
-        }
+
     }
 }
 

@@ -10,7 +10,10 @@ import kotlin.time.Instant
 
 private fun local(value:String)=try {Instant.parse(value).toLocalDateTime(TimeZone.currentSystemDefault())} catch(_:IllegalArgumentException) {null}
 internal fun chatLocalDate(value:String)=local(value)?.date?.toString() ?: "Date unavailable"
-internal fun chatLocalTime(value:String)=local(value)?.let {"${it.hour.toString().padStart(2,'0')}:${it.minute.toString().padStart(2,'0')}"} ?: ""
+internal fun chatLocalTime(value: String, twelveHour: Boolean = false) = local(value)?.let {
+    if (twelveHour) "${(it.hour % 12).let { hour -> if (hour == 0) 12 else hour }}:${it.minute.toString().padStart(2, '0')} ${if (it.hour < 12) "AM" else "PM"}"
+    else "${it.hour.toString().padStart(2, '0')}:${it.minute.toString().padStart(2, '0')}"
+} ?: ""
 
 internal fun chatDateLabel(value: String, today: LocalDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date): String {
     val date = local(value)?.date ?: return "Date unavailable"

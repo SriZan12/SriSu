@@ -8,6 +8,9 @@ import okio.ByteString.Companion.encodeUtf8
 import com.srisu.srisu.features.couplechat.data.PreparedChatMedia
 import de.connect2x.trixnity.core.model.events.m.room.EncryptedFile
 
+/** Unknown is distinct from an explicitly reported offline partner. */
+enum class MatrixPartnerPresence { UNKNOWN, ONLINE, OFFLINE, AWAY }
+
 enum class MatrixMessageDelivery { SENT, SENDING, FAILED }
 
 /** Leaves headroom under Matrix's event-size ceiling for Megolm/base64 and JSON envelopes. */
@@ -63,6 +66,8 @@ data class MatrixChatRoomState(
     val roomId: String,
     val messages: List<MatrixChatMessage> = emptyList(),
     val availability: MatrixChatAvailability = MatrixChatAvailability.Loading,
+    val partnerPresence: MatrixPartnerPresence = MatrixPartnerPresence.UNKNOWN,
+    val partnerTyping: Boolean = false,
     val sparkBackupPending: Boolean = false,
     val syncing: Boolean = false,
     val sending: Boolean = false,
@@ -84,6 +89,7 @@ class MatrixChatRoomOwner
 interface MatrixChatRepository {
     fun observeRoom(roomId: String): Flow<MatrixChatRoomState>
     fun openRoom(roomId: String, owner: MatrixChatRoomOwner)
+    fun setTyping(roomId: String, owner: MatrixChatRoomOwner, typing: Boolean) {}
     fun closeRoom(roomId: String, owner: MatrixChatRoomOwner)
     suspend fun sendText(roomId: String, text: String): Result<String>
     suspend fun encryptSparkAnswer(session: com.srisu.srisu.features.sparks.data.SparkSession, text: String): Result<kotlinx.serialization.json.JsonObject> = Result.failure(UnsupportedOperationException())

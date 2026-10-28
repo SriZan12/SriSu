@@ -62,3 +62,19 @@ fun SriSuPartnerLinkTypography(): Typography = sriSuTypography(useSerifHeadings 
         labelSmall = it.bodySmall.copy(fontWeight = FontWeight.Bold),
     )
 }
+
+fun pureChatTypography(base: Typography): Typography = base.copy(
+    bodyLarge = base.bodyLarge.copy(fontSize = 16.sp, lineHeight = 23.68.sp, letterSpacing = 0.sp,
+        lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.None)),
+    titleMedium = base.titleMedium.copy(fontSize = 17.sp, lineHeight = 25.16.sp,
+        fontWeight = FontWeight.Medium, letterSpacing = 0.sp),
+    bodySmall = base.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.28.sp, letterSpacing = 0.sp),
+)
+
+@Composable fun pureChatSerif(avatar: Boolean = false): TextStyle = TextStyle(
+    fontFamily = FontFamily(Font(Res.font.instrument_serif_regular)),
+    fontSize = if (avatar) 21.sp else 23.sp,
+    lineHeight = if (avatar) 26.sp else 26.45.sp,
+    letterSpacing = 0.sp,
+)
+fun pureChatFooter(base: TextStyle): TextStyle = base.copy(fontSize = 12.sp, lineHeight = 17.76.sp, letterSpacing = 0.sp)

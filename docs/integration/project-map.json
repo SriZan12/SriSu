@@ -36,7 +36,7 @@
   },
   "features": {
     "couple_chat": {
-      "frontend_branch": "dev-core-architecture",
+      "frontend_branch": "chat-ui-pure",
       "backend_branch": "codex/couple-chat-rebuild",
       "contract": "core-1:POST /api/chat/v2/rooms/{uuid}/matrix/session/",
       "status": "matrix-chat-ui-recovered-media-replies-reactions-local-verified-live-exchange-pending",
@@ -46,8 +46,17 @@
       "related_prs": [
         "SriZan12/SriSu#23",
         "SriZan12/SriSu#24",
-        "SrizanKhadka/SriSu#39"
-      ]
+        "SrizanKhadka/SriSu#39",
+        "SrizanKhadka/SriSu#40"
+      ],
+      "conversation_ui": "Pure structure across six original palettes; Matrix partner presence and typing",
+      "ui_validation": "docs/validation/chat-pure/README.md",
+      "activity_validation": "docs/validation/chat-pure/activity/README.md",
+      "activity_backend_branch": "codex/chat-presence",
+      "share_menu": "Illustrated Quick Share: Photos, Camera, Video, Voice; Spark, Challenge, Plan",
+      "share_menu_validation": "docs/validation/chat-pure/quick-share/README.md",
+      "theme_picker": "Palette grid with six existing presets, live sample and explicit Apply",
+      "theme_picker_validation": "docs/validation/chat-pure/theme-picker/README.md"
     },
     "moments": {
       "frontend_branch": "dev-core-architecture",

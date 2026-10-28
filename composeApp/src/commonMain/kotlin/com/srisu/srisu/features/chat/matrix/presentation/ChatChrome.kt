@@ -2,6 +2,9 @@ package com.srisu.srisu.features.chat.matrix.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import com.srisu.srisu.theme.*
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +59,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.srisu.srisu.components.SriSuButton
+import com.srisu.srisu.features.chat.matrix.MatrixPartnerPresence
+import srisu.composeapp.generated.resources.chat_partner_online
+import srisu.composeapp.generated.resources.chat_partner_offline
+import srisu.composeapp.generated.resources.chat_partner_away
+import srisu.composeapp.generated.resources.chat_partner_status_unavailable
 import com.srisu.srisu.features.chat.matrix.MatrixChatAvailability
 import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
 import com.srisu.srisu.theme.ChatTokens
@@ -93,67 +102,41 @@ internal fun ChatHeader(
     partner: ChatPartnerIdentity?,
     availability: MatrixChatAvailability,
     onBack: () -> Unit,
+    presence: MatrixPartnerPresence = MatrixPartnerPresence.UNKNOWN,
     onAppearance: (() -> Unit)? = null,
 ) {
-    val securityStatus = when (availability) {
-        is MatrixChatAvailability.Ready -> Res.string.chat_secure_encrypted
-        is MatrixChatAvailability.Offline -> Res.string.chat_secure_encrypted_offline
-        MatrixChatAvailability.Loading -> Res.string.chat_secure_verifying
-        is MatrixChatAvailability.Error, is MatrixChatAvailability.Unavailable ->
-            Res.string.chat_secure_header_unavailable
+    val status = if (availability !is MatrixChatAvailability.Ready) MatrixPartnerPresence.UNKNOWN else presence
+    val statusLabel = when (status) {
+        MatrixPartnerPresence.ONLINE -> Res.string.chat_partner_online
+        MatrixPartnerPresence.OFFLINE -> Res.string.chat_partner_offline
+        MatrixPartnerPresence.AWAY -> Res.string.chat_partner_away
+        MatrixPartnerPresence.UNKNOWN -> Res.string.chat_partner_status_unavailable
     }
-    // Start-aligned rather than Figma's centred title: long names and 160–200% text keep the
-    // back target and identity from colliding.
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painterResource(Res.drawable.partner_link_back),
-                    contentDescription = stringResource(Res.string.chat_secure_back),
-                    modifier = Modifier.size(MaterialTheme.spacing.chromeIcon),
-                )
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+            .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack, modifier = Modifier.size(PureChatTokens.control)) {
+                Icon(PureChatIcons.Back, stringResource(Res.string.chat_secure_back), Modifier.size(PureChatTokens.icon))
             }
-        },
-        actions = { if (onAppearance != null) IconButton(onClick = onAppearance) {
-            Icon(com.srisu.srisu.features.couplechat.presentation.ChatIcons.MoreHoriz, "Chat appearance")
-        } },
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
-            ) {
-                if (partner != null) PartnerAvatar(partner, ChatTokens.headerAvatar, MaterialTheme.typography.labelMedium)
-                Column(Modifier.weight(1f, fill = false)) {
-                    Text(
-                        partner?.name ?: stringResource(Res.string.chat_secure_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
-                    ) {
-                        Icon(
-                            Icons.Filled.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(ChatTokens.metaIcon - MaterialTheme.spacing.hairline * 2),
-                        )
-                        Text(
-                            stringResource(securityStatus),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+            Box(Modifier.weight(1f).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    if (partner != null) PartnerAvatar(partner, ChatTokens.headerAvatar, pureChatSerif(avatar = true))
+                    Column(Modifier.weight(1f, fill = false)) {
+                        Text(partner?.name ?: stringResource(Res.string.chat_secure_title),
+                            style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.semantics { heading() })
+                        Text(stringResource(statusLabel), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.chatColors.metadata, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
-        },
-    )
+            if (onAppearance != null) IconButton(onClick = onAppearance, modifier = Modifier.size(PureChatTokens.control)) {
+                Icon(com.srisu.srisu.features.couplechat.presentation.ChatIcons.MoreHoriz, "Chat appearance", Modifier.size(PureChatTokens.icon))
+            } else Spacer(Modifier.size(PureChatTokens.control))
+        }
+    }
 }
 
 /** Partner photo with an initials fallback that stays visible until (or unless) the photo loads. */
@@ -163,13 +146,13 @@ internal fun PartnerAvatar(partner: ChatPartnerIdentity, size: androidx.compose.
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.secondaryContainer),
+            .background(if (MaterialTheme.chatColors.pure) MaterialTheme.chatColors.incoming else MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         // Initials are decorative inside a fixed circle, so they follow the avatar size, not font scale.
-        val initialsSize = with(LocalDensity.current) { (size * 0.38f).toSp() }
+        val initialsSize = with(LocalDensity.current) { (size * .65625f).toSp() }
         Text(
-            partner.name.split(' ').filter(String::isNotBlank).take(2).joinToString("") { it.take(1).uppercase() },
+            partner.name.split(' ').filter(String::isNotBlank).take(1).joinToString("") { it.take(1).uppercase() },
             style = initialsStyle.copy(fontSize = initialsSize, lineHeight = initialsSize),
             maxLines = 1,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -368,7 +351,7 @@ internal fun ChatOfflineBanner(message: String, onRetry: () -> Unit) {
 @Composable
 internal fun ChatDayHeader(label: String) {
     Box(
-        Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.large, bottom = MaterialTheme.spacing.tiny),
+        Modifier.fillMaxWidth().padding(top = 21.dp, bottom = 5.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(

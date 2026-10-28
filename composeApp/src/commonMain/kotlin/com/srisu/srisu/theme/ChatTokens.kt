@@ -47,3 +47,20 @@ object ChatTokens {
     /** Placeholders and the composer field share the bubble radius so tall drafts keep soft corners. */
     val roundedShape = RoundedCornerShape(bubbleRadius)
 }
+
+/** Geometry read from the approved Pure preview, independent of the rest of SriSu. */
+object PureChatTokens {
+    val gutter = 18.dp
+    val smallGutter = 13.dp
+    val groupedGap = 3.dp
+    val groupGap = 16.dp
+    val control = 44.dp
+    val icon = 21.dp
+    val voiceWidth = 218.dp
+    val voiceShape = RoundedCornerShape(20.dp)
+    val sparkShape = RoundedCornerShape(18.dp)
+    val composerShape = RoundedCornerShape(28.dp)
+    fun bubbleShape(mine: Boolean, joined: Boolean) = if (mine)
+        RoundedCornerShape(20.dp, if (joined) 6.dp else 20.dp, 6.dp, 20.dp)
+    else RoundedCornerShape(if (joined) 6.dp else 20.dp, 20.dp, 20.dp, 6.dp)
+}

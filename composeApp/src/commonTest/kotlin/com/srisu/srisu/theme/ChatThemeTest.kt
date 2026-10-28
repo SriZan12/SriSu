@@ -14,9 +14,15 @@ class ChatThemeTest {
     @Test fun textMetadataAndControlsMeetContrastAlongEveryGradient() {
         for(base in listOf(SriSuLightColorScheme,SriSuDarkColorScheme)) for(preset in ChatThemePreset.entries) {
             val colors=chatColors(preset,base)
-            for(surface in (0..100).map {lerp(colors.outgoingStart,colors.outgoingEnd,it/100f)}+colors.incoming+colors.scheme.background) {
-                for(ink in listOf(colors.text,colors.metadata,colors.receipt))
+            for(surface in (if (colors.pure) emptyList() else (0..100).map {lerp(colors.outgoingStart,colors.outgoingEnd,it/100f)})+colors.incoming+colors.scheme.background) {
+                for(ink in if (colors.pure && surface == colors.incoming) listOf(colors.text) else listOf(colors.text,colors.metadata,colors.receipt))
                     assertTrue(contrast(surface,ink)>=4.5f,"${preset.id}: ${contrast(surface,ink)}")
+            }
+            if (colors.pure) {
+                assertTrue(contrast(colors.outgoingStart, colors.outgoingText) >= 4.5f)
+                assertTrue(contrast(colors.incoming, colors.scheme.onSurfaceVariant) >= 4.5f)
+                assertTrue(contrast(colors.sparkSurface, colors.scheme.onSurfaceVariant) >= 4.5f)
+                assertTrue(contrast(colors.sparkSurface, colors.sparkInk) >= 4.5f)
             }
             assertTrue(contrast(colors.scheme.primary,colors.scheme.onPrimary)>=4.5f)
         }

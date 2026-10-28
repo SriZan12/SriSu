@@ -52,6 +52,20 @@ object ChatFixtures {
     /** Synthetic partner; no photo URL so renders never fetch remote media. */
     val partner = ChatPartnerIdentity(name = "Aatithi Rai", photoUrl = null)
 
+    /** Approved Pure preview content, test-only; real runtime state still comes from Matrix. */
+    fun pure() = ready(listOf(
+        message("pure-1", "Made it home. How was your day?", false, 0),
+        message("pure-2", "Long day. Better now 🙂", true, 1),
+        message("pure-3", "Saved you the last momo.", false, 2),
+        message("pure-4", "No promises about the achar.", false, 2),
+        message("pure-5", "On my way ♡", true, 3).copy(read = true),
+        message("pure-spark", "What felt like home today?", true, 4).copy(
+            sparkReference = com.srisu.srisu.features.sparks.data.SparkReference("11111111-1111-4111-8111-111111111111", 1)),
+        message("pure-voice", "", false, 5).copy(attachment = com.srisu.srisu.features.chat.matrix.MatrixChatAttachment(
+            "voice", "audio/wav", ChatRecoveryFixtures.file, durationMs = 18_000,
+            waveform = listOf(25, 50, 75, 42, 100, 63, 38, 75, 100, 50, 25, 58))),
+    ).map { it.copy(timestampMillis = it.timestampMillis + (10 * 60 + 40) * MINUTE) })
+
     fun empty() = ready(emptyList())
 
     /** Thirty alternating exchanges for scroll, jump-to-latest and pagination-stability checks. */

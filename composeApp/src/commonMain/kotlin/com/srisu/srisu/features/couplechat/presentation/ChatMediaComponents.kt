@@ -267,35 +267,36 @@ internal fun InlineVoicePlayer(
     speed: Float = 1f,
     onSpeed: (() -> Unit)? = null
 ) {
+    val voiceInk = LocalContentColor.current
     val fraction = if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f
     val canSeek = duration > 0 && !loading && error == null
     Column(modifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             FilledIconButton(
                 onClick = onPlay, enabled = !loading, modifier = Modifier.size(ChatVoiceLayout.playButton),
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.primary,
-                    disabledContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = voiceInk.copy(alpha = 0f),
+                    contentColor = voiceInk,
+                    disabledContainerColor = voiceInk.copy(alpha = 0f),
+                    disabledContentColor = voiceInk
                 )
             ) {
                 if (loading) CircularProgressIndicator(
                     Modifier.size(ChatVoiceLayout.loader).semantics { contentDescription = "Opening voice message" },
                     strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = voiceInk
                 )
                 else Icon(
-                    if (error != null) Icons.Outlined.Refresh else if (playing) ChatIcons.Pause else Icons.Outlined.PlayArrow,
+                    if (error != null) Icons.Outlined.Refresh else if (playing) ChatIcons.Pause else PureChatIcons.Play,
                     if (error != null) "Retry playback" else if (playing) "Pause voice message" else "Play voice message",
-                    Modifier.size(ChatVoiceLayout.playIcon)
+                    Modifier.size(18.dp)
                 )
             }
-            Box(Modifier.weight(1f).height(ChatVoiceLayout.track), contentAlignment = Alignment.Center) {
-                // Matrix voice events carry no levels yet; uniform low bars show progress without faking a waveform.
+            Box(Modifier.weight(1f).height(24.dp), contentAlignment = Alignment.Center) {
+                // Old events without levels use uniform low bars; never invent an audio waveform.
                 VoiceBars(
                     media.waveform.ifEmpty { listOf(ChatVoiceLayout.placeholderLevel) },
                     fraction,
@@ -309,26 +310,13 @@ internal fun InlineVoicePlayer(
                     modifier = Modifier.fillMaxWidth()
                         .semantics { contentDescription = "Seek voice message" })
             }
-            if (onSpeed != null) Surface(
-                onClick = onSpeed,
-                shape = MaterialTheme.shapes.pill,
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.chatColors.text,
-                border = BorderStroke(MaterialTheme.spacing.hairline, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.semantics { contentDescription = "Playback speed ${speedLabel(speed)}" }
-            ) {
-                Text(
-                    speedLabel(speed),
-                    Modifier.padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.tiny),
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1
-                )
-            }
             Text(
                 if (loading) "…" else if (duration > 0) mediaTime(if (playing || position > 0) position else duration)
                 else if (media.durationMs > 0) mediaTime(media.durationMs) else "0:00",
-                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
-                color = MaterialTheme.chatColors.metadata,
+                modifier = if (onSpeed != null) Modifier.clickable(onClickLabel = "Change playback speed", onClick = onSpeed)
+                    .semantics { stateDescription = "Playback speed ${speedLabel(speed)}" } else Modifier,
+                style = pureChatFooter(MaterialTheme.typography.bodySmall).copy(fontFeatureSettings = "tnum"),
+                color = if (MaterialTheme.chatColors.pure) voiceInk.copy(alpha = .7f) else MaterialTheme.chatColors.metadata,
                 maxLines = 1
             )
         }
@@ -346,12 +334,13 @@ internal fun InlineVoicePlayer(
 /** Rounded bars resampled to the available width; bars before [progress] use the accent. */
 @Composable
 internal fun VoiceBars(levels: List<Int>, progress: Float, modifier: Modifier = Modifier) {
-    val played = MaterialTheme.colorScheme.primary
-    val remaining = MaterialTheme.chatColors.metadata.copy(alpha = .4f)
+    val played = if (MaterialTheme.chatColors.pure) LocalContentColor.current else MaterialTheme.colorScheme.primary
+    val remaining = if (MaterialTheme.chatColors.pure) LocalContentColor.current.copy(alpha = .45f) else MaterialTheme.chatColors.metadata.copy(alpha = .4f)
     Canvas(modifier) {
         val bar = ChatVoiceLayout.bar.toPx()
         val pitch = bar + ChatVoiceLayout.barGap.toPx()
-        val count = ((size.width + ChatVoiceLayout.barGap.toPx()) / pitch).toInt().coerceAtLeast(1)
+        val capacity = ((size.width + ChatVoiceLayout.barGap.toPx()) / pitch).toInt().coerceAtLeast(1)
+        val count = if (levels.size > 1) minOf(capacity, levels.size) else capacity
         val minimum = ChatVoiceLayout.barMin.toPx()
         repeat(count) { index ->
             val level = levels[(index * levels.size / count).coerceAtMost(levels.lastIndex)].coerceIn(0, 100)
@@ -467,78 +456,8 @@ internal fun MediaDraftPreview(
 }
 
 @Composable
-internal fun ChatAttachmentSheet(
-    controller: ChatMediaController,
-    onDismiss: () -> Unit,
-    onCard: ((String) -> Unit)? = null,
-    onChallenge: (() -> Unit)? = null,
-    onPlan: (() -> Unit)? = null
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(MaterialTheme.spacing.gutter).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Text("Share something", style = MaterialTheme.typography.titleLarge)
-            if (onPlan != null) ChatActionRow("Plan something together", androidx.compose.material.icons.Icons.Outlined.CalendarMonth, { onDismiss(); onPlan() })
-            if (onChallenge != null) ChatActionRow("Try a Challenge together", androidx.compose.material.icons.Icons.Outlined.WbSunny,
-                { onDismiss(); onChallenge() })
-            if (onCard != null) ChatActionRow("A Spark for the two of you", androidx.compose.material.icons.Icons.Outlined.AutoAwesome,
-                { onDismiss(); onCard("spark") })
-            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
-                ShareTile(
-                    "Photos",
-                    ChatIcons.Image,
-                    Modifier.weight(1f)
-                ) { onDismiss(); controller.pick("photo") }
-                ShareTile(
-                    "Video",
-                    ChatIcons.Videocam,
-                    Modifier.weight(1f)
-                ) { onDismiss(); controller.pick("video") }
-                ShareTile(
-                    "Camera",
-                    ChatIcons.PhotoCamera,
-                    Modifier.weight(1f)
-                ) { onDismiss(); controller.pick("camera") }
-            }
-            ChatActionRow(
-                "Record a voice draft",
-                ChatIcons.Mic,
-                { onDismiss(); controller.record(true) })
-            Text(
-                "One attachment per message. Videos up to 2 minutes and 16 MB. Location tags are removed from photos.",
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}
-
-@Composable
-private fun ShareTile(label: String, icon: ImageVector, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Column(
-            Modifier.padding(
-                vertical = MaterialTheme.spacing.medium,
-                horizontal = MaterialTheme.spacing.small
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.secondary)
-            Text(label, style = MaterialTheme.typography.titleSmall)
-        }
-    }
-}
-
-@Composable
 internal fun VoiceRecordControl(controller: ChatMediaController, enabled: Boolean) {
+    val controlSize = PureChatTokens.control
     val enabledNow by rememberUpdatedState(enabled)
     // The accessibility action starts locked recording with explicit controls.
     // The pointer gesture supports hold/release, left cancellation and up locking.
@@ -546,7 +465,7 @@ internal fun VoiceRecordControl(controller: ChatMediaController, enabled: Boolea
         shape = MaterialTheme.shapes.pill,
         color = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
-        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics {
+        modifier = Modifier.sizeIn(minWidth = controlSize, minHeight = controlSize).semantics {
             role = Role.Button; contentDescription = "Record voice message"
             if (!enabled) disabled()
             onClick("Start locked recording") { if (enabled) controller.record(true); enabled }
@@ -594,8 +513,8 @@ internal fun VoiceRecordControl(controller: ChatMediaController, enabled: Boolea
         }) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(48.dp)
-        ) { Icon(ChatIcons.Mic, null) }
+            modifier = Modifier.size(controlSize)
+        ) { Icon(PureChatIcons.Mic, null, Modifier.size(PureChatTokens.icon)) }
     }
 }
 

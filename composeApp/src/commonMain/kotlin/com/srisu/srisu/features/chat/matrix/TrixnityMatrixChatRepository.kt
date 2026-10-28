@@ -1,6 +1,8 @@
 package com.srisu.srisu.features.chat.matrix
 
 import okio.ByteString.Companion.encodeUtf8
+import de.connect2x.trixnity.core.subscribeContentAsFlow
+import de.connect2x.trixnity.core.model.events.m.TypingEventContent
 
 import com.srisu.srisu.features.couplechat.data.PreparedChatMedia
 import de.connect2x.trixnity.client.room.message.reply
@@ -123,11 +125,38 @@ class TrixnityMatrixChatRepository(
     private var clientOutboxGate: MatrixOutboxGate? = null
     private var roomJob: Job? = null
     private var loginJob: Job? = null
+    private var activityJob: Job? = null
+    private var typingUsers: Flow<Map<RoomId, Set<UserId>>> = flowOf(emptyMap())
     private var recoveryJob: Job? = null
     private var roomOperation: Long = 0
     private var roomOwner: MatrixChatRoomOwner? = null
     private val pendingAccountWipes = mutableSetOf<Long>()
     private var cleanupBlocked = true
+    private data class TypingTarget(val client: MatrixClient, val room: RoomId, val user: UserId,
+        val operation: Long, val owner: MatrixChatRoomOwner)
+    private val typingPublisher = MatrixTypingPublisher<TypingTarget>(scope, isCurrent = { target ->
+        val active = activeRoom
+        client === target.client && roomOwner === target.owner && roomOperation == target.operation &&
+            active?.matrixRoomId == target.room && active.operation == target.operation &&
+            sessions.stamp() == active.stamp && lifetime.foreground.value &&
+            _state.value.availability is MatrixChatAvailability.Ready && clientOutboxGate?.isEnabled() == true
+    }) { target, typing ->
+        target.client.api.room.setTyping(target.room, target.user, typing,
+            timeout = if (typing) 10_000L else null).getOrThrow()
+    }
+
+    override fun setTyping(roomId: String, owner: MatrixChatRoomOwner, typing: Boolean) {
+        if (roomOwner !== owner || _state.value.roomId != normalizeDjangoRoomIdOrNull(roomId)) return
+        if (!typing) { typingPublisher.stop(); return }
+        val active = activeRoom ?: return
+        val currentClient = client ?: return
+        typingPublisher.activity(TypingTarget(currentClient, active.matrixRoomId, UserId(active.ownMatrixId), active.operation, owner))
+    }
+
+    private fun clearActivity() {
+        typingPublisher.stop()
+        _state.update { it.copy(partnerPresence = MatrixPartnerPresence.UNKNOWN, partnerTyping = false) }
+    }
 
     init {
         scope.launch {
@@ -151,6 +180,7 @@ class TrixnityMatrixChatRepository(
             sessions.state.collect { current ->
                 val previousAccount = previous.accountId
                 if (current.accountId != previousAccount) {
+                    clearActivity()
                     cleanupBlocked = true
                     roomOperation += 1
                     clientOutboxGate?.disable()
@@ -202,6 +232,7 @@ class TrixnityMatrixChatRepository(
                 try {
                     if (foreground) validatedRoom?.let { revalidateOnForeground(it) }
                     else {
+                        clearActivity()
                         clientOutboxGate?.disableAndJoin()
                         client?.stopSync()
                     }
@@ -243,6 +274,7 @@ class TrixnityMatrixChatRepository(
     }
 
     override fun openRoom(roomId: String, owner: MatrixChatRoomOwner) {
+        if (roomOwner !== owner) typingPublisher.stop()
         roomOwner = owner
         val normalized = normalizeDjangoRoomIdOrNull(roomId) ?: run {
             val operation = ++roomOperation
@@ -309,6 +341,7 @@ class TrixnityMatrixChatRepository(
 
     override fun closeRoom(roomId: String, owner: MatrixChatRoomOwner) {
         if (roomOwner !== owner) return
+        clearActivity()
         roomOwner = null
         val normalized = normalizeDjangoRoomIdOrNull(roomId) ?: return
         if (activeRoom?.djangoRoomId != normalized && _state.value.roomId != normalized) return
@@ -632,6 +665,8 @@ class TrixnityMatrixChatRepository(
     }
 
     override fun close() {
+        clearActivity()
+        activityJob?.cancel()
         roomJob?.cancel()
         loginJob?.cancel()
         recoveryJob?.cancel()
@@ -945,6 +980,11 @@ class TrixnityMatrixChatRepository(
         clientStamp = stamp
         clientOperation = operation
         clientOutboxGate = outboxGate
+        activityJob?.cancel()
+        val activityScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
+        activityJob = activityScope.coroutineContext[Job]
+        typingUsers = trackMatrixTyping(activityScope, created.api.sync.subscribeContentAsFlow<TypingEventContent>(),
+            created.syncState, lifetime.foreground)
         observeLoginState(created, stamp)
         created
     }
@@ -1002,6 +1042,10 @@ class TrixnityMatrixChatRepository(
         }
         val receipts = matrixClient.user.getReceiptsById(active.matrixRoomId, UserId(active.partnerMatrixId))
         val security = secureRoomState(matrixClient, active)
+        val activity = partnerActivity(active.matrixRoomId, UserId(active.partnerMatrixId),
+            matrixClient.user.getPresence(UserId(active.partnerMatrixId)).map { it?.presence.toPartnerPresence() },
+            typingUsers,
+            matrixClient.syncState, lifetime.foreground)
         roomJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             launch { maintainSparkRecovery(matrixClient, active) }
             var hasVerifiedSnapshot = false
@@ -1051,7 +1095,13 @@ class TrixnityMatrixChatRepository(
             }
             collectWithOutboxGateFailClosed(
                 gate = observedGate,
-                source = observations,
+                source = observations.combine(activity) { observation, partner ->
+                    val visible = observation.secure && observation.syncState == SyncState.RUNNING && lifetime.foreground.value
+                    observation.copy(state = observation.state.copy(
+                        partnerPresence = if (visible) partner.presence else MatrixPartnerPresence.UNKNOWN,
+                        partnerTyping = visible && partner.typing,
+                    ))
+                },
                 onEach = { observation ->
                     val current = activeRoom
                     if (client === matrixClient &&
@@ -1068,6 +1118,7 @@ class TrixnityMatrixChatRepository(
                             lastVerifiedMessages = observation.state.messages
                         }
                         if (!observation.secure) {
+                            typingPublisher.stop()
                             observedGate.disable()
                             _state.value = observation.state
                             observedGate.disableAndJoin()
@@ -1084,6 +1135,7 @@ class TrixnityMatrixChatRepository(
                             observedGate.enable()
                             _state.value = observation.state
                         } else {
+                            typingPublisher.stop()
                             observedGate.disable()
                             observedGate.disableAndJoin()
                             _state.value = if (hasVerifiedSnapshot) {
@@ -1137,6 +1189,7 @@ class TrixnityMatrixChatRepository(
         allowSameAccountRestart: Boolean = true,
     ) {
         if (validatedRoom?.sameConversation(expected) != true) return
+        clearActivity()
         val wasOpen = activeRoom?.sameConversation(expected) == true
         val operation = ++roomOperation
         clientOutboxGate?.disableAndJoin()
@@ -1487,6 +1540,9 @@ class TrixnityMatrixChatRepository(
     }
 
     private suspend fun shutdownClientLocked(logout: Boolean, deleteScope: MatrixStorageScope?) {
+        clearActivity()
+        activityJob?.cancel(); activityJob = null
+        typingUsers = flowOf(emptyMap())
         val old = client
         val oldGate = clientOutboxGate
         oldGate?.disable()
