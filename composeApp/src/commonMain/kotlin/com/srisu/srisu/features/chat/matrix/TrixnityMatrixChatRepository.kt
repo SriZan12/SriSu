@@ -23,6 +23,8 @@ import com.srisu.srisu.core.session.SessionChangedException
 import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.session.SessionStamp
 import de.connect2x.trixnity.client.CryptoDriverModule
+import de.connect2x.trixnity.client.media.mappings.EventContentMediaMappings
+import de.connect2x.trixnity.core.serialization.events.EventContentSerializerMappings
 import de.connect2x.trixnity.client.MatrixClient
 import de.connect2x.trixnity.client.RepositoriesModule
 import de.connect2x.trixnity.client.create
@@ -548,9 +550,10 @@ class TrixnityMatrixChatRepository(
                 body = caption.ifBlank { "Video" }, fileName = "video", file = file,
                 info = VideoInfo(width = media.width, height = media.height, duration = media.durationMs,
                     mimeType = media.mime, size = media.bytes.size.toLong(), thumbnailFile = thumbnail), relatesTo = relation)
-            else -> RoomMessageEventContent.FileBased.Audio(
+            else -> voiceMessageContent(RoomMessageEventContent.FileBased.Audio(
                 body = caption.ifBlank { "Voice message" }, fileName = "voice.wav", file = file,
-                info = AudioInfo(duration = media.durationMs, mimeType = media.mime, size = media.bytes.size.toLong()), relatesTo = relation)
+                info = AudioInfo(duration = media.durationMs, mimeType = media.mime, size = media.bytes.size.toLong()), relatesTo = relation),
+                media.waveform)
         }
         ensureRichRoomCurrent(current, active)
         current.room.sendMessage(active.matrixRoomId) { content(content) }
@@ -878,6 +881,13 @@ class TrixnityMatrixChatRepository(
                     name = "SriSu-Matrix-$accountId"
                     httpClientEngine = engine
                     storeTimelineEventContentUnencrypted = false
+                    // Voice notes carry MSC1767 waveform blocks that the stock m.audio type drops.
+                    modulesFactories += {
+                        module {
+                            single<EventContentSerializerMappings> { matrixEventContentSerializerMappings }
+                            single<EventContentMediaMappings> { matrixEventContentMediaMappings }
+                        }
+                    }
                     // The upstream sender otherwise starts during MatrixClient.create and
                     // can drain a persisted outbox before SriSu's relationship/room gate.
                     modulesFactories += {

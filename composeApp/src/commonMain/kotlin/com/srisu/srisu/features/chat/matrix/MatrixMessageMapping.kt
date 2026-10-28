@@ -9,24 +9,31 @@ import de.connect2x.trixnity.core.model.events.m.RelatesTo
 import de.connect2x.trixnity.core.model.events.m.ReactionEventContent
 import de.connect2x.trixnity.core.model.events.m.room.RedactionEventContent
 import de.connect2x.trixnity.core.model.events.m.room.RoomMessageEventContent
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
-internal fun RoomMessageEventContent.attachment(): MatrixChatAttachment? = when (this) {
-    is RoomMessageEventContent.FileBased.Image -> file?.let {
-        MatrixChatAttachment("photo", info?.mimeType ?: "image/jpeg", it,
-            info?.width ?: 0, info?.height ?: 0, thumbnail = info?.thumbnailFile)
+internal fun RoomMessageEventContent.attachment(): MatrixChatAttachment? = when (val content = typed()) {
+    is RoomMessageEventContent.FileBased.Image -> content.file?.let {
+        MatrixChatAttachment("photo", content.info?.mimeType ?: "image/jpeg", it,
+            content.info?.width ?: 0, content.info?.height ?: 0, thumbnail = content.info?.thumbnailFile)
     }
-    is RoomMessageEventContent.FileBased.Video -> file?.let {
-        MatrixChatAttachment("video", info?.mimeType ?: "video/mp4", it,
-            info?.width ?: 0, info?.height ?: 0, info?.duration ?: 0, info?.thumbnailFile)
+    is RoomMessageEventContent.FileBased.Video -> content.file?.let {
+        MatrixChatAttachment("video", content.info?.mimeType ?: "video/mp4", it,
+            content.info?.width ?: 0, content.info?.height ?: 0, content.info?.duration ?: 0, content.info?.thumbnailFile)
     }
-    is RoomMessageEventContent.FileBased.Audio -> file?.let {
-        MatrixChatAttachment("voice", info?.mimeType ?: "audio/wav", it, durationMs = info?.duration ?: 0)
+    is RoomMessageEventContent.FileBased.Audio -> content.file?.let {
+        val voice = voiceExtension()
+        MatrixChatAttachment("voice", content.info?.mimeType ?: "audio/wav", it,
+            durationMs = content.info?.duration ?: (voice?.get("duration") as? JsonPrimitive)?.longOrNull ?: 0,
+            waveform = decodeVoiceWaveform(voice?.get("waveform")))
     }
     else -> null
 }
 
 /** Strip the Matrix plaintext reply fallback; the attached quote has its own UI. */
-internal fun RoomMessageEventContent.displayBody(): String {
+internal fun RoomMessageEventContent.displayBody(): String = typed().typedDisplayBody()
+
+private fun RoomMessageEventContent.typedDisplayBody(): String {
     val text = if (relatesTo?.replyTo != null && body.startsWith("> ") && "\n\n" in body)
         body.substringAfter("\n\n") else body
     return if (this is RoomMessageEventContent.FileBased && text in setOf("Photo", "Video", "Voice message", fileName)) "" else text
@@ -55,7 +62,7 @@ internal fun matrixTimelineMessages(events: List<TimelineEvent>, ownId: String, 
         MatrixChatMessage(
             id = event.id.full, body = roomMessage?.displayBody().orEmpty(), senderMatrixId = event.sender.full,
             mine = event.sender.full == ownId, timestampMillis = event.originTimestamp, delivery = MatrixMessageDelivery.SENT,
-            unavailable = !deleted && (roomMessage == null || roomMessage is RoomMessageEventContent.FileBased && media == null),
+            unavailable = !deleted && (roomMessage == null || roomMessage.typed() is RoomMessageEventContent.FileBased && media == null),
             transactionId = event.unsigned?.transactionId?.takeIf { event.sender.full == ownId },
             planReference = com.srisu.srisu.features.plans.data.PlanReference.parse(roomMessage?.externalUrl),
             challengeReference = com.srisu.srisu.features.challenges.data.ChallengeReference.parse(roomMessage?.externalUrl),

@@ -121,7 +121,7 @@ not promise creation of new messages while offline.
 | Delivery/read state | Real Matrix read receipts | Single check means sent; double check means a known partner read receipt. Independent delivered/played receipts are not fabricated. Two-device runtime validation remains |
 | Reply, reaction and deletion | Matrix reply relations, encrypted message annotations, own-message redactions | Restored with current-room gating and outbox retry. Edit remains absent. Encrypted annotations have a readable text fallback on the prior client; see recovery record |
 | Photo/video and viewer | Trixnity/Matrix encrypted files and thumbnails | Restored compact bubbles, captions, real upload progress, picker/camera and typed full-screen viewer; one attachment, 16 MiB/120 s limits; live exchange remains unverified |
-| Voice recorder/playback | Recovered native recorder/player and encrypted Matrix audio | Restored inline single-owner playback with actual progress; no invented waveform or played receipt; native runtime recording/playback still needs device validation |
+| Voice recorder/playback | Recovered native recorder/player and encrypted Matrix audio | Restored inline single-owner playback with actual progress; the recorded waveform travels inside the encrypted `m.audio` content as MSC3245/MSC1767 (see below); no played receipt; native runtime recording/playback still needs device validation |
 | Spark | `sparks-1` ciphertext gate plus an encrypted Matrix question/reference card | Implemented locally; see [Sparks](sparks.md) |
 | Ask/free response and polls | Separate versioned SriSu domain plus encrypted display content | Unimplemented and disabled |
 | Planner/Plan cards | `CouplePlanModel` remains domain authority; Matrix may carry an encrypted typed reference | Basic Plan data exists outside chat; rich type/location/reminder/checklist/card flow is unimplemented |
@@ -133,6 +133,26 @@ Unknown Matrix event or content versions must render as inert/update-required
 items rather than crash or grant an action. A Figma control is not enabled until
 its domain authority, encrypted representation, failure behavior, accessibility,
 and Android/iOS implementation are complete.
+
+### Voice note event content
+
+Voice notes are encrypted `m.room.message` events with `msgtype: m.audio`, the
+usual `body`/`filename`/`file` (`EncryptedFile`)/`info` (`duration` ms,
+`mimetype`, `size`), and the voice extensions used by Element:
+
+- `org.matrix.msc1767.audio`: `{ "duration": <ms>, "waveform": [<int 0–1024>, …] }`;
+  at most 100 samples, peak-downsampled from the recorder's 0–100 levels.
+  `waveform` is omitted when the recorder produced none.
+- `org.matrix.msc3245.voice`: `{}`.
+
+Trixnity's typed `m.audio` drops unknown keys, so `MatrixVoiceContent.kt` swaps
+the client's `m.room.message` serializer: audio content carrying either block
+stays a `RoomMessageEventContent.Unknown("m.audio")` with its raw JSON, and an
+extra media-upload mapping replaces the cached encrypted file URL on send. On
+receive, waveforms that are not arrays of numbers or exceed 1024 samples are
+ignored; values are clamped and scaled back to 0–100. Older SriSu builds and
+other clients without these blocks still decode plain encrypted `m.audio` and
+show placeholder bars.
 
 The timeline starts with 100 events and exposes Load earlier in 100-event steps,
 up to a bounded window of 2,000. Stable transaction keys survive local

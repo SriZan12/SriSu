@@ -21,7 +21,7 @@ internal fun MatrixChatMessage.toDisplay(room: MatrixChatRoomState, thumbnails: 
     }
     val content = planReference?.takeUnless { deleted || unavailable }?.let { ChatContent.Plan(body, it) } ?: challengeReference?.takeUnless { deleted || unavailable }?.let { ChatContent.Challenge(body, it) } ?: sparkReference?.takeUnless { deleted || unavailable }?.let { ChatContent.Spark(body, it) } ?: momentReference?.takeUnless { deleted || unavailable }?.let { ChatContent.Moment(body, it) } ?: attachment?.let { media ->
         ChatContent.Media(listOf(ChatMedia(AttachmentDescriptor(id, room.roomId, id), media.kind, media.mime,
-            media.width, media.height, media.durationMs, thumbnails[id])), body, quote)
+            media.width, media.height, media.durationMs, thumbnails[id], media.waveform)), body, quote)
     } ?: ChatContent.Text(body, quote)
     return LocalChatMessage(id, room.roomId, if (mine) self else PARTNER_DISPLAY_ID,
         Instant.fromEpochMilliseconds(timestampMillis).toString(), content,
