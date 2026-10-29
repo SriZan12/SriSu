@@ -38,6 +38,12 @@ alerts. It refuses stale, signed-out, unregistered or disabled targets. Only one
 selected device is addressed; there is no topic or audience/broadcast mode. Keep
 test IDs and credentials out of chat, Git and screenshots.
 
+The lookup must use the backend's `SHA-256("fid:" + registered_id)` target digest.
+The original kit hashed only the ID, which incorrectly rejected registered phones.
+The physical Android run on 29 October caught this mismatch; the corrected kit
+retains all session, permission and preference checks. Its regression test fails
+against the previous lookup and passes with the correction.
+
 Command-line equivalents, run from the kit folder:
 
 ```powershell
