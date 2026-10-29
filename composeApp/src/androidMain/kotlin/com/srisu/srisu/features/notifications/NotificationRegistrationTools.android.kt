@@ -39,7 +39,7 @@ internal fun FirebaseIdCopyPanel(state: FirebaseIdState, onCopy: () -> Boolean, 
         Text(when (state) {
             FirebaseIdState.NOT_CONFIGURED -> "Firebase is not configured in this build."
             FirebaseIdState.SIGN_IN_REQUIRED -> "Sign in to get this phone’s Firebase ID."
-            FirebaseIdState.PERMISSION_REQUIRED -> "Enable notifications above to register this phone."
+            FirebaseIdState.PERMISSION_REQUIRED -> "Allow notifications in Profile → Notifications & diagnostics to register this phone."
             FirebaseIdState.REGISTERING -> "Getting this phone’s Firebase ID…"
             FirebaseIdState.WAITING -> "Waiting for Firebase registration. You can retry if it does not finish."
             FirebaseIdState.FAILED -> "Couldn’t register with Firebase. Check your connection and retry."

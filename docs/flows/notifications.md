@@ -2,8 +2,10 @@
 
 ## Copy the Android Firebase test ID — 29 October 2026
 
-Android debug builds now expose **Profile → Notifications & diagnostics → Firebase
-test notifications → Copy Firebase ID**. Sign in and allow notifications first.
+Android debug builds now expose **Home → Firebase test notifications → Copy Firebase
+ID**, directly below the greeting. The tool was moved from notification settings at
+the user's request, starting from frontend merge `1ed0678`. Sign in and allow
+notifications first in **Profile → Notifications & diagnostics**.
 The button becomes available after the native Firebase registration callback.
 Missing configuration, signed-out state, denied permission, registration progress,
 failure and retry have explicit UI states. Copy success is shown only when Android
@@ -28,7 +30,9 @@ no tool. Firebase credentials and API-origin configuration remain local and igno
 
 This frontend change starts from merge `0a309bc` on `dev-core-architecture`; the
 paired backend remains `5fb1237`. No API, migration or backend deployment is required.
-The control reuses the existing settings components and theme tokens. Live Figma
+The control reuses the existing notification components and theme tokens. Its Home
+placement is a user-requested developer addition to page `1:3`; iOS and release
+builds render no control or extra section gap. Live Figma
 file metadata was available for `LztysD1YvINX7RwZpnhhTt`, but reading design-system
 page `0:1` hit the Starter-plan tool limit. This is derived developer UI with no
 dedicated settings node or new pixel-fidelity claim.
@@ -41,6 +45,13 @@ instrumentation APK and shared iOS simulator source compile. The existing opt-in
 device integration test now also checks the native copied ID without logging it;
 that extended device test was compiled but not rerun for this change. Earlier live
 delivery evidence below applies to the earlier build. Apple/APNs remains deferred.
+
+Home relocation validation: all 23 existing Home and notification tests passed.
+The Home render checks now scroll the vertical list to offscreen Plan/Planner
+controls, including large text, rather than assuming they start in the viewport.
+The Home preview was inspected with the tool below the greeting. Theme/whitespace
+checks, Android debug assembly and shared iOS simulator compilation passed; no new
+physical-device or live-delivery test was run for this layout change.
 
 ## Consolidated core integration — 29 October 2026
 
