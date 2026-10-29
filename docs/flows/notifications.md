@@ -1,5 +1,47 @@
 # Notifications and crash diagnostics V1
 
+## Copy the Android Firebase test ID — 29 October 2026
+
+Android debug builds now expose **Profile → Notifications & diagnostics → Firebase
+test notifications → Copy Firebase ID**. Sign in and allow notifications first.
+The button becomes available after the native Firebase registration callback.
+Missing configuration, signed-out state, denied permission, registration progress,
+failure and retry have explicit UI states. Copy success is shown only when Android
+accepts the clipboard write; permission and account state are rechecked on every tap.
+
+This app uses Firebase's registered **Installation ID (FID)** flow, rather than the
+legacy token API. The copied value is the current native FCM registration target,
+not the app's internal installation UUID. Paste it into Firebase Console for project
+`srisu-ef431`: Messaging → create a notification campaign → Send test message →
+registration ID/token field → Test. Keep SriSu in the background to test the system
+notification, and enable the phone's notification sound. Firebase's
+[test-message instructions](https://firebase.google.com/docs/cloud-messaging/flutter/get-started#send_a_test_notification_message)
+document support for a registered Firebase Installation ID or FCM registration token.
+A generic console notification tests delivery; it does not contain a server delivery
+ID for opening a specific SriSu activity.
+
+The identifier stays in the Android provider until explicitly copied. It is never
+rendered in Compose text/semantics or added to logs, shared state, diagnostics or
+source control. The clipboard entry is marked sensitive to hide Android's preview.
+The UI and copy action are gated by the installed app's debuggable flag; iOS exposes
+no tool. Firebase credentials and API-origin configuration remain local and ignored.
+
+This frontend change starts from merge `0a309bc` on `dev-core-architecture`; the
+paired backend remains `5fb1237`. No API, migration or backend deployment is required.
+The control reuses the existing settings components and theme tokens. Live Figma
+file metadata was available for `LztysD1YvINX7RwZpnhhTt`, but reading design-system
+page `0:1` hit the Starter-plan tool limit. This is derived developer UI with no
+dedicated settings node or new pixel-fidelity claim.
+
+Validation for this change: 16 focused notification tests passed, including clipboard
+replacement with a rotated synthetic ID, sensitive-preview metadata, denied copy
+after sign-out/permission revocation, release gating, registration states and UI
+retry/copy feedback. Theme and whitespace checks passed. The Android debug app,
+instrumentation APK and shared iOS simulator source compile. The existing opt-in
+device integration test now also checks the native copied ID without logging it;
+that extended device test was compiled but not rerun for this change. Earlier live
+delivery evidence below applies to the earlier build. Apple/APNs remains deferred.
+
 ## Consolidated core integration — 29 October 2026
 
 This branch combines current `dev-core-architecture` (`2c7384b`), including the

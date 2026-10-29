@@ -46,6 +46,7 @@ import org.koin.compose.koinInject
             } else Text("Chat push notifications are not available yet.")
             SettingSwitch("Invitations & shared activity",prefs.activity,!state.busy) {repository.save(activity=it)}
         }
+        NotificationRegistrationTools()
         HorizontalDivider()
         Text("Crash reports",style=MaterialTheme.typography.titleMedium)
         Text("Help diagnose crashes with optional reports. We do not add your name, messages or account ID. The operating system may retain crash data locally. Turning this off deletes unsent reports.")

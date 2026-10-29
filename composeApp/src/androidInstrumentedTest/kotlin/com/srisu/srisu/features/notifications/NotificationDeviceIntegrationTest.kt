@@ -111,6 +111,15 @@ class NotificationDeviceIntegrationTest {
             }
             val original = requireNotNull(registration)
             assertEquals("fid", original.targetKind)
+            withContext(Dispatchers.Main) {
+                val driver = requireNotNull(com.srisu.srisu.notifications.AndroidNotifications.instance)
+                assertTrue("Debug action copies registered Firebase ID", driver.copyRegistrationIdForTesting())
+                val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                val clip = requireNotNull(clipboard.primaryClip)
+                assertTrue("Copied ID matches the native registration", clip.getItemAt(0).text.toString() == original.target)
+                assertTrue("Firebase ID clipboard preview is hidden", clip.description.extras!!.getBoolean("android.content.extra.IS_SENSITIVE"))
+                clipboard.clearPrimaryClip()
+            }
             assertTrue("Native registration accepted", api.register(original).result is NetworkAPIResult.Success)
             repository.reconcile()
             assertNotNull("Preferences retrieved", repository.state.value.preferences)

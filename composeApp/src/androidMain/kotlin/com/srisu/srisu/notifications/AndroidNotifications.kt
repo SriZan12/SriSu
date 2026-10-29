@@ -26,6 +26,7 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
     private val vault by lazy { KVault(context=context, fileName="srisu_notifications_v1") }
     private var fid: String? = null
     private var registering = false
+    private var registrationFailed = false
     private var unregistering = false
     private var activeBinding: String? = null
     var requestRuntimePermission: (() -> Unit)? = null
@@ -50,14 +51,27 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
     private fun permitted() = NotificationManagerCompat.from(context).areNotificationsEnabled() &&
         (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context,Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED)
     override fun refresh() {
-        publish()
         if(configured && activeBinding != null && permitted() && fid==null && !registering && !unregistering) {
             registering=true
+            registrationFailed=false
             FirebaseMessaging.getInstance().isAutoInitEnabled=true
-            FirebaseMessaging.getInstance().register().addOnCompleteListener { registering=false }
+            FirebaseMessaging.getInstance().register().addOnCompleteListener {
+                registering=false
+                registrationFailed=!it.isSuccessful
+                publish()
+            }
         }
+        publish()
     }
-    fun registered(value:String) { if(activeBinding != null && !unregistering) { fid=value;publish() } }
+    fun registered(value:String) { if(activeBinding != null && !unregistering) { fid=value;registrationFailed=false;publish() } }
+    internal fun registrationIdAccess() = FirebaseIdAccess(
+        debugBuild=isNotificationDebugBuild(context), configured=configured,
+        signedIn=activeBinding != null, permissionGranted=permitted(),
+        unregistering=unregistering, registering=registering,
+        registrationFailed=registrationFailed, hasId=!fid.isNullOrBlank(),
+    )
+    internal fun copyRegistrationIdForTesting(): Boolean =
+        copyFirebaseRegistrationId(context, registrationIdAccess(), fid)
     private fun publish() {
         if(!configured) { NativeNotifications.update(false,"unavailable",false,true);return }
         val permission=when {permitted()->"granted";vault.string("asked")=="yes"->"denied";else->"not_determined"}
@@ -87,7 +101,7 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
     override fun renewRegistration() {check(vault.set("binding",""));publish()}
     override fun clearAccount() {
         context.getSystemService(NotificationManager::class.java).cancelAll()
-        activeBinding=null;fid=null
+        activeBinding=null;fid=null;registrationFailed=false
         if(configured) {
             FirebaseMessaging.getInstance().isAutoInitEnabled=false
             unregistering=true
