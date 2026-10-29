@@ -89,7 +89,7 @@ def require_binding(fid):
         with connection.cursor() as cursor:
             cursor.execute("SET TRANSACTION READ ONLY")
         now = django_time.now()
-        binding = Installation.objects.filter(target_digest=digest(fid), target_kind="fid",
+        binding = Installation.objects.filter(target_digest=digest("fid:" + fid), target_kind="fid",
             platform="android", active=True, permitted=True, user__is_active=True,
             updated_at__gte=installation_cutoff(), session__revoked_at__isnull=True,
             session__expires_at__gt=now).values("user_id").first()

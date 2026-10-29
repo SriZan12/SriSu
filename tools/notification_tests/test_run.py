@@ -1,10 +1,12 @@
 import contextlib
 from datetime import datetime, timezone
 import io
+import hashlib
 import json
 from pathlib import Path
 import sys
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -14,6 +16,35 @@ SYNTHETIC_FID = "c" + "a" * 21
 
 
 class NotificationKitTest(unittest.TestCase):
+    def test_binding_lookup_matches_the_backend_namespaced_target_digest(self):
+        # notifications.services.register persists SHA-256(kind + ':' + target).
+        # A raw-FID digest previously rejected every real registered phone.
+        stored_digest = hashlib.sha256(("fid:" + SYNTHETIC_FID).encode()).hexdigest()
+        manager = Mock()
+        def lookup(**filters):
+            row = {"user_id": 1} if filters["target_digest"] == stored_digest else None
+            query = Mock()
+            query.values.return_value.first.return_value = row
+            return query
+        manager.filter.side_effect = lookup
+        prefs = Mock()
+        prefs.filter.return_value.first.return_value = SimpleNamespace(push=True, activity=True)
+        cursor = contextlib.nullcontext(Mock())
+        modules = {
+            "django": SimpleNamespace(setup=lambda: None),
+            "django.conf": SimpleNamespace(settings=SimpleNamespace(FIREBASE_PROJECT_ID=run.PROJECT, NOTIFICATIONS_ENABLED=True)),
+            "django.db": SimpleNamespace(connection=SimpleNamespace(vendor="postgresql", cursor=lambda: cursor), transaction=SimpleNamespace(atomic=contextlib.nullcontext)),
+            "django.utils": SimpleNamespace(timezone=SimpleNamespace(now=lambda: datetime.now(timezone.utc))),
+            "notifications.models": SimpleNamespace(Installation=SimpleNamespace(objects=manager), Preferences=SimpleNamespace(objects=prefs)),
+            "notifications.services": SimpleNamespace(digest=lambda value: hashlib.sha256(value.encode()).hexdigest(), installation_cutoff=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc)),
+        }
+        with patch.dict(sys.modules, modules), patch.object(sys, "path", list(sys.path)), patch.dict(run.os.environ):
+            run.require_binding(SYNTHETIC_FID)
+            with self.assertRaises(run.TestKitError):
+                run.require_binding("d" + "b" * 21)
+        self.assertEqual(manager.filter.call_args_list[0].kwargs["target_kind"], "fid")
+        self.assertEqual(manager.filter.call_args_list[0].kwargs["platform"], "android")
+
     def test_readiness_denial_never_calls_firebase(self):
         sender = Mock()
         with self.assertRaises(run.TestKitError):
