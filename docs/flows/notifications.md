@@ -29,7 +29,8 @@ The Android permission callbacks preserve both push and Plan reminders. On iOS,
 one notification-center delegate distinguishes local `plan-` reminders from remote
 push, so foreground presentation and authenticated reminder taps remain supported.
 Firebase uses the integration's existing pinned SDK versions; CocoaPods/libsignal
-are not reintroduced. Crash diagnostics remain opt-in. Local builds still get their
+are not reintroduced. Debug and release plists both disable automatic collection
+and registration before Firebase initializes; crash diagnostics remain opt-in. Local builds still get their
 API origin/environment from the latest configuration precedence, without a hardcoded
 Windows host overriding it.
 
