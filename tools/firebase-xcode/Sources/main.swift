@@ -72,12 +72,16 @@ var appAttributes = attributes[app] ?? [:]
 appAttributes["SystemCapabilities"] = ["com.apple.Push": ["enabled": 1]]
 attributes[app] = appAttributes; pbx.projects.first!.targetAttributes = attributes
 try project.write(path:path)
-let plistPath = root + "iosApp/iosApp/Info.plist"
-var plist = try PropertyListSerialization.propertyList(from:Data(contentsOf:plistPath.url),format:nil) as! [String:Any]
-plist["FirebaseCrashlyticsCollectionEnabled"] = false
-plist["FirebaseMessagingAutoInitEnabled"] = false
-plist["FirebaseMessagingInstallationIdEnabled"] = true
-plist["FirebaseAppDelegateProxyEnabled"] = false
-plist["FIREBASE_ANALYTICS_COLLECTION_ENABLED"] = false
-try PropertyListSerialization.data(fromPropertyList:plist,format:.xml,options:0).write(to:plistPath.url)
+// Debug has a separate plist for local-network access. Both configurations must
+// disable collection and automatic registration before FirebaseApp.configure().
+for name in ["Info.plist", "Info.Debug.plist"] {
+    let plistPath = root + "iosApp/iosApp/\(name)"
+    var plist = try PropertyListSerialization.propertyList(from:Data(contentsOf:plistPath.url),format:nil) as! [String:Any]
+    plist["FirebaseCrashlyticsCollectionEnabled"] = false
+    plist["FirebaseMessagingAutoInitEnabled"] = false
+    plist["FirebaseMessagingInstallationIdEnabled"] = true
+    plist["FirebaseAppDelegateProxyEnabled"] = false
+    plist["FIREBASE_ANALYTICS_COLLECTION_ENABLED"] = false
+    try PropertyListSerialization.data(fromPropertyList:plist,format:.xml,options:0).write(to:plistPath.url)
+}
 print("Configured Firebase only on iosApp, with opt-in diagnostics and APNs capability.")
