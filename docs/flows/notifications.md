@@ -1,5 +1,11 @@
 # Notifications and crash diagnostics V1
 
+The [device-only Firebase test kit](../../tools/notification_tests/README.md) provides
+seven repeatable direct-FCM probes, a manual checklist for all six supported domain
+alerts, and local Plan-reminder checks. It uses the existing Windows Docker sender
+credentials without Firebase Console sign-in. Direct probes are separate from
+Analytics A/B campaigns and from real domain events/tap authorization.
+
 ## Copy the Android Firebase test ID — 29 October 2026
 
 Android debug builds now expose **Home → Firebase test notifications → Copy Firebase
