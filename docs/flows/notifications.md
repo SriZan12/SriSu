@@ -6,6 +6,13 @@ alerts, and local Plan-reminder checks. It uses the existing Windows Docker send
 credentials without Firebase Console sign-in. Direct probes are separate from
 Analytics A/B campaigns and from real domain events/tap authorization.
 
+See the [29 October physical Android verification](../validation/notifications/android-phone-20261029.md)
+for live Windows-to-Realme results: audible confirmation, silent-channel delivery,
+actual notification taps, payload guards, foreground observations and offline TTL.
+That run also corrected the test kit's missing `fid:` digest namespace. It did not
+change the deployed backend or add Matrix chat push; its coverage limits are
+recorded separately from the earlier isolated-emulator domain tests below.
+
 ## Copy the Android Firebase test ID — 29 October 2026
 
 Android debug builds now expose **Home → Firebase test notifications → Copy Firebase
