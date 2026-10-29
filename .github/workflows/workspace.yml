@@ -35,7 +35,7 @@ jobs:
       - name: Validate theme
         run: python tools/theme/check_theme.py
       - name: Test and compile Android
-        run: ./gradlew :composeApp:testDebugUnitTest :composeApp:compileDebugKotlinAndroid --no-daemon --max-workers=2 --console=plain
+        run: ./gradlew :composeApp:testDebugUnitTest :composeApp:compileDebugKotlinAndroid :composeApp:compileDebugAndroidTestKotlinAndroid --no-daemon --max-workers=2 --console=plain
 
   ios:
     runs-on: macos-15

@@ -63,6 +63,19 @@ Backend consolidation commit: `0742498` (Matrix/shared activities, preserved loc
 Explore/Faves work and compatible activity notifications). Final integration merge
 IDs are available in the paired `dev-core-architecture` histories.
 
+### Windows deployment preparation — 29 October 2026
+
+Building the merged app's Android instrumentation APK exposed a missing
+`androidx.compose.ui:ui-test-junit4` dependency in `androidInstrumentedTest`.
+Restored the same pinned 1.9.0 dependency already used by the unit-test source set.
+The workspace verifier and GitHub Android job now also compile instrumentation
+sources so this failure is covered by routine checks.
+
+`:composeApp:assembleDebug :composeApp:assembleDebugAndroidTest` passed with
+`-Psrisu.apiBaseUrl=http://127.0.0.1:8029/`, the isolated device-test origin. These
+artifacts are for synthetic device tests; this is not yet Windows deployment or
+live Android delivery evidence. Apple enrollment and APNs remain skipped.
+
 Implementation and deployment record, updated 2026-10-14. The user approved the [architecture plan](../architecture/notifications-crashlytics-plan.md).
 Both repositories use `codex/notifications-crashlytics-v1`, branched from fresh
 `dev-core-architecture`: frontend `9f1a7708f1aa9785fb6e046227e134f23e1ec9f1`, backend

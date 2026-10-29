@@ -85,7 +85,7 @@ def verify(target):
             env["JAVA_HOME"] = env["SRISU_JAVA_HOME"]
         elif studio_jdk.is_dir():
             env["JAVA_HOME"] = str(studio_jdk)
-        tasks = ["./gradlew", ":composeApp:testDebugUnitTest", ":composeApp:compileDebugKotlinAndroid"]
+        tasks = ["./gradlew", ":composeApp:testDebugUnitTest", ":composeApp:compileDebugKotlinAndroid", ":composeApp:compileDebugAndroidTestKotlinAndroid"]
         if sys.platform == "darwin":
             tasks.append(":composeApp:compileKotlinIosSimulatorArm64")
         else:
