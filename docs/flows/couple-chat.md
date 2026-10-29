@@ -1,12 +1,21 @@
 # Couple Chat — Matrix cutover record
 
-Record updated: 2026-10-28. This is the frontend-owned implementation and release
+Record updated: 2026-10-29. This is the frontend-owned implementation and release
 record for Couple Chat. The KMP client is now Matrix-only and the custom Django
 message/WebSocket and ChatV2 transports have been removed. A local Compose
 control-plane interoperability run verified Django authorization, JWT exchange,
 Synapse room policy and membership for two synthetic couples. This does not claim
-a two-client encrypted message exchange, production deployment, independent
+a two-client encrypted message exchange in that earlier run, production deployment, independent
 security review, app-level database encryption, or the complete Figma experience.
+
+The later **29 October Windows deployment** passed a native Android two-participant
+encrypted exchange using the real Trixnity repositories and separate protected
+stores, plus Matrix typing start/stop and unrelated-account bootstrap denial.
+Raw homeserver history contained encrypted events and no synthetic plaintext.
+`MatrixDeviceIntegrationTest` is opt-in: its app-private synthetic fixture must name
+the separate test backend on loopback port 8029. No fixture loader ships in the
+application. See [the deployment acceptance record](notifications.md#merged-windows-deployment-and-android-acceptance--29-october-2026)
+for the exact runtime pair and coverage boundaries. This adds no Figma/UI change.
 
 The accepted direction is defined by
 [ADR 003](../architecture/decisions/003-matrix-couple-chat.md). The rejected

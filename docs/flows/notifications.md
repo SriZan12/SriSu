@@ -76,6 +76,47 @@ sources so this failure is covered by routine checks.
 artifacts are for synthetic device tests; this is not yet Windows deployment or
 live Android delivery evidence. Apple enrollment and APNs remain skipped.
 
+### Merged Windows deployment and Android acceptance — 29 October 2026
+
+The subsequent deployment completed the Matrix cutover and all merged migrations
+on Windows Docker Desktop at `192.168.1.69`. Backend runtime `80a1330`, with the
+Windows shell-line-ending correction merged as `06b004f`, serves Django on port
+8000 and private Synapse on 8008. The paired app runtime is `5ad8a97`; the deployment
+branch also adds the opt-in device tests described here. Both repositories publish
+these changes through `dev-core-architecture`. Backend `docs/notifications.md`
+contains the host paths, backup/restore evidence and restart command.
+
+On the dedicated Google Play API 35 emulator, the actual
+`NotificationDeviceIntegrationTest` passed in 49.975 seconds against the merged
+backend image in a separate synthetic PostgreSQL/Synapse Compose project. It
+verified FID registration, foreground delivery without an OS alert, background
+generic notification, actual PendingIntent/MainActivity launch, authorized routing,
+unrelated-user and stale-invitation denial, preference suppression, account switch
+and logout. The test backend reported two accepted deliveries and zero active
+installations after logout. The deployed worker's independent FCM validation-only
+request also passed; its ADC remains only on Windows.
+
+`MatrixDeviceIntegrationTest` passed in 47.286 seconds using two protected native
+Android stores, the real Trixnity repository and the isolated Django/Synapse stack:
+both participants sent and decrypted messages, typing started/stopped through
+Matrix sync, and an unrelated account could not bootstrap the room. A separate raw
+Matrix history check confirmed encrypted events and absence of the synthetic
+plaintext. Live HTTP checks covered Plans create/retry/accept/stale-write denial,
+Sparks catalogue/create/plaintext rejection/skip, unrelated-user denial,
+Challenges/Home, couple profile and feed. These are distinct from UI acceptance
+of every activity screen and from physical-device coverage.
+
+The normal LAN debug APK targets `http://192.168.1.69:8000/` and is retained at
+`D:\SriSu-tools\SriSu-core-debug.apk` on Windows. Its SHA-256 is
+`7446d3166f89fd3690ac07738cd9bb08dd22a49989de4d1e3ddd73d08ec766c3`.
+`DeploymentDeviceSmokeTest` passed in 11.09 seconds on that APK: its configured
+origin matched the deployment, interests returned 200, unauthenticated notification
+settings returned 401, Matrix versions/policy returned 200, and MainActivity
+launched. This probe was read-only against the deployed application database.
+The connected physical phone's app data was not changed. Apple enrollment/APNs,
+release signing and a new Crashlytics console verification remain deferred.
+Matrix message push remains unavailable; activity notifications are verified.
+
 Implementation and deployment record, updated 2026-10-14. The user approved the [architecture plan](../architecture/notifications-crashlytics-plan.md).
 Both repositories use `codex/notifications-crashlytics-v1`, branched from fresh
 `dev-core-architecture`: frontend `9f1a7708f1aa9785fb6e046227e134f23e1ec9f1`, backend
