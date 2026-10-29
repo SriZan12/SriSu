@@ -51,13 +51,14 @@ suspend inline fun <reified T> HttpClient.safeRequest(
 ): ResultHandler<T?> {
     require(readRetries in 0..2)
     val builder = HttpRequestBuilder().apply(execute)
+    val scope = attributes.getOrNull(SessionCoordinatorKey)?.let { RequestScope(it, it.stamp()) }
     if (builder.attributes.getOrNull(PublicAuthRequestKey) != true) {
         val refreshError = try { refreshSessionIfNeeded() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { return handleException<T>(failure) }
         refreshError?.let { return ResultHandler(NetworkAPIResult.Error(it)) }
     }
-    val scope = attributes.getOrNull(SessionCoordinatorKey)?.let { RequestScope(it, it.stamp()) }
+    scope?.ensureCurrent()
     scope?.let { builder.attributes.put(RequestScopeKey, it) }
     val retryLimit = if (builder.method == HttpMethod.Get || builder.method == HttpMethod.Head) readRetries else 0
     for (attempt in 0..retryLimit) {

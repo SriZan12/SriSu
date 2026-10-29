@@ -4,10 +4,10 @@ import EventKit
 import EventKitUI
 import ComposeApp
 
-final class IosPlanDevice: NSObject, PlanDevice, UNUserNotificationCenterDelegate, EKEventEditViewDelegate, UIAdaptivePresentationControllerDelegate {
+final class IosPlanDevice: NSObject, PlanDevice, EKEventEditViewDelegate, UIAdaptivePresentationControllerDelegate {
     private let center = UNUserNotificationCenter.current()
     private var calendarResult: ((String) -> Void)?
-    override init() { super.init(); center.delegate = self }
+    override init() { super.init() }
     func permission(result: @escaping (String) -> Void) {
         center.getNotificationSettings { settings in
             let status: String
@@ -83,12 +83,5 @@ final class IosPlanDevice: NSObject, PlanDevice, UNUserNotificationCenterDelegat
         var top = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController
         while let next = top?.presentedViewController { top = next }
         return top
-    }
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) { completionHandler([.banner,.sound]) }
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        if let url = response.notification.request.content.userInfo["url"] as? String {
-            DispatchQueue.main.async { PlatformEntry.shared.openNotification(url:url,deliveryId:response.notification.request.identifier) }
-        }
-        completionHandler()
     }
 }

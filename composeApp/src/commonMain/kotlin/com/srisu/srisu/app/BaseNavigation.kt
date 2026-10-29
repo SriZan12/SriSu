@@ -79,13 +79,17 @@ private fun NavigationShell(access: StartupState.Available, member: CoupleAccess
     }
     val entry by controller.currentBackStackEntryAsState()
     val tab = BottomDestination.fromDestination(entry?.destination)
+    val snackbars = remember { SnackbarHostState() }
+    com.srisu.srisu.features.notifications.NotificationHost(protected, entry, navigator::open, snackbars)
     Scaffold(
         modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = {
+        snackbarHost = { SnackbarHost(snackbars) },
+        topBar = { Column {
+            if (protected && tab == BottomDestination.PROFILE) TextButton(onClick = { navigator.open(ProfileNav.NotificationSettings) }) { Text("Notifications & diagnostics") }
             if (protected && member?.warning != null) TextButton(onClick = onRetry) {
                 Text(stringResource(Res.string.nav_membership_retry))
             }
-        },
+        } },
         bottomBar = { AppBottomBar(navigator::selectBottomDestination, tab, tab != null) }
     ) { padding ->
         AppNavHost(controller, start, access.session, protected, onLeaveAuth,

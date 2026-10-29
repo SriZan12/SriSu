@@ -29,6 +29,8 @@ val sharedNetworkModule = module {
     single<com.srisu.srisu.features.challenges.data.ChallengeSource> { com.srisu.srisu.features.challenges.data.ChallengeRepository(get(), get()) }
     single<com.srisu.srisu.features.sparks.data.SparkSource> { com.srisu.srisu.features.sparks.data.SparkRepository(get(), get()) }
     single<com.srisu.srisu.features.moments.data.MomentSource> { com.srisu.srisu.features.moments.data.MomentRepository(get(), get(), get()) }
+    single { com.srisu.srisu.features.notifications.NotificationApi(get(), get()) }
+    single { com.srisu.srisu.features.notifications.NotificationRepository(get(), get(), get()) } onClose { it?.close() }
     single { com.srisu.srisu.core.config.ApiEnvironment.configured() }
     single { com.srisu.srisu.core.lifecycle.ApplicationLifetime() } onClose { it?.close() }
     single { com.srisu.srisu.core.session.SessionCoordinator(get(org.koin.core.qualifier.named("platformSessionStorage"))) }
