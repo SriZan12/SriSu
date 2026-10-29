@@ -270,3 +270,10 @@ The requested motion follow-up adds an 820 ms one-time heart/Moments icon sequen
 when the profile statistics become visible. Its account/profile-scoped saved state
 prevents replay on refresh, editor return or restoration; reduced motion is honored.
 See the refinement record for frame captures, lifecycle behavior and test results.
+
+## Notification integration (2026-10-13)
+
+[Notifications V1](notifications.md) adds authenticated, current-state tap routing and
+privacy-safe alerts for the implemented transitions. Profile settings include device
+permission, server delivery preferences/mute and separate opt-in crash diagnostics.
+See that guide for contract compatibility, backend-first rollout and verification limits.

@@ -84,3 +84,10 @@ and confirmation now share a partner-flow ViewModel rather than an account-wide 
 The old Matches tab is removed; Home's Partner invitations action retains its existing
 sent/received lists. Profile previews pass a stable user ID and resolve the authorized
 selection from the flow scope; the former full-profile JSON route is removed.
+
+## Notification integration (2026-10-13)
+
+[Notifications V1](notifications.md) adds authenticated, current-state tap routing and
+privacy-safe alerts for the implemented transitions. Profile settings include device
+permission, server delivery preferences/mute and separate opt-in crash diagnostics.
+See that guide for contract compatibility, backend-first rollout and verification limits.

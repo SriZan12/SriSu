@@ -4,6 +4,10 @@ Proposal dated 2026-10-13. Feature implementation has not started. This is the f
 
 Use Firebase Cloud Messaging (FCM) for private alerts and native Firebase Crashlytics SDKs for Android and iOS. Keep authentication, authorization, plans, invitations, chat ciphertext and notification delivery records in the existing Django/PostgreSQL system. Preserve the current libsignal chat. Start with a small set of actionable alerts, generic lock-screen text, existing feature destinations, and no separate notification center.
 
+> Historical proposal: implementation and the October 29 Matrix consolidation
+> supersede the baseline and transport decisions below. See the current
+> [notification flow and verification record](../flows/notifications.md).
+
 ## Project findings
 
 ### Repository baseline

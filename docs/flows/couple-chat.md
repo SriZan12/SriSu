@@ -738,3 +738,9 @@ claimed. Those remain release gates above.
 
 
 The historical text-only cutover notes above are superseded for Sparks by [the October 23 implementation](sparks.md): four decks, protected drafts and mutually revealed encrypted answers. Other unimplemented activities are unchanged.
+
+## Core consolidation, 29 October 2026
+
+The current Matrix UI, presence and waveform features are consolidated with the
+activity-notification/Crashlytics branch. Matrix push remains unavailable. See
+[notification compatibility and current scope](notifications.md#consolidated-core-integration--29-october-2026).
