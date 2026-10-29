@@ -3,6 +3,7 @@ package com.srisu.srisu.home
 import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
@@ -35,6 +36,8 @@ class HomeRenderTest {
         onFindPartner = { events += "find" }, onInvitations = { events += "invitations" },
     )
     private var retries = 0
+    private val homeList = hasScrollToIndexAction() and
+        SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
     private fun render(state: HomeUiState, name: String, dark: Boolean = false, largeText: Boolean = false) {
         compose.setContent {
@@ -73,7 +76,8 @@ class HomeRenderTest {
         compose.onNodeWithContentDescription("Add a moment").performClick()
         compose.onNodeWithContentDescription("Aayush. 2 new moments").performClick()
         compose.onNodeWithText("Cook something new together").performClick()
-        compose.onNodeWithText("Sunrise hike to Nagarkot").performScrollTo().performClick()
+        compose.onNode(homeList).performScrollToNode(hasText("Sunrise hike to Nagarkot"))
+        compose.onNodeWithText("Sunrise hike to Nagarkot").performClick()
         compose.onNodeWithText("Sun 20 • 5:30 AM • Both going").assertExists()
         assertEquals(listOf("chat", "chat", "spark", "ask", "planner", "profile", "notifications", "create:10", "moments:10:2",
             "challenge:c1", "plan:7"), events)
@@ -83,6 +87,7 @@ class HomeRenderTest {
 
     @Test fun contentLargeText() {
         render(HomePreviewData.content, "content-large-text", largeText = true)
+        compose.onNode(homeList).performScrollToNode(hasText("Planner"))
         compose.onNodeWithText("Planner").assertIsDisplayed()
     }
 

@@ -141,7 +141,7 @@
       "flow": "docs/flows/notifications.md",
       "backend_guide": "../SriSu-backend/docs/notifications.md",
       "status": "consolidated-current-activity-notifications-matrix-chat-push-unavailable",
-      "android_debug_tools": "Copy registered Firebase ID for console test notifications; sensitive clipboard, no identifier logging",
+      "android_debug_tools": "Home below greeting: copy registered Firebase ID for console test notifications; sensitive clipboard, no identifier logging",
       "consolidation_branch": "codex/consolidate-core-20261029"
     }
   }

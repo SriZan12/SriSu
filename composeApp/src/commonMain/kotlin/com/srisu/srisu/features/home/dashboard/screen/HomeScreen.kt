@@ -28,6 +28,7 @@ import com.srisu.srisu.features.home.dashboard.state.HomeStatus
 import com.srisu.srisu.features.home.dashboard.state.HomeUiState
 import com.srisu.srisu.features.home.dashboard.vm.HomeViewModel
 import com.srisu.srisu.features.moments.presentation.MomentLifecycle
+import com.srisu.srisu.features.notifications.NotificationRegistrationTools
 import com.srisu.srisu.theme.HomeTokens
 import com.srisu.srisu.theme.spacing
 import org.jetbrains.compose.resources.stringResource
@@ -75,9 +76,12 @@ fun HomeContent(
                 verticalArrangement = Arrangement.spacedBy(space.section)) {
                 val couple = state.couple
                 item(key = "header", contentType = "header") {
-                    HomeHeader(state.daypart, state.name, couple?.partner?.name, couple?.daysTogether,
-                        hasAlerts = (couple?.pendingInvitations ?: 0) > 0, onCoupleProfile = actions.onCoupleProfile,
-                        onNotifications = if (couple == null) actions.onInvitations else actions.onNotifications)
+                    Column(verticalArrangement = Arrangement.spacedBy(space.section)) {
+                        HomeHeader(state.daypart, state.name, couple?.partner?.name, couple?.daysTogether,
+                            hasAlerts = (couple?.pendingInvitations ?: 0) > 0, onCoupleProfile = actions.onCoupleProfile,
+                            onNotifications = if (couple == null) actions.onInvitations else actions.onNotifications)
+                        NotificationRegistrationTools()
+                    }
                 }
                 if (state.refreshing) item(key = "refreshing", contentType = "progress") {
                     val label = stringResource(Res.string.home_refreshing)
