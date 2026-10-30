@@ -13,6 +13,22 @@ That run also corrected the test kit's missing `fid:` digest namespace. It did n
 change the deployed backend or add Matrix chat push; its coverage limits are
 recorded separately from the earlier isolated-emulator domain tests below.
 
+## Android startup registration — 30 October 2026
+
+Firebase auto-init and registration entry points now run on a serialized worker
+executor. In the pinned Messaging SDK, enabling auto-init can synchronously check
+the cached FID; calling that path on the UI thread can fail before registration
+starts. Previously, that failure could leave Home stuck at “Getting this phone’s
+Firebase ID…” until the process restarted. Synchronous SDK failures now complete
+as a failed attempt, making the existing retry path available. Completion and
+published state return to the main thread, while obsolete callbacks are ignored
+after logout or a newer attempt. Logout queues auto-init disable/unregistration
+through the same worker and clears the old registering flag.
+
+This is an Android-only change based on frontend `6deb1d4`; backend `5fb1237` and
+the `notifications-1` API are unchanged. There is no migration or UI design change.
+Validation and final physical-device results are recorded separately after execution.
+
 ## Copy the Android Firebase test ID — 29 October 2026
 
 Android debug builds now expose **Home → Firebase test notifications → Copy Firebase
