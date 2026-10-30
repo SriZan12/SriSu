@@ -110,13 +110,16 @@ class MatrixPushDeviceIntegrationTest {
             for (i in 0..1) { withContext(Dispatchers.Main) { repositories[i].openRoom(room, owners[i]) }; ready(i) }
             stage("sending and decrypting in the foreground")
             val foregroundSignal = async(Dispatchers.Main.immediate, start = CoroutineStart.UNDISPATCHED) {
-                withTimeout(120_000) { NativeNotifications.signal.filterNotNull().first { !it.tapped } }
+                withTimeoutOrNull(120_000) { NativeNotifications.signal.filterNotNull().first { !it.tapped } }
             }
             send("Synthetic Matrix push foreground")
             assertNotNull("Partner decrypts foreground message", withTimeoutOrNull(120_000) {
                 repositories[1].observeRoom(room).first { it.messages.any { message -> !message.mine && message.body == "Synthetic Matrix push foreground" && !message.unavailable } }
             })
-            val foreground = foregroundSignal.await()
+            stage("partner decrypted the foreground message")
+            val received = foregroundSignal.await()
+            assertNotNull("Foreground FCM callback; OS alerts=${manager.activeNotifications.size}", received)
+            val foreground = requireNotNull(received)
             assertEquals("Foreground has no OS alert", 0, manager.activeNotifications.size)
             assertEquals(NotificationResolution.Ready(ChatNav.CoupleConversation(room, origin = "notification")), notifications.resolve(foreground))
             assertEquals("Unrelated account cannot resolve delivery", 404,
