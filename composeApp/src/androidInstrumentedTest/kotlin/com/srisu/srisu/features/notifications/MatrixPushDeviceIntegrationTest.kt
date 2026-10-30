@@ -96,6 +96,11 @@ class MatrixPushDeviceIntegrationTest {
             assertEquals("You have an update. Open SriSu to view it.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
         }
         try {
+            compose.setContent { androidx.compose.material3.Text("Testing Matrix notifications") }
+            withContext(Dispatchers.Main) {
+                compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            compose.waitForIdle()
             stage("registering the native Android installation")
             instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
             withContext(Dispatchers.Main) { native.refresh(); lifetimes.forEach { it.setForeground(true) } }
@@ -109,6 +114,15 @@ class MatrixPushDeviceIntegrationTest {
             assertTrue("Server enables Matrix push", notifications.state.value.preferences!!.capabilities.contains("matrix-chat-push-1"))
             assertFalse("Unrelated account denied", remotes[2].create(room) is NetworkAPIResult.Success)
             for (i in 0..1) { withContext(Dispatchers.Main) { repositories[i].openRoom(room, owners[i]) }; ready(i) }
+            withContext(Dispatchers.Main) {
+                waitFor("Test activity is visibly foreground and unlocked") {
+                    val process = android.app.ActivityManager.RunningAppProcessInfo()
+                    android.app.ActivityManager.getMyMemoryState(process)
+                    compose.activity.hasWindowFocus() &&
+                        process.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                        !context.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
+                }
+            }
             stage("sending and decrypting in the foreground")
             val foregroundSignal = async(Dispatchers.Main.immediate, start = CoroutineStart.UNDISPATCHED) {
                 withTimeoutOrNull(120_000) { NativeNotifications.signal.filterNotNull().first { !it.tapped } }
