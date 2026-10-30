@@ -119,10 +119,11 @@ class MatrixPushDeviceIntegrationTest {
             val foreground = foregroundSignal.await()
             assertEquals("Foreground has no OS alert", 0, manager.activeNotifications.size)
             assertEquals(NotificationResolution.Ready(ChatNav.CoupleConversation(room, origin = "notification")), notifications.resolve(foreground))
-            assertTrue("Unrelated account cannot resolve delivery", strangerApi.resolve(foreground.deliveryId).result is NetworkAPIResult.Error)
+            assertEquals("Unrelated account cannot resolve delivery", 404,
+                (strangerApi.resolve(foreground.deliveryId).result as? NetworkAPIResult.Error)?.failure?.status)
             withContext(Dispatchers.Main) { NativeNotifications.consume(foreground); repositories[1].close(); lifetimes[1].setForeground(false) }
             // Keep its protected E2EE store for the real MainActivity to reopen on tap.
-            assertTrue(vault.set(Constants.Auth.SESSION_KEY, users.getJSONObject(1).toString()))
+            assertTrue(vault.set(Constants.Auth.SESSION_KEY, requireNotNull(sessions[1].getSession(Constants.Auth.SESSION_KEY))))
             delay(31_000) // Reset the real server's per-installation audible budget.
             withContext(Dispatchers.Main) { compose.activity.moveTaskToBack(true) }
             delay(1_000)
