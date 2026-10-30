@@ -30,12 +30,12 @@ class NotificationSettingsTest {
     @get:Rule val compose=createAndroidComposeRule<androidx.activity.ComponentActivity>()
 
     @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class)
-    private fun render(dark: Boolean, large: Boolean) {
+    private fun render(dark: Boolean, large: Boolean, matrixChat: Boolean = false) {
         val sessions=session()
         val lifetime=ApplicationLifetime()
         val client=HttpClientFactory.create(sessions,environment,MockEngine { request ->
             if(request.method==HttpMethod.Put) respond("{}",HttpStatusCode.Conflict,headersOf(HttpHeaders.ContentType,"application/json"))
-            else respond("""{"data":{"contract":"notifications-1","push":true,"chat":true,"activity":true,"revision":1}}""",headers=headersOf(HttpHeaders.ContentType,"application/json"))
+            else respond("""{"data":{"contract":"notifications-1","push":true,"chat":true,"activity":true,"revision":1,"capabilities":[${if(matrixChat) "\"matrix-chat-push-1\"" else ""}]}}""",headers=headersOf(HttpHeaders.ContentType,"application/json"))
         })
         val repository=NotificationRepository(NotificationApi(client,environment),sessions,lifetime)
         NativeNotifications.update(true,"denied",false,true)
@@ -52,6 +52,14 @@ class NotificationSettingsTest {
                 }
             }
             compose.waitUntil(10000) { ShadowLooper.idleMainLooper();repository.state.value.preferences != null }
+            if (matrixChat) {
+                compose.onNodeWithContentDescription("Chat messages").performScrollTo().assertIsOn()
+                compose.onNodeWithText("Mute 1 hour").performScrollTo().assertIsDisplayed()
+                compose.onNodeWithText("Chat push notifications are not available yet.").assertDoesNotExist()
+            } else {
+                compose.onNodeWithContentDescription("Chat messages").assertDoesNotExist()
+                compose.onNodeWithText("Chat push notifications are not available yet.").performScrollTo().assertIsDisplayed()
+            }
             compose.onNodeWithText("Open system settings").performScrollTo().assertIsDisplayed()
             compose.onNodeWithContentDescription("Push notifications").performScrollTo().performClick()
             compose.waitUntil(10000) { ShadowLooper.idleMainLooper();repository.state.value.error != null }
@@ -75,5 +83,5 @@ class NotificationSettingsTest {
         }
     }
     @Test fun deniedPermissionAndFailedSaveKeepConfirmedSettings()=render(false,false)
-    @Test @Config(qualifiers="w320dp-h640dp-xhdpi") fun darkLargeTextSettingsRemainReachable()=render(true,true)
+    @Test @Config(qualifiers="w320dp-h640dp-xhdpi") fun darkLargeTextSettingsRemainReachable()=render(true,true,matrixChat=true)
 }

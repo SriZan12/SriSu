@@ -65,9 +65,9 @@ fun notificationMatches(route: Route, current: Route?): Boolean = when {
         }
     }
     // Contextual, once-dismissed primer only when the user opens the conversation.
-    if(protected && (current is CoupleProfileDestination || current == ChatNav.PartnerRequests) && native.configured && native.permission=="not_determined" && !native.promptDismissed) {
+    if(protected && (current is ChatNav.CoupleConversation || current is CoupleProfileDestination || current == ChatNav.PartnerRequests) && native.configured && native.permission=="not_determined" && !native.promptDismissed) {
         AlertDialog(onDismissRequest={NativeNotifications.driver?.dismissPrompt()},title={Text("Stay in touch")},
-            text={Text("Get private alerts for invitations and shared activity. Personal details stay inside SriSu.")},
+            text={Text("Stay up to date with private alerts. Personal details stay inside SriSu.")},
             confirmButton={TextButton(onClick={NativeNotifications.driver?.dismissPrompt();NativeNotifications.driver?.requestPermission()}) {Text("Enable notifications")}},
             dismissButton={TextButton(onClick={NativeNotifications.driver?.dismissPrompt()}) {Text("Not now")}})
     }

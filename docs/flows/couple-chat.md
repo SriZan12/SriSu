@@ -1,6 +1,6 @@
 # Couple Chat — Matrix cutover record
 
-Record updated: 2026-10-29. This is the frontend-owned implementation and release
+Record updated: 2026-10-30. This is the frontend-owned implementation and release
 record for Couple Chat. The KMP client is now Matrix-only and the custom Django
 message/WebSocket and ChatV2 transports have been removed. A local Compose
 control-plane interoperability run verified Django authorization, JWT exchange,
@@ -16,6 +16,8 @@ Raw homeserver history contained encrypted events and no synthetic plaintext.
 the separate test backend on loopback port 8029. No fixture loader ships in the
 application. See [the deployment acceptance record](notifications.md#merged-windows-deployment-and-android-acceptance--29-october-2026)
 for the exact runtime pair and coverage boundaries. This adds no Figma/UI change.
+
+Android Matrix message push is implemented in the [notification flow](notifications.md#matrix-chat-push--30-october-2026). It uses Synapse metadata and the existing FCM outbox; Matrix remains the sole encrypted message transport.
 
 The accepted direction is defined by
 [ADR 003](../architecture/decisions/003-matrix-couple-chat.md). The rejected

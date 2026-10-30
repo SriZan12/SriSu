@@ -9,6 +9,7 @@ import com.srisu.srisu.features.coupleprofile.navigation.*
     @SerialName("installation_id") val installationId: String,
     val proof: String, val version: Long, val platform: String,
     @SerialName("target_kind") val targetKind: String, val target: String, val permitted: Boolean,
+    val capabilities: List<String> = emptyList(),
 )
 @Serializable data class InstallationBinding(@SerialName("installation_id") val installationId: String, val version: Long)
 @Serializable data class NotificationPreferences(
@@ -32,6 +33,8 @@ import com.srisu.srisu.features.coupleprofile.navigation.*
 ) {
     fun route(): Route? = when (kind) {
         "conversation" -> if (validNotificationId(roomId) && validNotificationId(messageId)) ChatNav.CoupleConversation(roomId, messageId, "notification") else null
+        "matrix_conversation" -> if (validNotificationId(roomId) && messageId == null)
+            ChatNav.CoupleConversation(roomId!!.lowercase(), origin="notification") else null
         "invitations" -> ChatNav.PartnerRequests
         "couple" -> coupleId?.takeIf { it > 0 }?.let { CoupleProfileDestination(it) }
         "sharing" -> coupleId?.takeIf { it > 0 }?.let { CoupleProfileDestination(it, CoupleSection.SHARING) }

@@ -25,7 +25,7 @@ import org.koin.compose.koinInject
             !native.configured -> "Notifications are not configured in this build."
             native.permission == "granted" -> "Notifications are allowed on this device. Manage sounds in system settings."
             native.permission == "denied" -> "Notifications are off on this device. You can allow them in system settings."
-            else -> "Allow notifications for invitations and shared activity."
+            else -> "Allow private notifications on this device."
         })
         if(native.configured) TextButton(onClick={ if(native.permission=="not_determined") NativeNotifications.driver?.requestPermission() else NativeNotifications.driver?.openSettings() }) {
             Text(if(native.permission=="not_determined") "Enable notifications" else "Open system settings")
@@ -35,7 +35,7 @@ import org.koin.compose.koinInject
         if(state.registrationFailed) { Text("This device hasn’t connected for notifications yet.");TextButton(onClick={NativeNotifications.driver?.refresh();repository.reload()}) {Text("Retry connection")} }
         state.preferences?.let { prefs ->
             SettingSwitch("Push notifications",prefs.push,!state.busy) {repository.save(push=it)}
-            if ("notification-plan-1" in prefs.capabilities) {
+            if ("matrix-chat-push-1" in prefs.capabilities) {
             SettingSwitch("Chat messages",prefs.chat,!state.busy) {repository.save(chat=it)}
             Text(if(prefs.muteForever) "Chat muted until you turn it back on" else prefs.muteUntil?.let {"Chat muted until $it"} ?: "Chat is not muted")
             FlowRow(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) {
