@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "repositories": {
+    "frontend": {
+      "path": ".",
+      "github": "SriZan12/SriSu",
+      "integration_branch": "dev-new-theme",
+      "workflow_branch": "codex/workspace-integration"
+    },
+    "backend": {
+      "path": "../SriSu-backend",
+      "github": "SrizanKhadka/SriSu",
+      "integration_branch": "dev",
+      "workflow_branch": "codex/workspace-integration"
+    }
+  },
+  "figma": {
+    "file_key": "LztysD1YvINX7RwZpnhhTt",
+    "nodes": {
+      "design_system": "0:1",
+      "auth_partner_linking_page": "1:2",
+      "find_partner": "14:220",
+      "invite_sent": "5:974",
+      "connected_confirmation": "5:1118",
+      "message_page": "1:5",
+      "message_thread": "184:2",
+      "message_voice": "184:1121",
+      "message_spark": "184:1634",
+      "message_ask": "185:2",
+      "message_planner": "185:781",
+      "message_options_nickname": "185:1624",
+      "home_moments_page": "1:3",
+      "home_challenge_title": "193:110",
+      "shared_space_challenge": "158:13166"
+    }
+  },
+  "features": {
+    "couple_chat": {
+      "frontend_branch": "dev-core-architecture",
+      "backend_branch": "dev-core-architecture",
+      "contract": "core-1:POST /api/chat/v2/rooms/{uuid}/matrix/session/",
+      "status": "matrix-chat-ui-recovered-media-replies-reactions-local-verified-live-exchange-pending",
+      "flow": "docs/flows/couple-chat.md",
+      "backend_guide": "../SriSu-backend/docs/chat-v2.md",
+      "challenges": "encrypted-matrix-reference-card-opens-authorized-challenge",
+      "related_prs": [
+        "SriZan12/SriSu#23",
+        "SriZan12/SriSu#24",
+        "SrizanKhadka/SriSu#39",
+        "SrizanKhadka/SriSu#40"
+      ],
+      "conversation_ui": "Pure structure across six original palettes; Matrix partner presence and typing",
+      "ui_validation": "docs/validation/chat-pure/README.md",
+      "activity_validation": "docs/validation/chat-pure/activity/README.md",
+      "activity_backend_branch": "codex/chat-presence",
+      "share_menu": "Illustrated Quick Share: Photos, Camera, Video, Voice; Spark, Challenge, Plan",
+      "share_menu_validation": "docs/validation/chat-pure/quick-share/README.md",
+      "theme_picker": "Palette grid with six existing presets, live sample and explicit Apply",
+      "theme_picker_validation": "docs/validation/chat-pure/theme-picker/README.md"
+    },
+    "moments": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "98f17e769bf4d0a43b444919f6f81aac91b76b3b",
+      "backend_branch": "dev-core-architecture",
+      "backend_start": "2a7d1f7d502bbaf3fb11b2330835a0d64bbe3ea5",
+      "contract": "core-1: moments-1",
+      "flow": "docs/flows/moments.md",
+      "backend_guide": "../SriSu-backend/docs/couple_moments.md",
+      "figma_page": "1:3",
+      "migration": "social.0016_couplemomentmodel_revision_and_more",
+      "status": "implemented-local-android-ios-postgres-http-verified-no-deployment"
+    },
+    "sparks": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "ee9742becd54bd1c30ad76e04e482085662d497b",
+      "backend_branch": "dev-core-architecture",
+      "backend_start": "ace26f623db19858bce62392c9a905cb81d8ffb1",
+      "contract": "sparks-1",
+      "flow": "docs/flows/sparks.md",
+      "backend_guide": "../SriSu-backend/docs/sparks.md",
+      "figma_node": "184:1634",
+      "migration": "social.0017_sparksession_sparkanswer_and_more",
+      "status": "implemented-local-live-iphone-native-partners-and-encrypted-phone-recovery-verified",
+      "live_validation": "docs/validation/sparks/live-flow.md",
+      "recovery_validation": "docs/validation/sparks/recovery.md"
+    },
+    "challenges": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "f0969a00c2329fd34187ef802390ef4a5ab4f01e",
+      "backend_branch": "dev-core-architecture",
+      "backend_start": "a542c87053b3dd52551da8c794367b8d97666fb5",
+      "contract": "challenges-1",
+      "flow": "docs/flows/challenges.md",
+      "backend_guide": "../SriSu-backend/docs/challenges.md",
+      "figma_nodes": [
+        "193:110",
+        "158:13166"
+      ],
+      "migrations": [
+        "social.0018_challengetemplate_couplechallenge_challengeoperation_and_more",
+        "social.0019_challenge_catalogue"
+      ],
+      "status": "implemented-local-native-two-partner-flow-verified-consolidated",
+      "validation": "docs/validation/challenges/README.md",
+      "qa_validation": "docs/validation/challenges/qa.md"
+    },
+    "plans": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "93fff640dd180614e78d9185355fbb287b2dc43a",
+      "backend_branch": "dev-core-architecture",
+      "backend_start": "04f5652fd843daf1dc653f08a19c10f149b219fb",
+      "contract": "plans-1",
+      "flow": "docs/flows/plans.md",
+      "backend_guide": "../SriSu-backend/docs/plans.md",
+      "figma_node": "185:781",
+      "migration": "social.0020_coupleplanmodel_cancelled_at_and_more",
+      "status": "implemented-local-native-two-partner-flow-verified-consolidated",
+      "validation": "docs/validation/plans/README.md"
+    },
+    "explore": {
+      "frontend_branch": "dev-core-architecture",
+      "frontend_start": "b6b1576b9ed26b270e9843f3ea4309a4ee3a93cb",
+      "backend_branch": "dev-core-architecture",
+      "backend_start": "6e0935c1c4f24267b9a956d259db5d113e9bb903",
+      "contract": "core-1: couple-feed + personal Faves conditional revision",
+      "flow": "docs/flows/moments.md#explore-and-personal-faves--26-october-2026",
+      "backend_guide": "../SriSu-backend/docs/couple_recommendations.md",
+      "figma_nodes": [
+        "0:1",
+        "1:3",
+        "34:1008"
+      ],
+      "migration": "social.0021_couplefaveversion",
+      "status": "implemented-local-iphone17-android-ios-postgres-http-verified-consolidated",
+      "validation": "docs/validation/explore/README.md"
+    },
+    "notifications": {
+      "frontend_branch": "dev-core-architecture",
+      "backend_branch": "dev-core-architecture",
+      "contract": "notifications-1",
+      "flow": "docs/flows/notifications.md",
+      "backend_guide": "../SriSu-backend/docs/notifications.md",
+      "status": "consolidated-current-activity-notifications-matrix-chat-push-unavailable",
+      "android_debug_tools": "Home below greeting: copy registered Firebase ID for console test notifications; sensitive clipboard, no identifier logging",
+      "test_kit": "tools/notification_tests/README.md",
+      "consolidation_branch": "codex/consolidate-core-20261029"
+    }
+  }
+}

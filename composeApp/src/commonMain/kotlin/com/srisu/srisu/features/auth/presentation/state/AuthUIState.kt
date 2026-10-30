@@ -11,6 +11,9 @@ import com.srisu.srisu.utils.ZodiacUtils.ZodiacSign
 
 @Stable
 data class AuthUIStates(
+    val challengeId: String? = null,
+    val resendAt: Long = 0,
+    val expiresAt: Long = 0,
     val phoneNumber: String = "",
     val fullName: String = "",
     val username: String = "",
@@ -30,7 +33,6 @@ data class AuthUIStates(
     val profilePictureUri: Uri? = null,
     val session: Session? = null,
     val currentScreen: CustomProfileSetupScreen = CustomProfileSetupScreen.AddFullNameScreen,
-    val screenStack: ArrayDeque<CustomProfileSetupScreen> = ArrayDeque(),
     val baseUIState: BaseUIState = BaseUIState.Idle,
     val validationError: Validation = Validation(),
     val countryList: List<CountryModel> = emptyList()

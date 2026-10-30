@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class Session(
+    val refreshRequestId: String? = null,
     @SerialName("access")
     val access: String? = null,
     @SerialName("refresh")

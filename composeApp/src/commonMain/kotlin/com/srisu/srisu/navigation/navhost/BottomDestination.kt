@@ -1,19 +1,23 @@
 package com.srisu.srisu.navigation.navhost
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
-import com.srisu.srisu.navigation.graph.ConnectionNav
+import com.srisu.srisu.navigation.graph.ChatNav
 import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.navigation.graph.ProfileNav
 import com.srisu.srisu.navigation.graph.Route
-import com.srisu.srisu.navigation.graph.SuggestionsNav
+import com.srisu.srisu.navigation.AppNavigator
+
+/** Chat is a full-screen destination; Back returns to the originating root. */
+fun AppNavigator.selectBottomDestination(destination: BottomDestination) {
+    if(destination==BottomDestination.CHAT) open(destination.route) else switchTab(destination.route)
+}
 
 enum class BottomDestination(
     val icon: ImageVector,
@@ -25,23 +29,14 @@ enum class BottomDestination(
         label = "Home",
         route = HomeNavigation.Home
     ),
-    EXPLORE(
-        icon = Icons.Filled.Search,
-        label = "Explore",
-        route = SuggestionsNav.Suggestions
-    ),
-    CONNECTIONS(
-        icon = Icons.Filled.Favorite,
-        label = "Crushes",
-        route = ConnectionNav.Connection
-    ),
-    MATCHES(
-        icon = Icons.Default.FavoriteBorder,
-        label = "Matches",
-        route = ConnectionNav.LoveRequestScreen
+    EXPLORE(Icons.Filled.Explore, "Explore", HomeNavigation.Explore),
+    CHAT(
+        icon = Icons.Filled.Forum,
+        label = "Chat",
+        route = ChatNav.CoupleConversation(origin = "bottom_bar")
     ),
     PROFILE(
-        icon = Icons.Filled.Person,
+        icon = Icons.Filled.PersonAdd,
         label = "Profile",
         route = ProfileNav.EditProfile
     );
@@ -50,10 +45,8 @@ enum class BottomDestination(
         fun fromDestination(destination: NavDestination?): BottomDestination? {
             return when {
                 destination?.hasRoute<HomeNavigation.Home>() == true -> HOME
-                destination?.hasRoute<SuggestionsNav.Suggestions>() == true -> EXPLORE
-                destination?.hasRoute<ConnectionNav.Connection>() == true -> CONNECTIONS
-                destination?.hasRoute<ConnectionNav.LoveRequestScreen>() == true -> MATCHES
                 destination?.hasRoute<ProfileNav.EditProfile>() == true -> PROFILE
+                destination?.hasRoute<HomeNavigation.Explore>() == true -> EXPLORE
                 else -> null
             }
         }

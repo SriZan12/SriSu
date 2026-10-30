@@ -1,38 +1,30 @@
 package com.srisu.srisu.di
 
-import com.srisu.srisu.features.chat.presentation.chat.vm.ChatViewModel
+import com.srisu.srisu.features.chat.matrix.MatrixChatEntryViewModel
+import com.srisu.srisu.features.chat.matrix.presentation.SecureChatViewModel
 import com.srisu.srisu.features.chat.presentation.findpartner.vm.FindPartnerViewModel
 import com.srisu.srisu.features.home.connection.presentation.coupleconnection.vm.CoupleConnectionViewModel
-import com.srisu.srisu.features.home.connection.presentation.singleconnection.vm.SingleConnectionViewModel
-import com.srisu.srisu.features.home.entertainment.vm.EntertainmentViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.EditProfileViewModel
 import com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel
-import com.srisu.srisu.features.home.suggestions.presentation.vm.SuggestionViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
-    viewModel {
-        EntertainmentViewModel(
-            suggestionRepository = get(),
-            sessionStorage = get()
-        )
-    }
+    viewModel { com.srisu.srisu.features.plans.presentation.PlanViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.plans.presentation.HomePlansViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.challenges.presentation.ChallengeViewModel(get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.challenges.presentation.HomeChallengesViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.sparks.presentation.SparkViewModel(get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.sparks.presentation.HomeSparksViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.HomeMomentsViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.home.dashboard.vm.HomeViewModel(get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.MomentComposerViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.MomentViewerViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.explore.presentation.ExploreViewModel(get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get(), get()) }
 
-    viewModel {
-        SuggestionViewModel(
-            suggestionRepository = get(),
-            connectionRepository = get(),
-            connectivityObserver = get(),
-        )
-    }
 
-    viewModel {
-        ProfileViewModel(
-            profileRepository = get(),
-            connectivityObserver = get(),
-        )
-    }
+    viewModel { ProfileViewModel() }
 
     viewModel {
         EditProfileViewModel(
@@ -42,17 +34,12 @@ val mainModule = module {
         )
     }
 
-    viewModel {
-        SingleConnectionViewModel(
-            connectionRepository = get(),
-            connectivityObserver = get()
-        )
-    }
 
     viewModel {
         FindPartnerViewModel(
             connectionRepository = get(),
-            sessionStorage = get()
+            sessionStorage = get(),
+            lifetime = get(),
         )
     }
 
@@ -63,6 +50,8 @@ val mainModule = module {
     }
 
     viewModel {
-        ChatViewModel(repository = get())
+        SecureChatViewModel(repository = get(), partners = get(), storage = get(), sessions = get(), moments = get())
     }
+
+    viewModel { MatrixChatEntryViewModel(resolver = get(), sessions = get()) }
 }

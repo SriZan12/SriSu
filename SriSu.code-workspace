@@ -1,0 +1,35 @@
+{
+  "folders": [
+    { "name": "SriSu — KMP frontend", "path": "." },
+    { "name": "SriSu — Django backend", "path": "../SriSu-backend" }
+  ],
+  "settings": {
+    "search.exclude": {
+      "**/.venv": true,
+      "**/.git": true,
+      "**/build": true,
+      "**/media": true
+    }
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "SriSu: check both repository references",
+        "type": "process",
+        "command": "python3",
+        "args": ["tools/workspace.py", "status", "--remote"],
+        "options": { "cwd": "${workspaceFolder:SriSu — KMP frontend}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "SriSu: verify both repositories",
+        "type": "process",
+        "command": "python3",
+        "args": ["tools/workspace.py", "verify", "all"],
+        "options": { "cwd": "${workspaceFolder:SriSu — KMP frontend}" },
+        "problemMatcher": []
+      }
+    ]
+  }
+}

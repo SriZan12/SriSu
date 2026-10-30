@@ -25,7 +25,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun CoupleConnectionScreen(
     coupleConnectionViewModel: CoupleConnectionViewModel = koinViewModel(),
-    onNavigateToProfile: (userProfileData: String?) -> Unit
+    onNavigateBack: () -> Unit = {},
+    onNavigateToProfile: (com.srisu.srisu.features.auth.data.remote.response.User?) -> Unit
 ) {
     val coupleConnectionUiState by coupleConnectionViewModel.coupleConnectionUiState.collectAsStateWithLifecycle()
     val loveRequestList = coupleConnectionViewModel.loveRequests.collectAsLazyPagingItems()
@@ -38,6 +39,7 @@ fun CoupleConnectionScreen(
         coupleConnectionUiState = coupleConnectionUiState,
         loveRequestList = loveRequestList,
         loveRequestSentList = loveRequestSentList,
+        onNavigateBack = onNavigateBack,
         onNavigateToProfile = { userProfileData ->
             onNavigateToProfile(userProfileData)
         }
@@ -57,25 +59,27 @@ private fun Initialization(
 
 @Composable
 private fun LoveRequestContent(
+    onNavigateBack: () -> Unit,
     coupleConnectionViewModel: CoupleConnectionViewModel,
     coupleConnectionUiState: CoupleConnectionUiState,
-    onNavigateToProfile: (userProfileData: String?) -> Unit,
+    onNavigateToProfile: (com.srisu.srisu.features.auth.data.remote.response.User?) -> Unit,
     loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>,
     loveRequestSentList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            ConnectionToolBar(
-                title = coupleConnectionUiState.currentTab?.title ?: "Connection"
+            com.srisu.srisu.components.PrimaryToolBar(
+                title = coupleConnectionUiState.currentTab?.title ?: "Partner invitations",
+                onNavigate = onNavigateBack
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues = innerPadding)
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                    color = MaterialTheme.colorScheme.background
                 )
         ) {
 
@@ -97,12 +101,13 @@ private fun LoveRequestContent(
                                     coupleConnectionViewModel.getUserProfile(userProfile = userProfileData)
                                 onNavigateToProfile(user)
                             },
-                            onAcceptLoveRequest = { id, senderNumber, receiverNumber ->
+                            onAcceptLoveRequest = { id, senderNumber, receiverNumber, partner ->
                                 coupleConnectionViewModel.updateLoveRequest(
                                     loveRequestId = id,
                                     senderNumber = senderNumber,
                                     receiverNumber = receiverNumber,
-                                    connectionStatus = Constants.ConnectionStatus.ACCEPTED
+                                    connectionStatus = Constants.ConnectionStatus.ACCEPTED,
+                                    partner = partner,
                                 )
                             },
                             onRejectLoveRequest = { id, senderNumber, receiverNumber ->

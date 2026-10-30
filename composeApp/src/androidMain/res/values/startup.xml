@@ -1,0 +1,11 @@
+<resources>
+    <color name="startup_background">#FFFFFF</color>
+    <style name="Theme.SriSu" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/startup_background</item>
+    </style>
+    <style name="Theme.SriSu.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/startup_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.SriSu</item>
+    </style>
+</resources>

@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.connection.presentation.coupleconnection.screen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,14 +27,14 @@ typealias loveRequestId = Long?
 @Composable
 fun LoveRequestListScreen(
     onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
+    onAcceptLoveRequest: (loveRequestId, senderNumber, receiverNumber, CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onRejectLoveRequest: (loveRequestId, senderNumber, receiverNumber) -> Unit,
     loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
 
     Box(
         modifier = Modifier.fillMaxSize().background(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest
+            color = MaterialTheme.colorScheme.background
         )
     ) {
         PagedConnectionContent(
@@ -61,7 +62,7 @@ fun LoveRequestListScreen(
 private fun LoveRequestListContent(
     modifier: Modifier,
     onNavigateToProfile: (userProfileData: CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
-    onAcceptLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber) -> Unit,
+    onAcceptLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber, CoupleConnectionRequestResponse.Result.Receiver?) -> Unit,
     onRejectLoveRequest: (loveRequestId: Long?, senderNumber, receiverNumber) -> Unit,
     loveRequestList: LazyPagingItems<CoupleConnectionRequestResponse.Result>
 ) {
@@ -72,13 +73,13 @@ private fun LoveRequestListContent(
         state = listState,
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
+            start = MaterialTheme.spacing.medium,
+            end = MaterialTheme.spacing.medium,
+            top = MaterialTheme.spacing.medium,
             bottom = 80.dp
         ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         items(
             count = loveRequestList.itemCount,
@@ -101,7 +102,8 @@ private fun LoveRequestListContent(
                     onAcceptLoveRequest(
                         loveRequest.id,
                         loveRequest.senderNumber,
-                        loveRequest.receiverNumber
+                        loveRequest.receiverNumber,
+                        loveRequest.receiver,
                     )
                 },
                 onClickSecondButton = {
@@ -115,4 +117,3 @@ private fun LoveRequestListContent(
         }
     }
 }
-

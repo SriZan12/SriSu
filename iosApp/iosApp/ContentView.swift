@@ -11,10 +11,18 @@ struct ComposeView: UIViewControllerRepresentable {
 }
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     var body: some View {
-        ComposeView()
-            .ignoresSafeArea(edges: .all)
+        ZStack {
+            ComposeView()
+                .ignoresSafeArea(edges: .all)
                 .ignoresSafeArea(.keyboard) // Compose has own keyboard handler
+                .accessibilityHidden(scenePhase != .active)
+            if scenePhase != .active {
+                Color(uiColor: .systemBackground).ignoresSafeArea()
+                Text("SriSu").font(.title)
+            }
+        }
     }
 }
 
