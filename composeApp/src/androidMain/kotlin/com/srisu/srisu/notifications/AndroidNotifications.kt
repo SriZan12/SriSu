@@ -21,6 +21,8 @@ import com.liftric.kvault.KVault
 import com.srisu.srisu.features.notifications.*
 import java.security.SecureRandom
 import java.util.UUID
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 class AndroidNotifications(private val context: Context) : NotificationPlatform {
     private val vault by lazy { KVault(context=context, fileName="srisu_notifications_v1") }
@@ -29,6 +31,24 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
     private var registrationFailed = false
     private var unregistering = false
     private var activeBinding: String? = null
+    private val registrationRunner by lazy {
+        FirebaseRegistrationRunner(
+            work = Executors.newSingleThreadExecutor { task -> Thread(task, "SriSu-Firebase-registration") },
+            main = Executor { Handler(Looper.getMainLooper()).post(it) },
+            client = {
+                val messaging = FirebaseMessaging.getInstance()
+                object : FirebaseRegistrationClient {
+                    override fun setAutoInit(enabled: Boolean) { messaging.isAutoInitEnabled = enabled }
+                    override fun register(complete: (Boolean) -> Unit) {
+                        messaging.register().addOnCompleteListener { complete(it.isSuccessful) }
+                    }
+                    override fun unregister(complete: (Boolean) -> Unit) {
+                        messaging.unregister().addOnCompleteListener { complete(it.isSuccessful) }
+                    }
+                }
+            },
+        )
+    }
     var requestRuntimePermission: (() -> Unit)? = null
     private val configured get() = FirebaseApp.getApps(context).isNotEmpty()
     init {
@@ -54,10 +74,9 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
         if(configured && activeBinding != null && permitted() && fid==null && !registering && !unregistering) {
             registering=true
             registrationFailed=false
-            FirebaseMessaging.getInstance().isAutoInitEnabled=true
-            FirebaseMessaging.getInstance().register().addOnCompleteListener {
+            registrationRunner.register { success ->
                 registering=false
-                registrationFailed=!it.isSuccessful
+                registrationFailed=!success
                 publish()
             }
         }
@@ -101,11 +120,10 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
     override fun renewRegistration() {check(vault.set("binding",""));publish()}
     override fun clearAccount() {
         context.getSystemService(NotificationManager::class.java).cancelAll()
-        activeBinding=null;fid=null;registrationFailed=false
+        activeBinding=null;fid=null;registering=false;registrationFailed=false
         if(configured) {
-            FirebaseMessaging.getInstance().isAutoInitEnabled=false
             unregistering=true
-            FirebaseMessaging.getInstance().unregister().addOnCompleteListener { unregistering=false;refresh() }
+            registrationRunner.unregister { unregistering=false;refresh() }
         }
         setDiagnostics(false)
     }
