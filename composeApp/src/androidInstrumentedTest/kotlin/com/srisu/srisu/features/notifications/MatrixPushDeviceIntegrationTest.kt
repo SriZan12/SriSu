@@ -62,6 +62,7 @@ class MatrixPushDeviceIntegrationTest {
         require(vault.string(Constants.Auth.SESSION_KEY) == null) { "Use a fresh test installation, never a personal login" }
         val room = fixture.getString("room_id")
         val environment = ApiEnvironment(fixture.getString("base_url"), development = true)
+        assertEquals("The actual app must target the isolated backend", environment.baseUrl, ApiEnvironment.configured().baseUrl)
         val sessions = (0..2).map { SessionCoordinator(MemorySession(users.getJSONObject(it).toString())) }
         val clients = sessions.map { HttpClientFactory.create(it, environment, OkHttp.create()) }
         val remotes = clients.map { MatrixSessionApiService(it, environment) }
@@ -162,11 +163,24 @@ class MatrixPushDeviceIntegrationTest {
             assertNotNull("Notification opens the real MainActivity", opened)
             val tap = tappedSignal.await()
             assertEquals(NotificationResolution.Ready(ChatNav.CoupleConversation(room, origin = "notification")), notifications.resolve(tap))
+            delay(5_000)
+            // Only this guarded synthetic installation may retain a UI diagnostic.
+            // Capture inside the existing automation session, never a second UIAutomator.
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            if (root?.packageName?.toString() == context.packageName) {
+                instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                    File(context.filesDir, "matrix-push-tap.png").outputStream().use {
+                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                    }
+                    bitmap.recycle()
+                }
+            }
+            stage("checking the real chat view after MainActivity startup")
             waitFor("Real chat screen decrypts the message from the notified room") {
                 instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Synthetic Matrix push tap destination")?.isNotEmpty() == true
             }
             waitFor("Real chat composer is available") {
-                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Message your partner")?.isNotEmpty() == true
+                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Send")?.isNotEmpty() == true
             }
             manager.cancelAll()
             stage("checking that chat preferences suppress further alerts")
