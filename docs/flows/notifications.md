@@ -33,6 +33,11 @@ real encrypted messages, FCM foreground/background arrival, sound-channel policy
 actual MainActivity tap navigation and disabled-chat suppression. No fixture loader
 ships in the application. See the [physical Android acceptance and Windows deployment record](../validation/notifications/matrix-push-20261030.md) for executed checks and their limits.
 
+The [native iOS → physical Samsung verification](../validation/notifications/ios-to-android-20261030.md)
+subsequently passed with a real iOS simulator sender, audible confirmation from the
+user, and the received notification opening its decrypted chat. Apple/APNs remains
+skipped. This is simulator-to-phone coverage on the isolated Windows stack.
+
 Figma file `LztysD1YvINX7RwZpnhhTt`, design-system page `0:1`, was unavailable due
 to the connected service's Starter-plan quota. This change reuses existing themed
 notification controls and chat navigation; only capability gating and primer copy
