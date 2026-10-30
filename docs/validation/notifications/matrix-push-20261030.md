@@ -43,7 +43,7 @@ on the Windows Docker laptop. Apple enrollment and APNs remain skipped.
 The device fixture uses a separate database and server identity, three synthetic
 accounts, and USB loopback ports 8029/18008. The production application contains no
 fixture loader or test event endpoint. No personal conversation was sent or read.
-The authenticated live LAN checks and final APK handoff are recorded below when run.
+The read-only live LAN checks and final APK handoff are recorded below.
 
 ## Test harness corrections
 
@@ -79,3 +79,34 @@ For enable/disable and rollback steps see backend `docs/notifications.md`.
 
 Figma `LztysD1YvINX7RwZpnhhTt`, page `0:1`, was quota-limited. Existing notification
 controls and theme tokens were reused; there is no new visual layout.
+
+The private callback was also pinged from the deployed Synapse container using its
+own private registration: HTTP 200, without emitting any message event or exposing
+the credential. Final isolated audit: 21 encrypted Matrix events, 20 accepted push
+deliveries, one disabled-chat event without a delivery, and three read-suppression
+markers. The audit found zero synthetic plaintext occurrences in Synapse storage.
+After acceptance, all 30 synthetic device sessions were revoked, the single stored
+push target was cleared, private session fixture files were removed, and only the
+isolated test containers were stopped. The live seven-container deployment remained up.
+
+## Final Android LAN handoff
+
+Frontend merge `a080d49b46a47d690b4090020a6fbecafdb8ee35` was built on Windows with
+`-Psrisu.apiBaseUrl=http://192.168.1.69:8000/`. The normal app APK SHA-256 is
+`72d3f65440c30393dc110ad517f2698f5f3637e8df35baa4ef1197ff8f94aa33`.
+The final validation-record commit changes documentation only; runtime code is identical.
+
+The final APK was installed on the Samsung after removing only this task's fresh
+synthetic app state. The USB test reverses were removed. `DeploymentDeviceSmokeTest`
+passed on the phone (`OK (1 test)`, 2.19 seconds), verifying the configured LAN API,
+public catalogue response, denied anonymous notification preferences, denied anonymous
+Matrix AS ingress, Synapse client versions/policy endpoints, and real MainActivity launch.
+These are read-only checks against the running deployment, separate from the encrypted
+message/FCM exercise against the isolated Windows databases.
+
+The test APK was uninstalled, the app was opened normally and notification permission
+is granted. It is signed out and ready for the user's own login. The phone's original
+plugged-in awake setting was restored and verified. The temporary marker authorizing
+fresh-install cleanup was removed so the runner cannot later clear a personal login.
+Apple remains skipped. No claim is made about hearing this phone's physical speaker,
+Apple push delivery, two physical devices, force-stopped app delivery, or release-store signing.
