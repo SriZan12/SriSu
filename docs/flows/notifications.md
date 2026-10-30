@@ -31,7 +31,7 @@ with an alias-only namespace and no permission to impersonate human users.
 and three synthetic accounts on a separate Django/Synapse database. It exercises
 real encrypted messages, FCM foreground/background arrival, sound-channel policy,
 actual MainActivity tap navigation and disabled-chat suppression. No fixture loader
-ships in the application. Live execution evidence is recorded separately after the run.
+ships in the application. See the [physical Android acceptance and Windows deployment record](../validation/notifications/matrix-push-20261030.md) for executed checks and their limits.
 
 Figma file `LztysD1YvINX7RwZpnhhTt`, design-system page `0:1`, was unavailable due
 to the connected service's Starter-plan quota. This change reuses existing themed
