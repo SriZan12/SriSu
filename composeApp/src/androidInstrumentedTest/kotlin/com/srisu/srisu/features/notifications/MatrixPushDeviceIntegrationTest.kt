@@ -7,9 +7,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.activity.compose.setContent
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.platform.app.InstrumentationRegistry
 import com.liftric.kvault.KVault
 import com.srisu.srisu.MainActivity
@@ -37,7 +36,7 @@ import org.junit.Test
  * Use only a fresh test installation and the isolated synthetic database. No fixture
  * loader, account override, or notification test endpoint ships in the application. */
 class MatrixPushDeviceIntegrationTest {
-    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val activityRule = ActivityScenarioRule(ComponentActivity::class.java)
     private class MemorySession(private var value: String?) : SessionStorage {
         override fun getSession(sessionKey: String) = value
         override fun saveSession(credentials: String, sessionKey: String) { value = credentials }
@@ -52,6 +51,8 @@ class MatrixPushDeviceIntegrationTest {
 
     @Test fun encryptedMessageRingsAndTapOpensItsConversation(): Unit = runBlocking {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
+        lateinit var foregroundActivity: ComponentActivity
+        activityRule.scenario.onActivity { foregroundActivity = it }
         val context = instrumentation.targetContext
         val fixtureFile = File(context.filesDir, "matrix-push-device-fixture.json")
         assumeTrue("Requires the isolated Matrix push fixture", fixtureFile.isFile)
@@ -98,11 +99,10 @@ class MatrixPushDeviceIntegrationTest {
             assertEquals("You have an update. Open SriSu to view it.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
         }
         try {
-            compose.setContent { androidx.compose.material3.Text("Testing Matrix notifications") }
             withContext(Dispatchers.Main) {
-                compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                foregroundActivity.setContent { androidx.compose.material3.Text("Testing Matrix notifications") }
+                foregroundActivity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
-            compose.waitForIdle()
             stage("registering the native Android installation")
             instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
             withContext(Dispatchers.Main) { native.refresh(); lifetimes.forEach { it.setForeground(true) } }
@@ -120,7 +120,7 @@ class MatrixPushDeviceIntegrationTest {
                 waitFor("Test activity is visibly foreground and unlocked") {
                     val process = android.app.ActivityManager.RunningAppProcessInfo()
                     android.app.ActivityManager.getMyMemoryState(process)
-                    compose.activity.hasWindowFocus() &&
+                    foregroundActivity.hasWindowFocus() &&
                         process.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
                         !context.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
                 }
@@ -145,7 +145,7 @@ class MatrixPushDeviceIntegrationTest {
             // Keep its protected E2EE store for the real MainActivity to reopen on tap.
             assertTrue(vault.set(Constants.Auth.SESSION_KEY, requireNotNull(sessions[1].getSession(Constants.Auth.SESSION_KEY))))
             delay(31_000) // Reset the real server's per-installation audible budget.
-            withContext(Dispatchers.Main) { compose.activity.moveTaskToBack(true) }
+            withContext(Dispatchers.Main) { foregroundActivity.moveTaskToBack(true) }
             delay(1_000)
             stage("checking the audible background notification")
             send("Synthetic Matrix push audible")
@@ -179,7 +179,6 @@ class MatrixPushDeviceIntegrationTest {
             assertNotNull("Notification opens the real MainActivity", opened)
             val tap = tappedSignal.await()
             assertEquals(NotificationResolution.Ready(ChatNav.CoupleConversation(room, origin = "notification")), notifications.resolve(tap))
-            compose.waitForIdle()
             delay(5_000)
             // Only this guarded synthetic installation may retain a UI diagnostic.
             // Capture inside the existing automation session, never a second UIAutomator.
@@ -194,10 +193,10 @@ class MatrixPushDeviceIntegrationTest {
             }
             stage("checking the real chat view after MainActivity startup")
             waitFor("Real chat screen decrypts the message from the notified room") {
-                compose.onAllNodesWithText("Synthetic Matrix push tap destination", substring = true).fetchSemanticsNodes().isNotEmpty()
+                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Synthetic Matrix push tap destination")?.isNotEmpty() == true
             }
             waitFor("Real chat composer is available") {
-                compose.onAllNodesWithContentDescription("Send").fetchSemanticsNodes().isNotEmpty()
+                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Send")?.isNotEmpty() == true
             }
             manager.cancelAll()
             stage("checking that chat preferences suppress further alerts")
