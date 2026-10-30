@@ -167,6 +167,10 @@ class SriSuMessagingService : FirebaseMessagingService() {
         val data=message.data
         Handler(Looper.getMainLooper()).post {
             NativeNotifications.receive(data["schema"],data["delivery_id"],data["expires_at"],false)
+            if (isNotificationDebugBuild(applicationContext)) android.util.Log.d("SriSuPushCheck",
+                "schema=${data["schema"] == "1"} id_valid=${validNotificationId(data["delivery_id"])} " +
+                    "expiry_future=${(data["expires_at"]?.toLongOrNull() ?: 0) > System.currentTimeMillis() / 1000} " +
+                    "signal_present=${NativeNotifications.signal.value != null}")
         }
     }
 }
