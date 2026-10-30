@@ -49,6 +49,18 @@ class MatrixPushDeviceIntegrationTest {
         override fun getSharedPreferences(name: String, mode: Int) = super.getSharedPreferences("matrix-push-sender-$name", mode)
     }
 
+    // Compose exposes virtual accessibility nodes. Traverse those nodes directly;
+    // findAccessibilityNodeInfosByText is not a portable virtual-node search.
+    private fun visibleText(node: android.view.accessibility.AccessibilityNodeInfo?, text: String): Boolean {
+        if (node == null) return false
+        if (node.isVisibleToUser && (node.text?.contains(text) == true || node.contentDescription?.contains(text) == true)) return true
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try { if (visibleText(child, text)) return true } finally { child.recycle() }
+        }
+        return false
+    }
+
     @Test fun encryptedMessageRingsAndTapOpensItsConversation(): Unit = runBlocking {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         lateinit var foregroundActivity: ComponentActivity
@@ -186,26 +198,18 @@ class MatrixPushDeviceIntegrationTest {
             assertNotNull("Notification opens the real MainActivity", opened)
             val tap = tappedSignal.await()
             assertEquals(NotificationResolution.Ready(ChatNav.CoupleConversation(room, origin = "notification")), notifications.resolve(tap))
-            delay(5_000)
-            // Only this guarded synthetic installation may retain a UI diagnostic.
-            // Capture inside the existing automation session, never a second UIAutomator.
-            val root = instrumentation.uiAutomation.rootInActiveWindow
-            if (root?.packageName?.toString() == context.packageName) {
-                instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-                    File(context.filesDir, "matrix-push-tap.png").outputStream().use {
-                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
-                    }
-                    bitmap.recycle()
-                }
-            }
             stage("checking the real chat view after MainActivity startup")
             waitFor("Real chat screen decrypts the message from the notified room") {
-                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Synthetic Matrix push tap destination")?.isNotEmpty() == true
+                visibleText(instrumentation.uiAutomation.rootInActiveWindow, "Synthetic Matrix push tap destination")
             }
             waitFor("Real chat composer is available") {
-                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Send")?.isNotEmpty() == true
+                visibleText(instrumentation.uiAutomation.rootInActiveWindow, "Send")
             }
             manager.cancelAll()
+            withContext(Dispatchers.Main) {
+                assertTrue("Chat keeps Android screenshot protection", requireNotNull(opened).window.attributes.flags and
+                    android.view.WindowManager.LayoutParams.FLAG_SECURE != 0)
+            }
             stage("checking that chat preferences suppress further alerts")
             val prefs = (api.preferences().result as NetworkAPIResult.Success).response!!
             assertTrue(api.save(PreferenceWrite(prefs.revision, true, false, true)).result is NetworkAPIResult.Success)
