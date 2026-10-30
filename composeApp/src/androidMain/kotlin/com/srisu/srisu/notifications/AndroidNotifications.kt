@@ -108,14 +108,14 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
         val target=fid ?: return null
         val id=vault.string("id") ?: UUID.randomUUID().toString().also { check(vault.set("id",it)) }
         val proof=vault.string("proof") ?: android.util.Base64.encodeToString(ByteArray(32).also {SecureRandom().nextBytes(it)},android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP).also {check(vault.set("proof",it))}
-        val identity="$binding:$target:${permitted()}"
+        val identity="$binding:$target:${permitted()}:matrix-chat-push-1"
         var version=vault.string("version")?.toLongOrNull() ?: 0L
         if(vault.string("binding")!=identity) {
             version++
             check(vault.set("version",version.toString()))
             check(vault.set("binding",identity))
         }
-        return InstallationRequest(id,proof,version,"android","fid",target,permitted())
+        return InstallationRequest(id,proof,version,"android","fid",target,permitted(), listOf("matrix-chat-push-1"))
     }
     override fun renewRegistration() {check(vault.set("binding",""));publish()}
     override fun clearAccount() {

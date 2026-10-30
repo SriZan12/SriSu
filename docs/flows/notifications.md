@@ -1,5 +1,43 @@
 # Notifications and crash diagnostics V1
 
+## Matrix chat push — 30 October 2026
+
+Matrix encrypted message events now use an authenticated Synapse application-service
+feed into the existing durable notification worker. Android opts in with the
+`matrix-chat-push-1` installation capability; older apps and Apple installations
+are excluded. The server advertises the capability before the existing chat/mute
+controls become available. A typed `matrix_conversation` destination contains the
+Django room UUID and opens `ChatNav.CoupleConversation` after live authorization.
+No message preview or Matrix identifier is sent through FCM.
+
+Both sender and recipient must still belong to the active, unblocked couple and
+current provisioned Matrix room. Dispatch and tap recheck that mapping and session.
+Encrypted edits/reactions, old events, redactions, read receipts, muted chat and
+revoked sessions are covered by the backend tests. Receipts/redactions suppress
+pending alerts; an alert already accepted by FCM can race with these changes.
+The app remains quiet for an already visible conversation. Other foreground updates
+use the existing generic banner. Background delivery uses the existing audible
+channel, with follow-ups inside 30 seconds using the quiet channel. OS permission,
+channel settings, volume and Do Not Disturb still control actual sound.
+
+Deploy the additive backend migration `notifications.0004_matrix_chat_push` first,
+then configure its private AS feed and update Android. There is no old-message
+backfill, Matrix SDK change or Apple/APNs setup. See backend `docs/notifications.md`
+for token storage, rollout cutoff, retry and rollback instructions. The application
+service implements the [standard Matrix API](https://spec.matrix.org/latest/application-service-api/)
+with an alias-only namespace and no permission to impersonate human users.
+
+`MatrixPushDeviceIntegrationTest` is opt-in and requires a fresh app installation
+and three synthetic accounts on a separate Django/Synapse database. It exercises
+real encrypted messages, FCM foreground/background arrival, sound-channel policy,
+actual MainActivity tap navigation and disabled-chat suppression. No fixture loader
+ships in the application. See the [physical Android acceptance and Windows deployment record](../validation/notifications/matrix-push-20261030.md) for executed checks and their limits.
+
+Figma file `LztysD1YvINX7RwZpnhhTt`, design-system page `0:1`, was unavailable due
+to the connected service's Starter-plan quota. This change reuses existing themed
+notification controls and chat navigation; only capability gating and primer copy
+change. No new visual layout or inferred Figma design is introduced.
+
 The [device-only Firebase test kit](../../tools/notification_tests/README.md) provides
 seven repeatable direct-FCM probes, a manual checklist for all six supported domain
 alerts, and local Plan-reminder checks. It uses the existing Windows Docker sender

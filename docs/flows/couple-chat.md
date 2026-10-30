@@ -1,6 +1,6 @@
 # Couple Chat — Matrix cutover record
 
-Record updated: 2026-10-29. This is the frontend-owned implementation and release
+Record updated: 2026-10-30. This is the frontend-owned implementation and release
 record for Couple Chat. The KMP client is now Matrix-only and the custom Django
 message/WebSocket and ChatV2 transports have been removed. A local Compose
 control-plane interoperability run verified Django authorization, JWT exchange,
@@ -16,6 +16,8 @@ Raw homeserver history contained encrypted events and no synthetic plaintext.
 the separate test backend on loopback port 8029. No fixture loader ships in the
 application. See [the deployment acceptance record](notifications.md#merged-windows-deployment-and-android-acceptance--29-october-2026)
 for the exact runtime pair and coverage boundaries. This adds no Figma/UI change.
+
+Android Matrix message push is implemented in the [notification flow](notifications.md#matrix-chat-push--30-october-2026). It uses Synapse metadata and the existing FCM outbox; Matrix remains the sole encrypted message transport.
 
 The accepted direction is defined by
 [ADR 003](../architecture/decisions/003-matrix-couple-chat.md). The rejected
@@ -240,7 +242,8 @@ not promise creation of new messages while offline.
 | Planner/Plan cards | `CouplePlanModel` remains domain authority; Matrix may carry an encrypted typed reference | Basic Plan data exists outside chat; rich type/location/reminder/checklist/card flow is unimplemented |
 | Story prompt cards | Couple Profile remains domain authority; a future Matrix card needs an encrypted typed reference | Unimplemented on Matrix; the retired legacy message side effect is not a fallback |
 | Conversation appearance/nickname | Account/room-scoped secure local preferences | Six palettes, Pure default and shared structure. Header presence uses Matrix. Nickname/privacy options remain absent; no legacy `ChatRoom.settings` calls |
-| Push notifications and voice/video calls | Separate future systems | Out of scope |
+| Android message push | Synapse application-service feed and the existing authorized FCM outbox | Implemented; see the Matrix push notification flow above. Apple delivery remains skipped. |
+| Voice/video calls | Separate future system | Out of scope |
 
 Unknown Matrix event or content versions must render as inert/update-required
 items rather than crash or grant an action. A Figma control is not enabled until
@@ -751,5 +754,5 @@ The historical text-only cutover notes above are superseded for Sparks by [the O
 ## Core consolidation, 29 October 2026
 
 The current Matrix UI, presence and waveform features are consolidated with the
-activity-notification/Crashlytics branch. Matrix push remains unavailable. See
+activity-notification/Crashlytics branch. Matrix push was unavailable at that checkpoint; the 30 October implementation above supersedes that limitation. See
 [notification compatibility and current scope](notifications.md#consolidated-core-integration--29-october-2026).

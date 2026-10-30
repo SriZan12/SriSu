@@ -32,6 +32,7 @@ class DeploymentDeviceSmokeTest {
         try {
             status(configured.baseUrl + "api/auth/interests/", 200)
             status(configured.baseUrl + "api/notifications/v1/preferences/", 401)
+            status(configured.baseUrl + "_matrix/app/v1/transactions/untrusted", 403)
             status(fixture.getString("matrix_url") + "/_matrix/client/versions", 200)
             status(fixture.getString("matrix_url") + "/_synapse/client/srisu/policy/v1", 200)
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->

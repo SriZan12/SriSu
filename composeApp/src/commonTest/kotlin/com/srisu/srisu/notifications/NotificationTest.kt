@@ -47,6 +47,20 @@ class NotificationTest {
         assertFalse(notificationMatches(ChatNav.CoupleConversation(room),ChatNav.CoupleConversation(message)))
         assertFalse(notificationMatches(CoupleProfileDestination(1,CoupleSection.SHARING),CoupleProfileDestination(1)))
     }
+    @Test fun matrixChatUsesTheAuthorizedDjangoRoomWithoutTreatingEventIdsAsLegacyMessages() {
+        val destination = NotificationDestination("matrix_conversation", roomId=room.uppercase())
+        assertEquals(ChatNav.CoupleConversation(room, origin="notification"), destination.route())
+        assertTrue(notificationMatches(destination.route()!!, ChatNav.CoupleConversation(room)))
+        assertNull(NotificationDestination("matrix_conversation", roomId="!private:matrix.test").route())
+        assertNull(NotificationDestination("matrix_conversation", roomId=room, messageId="\$event").route())
+        assertNull(NotificationDestination("matrix_conversation").route())
+    }
+    @Test fun androidChatCapabilityIsExplicitAndOlderClientsCanStillOmitIt() {
+        val legacy = InstallationRequest(room, "s".repeat(48), 1, "android", "fid", "c".repeat(22), true)
+        assertFalse("capabilities" in ApiJson.encodeToJsonElement(legacy).jsonObject)
+        val android = legacy.copy(capabilities=listOf("matrix-chat-push-1"))
+        assertEquals("[\"matrix-chat-push-1\"]", ApiJson.encodeToJsonElement(android).jsonObject["capabilities"].toString())
+    }
     @Test fun leavingOldScreenCannotClearNewScreenVisibility() {
         val old=Any();val current=Any()
         try {
