@@ -62,7 +62,14 @@ class MatrixPushDeviceIntegrationTest {
         val users = fixture.getJSONArray("users")
         for (i in 0..2) require(users.getJSONObject(i).getLong("id").toString().startsWith("8200000000000000"))
         val vault = KVault(context = context, fileName = Constants.Auth.SESSION_FILE)
-        require(vault.string(Constants.Auth.SESSION_KEY) == null) { "Use a fresh test installation, never a personal login" }
+        vault.string(Constants.Auth.SESSION_KEY)?.let { previous ->
+            val saved = JSONObject(previous)
+            require(saved.optLong("id") == users.getJSONObject(1).getLong("id") &&
+                saved.optString("phone_number") == users.getJSONObject(1).getString("phone_number")) {
+                "Use a fresh test installation, never a personal login"
+            }
+            vault.clear() // Recover only this synthetic session after an interrupted run.
+        }
         val room = fixture.getString("room_id")
         val environment = ApiEnvironment(fixture.getString("base_url"), development = true)
         assertEquals("The actual app must target the isolated backend", environment.baseUrl, ApiEnvironment.configured().baseUrl)
