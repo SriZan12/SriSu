@@ -37,6 +37,10 @@ The [native iOS → physical Samsung verification](../validation/notifications/i
 subsequently passed with a real iOS simulator sender, audible confirmation from the
 user, and the received notification opening its decrypted chat. Apple/APNs remains
 skipped. This is simulator-to-phone coverage on the isolated Windows stack.
+The [closed-app and locked-phone follow-up](../validation/notifications/closed-locked-20261030.md)
+also passed: arrival with no app process or Recents task and the keyguard locked,
+human sound confirmation, and an actual System UI notification tap after unlocking
+that displayed the correct decrypted conversation.
 
 Figma file `LztysD1YvINX7RwZpnhhTt`, design-system page `0:1`, was unavailable due
 to the connected service's Starter-plan quota. This change reuses existing themed
