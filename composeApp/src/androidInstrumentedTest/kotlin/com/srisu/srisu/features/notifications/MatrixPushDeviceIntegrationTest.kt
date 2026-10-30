@@ -8,6 +8,8 @@ import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.test.platform.app.InstrumentationRegistry
 import com.liftric.kvault.KVault
 import com.srisu.srisu.MainActivity
@@ -177,6 +179,7 @@ class MatrixPushDeviceIntegrationTest {
             assertNotNull("Notification opens the real MainActivity", opened)
             val tap = tappedSignal.await()
             assertEquals(NotificationResolution.Ready(ChatNav.CoupleConversation(room, origin = "notification")), notifications.resolve(tap))
+            compose.waitForIdle()
             delay(5_000)
             // Only this guarded synthetic installation may retain a UI diagnostic.
             // Capture inside the existing automation session, never a second UIAutomator.
@@ -191,10 +194,10 @@ class MatrixPushDeviceIntegrationTest {
             }
             stage("checking the real chat view after MainActivity startup")
             waitFor("Real chat screen decrypts the message from the notified room") {
-                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Synthetic Matrix push tap destination")?.isNotEmpty() == true
+                compose.onAllNodesWithText("Synthetic Matrix push tap destination", substring = true).fetchSemanticsNodes().isNotEmpty()
             }
             waitFor("Real chat composer is available") {
-                instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText("Send")?.isNotEmpty() == true
+                compose.onAllNodesWithContentDescription("Send").fetchSemanticsNodes().isNotEmpty()
             }
             manager.cancelAll()
             stage("checking that chat preferences suppress further alerts")
