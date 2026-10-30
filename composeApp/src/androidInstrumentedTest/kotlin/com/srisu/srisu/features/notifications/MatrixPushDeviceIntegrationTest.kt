@@ -61,6 +61,16 @@ class MatrixPushDeviceIntegrationTest {
         return false
     }
 
+    private fun visibleEditor(node: android.view.accessibility.AccessibilityNodeInfo?): Boolean {
+        if (node == null) return false
+        if (node.isVisibleToUser && node.isEditable) return true
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try { if (visibleEditor(child)) return true } finally { child.recycle() }
+        }
+        return false
+    }
+
     @Test fun encryptedMessageRingsAndTapOpensItsConversation(): Unit = runBlocking {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         lateinit var foregroundActivity: ComponentActivity
@@ -203,7 +213,7 @@ class MatrixPushDeviceIntegrationTest {
                 visibleText(instrumentation.uiAutomation.rootInActiveWindow, "Synthetic Matrix push tap destination")
             }
             waitFor("Real chat composer is available") {
-                visibleText(instrumentation.uiAutomation.rootInActiveWindow, "Send")
+                visibleEditor(instrumentation.uiAutomation.rootInActiveWindow)
             }
             manager.cancelAll()
             withContext(Dispatchers.Main) {
