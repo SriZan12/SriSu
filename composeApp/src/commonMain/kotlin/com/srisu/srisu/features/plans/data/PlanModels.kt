@@ -9,7 +9,9 @@ import kotlin.time.Instant
 
 @Serializable data class PlanMember(val id: Long, val name: String, val photo: String? = null)
 @Serializable data class PlanHome(val couple: Long? = null, val members: List<PlanMember> = emptyList(),
-    @SerialName("next_plan") val nextPlan: Plan? = null, val invitations: Int = 0)
+    @SerialName("next_plan") val nextPlan: Plan? = null, val invitations: Int = 0,
+    @SerialName("featured_plan") val featuredPlan: Plan? = null, val requests: Int? = null,
+    @SerialName("completed_count") val completedCount: Int? = null)
 @Serializable data class PlanPage(val items: List<Plan> = emptyList(), val next: String? = null)
 @Serializable data class PlanChange(val title: String, @SerialName("starts_at") val startsAt: String,
     val place: String = "", @SerialName("time_zone") val timeZone: String = "UTC", val author: Long)
@@ -38,9 +40,9 @@ import kotlin.time.Instant
     }
 }
 @Serializable data class PlanDraft(val couple: Long, val title: String = "", val startsAt: String = "", val place: String = "",
-    val timeZone: String = "UTC", val planId: Long? = null, val revision: Long? = null)
+    val timeZone: String = "UTC", val planId: Long? = null, val revision: Long? = null, val ideaId: String? = null, val ideaRevision: Long? = null)
 @Serializable data class PlanIntent(val requestId: String, val couple: Long, val planId: Long? = null,
-    val revision: Long? = null, val action: String? = null, val values: JsonObject = buildJsonObject {})
+    val revision: Long? = null, val action: String? = null, val values: JsonObject = buildJsonObject {}, val ideaId: String? = null)
 @Serializable data class PlanReference(val id: Long, val couple: Long) {
     val url get() = "https://srisu.app/plans/$couple/$id"
     companion object {

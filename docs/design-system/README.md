@@ -151,3 +151,15 @@ preview are calculated from the original app base scheme before the picker theme
 is installed, preserving all six preset colors. Short labels are presentation-only;
 stored IDs and global theme definitions remain unchanged. See [the reference and
 checks](../validation/chat-pure/theme-picker/README.md).
+
+
+## Home couple space (2026-11-09)
+
+The approved four attachments and Stage 2 preview define a Home-scoped light
+composition in `HomeCoupleSpaceTheme.kt`: white canvas, lilac question, warm rows,
+pastel counters, Satoshi typography and native illustrative artwork. This is an
+intentional user-approved override of the older Figma Home frames, not a global
+palette or chat-theme rewrite. Question text uses measured balanced wrapping.
+Content heights grow, controls wrap, and the floating bottom navigation reflows
+at large text. See [design provenance](../design/home-redesign/stage-3.md) and
+[native validation](../validation/home-couple-space/README.md).

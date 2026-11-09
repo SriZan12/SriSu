@@ -116,6 +116,17 @@ class ApiRouteContractTest {
             check("notification-preferences") {notifications.preferences()}
             check("notification-preferences-save") {notifications.save(com.srisu.srisu.features.notifications.PreferenceWrite(1,true,true,true))}
             check("notification-resolve") {notifications.resolve(room)}
+            val sparks = com.srisu.srisu.features.sparks.data.SparkRepository(client, environment)
+            check("home-daily-question") { ResultHandler(sparks.daily(1, "Asia/Kathmandu")) }
+            val statuses = com.srisu.srisu.features.coupleprofile.data.CoupleStatusRepository(client, environment)
+            check("home-statuses") { ResultHandler(statuses.get(1)) }
+            check("home-status-save") { ResultHandler(statuses.save(1, "Feeling cosy", 0, room)) }
+            val ideas = com.srisu.srisu.features.plans.data.DateIdeaRepository(client, environment)
+            check("home-ideas") { ResultHandler(ideas.list(1)) }
+            check("home-idea-create") { ResultHandler(ideas.create(1, "coffee", room)) }
+            check("home-idea") { ResultHandler(ideas.get(room)) }
+            check("home-idea-action") { ResultHandler(ideas.act(room, 1, room, "interest", buildJsonObject { put("interested", true) })) }
+            check("plans-home") { ResultHandler(com.srisu.srisu.features.plans.data.PlanRepository(client, environment).home()) }
             val expired = "synthetic." + Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
                 .encode("""{"exp":1,"sid":"synthetic"}""".encodeToByteArray()) + ".synthetic"
             sessions.saveSession(ApiJson.encodeToString(Session(id = 1, access = expired, refresh = "synthetic-refresh")), SESSION_KEY)

@@ -10,7 +10,8 @@ import kotlinx.serialization.SerialName
     val activities: List<ChallengeActivity>)
 @Serializable data class ChallengeMember(val id: Long, val name: String, val photo: String? = null)
 @Serializable data class ChallengeHome(val collections: List<ChallengeCollection> = emptyList(),
-    val couple: Long? = null, val members: List<ChallengeMember> = emptyList(), val current: ChallengeSession? = null)
+    val couple: Long? = null, val members: List<ChallengeMember> = emptyList(), val current: ChallengeSession? = null,
+    @SerialName("last_completed") val lastCompleted: ChallengeSession? = null)
 @Serializable data class ChallengeHistory(val items: List<ChallengeSession> = emptyList(), val next: String? = null)
 @Serializable data class ChallengeSession(val id: String, val couple: Long, val creator: Long,
     val activity: ChallengeActivity, val state: String, val revision: Long,

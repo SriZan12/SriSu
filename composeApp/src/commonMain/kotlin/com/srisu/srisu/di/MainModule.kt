@@ -10,14 +10,14 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
-    viewModel { com.srisu.srisu.features.plans.presentation.PlanViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.plans.presentation.PlanViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { com.srisu.srisu.features.plans.presentation.HomePlansViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.challenges.presentation.ChallengeViewModel(get(), get(), get(), get()) }
     viewModel { com.srisu.srisu.features.challenges.presentation.HomeChallengesViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.sparks.presentation.SparkViewModel(get(), get(), get()) }
     viewModel { com.srisu.srisu.features.sparks.presentation.HomeSparksViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.HomeMomentsViewModel(get(), get()) }
-    viewModel { com.srisu.srisu.features.home.dashboard.vm.HomeViewModel(get(), get(), get(), get()) }
+    viewModel { com.srisu.srisu.features.home.dashboard.vm.HomeViewModel(get(), get(), get(), get(), sparks = get(), statuses = get(), ideas = get(), matrix = get(), resolver = get(), connections = get(), apiOrigin = get<com.srisu.srisu.core.config.ApiEnvironment>().baseUrl, profiles = get(), reminders = get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentComposerViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentViewerViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.explore.presentation.ExploreViewModel(get(), get(), get(), get()) }

@@ -34,6 +34,7 @@ import de.connect2x.trixnity.client.cryptodriver.vodozemac.vodozemac
 import de.connect2x.trixnity.client.flatten
 import de.connect2x.trixnity.client.flattenNotNull
 import de.connect2x.trixnity.client.room
+import de.connect2x.trixnity.client.notification
 import de.connect2x.trixnity.client.user
 import de.connect2x.trixnity.client.room.getState
 import de.connect2x.trixnity.client.room.message.text
@@ -130,6 +131,21 @@ class TrixnityMatrixChatRepository(
     private var recoveryJob: Job? = null
     private var roomOperation: Long = 0
     private var roomOwner: MatrixChatRoomOwner? = null
+    private val summaryOwner = MatrixChatRoomOwner()
+    private val summaries = linkedMapOf<MatrixChatRoomOwner, String>()
+    override fun openSummary(roomId: String, owner: MatrixChatRoomOwner) {
+        val normalized = normalizeDjangoRoomIdOrNull(roomId) ?: return
+        summaries[owner] = normalized
+        if (roomOwner == null || roomOwner === summaryOwner) openRoom(normalized, summaryOwner)
+    }
+    override fun closeSummary(owner: MatrixChatRoomOwner) {
+        summaries.remove(owner)
+        if (roomOwner === summaryOwner) {
+            val remaining = summaries.values.lastOrNull()
+            if (remaining == null) closeRoom(_state.value.roomId, summaryOwner)
+            else openRoom(remaining, summaryOwner)
+        }
+    }
     private val pendingAccountWipes = mutableSetOf<Long>()
     private var cleanupBlocked = true
     private data class TypingTarget(val client: MatrixClient, val room: RoomId, val user: UserId,
@@ -180,6 +196,8 @@ class TrixnityMatrixChatRepository(
             sessions.state.collect { current ->
                 val previousAccount = previous.accountId
                 if (current.accountId != previousAccount) {
+                    summaries.clear()
+                    roomOwner = null
                     clearActivity()
                     cleanupBlocked = true
                     roomOperation += 1
@@ -341,6 +359,11 @@ class TrixnityMatrixChatRepository(
 
     override fun closeRoom(roomId: String, owner: MatrixChatRoomOwner) {
         if (roomOwner !== owner) return
+        if (owner !== summaryOwner) summaries.values.lastOrNull()?.let { summaryRoom ->
+            clearActivity()
+            openRoom(summaryRoom, summaryOwner)
+            return
+        }
         clearActivity()
         roomOwner = null
         val normalized = normalizeDjangoRoomIdOrNull(roomId) ?: return
@@ -665,6 +688,7 @@ class TrixnityMatrixChatRepository(
     }
 
     override fun close() {
+        summaries.clear()
         clearActivity()
         activityJob?.cancel()
         roomJob?.cancel()
@@ -1040,6 +1064,7 @@ class TrixnityMatrixChatRepository(
             if (pending.isEmpty()) flowOf(emptyList())
             else combine(pending.map { it.mediaUploadProgress }) { pending }
         }
+        val unread = matrixClient.notification.isUnread(active.matrixRoomId)
         val receipts = matrixClient.user.getReceiptsById(active.matrixRoomId, UserId(active.partnerMatrixId))
         val security = secureRoomState(matrixClient, active)
         val activity = partnerActivity(active.matrixRoomId, UserId(active.partnerMatrixId),
@@ -1095,7 +1120,9 @@ class TrixnityMatrixChatRepository(
             }
             collectWithOutboxGateFailClosed(
                 gate = observedGate,
-                source = observations.combine(activity) { observation, partner ->
+                source = observations.combine(unread) { observation, unseen ->
+                    observation.copy(state = observation.state.copy(unread = unseen.takeIf { observation.secure && observation.syncState == SyncState.RUNNING }))
+                }.combine(activity) { observation, partner ->
                     val visible = observation.secure && observation.syncState == SyncState.RUNNING && lifetime.foreground.value
                     observation.copy(state = observation.state.copy(
                         partnerPresence = if (visible) partner.presence else MatrixPartnerPresence.UNKNOWN,

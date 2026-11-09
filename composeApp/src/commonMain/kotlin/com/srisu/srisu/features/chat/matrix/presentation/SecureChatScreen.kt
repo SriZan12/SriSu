@@ -84,7 +84,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
     onOpenChallenges: (String?)->Unit = {},
     onOpenSparks: (String?)->Unit = {},
     onOpenMoment: (com.srisu.srisu.features.moments.data.MomentReference)->Unit = {},
-    onOpenMedia: (String, Boolean) -> Unit = { _, _ -> }) {
+    onOpenMedia: (String, Boolean) -> Unit = { _, _ -> }, initialMessageId: String? = null) {
     val state by viewModel.state.collectAsState()
     val momentReply by viewModel.momentReply.collectAsState()
     com.srisu.srisu.features.moments.presentation.MomentLifecycle(viewModel::destinationVisible)
@@ -97,13 +97,21 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
     var attachments by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<String?>(null) }
     var deleting by remember { mutableStateOf<String?>(null) }
-    var jump by remember { mutableStateOf<String?>(null) }
+    var jump by rememberSaveable { mutableStateOf(initialMessageId) }
+    val draftOffer by viewModel.draftOffer.collectAsState()
     val media = rememberChatMediaController(viewModel)
     val copy = rememberCopyPrivateText()
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     ProtectConversation()
     PrivateChatClipboard {
         SriSuChatTheme(ChatThemePreset.fromId(ui.preferences.chatTheme)) {
+            if (draftOffer != null) AlertDialog(onDismissRequest = { viewModel.resolveDraftOffer(null) },
+                title = { Text("Keep your saved draft?") }, text = { Text("Add the new message to your saved draft, or replace the draft and its reply context.") },
+                confirmButton = { TextButton(onClick = { viewModel.resolveDraftOffer(false) }) { Text("Add to draft") } },
+                dismissButton = { Row {
+                    TextButton(onClick = { viewModel.resolveDraftOffer(null) }) { Text("Keep draft") }
+                    TextButton(onClick = { viewModel.resolveDraftOffer(true) }) { Text("Replace") }
+                } })
             Box(Modifier.fillMaxSize()) {
                 Scaffold(topBar = { ChatHeader(partner, availability, onBack, presence = state?.partnerPresence ?: com.srisu.srisu.features.chat.matrix.MatrixPartnerPresence.UNKNOWN) { viewModel.stopTyping(); keyboard?.hide(); appearance = true } },
                     containerColor = MaterialTheme.colorScheme.background) { padding ->

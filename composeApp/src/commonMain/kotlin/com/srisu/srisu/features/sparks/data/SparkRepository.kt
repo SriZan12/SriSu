@@ -12,6 +12,7 @@ import kotlinx.serialization.json.*
 interface SparkSource {
     val changes: StateFlow<Long>
     fun changed()
+    suspend fun daily(couple: Long, zone: String): NetworkAPIResult<SparkDaily?> = NetworkAPIResult.Success(null)
     suspend fun home(): NetworkAPIResult<SparkHome?>
     suspend fun history(after: String? = null): NetworkAPIResult<SparkHistoryPage?> = NetworkAPIResult.Success(SparkHistoryPage())
     suspend fun get(id: String): NetworkAPIResult<SparkSession?>
@@ -25,6 +26,10 @@ class SparkRepository(private val client: HttpClient, private val environment: A
     override val changes: StateFlow<Long> = revision
     override fun changed() { revision.value += 1 }
     private fun path(value: String) = environment.baseUrl + "api/social/sparks/" + value
+    override suspend fun daily(couple: Long, zone: String) = client.safeRequest<SparkDaily> {
+        url(path("daily/")); method = HttpMethod.Post
+        setBody(buildJsonObject { put("couple", couple); put("time_zone", zone) })
+    }.result
     override suspend fun home() = client.safeRequest<SparkHome> { url(path("home/")) }.result
     override suspend fun history(after: String?) = client.safeRequest<SparkHistoryPage> {
         url(path("history/")); after?.let { parameter("after", it) }

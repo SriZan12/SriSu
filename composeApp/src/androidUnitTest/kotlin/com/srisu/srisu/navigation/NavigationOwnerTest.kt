@@ -34,6 +34,7 @@ class NavigationOwnerTest {
             NavHost(controller, startDestination = HomeNavigation.Home) {
                 composable<HomeNavigation.Home> { }
                 composable<HomeNavigation.Explore> { }
+                composable<HomeNavigation.Questions> { }
                 composable<ChatNav.CoupleConversation> { entry ->
                     val probe = androidx.lifecycle.viewmodel.compose.viewModel<Probe>(initializer = { Probe() })
                     SideEffect { probes[entry.id] = probe }
@@ -70,10 +71,10 @@ class NavigationOwnerTest {
             AppNavigator(controller).selectBottomDestination(BottomDestination.HOME)
         }
         compose.waitForIdle()
-        compose.runOnIdle {AppNavigator(controller).selectBottomDestination(BottomDestination.EXPLORE)}
+        compose.runOnIdle {AppNavigator(controller).selectBottomDestination(BottomDestination.QUESTIONS)}
         compose.waitForIdle()
         compose.runOnIdle {
-            assertEquals(BottomDestination.EXPLORE, BottomDestination.fromDestination(controller.currentDestination))
+            assertEquals(BottomDestination.QUESTIONS, BottomDestination.fromDestination(controller.currentDestination))
             AppNavigator(controller).back()
         }
         compose.waitForIdle()

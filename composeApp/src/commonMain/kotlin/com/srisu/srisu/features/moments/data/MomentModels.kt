@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
     @SerialName("active_count") val activeCount: Int = 0, @SerialName("unseen_count") val unseenCount: Int = 0,
     @SerialName("next_expiry") val nextExpiry: String? = null)
 @Serializable data class MomentCouple(val id: Long, @SerialName("anniversary_date") val anniversary: String? = null,
-    val members: List<MomentPerson> = emptyList())
+    val members: List<MomentPerson> = emptyList(), val title: String? = null)
 @Serializable data class MomentHome(val user: MomentPerson, val couple: MomentCouple? = null,
     @SerialName("server_time") val serverTime: String)
 @Serializable data class MomentPhoto(val id: Long, val image: String, val order: Int = 0,

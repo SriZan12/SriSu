@@ -42,6 +42,7 @@ sealed interface ChatNav : Route {
         val origin: String = "chat",
         val momentId: Long? = null,
         val momentCoupleId: Long? = null,
+        val draftPreset: String? = null,
     ) : ChatNav
 
     @Serializable data class MediaViewer(val roomId: String, val messageId: String, val draft: Boolean = false) : ChatNav
@@ -162,13 +163,14 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
             val vm = koinViewModel<SecureChatViewModel>()
             LaunchedEffect(roomId,route.momentId,route.momentCoupleId) {
                 vm.openRoom(roomId)
+                vm.offerDraftPreset(route.draftPreset)
                 if(route.momentId!=null && route.momentCoupleId!=null && route.momentId>0 && route.momentCoupleId>0)
                     vm.openMomentReply(com.srisu.srisu.features.moments.data.MomentReference(route.momentId,route.momentCoupleId))
             }
             DisposableEffect(entry, roomId) {
                 onDispose { vm.leaveDestination() }
             }
-            SecureChatScreen(viewModel = vm, onBack = nav::back,
+            SecureChatScreen(viewModel = vm, onBack = nav::back, initialMessageId = route.messageId,
                 onOpenPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination(it, fromChat = true)) },
                 onOpenChallenges = { nav.open(com.srisu.srisu.features.challenges.navigation.ChallengesDestination(it, fromChat = true)) },
                 onOpenSparks = { nav.open(com.srisu.srisu.features.sparks.navigation.SparksDestination(it, fromChat = true)) },

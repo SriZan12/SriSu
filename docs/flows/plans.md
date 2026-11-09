@@ -139,3 +139,8 @@ ViewModel continues to own saved draft text. Model replacements still update the
 editor; length limits and Next/Done behavior remain. This fixes a reproduced iOS
 first-character caret jump. Home invitation counts open Invitations directly.
 See [integrated QA evidence and remaining gaps](../validation/full-app-qa/README.md).
+
+
+## Home integration — 9 November 2026
+
+Home now opens the existing Plan editor directly, including conversion of mutually interested shared ideas into separate invitations. Drafts and exact pending operation IDs survive retries. Home adds current-request access and personal reminders; elapsed unresolved invitations remain reachable. See [Home couple space](home-couple-space.md).

@@ -92,3 +92,8 @@ failed chat-card loads keep their requested ID for retry; leaving detail cancels
 its pending background read; successful refresh clears stale connection errors;
 ended/accepted Challenges cannot initiate a new invitation-card publication.
 These changes preserve the API and stored activity state.
+
+
+## Home integration — 9 November 2026
+
+Home displays the active or most recent completed challenge with truthful status. A completed challenge’s Choose another opens the existing catalogue. Incoming challenge requests are also accessible from the Home bell. See [Home couple space](home-couple-space.md).

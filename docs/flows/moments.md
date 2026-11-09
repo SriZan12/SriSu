@@ -370,3 +370,8 @@ Migration `social.0021_couplefaveversion` is additive and preserves Faves. Deplo
 migration/endpoints before the new client; existing unconditional PUT/DELETE contracts
 remain compatible. No dependency, production configuration or Figma changes.
 See [render and validation evidence](../validation/explore/README.md).
+
+
+## Home integration — 9 November 2026
+
+Home’s two avatar entries open authorized existing Moment viewers, and the own-avatar plus opens creation. Private expiring status bubbles are separate from public profile mood. See [Home couple space](home-couple-space.md).

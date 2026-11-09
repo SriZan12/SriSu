@@ -21,7 +21,7 @@ class PlanRepository(private val client: HttpClient, private val environment: Ap
     override val changes: StateFlow<Long> = mutable
     override fun changed() { mutable.value += 1 }
     private fun path(value: String) = environment.baseUrl + "api/social/plans/" + value
-    override suspend fun home() = client.safeRequest<PlanHome> { url(path("home/")) }.result
+    override suspend fun home() = client.safeRequest<PlanHome> { url(path("home/")); parameter("time_zone", kotlinx.datetime.TimeZone.currentSystemDefault().id) }.result
     override suspend fun list(mode: String, cursor: String?) = client.safeRequest<PlanPage> { url(path("")); parameter("mode", mode); cursor?.let { parameter("cursor", it) } }.result
     override suspend fun get(id: Long) = client.safeRequest<Plan> { url(path("$id/")) }.result
     override suspend fun submit(intent: PlanIntent) = client.safeRequest<Plan> {

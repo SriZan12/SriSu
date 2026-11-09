@@ -756,3 +756,8 @@ The historical text-only cutover notes above are superseded for Sparks by [the O
 The current Matrix UI, presence and waveform features are consolidated with the
 activity-notification/Crashlytics branch. Matrix push was unavailable at that checkpoint; the 30 October implementation above supersedes that limitation. See
 [notification compatibility and current scope](notifications.md#consolidated-core-integration--29-october-2026).
+
+
+## Home integration — 9 November 2026
+
+Home uses a local read-only Matrix summary lease, not the foreground conversation owner; it never marks messages read. Home draft presets preserve restored text/reply/Moment context with explicit Keep/Append/Replace and never auto-send. Pure, Quick Share and Palette visuals are retained. See [Home couple space](home-couple-space.md).

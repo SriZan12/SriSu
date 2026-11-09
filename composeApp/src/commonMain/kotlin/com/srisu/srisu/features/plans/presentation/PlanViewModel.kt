@@ -26,7 +26,7 @@ data class PlanState(val home: PlanHome? = null, val plan: Plan? = null, val pag
 @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
 class PlanViewModel(private val source: PlanSource, private val matrix: MatrixChatRepository,
     private val sessions: SessionCoordinator, environment: ApiEnvironment,
-    val reminders: PlanReminders, private val device: PlanDevice): ViewModel() {
+    val reminders: PlanReminders, private val device: PlanDevice, private val ideas: DateIdeaSource? = null): ViewModel() {
     private val stamp=sessions.stamp()
     private val key="plans:${stamp.accountId}:${environment.baseUrl}"
     private val json=Json { ignoreUnknownKeys=true }
@@ -117,6 +117,19 @@ class PlanViewModel(private val source: PlanSource, private val matrix: MatrixCh
             timeZone=plan?.change?.timeZone ?: plan?.timeZone?.takeIf { it.isNotBlank() } ?: TimeZone.currentSystemDefault().id,planId=plan?.id,revision=plan?.revision))
         mutable.update { it.copy(editing=true,error=null,notice=null) }
     }
+    fun fromIdea(id: String) = task {
+        val idea = checkNotNull(ideas).get(id).planValue()
+        sessions.ensureCurrent(stamp)
+        require(idea.couple == state.value.home?.couple)
+        if (idea.planId != null) { accept(readPlan(idea.planId)); return@task }
+        require(idea.state == "open" && idea.interestedBy.size == 2 && stamp.accountId in idea.interestedBy)
+        if (state.value.draft != null && state.value.draft?.ideaId != id) {
+            mutable.update { it.copy(editing = true, notice = "Finish or discard your saved draft before planning this idea.") }; return@task
+        }
+        storeDraft(state.value.draft ?: PlanDraft(idea.couple, title = idea.title,
+            timeZone = TimeZone.currentSystemDefault().id, ideaId = id, ideaRevision = idea.revision))
+        mutable.update { it.copy(editing = true) }
+    }
     fun resumeDraft() { if(state.value.canAct && state.value.draft!=null) { leaveDetail();mutable.update { it.copy(editing=true) } } }
     fun edit(draft:PlanDraft) { if(!state.value.busy && state.value.pending==null) storeDraft(draft) }
     fun closeEditor() { if(!state.value.busy) mutable.update { it.copy(editing=false) } }
@@ -129,9 +142,9 @@ class PlanViewModel(private val source: PlanSource, private val matrix: MatrixCh
         if(draft.title.isBlank() || draft.title.length>120 || draft.place.length>240 || runCatching { Instant.parse(draft.startsAt)>Clock.System.now() }.getOrDefault(false).not()) {
             mutable.update { it.copy(error="Add a title and choose a future date and time.") };return
         }
-        submit(PlanIntent(Uuid.random().toString(),draft.couple,draft.planId,draft.revision,if(draft.planId==null) null else "propose",buildJsonObject {
+        submit(PlanIntent(Uuid.random().toString(),draft.couple,draft.planId,draft.ideaRevision ?: draft.revision,if(draft.planId==null) null else "propose",buildJsonObject {
             put("title",draft.title.trim());put("starts_at",draft.startsAt);put("place",draft.place.trim());put("time_zone",draft.timeZone)
-        }))
+        }, ideaId = draft.ideaId))
     }
     fun action(action:String,values:JsonObject=buildJsonObject {}) {
         val plan=state.value.plan ?: return
@@ -141,11 +154,24 @@ class PlanViewModel(private val source: PlanSource, private val matrix: MatrixCh
     fun retry() { state.value.pending?.let(::submit) ?: refresh() }
     private fun submit(intent:PlanIntent)=task {
         storePending(intent)
-        val result=source.submit(intent);sessions.ensureCurrent(stamp)
+        val result = if (intent.ideaId != null) {
+            when (val converted = checkNotNull(ideas).act(intent.ideaId, checkNotNull(intent.revision), intent.requestId, "plan", intent.values)) {
+                is NetworkAPIResult.Error -> NetworkAPIResult.Error(converted.failure)
+                is NetworkAPIResult.Success -> source.get(checkNotNull(converted.response?.planId))
+            }
+        } else source.submit(intent)
+        sessions.ensureCurrent(stamp)
         if(result is NetworkAPIResult.Error && result.failure.status in listOf(400,403,404,409)) {
             storePending(null)
             if(result.failure.status==409) {
                 load()
+                if (intent.ideaId != null) {
+                    val currentIdea = checkNotNull(ideas).get(intent.ideaId).planValue()
+                    state.value.draft?.takeIf { it.ideaId == currentIdea.id }?.let { draft ->
+                        if (currentIdea.state == "open" && currentIdea.interestedBy.size == 2) storeDraft(draft.copy(ideaRevision = currentIdea.revision))
+                        else { storeDraft(null); mutable.update { it.copy(editing = false) }; currentIdea.planId?.let { accept(readPlan(it)) } }
+                    }
+                }
                 // Retain the text, but require a deliberate save against the refreshed revision.
                 state.value.draft?.let { draft -> if(draft.planId==state.value.plan?.id) storeDraft(draft.copy(revision=state.value.plan?.revision)) }
             }

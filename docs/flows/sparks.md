@@ -144,3 +144,8 @@ migration or dependency upgrade is needed for recovery (the original Sparks
 migration 0017 still applies). Recovery is an intentional extension using existing
 Satoshi/theme components; no recovery frame was supplied in Figma. The live Figma
 connector remained blocked by its Starter-plan quota.
+
+
+## Home integration — 9 November 2026
+
+Home and the Questions tab now reuse the existing Spark flows. Daily assignment, carry/skip behavior, metadata-only partner activity and catalogue revisits are described in [Home couple space](home-couple-space.md). The daily projection never includes answer ciphertext.
