@@ -1,6 +1,8 @@
 package com.srisu.srisu.features.home
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -53,7 +55,7 @@ object HomeRenderFixtures {
     }
 }
 @Composable internal fun HomeRenderFixture(name: String, actions: HomeActions = HomeActions(), interactions: HomeInteractions = HomeInteractions(), retry: () -> Unit = {}) {
-    Scaffold(bottomBar = { AppBottomBar({}, BottomDestination.HOME, true) }) { padding ->
-        HomeContent(HomeRenderFixtures.state(name), { null }, retry, actions, Modifier.padding(padding), interactions)
+    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0), bottomBar = { AppBottomBar({}, BottomDestination.HOME, true) }) { padding ->
+        HomeContent(HomeRenderFixtures.state(name), { null }, retry, actions, Modifier.padding(padding).consumeWindowInsets(padding), interactions)
     }
 }

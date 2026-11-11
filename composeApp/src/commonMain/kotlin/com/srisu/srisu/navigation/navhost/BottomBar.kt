@@ -23,7 +23,7 @@ import com.srisu.srisu.theme.transparent
     if (!visible) return
     val space = MaterialTheme.spacing
     val large = LocalDensity.current.fontScale > 1.3f
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = if (large) space.small else space.gutter, vertical = space.small),
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = if (large) space.small else 14.dp, vertical = space.small),
         contentAlignment = Alignment.Center) {
         Surface(Modifier.widthIn(max = 480.dp).fillMaxWidth(), shape = if (large) MaterialTheme.shapes.large else MaterialTheme.shapes.pill,
             color = HomeSpace.paper, tonalElevation = 0.dp, shadowElevation = 5.dp) {
@@ -42,12 +42,12 @@ import com.srisu.srisu.theme.transparent
     val tint = if (selected) HomeSpace.ink else HomeSpace.muted
     val item = modifier.clip(MaterialTheme.shapes.pill).background(if (selected) HomeSpace.warm else MaterialTheme.colorScheme.transparent)
         .selectable(selected, role = Role.Tab, onClick = { if (!selected) click() }).heightIn(min = space.touchTarget)
-        .padding(horizontal = space.tiny, vertical = space.small)
+        .padding(horizontal = space.tiny, vertical = if (large) space.small else 5.dp)
     if (large) Row(item, horizontalArrangement = Arrangement.spacedBy(space.tiny, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
         Icon(destination.icon, null, Modifier.size(space.icon), tint)
         Text(destination.label, color = tint, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f, false), textAlign = TextAlign.Center)
     } else Column(item, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)) {
-        Icon(destination.icon, null, Modifier.size(space.icon), tint)
-        Text(destination.label, color = tint, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+        Icon(destination.icon, null, Modifier.size(20.dp), tint)
+        Text(destination.label, color = tint, style = HomeSpace.type(MaterialTheme.typography).bodySmall, textAlign = TextAlign.Center)
     }
 }

@@ -5,6 +5,11 @@ See [implementation provenance and rollout](../../design/home-redesign/stage-3.m
 and [behavior](../../flows/home-couple-space.md). Publication is to feature branches
 and linked PRs; no merge, production deployment or production migration occurred.
 
+For the subsequent 11 November compactness/curved-connector pass, see
+[the refinement verification](refinement-2026-11-11/README.md). Results below
+describe the 9 November implementation and are not fresh device verification of
+that later pass.
+
 ## Results actually obtained
 
 | Check | Result | Limits |

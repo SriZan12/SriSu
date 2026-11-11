@@ -2,6 +2,8 @@ package com.srisu.srisu.features.home
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -48,10 +50,10 @@ class HomeDeviceTest {
             val d=LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(d.density,scale)) {
                 SriSuTheme(darkTheme=false) {
-                    Scaffold(bottomBar={AppBottomBar({},BottomDestination.HOME,true)}) {padding ->
+                    Scaffold(contentWindowInsets=WindowInsets(0,0,0,0),bottomBar={AppBottomBar({},BottomDestination.HOME,true)}) {padding ->
                         HomeContent(state,{null},{events+="retry"},HomeActions(
                             onCreateMoment={events+="moment"},onQuestion={events+="question"},
-                            onChat={events+="chat"},onFindPartner={events+="find"}),Modifier.padding(padding))
+                            onChat={events+="chat"},onFindPartner={events+="find"}),Modifier.padding(padding).consumeWindowInsets(padding))
                     }
                 }
             }

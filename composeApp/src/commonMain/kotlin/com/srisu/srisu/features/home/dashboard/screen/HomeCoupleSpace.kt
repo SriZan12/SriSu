@@ -58,10 +58,11 @@ import kotlin.time.Instant
         val canIdea = canAct && "idea" !in state.blockedActions
         val canPlan = canAct && "plan" !in state.blockedActions
         Surface(modifier.fillMaxSize(), color = H.paper) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                val compact = maxWidth < 360.dp
                 LazyColumn(Modifier.widthIn(max = 560.dp).fillMaxSize().statusBarsPadding(),
-                    state = rememberLazyListState(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(26.dp)) {
+                    state = rememberLazyListState(), contentPadding = PaddingValues(horizontal = if (compact) 17.dp else 22.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(22.dp)) {
                     item("heading") { SpaceHeading(state, actions) { requests = true } }
                     if (state.refreshing) item("progress") {
                         LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Refreshing Home" }, color = H.purple, trackColor = H.lilac)
@@ -79,14 +80,14 @@ import kotlin.time.Instant
                         c == null -> item("unpaired") { Unpaired(state, actions, retry) }
                         else -> {
                             item("couple") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                CouplePortraits(c, load, actions, canStatus) { statusPicker = true }
+                                CouplePortraits(c, load, actions, canStatus, compact) { statusPicker = true }
                                 if (c.statusState == HomeStatus.FAILED) RetryRow("Statuses couldn’t refresh.", retry)
                             } }
                             item("question") { when (val q = c.question) {
                                 HomeSection.Loading -> HomePlaceholderCard()
                                 HomeSection.Failed -> Column { RetryRow("Your question couldn’t refresh.", retry); SpaceButton("Open secure chat", actions.onChat) }
                                 HomeSection.Empty -> RetryRow("Your question isn’t available yet.", retry)
-                                is HomeSection.Ready -> QuestionHero(q.value, c, load, { actions.onQuestion(q.value.session.id) }, retry)
+                                is HomeSection.Ready -> QuestionHero(q.value, c, load, { actions.onQuestion(q.value.session.id) }, retry, compact)
                             } }
                             item("from") { FromPartner(c, load, actions) }
                             item("plans") {
@@ -184,19 +185,20 @@ import kotlin.time.Instant
 
 @Composable private fun SpaceHeading(state: HomeUiState, actions: HomeActions, requests: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).clickable(role = Role.Button,
+            onClickLabel = if (state.couple != null) "Open your couple profile" else "Explore SriSu",
+            onClick = if (state.couple != null) actions.onCoupleProfile else actions.onExplore)) {
             Text(state.couple?.let { "You & ${it.partner.name.ifBlank { "your partner" }}" } ?: "Your space",
                 style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-            TextButton(onClick = if (state.couple != null) actions.onCoupleProfile else actions.onExplore,
-                contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 44.dp)) {
-                Text(state.couple?.title?.takeIf(String::isNotBlank) ?: if (state.couple != null) "Your couple profile" else "Explore SriSu", color = H.muted, style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(state.couple?.title?.takeIf(String::isNotBlank) ?: if (state.couple != null) "Your couple profile" else "Explore SriSu", color = H.muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
                 Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.padding(start = 5.dp).size(16.dp), tint = H.muted)
             }
         }
         IconButton(onClick = requests,
             modifier = Modifier.semantics { contentDescription = "Requests${if ((state.couple?.pendingInvitations ?: 0) > 0 || state.invitation?.incoming == true || state.couple?.sharingRequest == HomeSection.Ready(true) || (state.couple?.challenge as? HomeSection.Ready)?.value?.incoming == true) ", new items to review" else ""}" }) {
             Box {
-                Icon(Icons.Outlined.Notifications, null, Modifier.size(25.dp))
+                Icon(Icons.Outlined.Notifications, null, Modifier.size(21.dp))
                 if ((state.couple?.pendingInvitations ?: 0) > 0 || state.invitation?.incoming == true || state.couple?.sharingRequest == HomeSection.Ready(true) || (state.couple?.challenge as? HomeSection.Ready)?.value?.incoming == true)
                     Box(Modifier.align(Alignment.TopEnd).size(7.dp).background(H.orange, CircleShape))
             }
@@ -204,60 +206,74 @@ import kotlin.time.Instant
     }
 }
 
-@Composable private fun CouplePortraits(c: HomeCoupleUi, load: HomeImageLoader, actions: HomeActions, canAct: Boolean, status: () -> Unit) {
+@Composable private fun CouplePortraits(c: HomeCoupleUi, load: HomeImageLoader, actions: HomeActions, canAct: Boolean, compact: Boolean, status: () -> Unit) {
     val own = c.moments.firstOrNull { it.own }
     val partner = c.moments.firstOrNull { !it.own }
     val large = LocalDensity.current.fontScale > 1.3f
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            PortraitColumn(own, true, c, load, actions, canAct, status, Modifier.weight(1f))
-            if (!large) {
-                Column(Modifier.weight(.85f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(Modifier.height(22.dp))
-                    DayConnector(c, actions)
+    val avatarSize = if (compact) 76.dp else if (LocalDensity.current.fontScale > 1.5f) 78.dp else 90.dp
+    BoxWithConstraints {
+        val centerWidth = if (compact) 67.dp else 76.dp
+        val bridgeWidth = (maxWidth + centerWidth) / 2 - avatarSize - 10.dp
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                PortraitColumn(own, true, c, load, actions, canAct, status, avatarSize, Modifier.weight(1f))
+                if (!large) {
+                    Column(Modifier.width(centerWidth), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(22.dp))
+                        DayConnector(c, actions, bridgeWidth)
+                    }
                 }
+                PortraitColumn(partner, false, c, load, actions, canAct, {}, avatarSize, Modifier.weight(1f))
             }
-            PortraitColumn(partner, false, c, load, actions, canAct, {}, Modifier.weight(1f))
+            if (large) DayConnector(c, actions)
         }
-        if (large) DayConnector(c, actions)
     }
 }
 
-@Composable private fun DayConnector(c: HomeCoupleUi, actions: HomeActions) {
-    Box(contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxWidth().height(44.dp)) {
-            drawLine(H.line, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(7.dp.toPx(), 5.dp.toPx())))
+@Composable private fun DayConnector(c: HomeCoupleUi, actions: HomeActions, bridgeWidth: androidx.compose.ui.unit.Dp? = null) {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        Canvas((if (bridgeWidth != null) Modifier.requiredWidth(bridgeWidth) else Modifier.fillMaxWidth()).height(56.dp)) {
+            // A shallow arch between the portraits; the date rests at its crest.
+            val arc = Path().apply {
+                moveTo(0f, size.height * .8f)
+                quadraticTo(size.width / 2, -size.height * .1f, size.width, size.height * .8f)
+            }
+            drawPath(arc, H.connector, style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 5.dp.toPx()))))
         }
-        Surface(onClick = actions.onCoupleProfile, shape = H.pill, color = H.paper, shadowElevation = 3.dp, border = BorderStroke(1.dp, H.line)) {
-            Text(c.daysTogether?.let { "Day $it" } ?: "Add date", style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.heightIn(min = 44.dp).padding(horizontal = 12.dp, vertical = 13.dp), textAlign = TextAlign.Center)
+        // Keep the touch area generous without making the visible pill 48 dp tall.
+        Box(Modifier.heightIn(min = 48.dp).clickable(role = Role.Button, onClick = actions.onCoupleProfile), contentAlignment = Alignment.Center) {
+            Surface(shape = H.pill, color = H.paper, shadowElevation = 2.dp, border = BorderStroke(1.dp, H.line)) {
+                Text(c.daysTogether?.let { "Day $it" } ?: "Add date", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), textAlign = TextAlign.Center)
+            }
         }
     }
 }
 
 @Composable private fun PortraitColumn(moment: HomeMomentUi?, own: Boolean, c: HomeCoupleUi, load: HomeImageLoader,
-    actions: HomeActions, canAct: Boolean, onStatus: () -> Unit, modifier: Modifier) {
+    actions: HomeActions, canAct: Boolean, onStatus: () -> Unit, avatarSize: androidx.compose.ui.unit.Dp, modifier: Modifier) {
     val person = moment?.person ?: if (own) HomePersonUi(c.account ?: 0, "You", null) else c.partner
     val text = c.statuses?.items?.firstOrNull { it.author == person.id }?.text?.takeIf(String::isNotBlank)
-    val scale = LocalDensity.current.fontScale
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(contentAlignment = Alignment.BottomCenter) {
-        Surface(shape = H.pill, color = H.paper, shadowElevation = if (text != null) 4.dp else 0.dp,
-            border = BorderStroke(1.dp, H.line), modifier = Modifier.widthIn(max = 112.dp).then(if (own) Modifier.clickable(enabled = canAct && c.statusesFresh, onClickLabel = "Set your private status", onClick = onStatus) else Modifier)) {
-            Text(text ?: if (c.statusState == HomeStatus.READY) { if (own) "Set status" else "No status shared" } else if (c.statusState == HomeStatus.LOADING) "Checking status…" else "Status unavailable",
-                style = MaterialTheme.typography.bodySmall, fontWeight = if (text != null) FontWeight.Bold else FontWeight.Normal,
-                color = if (text != null) H.ink else H.muted, textAlign = TextAlign.Center,
-                modifier = Modifier.heightIn(min = 44.dp).padding(horizontal = 7.dp, vertical = 12.dp))
-        }
-            if (text != null) Canvas(Modifier.offset(y = 6.dp).size(12.dp, 8.dp)) {
-                val tail = Path().apply { moveTo(0f, 0f); lineTo(size.width / 2, size.height); lineTo(size.width, 0f); close() }
-                drawPath(tail, H.paper)
-                drawLine(H.line, Offset(0f, 0f), Offset(size.width / 2, size.height), 1.dp.toPx())
-                drawLine(H.line, Offset(size.width / 2, size.height), Offset(size.width, 0f), 1.dp.toPx())
+        Box(Modifier.heightIn(min = 48.dp).then(if (own) Modifier.clickable(enabled = canAct && c.statusesFresh, role = Role.Button, onClickLabel = "Set your private status", onClick = onStatus) else Modifier), contentAlignment = Alignment.Center) {
+            Box(contentAlignment = Alignment.BottomCenter) {
+                Surface(shape = H.pill, color = H.paper, shadowElevation = if (text != null) 4.dp else 0.dp,
+                    border = BorderStroke(1.dp, H.line), modifier = Modifier.widthIn(max = 112.dp)) {
+                    Text(text ?: if (c.statusState == HomeStatus.READY) { if (own) "Set status" else "No status shared" } else if (c.statusState == HomeStatus.LOADING) "Checking status…" else "Status unavailable",
+                        style = MaterialTheme.typography.bodySmall, fontWeight = if (text != null) FontWeight.Bold else FontWeight.Normal,
+                        color = if (text != null) H.ink else H.muted, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp))
+                }
+                if (text != null) Canvas(Modifier.offset(y = 6.dp).size(12.dp, 8.dp)) {
+                    val tail = Path().apply { moveTo(0f, 0f); lineTo(size.width / 2, size.height); lineTo(size.width, 0f); close() }
+                    drawPath(tail, H.paper)
+                    drawLine(H.line, Offset(0f, 0f), Offset(size.width / 2, size.height), 1.dp.toPx())
+                    drawLine(H.line, Offset(size.width / 2, size.height), Offset(size.width, 0f), 1.dp.toPx())
+                }
             }
         }
         Box(contentAlignment = Alignment.Center) {
-            val size = if (scale > 1.5f) 78.dp else 90.dp
+            val size = avatarSize
             Box(Modifier.size(size + 10.dp).clip(CircleShape).then(if (moment?.hasUnseen == true && c.momentsFresh) Modifier.border(2.dp, H.purple, CircleShape) else Modifier)
                 .clickable(enabled = c.momentsFresh, onClickLabel = "Open ${if (own) "your" else person.name + "’s"} Moments") {
                     if (own && (moment?.activeCount ?: 0) == 0) actions.onCreateMoment(c.id) else actions.onViewMoments(c.id, person.id)
@@ -276,20 +292,22 @@ import kotlin.time.Instant
     }
 }
 
-@Composable private fun QuestionHero(daily: SparkDaily, c: HomeCoupleUi, load: HomeImageLoader, open: () -> Unit, retry: () -> Unit) {
+@Composable private fun QuestionHero(daily: SparkDaily, c: HomeCoupleUi, load: HomeImageLoader, open: () -> Unit, retry: () -> Unit, compact: Boolean) {
     val q = daily.session
     val mine = q.submitted(c.account)
     val theirs = q.submitted(c.partner.id)
     val large = LocalDensity.current.fontScale > 1.3f
     Surface(shape = H.hero, color = H.lilac) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(if (compact) 18.dp else 20.dp)) {
             Text(if (daily.carried && q.open) "YOUR QUESTION" else if (daily.revisit) "A QUESTION TO REVISIT" else "TODAY", color = H.purple, style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(11.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BalancedQuestion(q.question, Modifier.weight(1f))
-                if (!large) TogetherArt(Modifier.padding(start = 10.dp).size(78.dp))
+                if (!large) TogetherArt(Modifier.padding(start = 10.dp).size(if (compact) 58.dp else 74.dp))
             }
+            Spacer(Modifier.height(18.dp))
             if (theirs && !mine && q.open) Surface(shape = H.card, color = H.paper) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PersonAvatar(c.partner, load, 28.dp)
                     // Fixed geometry only: no answer, envelope or length is loaded into this strip.
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -299,15 +317,19 @@ import kotlin.time.Instant
                     Icon(Icons.Outlined.Lock, "Their answer is hidden until you answer", Modifier.size(18.dp), tint = H.muted)
                 }
             }
+            if (theirs && !mine && q.open) Spacer(Modifier.height(15.dp))
             val note = when { q.revealed -> "You both answered. Keep the conversation going."; !q.open -> "Skipped together. A new question arrives tomorrow.";
                 mine -> "Your answer is saved. Waiting for ${c.partner.name}."; else -> null }
-            note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = H.muted) }
+            note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = H.muted); Spacer(Modifier.height(15.dp)) }
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 CoupleMini(c, load)
                 SpaceButton(when { q.revealed -> "See your answers"; !q.open -> "View question"; mine -> "View my answer"; theirs -> "Answer to reveal"; else -> "Go first" }, open,
                     dark = true, icon = if (q.open && theirs && !mine) Icons.Outlined.Lock else Icons.AutoMirrored.Outlined.ArrowForward)
             }
-            if (!c.questionFresh) RetryRow("Question hasn’t refreshed. Open it to check the latest state.", retry)
+            if (!c.questionFresh) {
+                Spacer(Modifier.height(16.dp))
+                RetryRow("Question hasn’t refreshed. Open it to check the latest state.", retry)
+            }
         }
     }
 }
@@ -368,7 +390,7 @@ import kotlin.time.Instant
     SpaceSection("From ${c.partner.name.ifBlank { "your partner" }}", "Open chat", actions.onChat) {
         when {
             showSpark -> Surface(onClick = { actions.onQuestion(spark!!.id) }, shape = H.card, color = H.warm, contentColor = H.ink) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 73.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                     PersonAvatar(c.partner, load, 40.dp)
                     Column(Modifier.weight(1f)) {
                         Text("${c.partner.name} ${if (daily?.partnerActivityKind == "sent") "sent a question" else "answered your question"}${if (!c.questionFresh || !ready) " · Last synced" else ""}", style = MaterialTheme.typography.bodySmall, color = H.muted)
@@ -393,7 +415,7 @@ import kotlin.time.Instant
                 }
             }
             message != null -> Surface(onClick = { actions.onChatMessage(message.messageId) }, shape = H.card, color = H.warm, contentColor = H.ink) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 73.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                     PersonAvatar(c.partner, load, 40.dp)
                     Column(Modifier.weight(1f)) {
                         Text("${c.partner.name} · ${message.sentAt}${if (!ready || !c.questionFresh) " · Last synced" else ""}", style = MaterialTheme.typography.bodySmall, color = H.muted)
@@ -600,7 +622,7 @@ import kotlin.time.Instant
 }
 
 @Composable private fun SpaceSection(title: String, action: String? = null, click: () -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         if (LocalDensity.current.fontScale > 1.3f) Column {
             Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             action?.let { TextButton(onClick = click, contentPadding = PaddingValues(0.dp)) { Text("$it →", style = MaterialTheme.typography.bodySmall, color = H.muted) } }

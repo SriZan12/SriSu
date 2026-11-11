@@ -90,3 +90,10 @@ target. Question wrapping is measured from the actual text rather than hard-code
 for the example. Home adds no decorative motion, so reduced motion does not hide
 feedback or change a required interaction. Native accessibility/hardware checks
 still have the limits recorded in validation.
+
+The 11 November visual refinement preserves these routes and data contracts.
+Narrow screens use smaller portraits and gutters. The date sits on a curved
+dashed connection between partners, with its compact visible pill inside a
+48 dp target; private status controls also retain a 48 dp minimum height.
+The shared bottom navigation has smaller default icons/labels and padding while
+retaining its minimum touch targets and enlarged-text reflow.

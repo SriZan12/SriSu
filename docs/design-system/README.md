@@ -163,3 +163,11 @@ palette or chat-theme rewrite. Question text uses measured balanced wrapping.
 Content heights grow, controls wrap, and the floating bottom navigation reflows
 at large text. See [design provenance](../design/home-redesign/stage-3.md) and
 [native validation](../validation/home-couple-space/README.md).
+
+The 11 November refinement reduces accumulated padding and visual control sizes:
+22 dp gutters (17 below 360 dp), 90 dp portraits (76 on compact phones), 11 sp
+secondary text, a 27 dp default date pill inside a 48 dp touch area, and compact
+20 dp navigation icons. The partner link is a dashed quadratic arch, as requested
+in the approved attachments. It joins the inner portrait edges and moves below
+the pair at enlarged text. These are adaptive dimensions, not a whole-screen
+scale transform; text scaling and content-driven heights remain enabled.

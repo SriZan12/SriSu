@@ -109,6 +109,7 @@ class HomeRenderTest {
         render("spark"); scroll("Answer to reveal").assertIsDisplayed()
         capture("compact-question"); scroll("Your story so far"); capture("compact-bottom")
     }
+    @Test @Config(qualifiers = "w430dp-h932dp-xhdpi") fun widerPhone() = render("message")
     @Test @Config(qualifiers = "w320dp-h700dp-xhdpi") fun compactAtTwoHundredPercent() {
         render("quiet", 2f)
         scroll("Go first").assertIsDisplayed(); capture("large-question")

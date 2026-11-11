@@ -21,8 +21,8 @@ import kotlin.test.Test
 /** iOS simulator Compose runtime, synthetic data; does not exercise native picker/camera. */
 @OptIn(ExperimentalTestApi::class)
 class HomeIosRenderTest {
-    private fun render(name:String,dark:Boolean=false,fontScale:Float=1f,small:Boolean=false) {
-        val width=if(small) 320 else 390;val height=if(small) 700 else 844
+    private fun render(name:String,dark:Boolean=false,fontScale:Float=1f,small:Boolean=false,wide:Boolean=false) {
+        val width=if(small) 320 else if(wide) 430 else 390;val height=if(small) 700 else if(wide) 932 else 844
         runSkikoComposeUiTest(size=Size(width*2f,height*2f),density=Density(2f,fontScale)) {
             mainClock.autoAdvance=false
             setContent {Box(Modifier.size(width.dp,height.dp).testTag("home-screen")) {SriSuTheme(darkTheme=dark) {Surface {HomeRenderFixture(name)}}}}
@@ -51,5 +51,6 @@ class HomeIosRenderTest {
     @Test fun loading()=render("loading")
     @Test fun error()=render("failed")
     @Test fun small()=render("spark",small=true)
+    @Test fun widerPhone()=render("message",wide=true)
     @Test fun largeText()=render("quiet",fontScale=2f,small=true)
 }
