@@ -171,3 +171,8 @@ secondary text, a 27 dp default date pill inside a 48 dp touch area, and compact
 in the approved attachments. It joins the inner portrait edges and moves below
 the pair at enlarged text. These are adaptive dimensions, not a whole-screen
 scale transform; text scaling and content-driven heights remain enabled.
+
+Follow-up QA keeps the portrait pair aligned independently of wrapping status
+and Moments labels. Question artwork yields its column if the measured text
+would exceed three lines beside it; the text remains complete at the requested
+font scale. The default short-question layout is preserved. See [UI QA](../validation/home-couple-space/ui-qa-2026-11-11/README.md).

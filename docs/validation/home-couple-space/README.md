@@ -10,6 +10,10 @@ For the subsequent 11 November compactness/curved-connector pass, see
 describe the 9 November implementation and are not fresh device verification of
 that later pass.
 
+The subsequent [11 November UI QA](ui-qa-2026-11-11/README.md) fixes portrait
+alignment and long-question wrapping, removes a redundant row, and records
+the latest 20 Android / 17 iOS Home render checks and their device-testing limits.
+
 ## Results actually obtained
 
 | Check | Result | Limits |

@@ -41,6 +41,8 @@ object HomeRenderFixtures {
         plan = HomeSection.Empty, featuredPlan = null,
         challenge = HomeSection.Ready((couple.challenge as HomeSection.Ready).value.copy(status = HomeChallengeStatus.COMPLETED))))
     val unpaired = HomeUiState(HomeStatus.READY, name = "Srijan")
+    val longName = "Anastasia Radhakrishnan"
+    val longQuestion = "What little thing could we make time for together this weekend, even if we only have an hour?"
     fun state(name: String): HomeUiState = when (name) {
         "message" -> message
         "quiet" -> quiet
@@ -51,6 +53,15 @@ object HomeRenderFixtures {
         "failed" -> HomeUiState(HomeStatus.FAILED)
         "loading" -> HomeUiState()
         "sections-failed" -> sparkHome.copy(couple = couple.copy(question = HomeSection.Failed, plan = HomeSection.Failed, challenge = HomeSection.Failed, chatAvailability = MatrixChatAvailability.Error("Offline"), unread = null))
+        "long-content" -> quiet.copy(couple = quiet.couple!!.copy(
+            partner = partner.copy(name = longName), title = "Little adventures, every day together",
+            moments = quiet.couple!!.moments.map { if (it.own) it else it.copy(person = partner.copy(name = longName)) },
+            question = HomeSection.Ready(daily.copy(session = spark.copy(question = longQuestion, submittedBy = emptyList()), partnerActivityAt = null))))
+        "incoming-plan" -> sparkHome.copy(couple = couple.copy(featuredPlan = plan.copy(creator = 2, response = "pending", state = "invited", title = "Dinner and a long walk by the riverside")))
+        "waiting-plan" -> sparkHome.copy(couple = couple.copy(featuredPlan = plan.copy(response = "pending", state = "invited")))
+        "partner-idea" -> quiet.copy(couple = quiet.couple!!.copy(ideas = HomeSection.Ready(DateIdeas(10, listOf(
+            DateIdea("33333333-3333-4333-8333-333333333333", 10, 2, "walk", listOf(2), "open", 1, "2026-11-09T07:00:00Z"))))))
+        "stale-question" -> sparkHome.copy(couple = couple.copy(questionFresh = false))
         else -> sparkHome
     }
 }

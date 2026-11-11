@@ -3,10 +3,13 @@ package com.srisu.srisu.home
 import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
 import com.srisu.srisu.features.home.HomeRenderFixture
+import com.srisu.srisu.features.home.HomeRenderFixtures
 import com.srisu.srisu.features.home.dashboard.screen.HomeActions
 import com.srisu.srisu.features.home.dashboard.screen.HomeInteractions
 import com.srisu.srisu.theme.SriSuTheme
@@ -40,7 +43,7 @@ class HomeRenderTest {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
                 SriSuTheme(darkTheme = false) { HomeRenderFixture(name, actions,
-                    HomeInteractions(suggest = { events += "idea:$it" }), { events += "retry" }) }
+                    HomeInteractions(suggest = { events += "idea:$it" }, idea = { _, interested, withdraw -> events += "interest:$interested:$withdraw" }), { events += "retry" }) }
             }
         }
         compose.waitForIdle(); capture("$name-${scale}-${compose.activity.resources.configuration.screenWidthDp}-top")
@@ -110,6 +113,48 @@ class HomeRenderTest {
         capture("compact-question"); scroll("Your story so far"); capture("compact-bottom")
     }
     @Test @Config(qualifiers = "w430dp-h932dp-xhdpi") fun widerPhone() = render("message")
+    @Test @Config(qualifiers = "w320dp-h700dp-xhdpi") fun portraitsStayAlignedWithWrappedLabels() {
+        render("quiet", 2f)
+        fun top(label: String) = compose.onNode(SemanticsMatcher(label) {
+            it.config.getOrNull(SemanticsActions.OnClick)?.label == label
+        }).fetchSemanticsNode().boundsInRoot.top
+        assertEquals(top("Open your Moments"), top("Open Aatithi’s Moments"), 1f)
+    }
+    @Test @Config(qualifiers = "w320dp-h700dp-xhdpi") fun longContentRemainsReadableAndActionsReachable() {
+        render("long-content")
+        compose.onNodeWithText("You & ${HomeRenderFixtures.longName}").performClick()
+        scroll("Go first").assertIsDisplayed(); capture("long-question")
+        scroll("Plans done").assertIsDisplayed()
+        assertEquals(listOf("profile"), events)
+    }
+    @Test @Config(qualifiers = "w320dp-h700dp-xhdpi") fun incomingPlanAtLargeTextKeepsBothResponses() {
+        render("incoming-plan", 2f)
+        scroll("I’m in").assertIsDisplayed()
+        scroll("Another day").assertIsDisplayed(); capture("incoming-large")
+    }
+    @Test fun waitingPlanKeepsItsChatNudge() {
+        render("waiting-plan")
+        scroll("👋 Nudge in chat").performClick(); capture("waiting-plan")
+        assertEquals(listOf("draft:nudge"), events)
+    }
+    @Test fun staleQuestionKeepsRetryAndAnswerSeparate() {
+        render("stale-question")
+        scroll("Question hasn’t refreshed. Open it to check the latest state.").assertIsDisplayed()
+        compose.onNodeWithText("Answer to reveal").assertExists(); capture("stale-question")
+    }
+    @Test fun plansAndIdeasHaveOneClearEntry() {
+        render("spark")
+        compose.onNodeWithText("Shared ideas").assertDoesNotExist()
+        scroll("View all →").performClick()
+        compose.onNodeWithText("Plans & ideas").assertIsDisplayed()
+        compose.onNodeWithText("Open your agenda").performClick()
+        assertEquals(listOf("plan:null"), events)
+    }
+    @Test fun partnerIdeaKeepsItsInterestAction() {
+        render("partner-idea")
+        scroll("Me too").performClick(); capture("partner-idea")
+        assertEquals(listOf("interest:true:false"), events)
+    }
     @Test @Config(qualifiers = "w320dp-h700dp-xhdpi") fun compactAtTwoHundredPercent() {
         render("quiet", 2f)
         scroll("Go first").assertIsDisplayed(); capture("large-question")

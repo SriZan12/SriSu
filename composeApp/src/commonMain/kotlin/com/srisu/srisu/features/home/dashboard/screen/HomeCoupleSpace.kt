@@ -93,7 +93,6 @@ import kotlin.time.Instant
                             item("plans") {
                                 SpaceSection("Coming up", "View all", { ideaPicker = true }) {
                                     ComingUp(c, canPlan, actions, interactions, retry, { reminderId = it }, canIdea) { ideaPicker = true }
-                                    if (c.featuredPlan != null) TextButton(onClick = { ideaPicker = true }) { Text("Shared ideas", color = H.muted) }
                                     if (c.pendingInvitations > 0) TextButton(onClick = { requests = true }) {
                                         Text("${c.pendingInvitations} ${if (c.pendingInvitations == 1) "request" else "requests"} to review", color = H.purple)
                                         Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.padding(start = 6.dp).size(16.dp), tint = H.purple)
@@ -209,23 +208,35 @@ import kotlin.time.Instant
 @Composable private fun CouplePortraits(c: HomeCoupleUi, load: HomeImageLoader, actions: HomeActions, canAct: Boolean, compact: Boolean, status: () -> Unit) {
     val own = c.moments.firstOrNull { it.own }
     val partner = c.moments.firstOrNull { !it.own }
+    val ownPerson = own?.person ?: HomePersonUi(c.account ?: 0, "You", null)
+    val partnerPerson = partner?.person ?: c.partner
     val large = LocalDensity.current.fontScale > 1.3f
     val avatarSize = if (compact) 76.dp else if (LocalDensity.current.fontScale > 1.5f) 78.dp else 90.dp
     BoxWithConstraints {
-        val centerWidth = if (compact) 67.dp else 76.dp
+        val centerWidth = if (large) 0.dp else if (compact) 67.dp else 76.dp
         val bridgeWidth = (maxWidth + centerWidth) / 2 - avatarSize - 10.dp
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Separate rows keep portrait centers aligned when either label or status wraps.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.BottomCenter) { PortraitStatus(ownPerson, true, c, canAct, status) }
+                Spacer(Modifier.width(centerWidth))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.BottomCenter) { PortraitStatus(partnerPerson, false, c, canAct, {}) }
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                PortraitColumn(own, true, c, load, actions, canAct, status, avatarSize, Modifier.weight(1f))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { PortraitAvatar(own, ownPerson, true, c, load, actions, avatarSize) }
                 if (!large) {
-                    Column(Modifier.width(centerWidth), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(22.dp))
+                    Box(Modifier.width(centerWidth).offset(y = (-16).dp)) {
                         DayConnector(c, actions, bridgeWidth)
                     }
                 }
-                PortraitColumn(partner, false, c, load, actions, canAct, {}, avatarSize, Modifier.weight(1f))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { PortraitAvatar(partner, partnerPerson, false, c, load, actions, avatarSize) }
             }
-            if (large) DayConnector(c, actions)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                MomentLabel(own, ownPerson, true, c, Modifier.weight(1f))
+                Spacer(Modifier.width(centerWidth))
+                MomentLabel(partner, partnerPerson, false, c, Modifier.weight(1f))
+            }
+            if (large) Box(Modifier.padding(top = 4.dp)) { DayConnector(c, actions) }
         }
     }
 }
@@ -250,46 +261,49 @@ import kotlin.time.Instant
     }
 }
 
-@Composable private fun PortraitColumn(moment: HomeMomentUi?, own: Boolean, c: HomeCoupleUi, load: HomeImageLoader,
-    actions: HomeActions, canAct: Boolean, onStatus: () -> Unit, avatarSize: androidx.compose.ui.unit.Dp, modifier: Modifier) {
-    val person = moment?.person ?: if (own) HomePersonUi(c.account ?: 0, "You", null) else c.partner
+@Composable private fun PortraitStatus(person: HomePersonUi, own: Boolean, c: HomeCoupleUi, canAct: Boolean, onStatus: () -> Unit) {
     val text = c.statuses?.items?.firstOrNull { it.author == person.id }?.text?.takeIf(String::isNotBlank)
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.heightIn(min = 48.dp).then(if (own) Modifier.clickable(enabled = canAct && c.statusesFresh, role = Role.Button, onClickLabel = "Set your private status", onClick = onStatus) else Modifier), contentAlignment = Alignment.Center) {
-            Box(contentAlignment = Alignment.BottomCenter) {
-                Surface(shape = H.pill, color = H.paper, shadowElevation = if (text != null) 4.dp else 0.dp,
-                    border = BorderStroke(1.dp, H.line), modifier = Modifier.widthIn(max = 112.dp)) {
-                    Text(text ?: if (c.statusState == HomeStatus.READY) { if (own) "Set status" else "No status shared" } else if (c.statusState == HomeStatus.LOADING) "Checking status…" else "Status unavailable",
-                        style = MaterialTheme.typography.bodySmall, fontWeight = if (text != null) FontWeight.Bold else FontWeight.Normal,
-                        color = if (text != null) H.ink else H.muted, textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp))
-                }
-                if (text != null) Canvas(Modifier.offset(y = 6.dp).size(12.dp, 8.dp)) {
-                    val tail = Path().apply { moveTo(0f, 0f); lineTo(size.width / 2, size.height); lineTo(size.width, 0f); close() }
-                    drawPath(tail, H.paper)
-                    drawLine(H.line, Offset(0f, 0f), Offset(size.width / 2, size.height), 1.dp.toPx())
-                    drawLine(H.line, Offset(size.width / 2, size.height), Offset(size.width, 0f), 1.dp.toPx())
-                }
+    Box(Modifier.heightIn(min = 48.dp).then(if (own) Modifier.clickable(enabled = canAct && c.statusesFresh, role = Role.Button, onClickLabel = "Set your private status", onClick = onStatus) else Modifier), contentAlignment = Alignment.Center) {
+        Box(contentAlignment = Alignment.BottomCenter) {
+            Surface(shape = H.pill, color = H.paper, shadowElevation = if (text != null) 4.dp else 0.dp,
+                border = BorderStroke(1.dp, H.line), modifier = Modifier.widthIn(max = 112.dp)) {
+                Text(text ?: if (c.statusState == HomeStatus.READY) { if (own) "Set status" else "No status shared" } else if (c.statusState == HomeStatus.LOADING) "Checking status…" else "Status unavailable",
+                    style = MaterialTheme.typography.bodySmall, fontWeight = if (text != null) FontWeight.Bold else FontWeight.Normal,
+                    color = if (text != null) H.ink else H.muted, textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp))
+            }
+            if (text != null) Canvas(Modifier.offset(y = 6.dp).size(12.dp, 8.dp)) {
+                val tail = Path().apply { moveTo(0f, 0f); lineTo(size.width / 2, size.height); lineTo(size.width, 0f); close() }
+                drawPath(tail, H.paper)
+                drawLine(H.line, Offset(0f, 0f), Offset(size.width / 2, size.height), 1.dp.toPx())
+                drawLine(H.line, Offset(size.width / 2, size.height), Offset(size.width, 0f), 1.dp.toPx())
             }
         }
-        Box(contentAlignment = Alignment.Center) {
-            val size = avatarSize
-            Box(Modifier.size(size + 10.dp).clip(CircleShape).then(if (moment?.hasUnseen == true && c.momentsFresh) Modifier.border(2.dp, H.purple, CircleShape) else Modifier)
-                .clickable(enabled = c.momentsFresh, onClickLabel = "Open ${if (own) "your" else person.name + "’s"} Moments") {
-                    if (own && (moment?.activeCount ?: 0) == 0) actions.onCreateMoment(c.id) else actions.onViewMoments(c.id, person.id)
-                }, contentAlignment = Alignment.Center) {
-                PersonAvatar(person, load, size)
-            }
-            if (own) IconButton(onClick = { actions.onCreateMoment(c.id) }, enabled = c.momentsFresh,
-                modifier = Modifier.align(Alignment.BottomEnd).size(44.dp)) {
-                Surface(shape = CircleShape, color = H.paper, shadowElevation = 2.dp, border = BorderStroke(1.dp, H.line), modifier = Modifier.size(30.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Add, "Add a Moment", Modifier.size(18.dp)) }
-                }
-            }
-        }
-        Text(if (own) "Your Moments" else if (moment?.hasUnseen == true && c.momentsFresh) "New Moments" else if ((moment?.activeCount ?: 0) == 0) "No Moments yet" else "${person.name}’s Moments",
-            style = MaterialTheme.typography.bodySmall, color = H.muted, textAlign = TextAlign.Center)
     }
+}
+
+@Composable private fun PortraitAvatar(moment: HomeMomentUi?, person: HomePersonUi, own: Boolean, c: HomeCoupleUi, load: HomeImageLoader,
+    actions: HomeActions, avatarSize: androidx.compose.ui.unit.Dp) {
+    Box(contentAlignment = Alignment.Center) {
+        val size = avatarSize
+        Box(Modifier.size(size + 10.dp).clip(CircleShape).then(if (moment?.hasUnseen == true && c.momentsFresh) Modifier.border(2.dp, H.purple, CircleShape) else Modifier)
+            .clickable(enabled = c.momentsFresh, onClickLabel = "Open ${if (own) "your" else person.name + "’s"} Moments") {
+                if (own && (moment?.activeCount ?: 0) == 0) actions.onCreateMoment(c.id) else actions.onViewMoments(c.id, person.id)
+            }, contentAlignment = Alignment.Center) {
+            PersonAvatar(person, load, size)
+        }
+        if (own) IconButton(onClick = { actions.onCreateMoment(c.id) }, enabled = c.momentsFresh,
+            modifier = Modifier.align(Alignment.BottomEnd).size(44.dp)) {
+            Surface(shape = CircleShape, color = H.paper, shadowElevation = 2.dp, border = BorderStroke(1.dp, H.line), modifier = Modifier.size(30.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Add, "Add a Moment", Modifier.size(18.dp)) }
+            }
+        }
+    }
+}
+
+@Composable private fun MomentLabel(moment: HomeMomentUi?, person: HomePersonUi, own: Boolean, c: HomeCoupleUi, modifier: Modifier) {
+    Text(if (own) "Your Moments" else if (moment?.hasUnseen == true && c.momentsFresh) "New Moments" else if ((moment?.activeCount ?: 0) == 0) "No Moments yet" else "${person.name}’s Moments",
+        style = MaterialTheme.typography.bodySmall, color = H.muted, textAlign = TextAlign.Center, modifier = modifier)
 }
 
 @Composable private fun QuestionHero(daily: SparkDaily, c: HomeCoupleUi, load: HomeImageLoader, open: () -> Unit, retry: () -> Unit, compact: Boolean) {
@@ -301,10 +315,7 @@ import kotlin.time.Instant
         Column(Modifier.fillMaxWidth().padding(if (compact) 18.dp else 20.dp)) {
             Text(if (daily.carried && q.open) "YOUR QUESTION" else if (daily.revisit) "A QUESTION TO REVISIT" else "TODAY", color = H.purple, style = MaterialTheme.typography.labelSmall)
             Spacer(Modifier.height(11.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                BalancedQuestion(q.question, Modifier.weight(1f))
-                if (!large) TogetherArt(Modifier.padding(start = 10.dp).size(if (compact) 58.dp else 74.dp))
-            }
+            QuestionPrompt(q.question, if (large) null else if (compact) 58.dp else 74.dp)
             Spacer(Modifier.height(18.dp))
             if (theirs && !mine && q.open) Surface(shape = H.card, color = H.paper) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -334,14 +345,20 @@ import kotlin.time.Instant
     }
 }
 
-/** Find the narrowest natural paragraph that keeps the minimum line count.
- * TextMeasurer uses the actual Satoshi glyph metrics on each platform; no demo-specific breaks. */
-@Composable private fun BalancedQuestion(question: String, modifier: Modifier) {
+/** Balance the actual text; decoration yields its column when it would force a long paragraph.
+ * Uses Satoshi glyph metrics on each platform, without demo-specific breaks or character limits. */
+@Composable private fun QuestionPrompt(question: String, artSize: androidx.compose.ui.unit.Dp?) {
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val density = LocalDensity.current
     val style = MaterialTheme.typography.headlineMedium.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Simple)
-    BoxWithConstraints(modifier) {
-        val available = with(density) { maxWidth.roundToPx() }.coerceAtLeast(1)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val fullWidth = with(density) { maxWidth.roundToPx() }.coerceAtLeast(1)
+        val artWidth = artSize?.let { with(density) { (it + 10.dp).roundToPx() } } ?: 0
+        val showArt = remember(question, fullWidth, artWidth, style, density.fontScale, measurer) {
+            artWidth > 0 && fullWidth > artWidth && measurer.measure(question, style,
+                constraints = androidx.compose.ui.unit.Constraints(maxWidth = fullWidth - artWidth)).lineCount <= 3
+        }
+        val available = fullWidth - if (showArt) artWidth else 0
         val width = remember(question, available, style, density.fontScale, measurer) {
             fun lines(px: Int) = measurer.measure(question, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = px)).lineCount
             val count = lines(available)
@@ -349,7 +366,10 @@ import kotlin.time.Instant
             repeat(9) { if (low < high) { val mid = (low + high) / 2; if (lines(mid.coerceAtLeast(1)) <= count) high = mid else low = mid + 1 } }
             high
         }
-        Text(question, style = style, modifier = Modifier.width(with(density) { width.toDp() }))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { Text(question, style = style, modifier = Modifier.width(with(density) { width.toDp() })) }
+            if (showArt) TogetherArt(Modifier.padding(start = 10.dp).size(artSize!!))
+        }
     }
 }
 

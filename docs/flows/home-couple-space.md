@@ -97,3 +97,9 @@ dashed connection between partners, with its compact visible pill inside a
 48 dp target; private status controls also retain a 48 dp minimum height.
 The shared bottom navigation has smaller default icons/labels and padding while
 retaining its minimum touch targets and enlarged-text reflow.
+
+The follow-up UI QA aligns status bubbles, avatars and Moments labels in shared
+rows so wrapped labels cannot shift the portraits. Long question text takes the
+illustration's space when needed. Coming up has one View all entry for Plans &
+ideas rather than an extra Shared ideas row beneath a featured Plan. Existing
+navigation and data actions remain unchanged. See [QA evidence](../validation/home-couple-space/ui-qa-2026-11-11/README.md).
