@@ -31,7 +31,8 @@
       "message_options_nickname": "185:1624",
       "home_moments_page": "1:3",
       "home_challenge_title": "193:110",
-      "shared_space_challenge": "158:13166"
+      "shared_space_challenge": "158:13166",
+      "questions_page": "1:6"
     }
   },
   "features": {
@@ -82,7 +83,17 @@
       "migration": "social.0017_sparksession_sparkanswer_and_more",
       "status": "implemented-local-live-iphone-native-partners-and-encrypted-phone-recovery-verified",
       "live_validation": "docs/validation/sparks/live-flow.md",
-      "recovery_validation": "docs/validation/sparks/recovery.md"
+      "recovery_validation": "docs/validation/sparks/recovery.md",
+      "questions_ui": {
+        "frontend_branch": "codex/questions-ui",
+        "frontend_base": "f86afc180e597c68b052aa2b3dce531109f85a34",
+        "backend_commit": "3e276ad6a38b1afdd955d760be4519628bd1b3f7",
+        "figma_page": "1:6",
+        "figma_root": "251:5437",
+        "validation": "docs/validation/questions-stage-two/README.md",
+        "scope": "Existing four decks; shared daily question, catalogue search, recent answers, preserved encrypted editor and reveal",
+        "status": "implemented-android-ios-simulator-verified; exact Figma assets and physical-device smoothness unverified"
+      }
     },
     "challenges": {
       "frontend_branch": "dev-core-architecture",

@@ -6,6 +6,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -39,7 +40,7 @@ class SparkRenderTest {
         previousLoader=SingletonImageLoader.get(compose.activity)
         renderLoader=ImageLoader.Builder(compose.activity).allowHardware(false).build()
         SingletonImageLoader.setUnsafe(renderLoader!!)
-        if(small) RuntimeEnvironment.setQualifiers("w320dp-h640dp-xhdpi")
+        if(small) RuntimeEnvironment.setQualifiers("w320dp-h568dp-xhdpi")
         compose.mainClock.autoAdvance=false
         compose.setContent {
             CompositionLocalProvider(androidx.compose.ui.platform.LocalInspectionMode provides true) {org.jetbrains.compose.resources.PreviewContextConfigurationEffect()}
@@ -59,16 +60,27 @@ class SparkRenderTest {
     @Test fun recoveryUnlock()=render("recovery-unlock")
     @Test fun recoveryReady()=render("recovery-ready")
     @Test fun recoveryErrorLargeText()=render("recovery-error-small",fontScale=1.6f,small=true)
+    @Test fun unpaired()=render("unpaired")
+    @Test fun invitation()=render("invitation")
+    @Test fun historyEmpty()=render("history-empty")
+    @Test fun search()=render("search")
+    @Test fun topic()=render("topic")
+    @Test fun quietDay()=render("quiet")
+    @Test fun loading()=render("loading")
+    @Test fun unavailable()=render("unavailable")
+    @Test fun smallestTwoHundredPercent()=render("catalogue-active-small-200",fontScale=2f,small=true)
+    @Test fun partnerAnsweredLargeText()=render("partner-small",fontScale=2f,small=true)
+    @Test fun smallDefault()=render("decks-small",small=true)
     @Test fun decks()=render("decks")
     @Test fun catalogueWithActiveSpark() {
         render("catalogue-active")
-        compose.onNodeWithText("Continue current Spark").assertIsDisplayed()
-        compose.onNodeWithText("Send into chat").assertDoesNotExist()
-        compose.onNodeWithText("Future").assertIsDisplayed()
+        compose.onNodeWithText("Go first").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Answer this question").assertDoesNotExist()
+        compose.onNodeWithText("Future").performScrollTo().assertIsDisplayed()
     }
     @Test fun catalogueWithActiveSparkLargeText() {
         render("catalogue-active-small",fontScale=1.6f,small=true)
-        compose.onNodeWithText("Continue current Spark").assertIsDisplayed()
+        compose.onNodeWithText("Go first").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Future").assertExists()
     }
     @Test fun answer()=render("answer")
