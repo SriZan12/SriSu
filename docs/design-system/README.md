@@ -176,3 +176,12 @@ Follow-up QA keeps the portrait pair aligned independently of wrapping status
 and Moments labels. Question artwork yields its column if the measured text
 would exceed three lines beside it; the text remains complete at the requested
 font scale. The default short-question layout is preserved. See [UI QA](../validation/home-couple-space/ui-qa-2026-11-11/README.md).
+
+## Questions (page 1:6)
+
+`QuestionsStyle` scopes the approved Questions layout to white/lilac/warm surfaces,
+Satoshi typography and compact rounded geometry, reusing `HomeSpace` colours and
+existing couple artwork. It does not change Chat palettes or global theme roles.
+Values are measured estimates from the rendered Figma and approved Stage 1 study;
+Figma export quota prevents exact token/artwork parity. See `docs/flows/sparks.md`
+for the frame map, responsive behaviour and intentional scope adaptations.

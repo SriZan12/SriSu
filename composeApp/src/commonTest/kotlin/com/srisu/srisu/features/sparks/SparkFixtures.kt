@@ -1,6 +1,8 @@
 package com.srisu.srisu.features.sparks
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import com.srisu.srisu.features.sparks.data.*
 import com.srisu.srisu.features.sparks.presentation.*
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
@@ -12,7 +14,7 @@ internal object SparkFixtures {
     val session = SparkSession("11111111-1111-4111-8111-111111111111", 3, 2,
         "22222222-2222-4222-8222-222222222222", "!spark:test.invalid", 1,
         "deep-1-v1", "What do you admire about me that you’ve never told me?", "deep", "open", 1, cardEventId = "\$card")
-    val home = SparkHome(Json.decodeFromString<List<SparkDeck>>(CATALOGUE), 3,
+    val home = SparkHome(Json.decodeFromString<List<SparkDeck>>(CATALOGUE).map { if (it.id == "deep") it.copy(questions = it.questions + SparkQuestion("deep-7-v1", "deep", "What made you feel close to me this week?")) else it }, 3,
         listOf(SparkMember(1, "Alex"), SparkMember(2, "Sam")))
     val envelope = buildJsonObject { put("algorithm", "m.megolm.v1.aes-sha2"); put("ciphertext", "synthetic-ciphertext"); put("session_id", "synthetic-session") }
     val one = SparkAnswer(1, "@one:test.invalid", envelope)
@@ -26,7 +28,7 @@ internal object SparkFixtures {
         return
     }
     val session = SparkFixtures.session
-    val base = SparkState(home = SparkFixtures.home, account = 1, loading = false, fresh = true, secure = true)
+    val base = SparkState(home = SparkFixtures.home, daily = SparkDaily(session, "2026-11-13", "Asia/Kathmandu"), account = 1, loading = false, fresh = true, secure = true)
     val state = when {
         name.startsWith("catalogue-active") -> base.copy(home = SparkFixtures.home.copy(active = session))
         name.startsWith("answer") -> base.copy(session = session.copy(submittedBy = listOf(2)), draft = SparkDraft("The way you make room for people. You listen with your whole heart, even on the busiest days."))
@@ -37,10 +39,23 @@ internal object SparkFixtures {
         name == "keys" -> base.copy(session = session.copy(state = "revealed", submittedBy = listOf(1, 2)), keyError = true)
         name == "failed" -> base.copy(session = session, draft = SparkDraft("I love how we find something to laugh about.", SparkFixtures.envelope), error = "Your submission could not be confirmed. Your draft is kept; retry to check it.")
         name == "skipped" -> base.copy(session = session.copy(state = "skipped"))
-        name == "unpaired" -> base.copy(home = SparkFixtures.home.copy(couple = null))
+        name.startsWith("unpaired") -> base.copy(home = SparkFixtures.home.copy(couple = null), daily = null)
+        name == "invitation" -> base.copy(home = SparkFixtures.home.copy(couple = null), daily = null, invitation = QuestionInvitation("Sam", false))
+        name == "loading" -> SparkState()
+        name == "unavailable" -> SparkState(loading = false, error = "Check your connection and try again.")
+        name == "partner-small" -> base.copy(daily = base.daily?.copy(session = session.copy(submittedBy = listOf(2))))
+        name == "quiet" -> base.copy(daily = base.daily?.copy(session = session.copy(state = "revealed", submittedBy = listOf(1,2))))
         else -> base
     }
-    SparkContent(state, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    val page = when { name.startsWith("history") -> QuestionPage.HISTORY; name.startsWith("search") -> QuestionPage.SEARCH; name.startsWith("topic") -> QuestionPage.TOPIC; else -> QuestionPage.HOME }
+    val isTab = state.session == null && page == QuestionPage.HOME
+    androidx.compose.material3.Scaffold(contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0,0,0,0), bottomBar = {
+        if (isTab) com.srisu.srisu.navigation.navhost.AppBottomBar({}, com.srisu.srisu.navigation.navhost.BottomDestination.QUESTIONS, true)
+    }) { padding ->
+        androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.padding(padding).consumeWindowInsets(padding)) {
+            SparkContent(state, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, page = page, selection = "deep", tab = isTab)
+        }
+    }
 }
 internal open class FakeSparks : SparkSource {
     override val changes = MutableStateFlow(0L)

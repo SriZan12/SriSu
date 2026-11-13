@@ -8,20 +8,32 @@ Backend contract: `sparks-1`; migration:
 
 ## Experience
 
-Home has a compact Sparks entry after Moments; its card resumes the active Spark,
-or shows the latest revealed Spark. **Show more** in the section header opens the
-full Sparks catalogue, with all four decks and recent history, even when a Spark
-is in progress. The catalogue offers the current Spark as a separate card and
-changes its primary action to **Continue current Spark** until that Spark finishes
-or is skipped. Refreshing the catalogue does not redirect into an answer screen.
-Chat's attachment sheet opens the same feature; existing chat cards still open
-their specific Spark. This uses the existing navigation without a new bottom tab.
+The Questions tab uses Figma page `1:6` (Questions board `251:5421`). Its
+current-question card uses the same server-allocated daily session as Home. An
+unfinished question carries until both answer or someone explicitly skips it;
+there is no queue or streak. A completed/skipped daily slot remains for its
+shared server day. The server's stable couple timezone owns that day boundary.
+Catalogue browsing does not open private answers or automatically replace the
+active question.
 
-Choose Deep, Memories, Playful or Future. Each contains six curated, versioned
-questions. Previous/next/shuffle stay within a deck. Send creates one active Spark
-for the couple and sends its encrypted question card into the existing Matrix
-conversation. Failed card publication is explicit and retryable. Stable Matrix
-transaction IDs and Spark-specific row keys keep retries as one logical card.
+The four current topics are Deep (7), Memories (6), Playful (6) and Future (6).
+Counts come from returned questions. Topic/search previews open a separate
+navigation destination; starting one resumes an existing open session first.
+A durable pending create retries its original request even after restart. Search
+matches catalogue question text/topic names locally and never searches answer
+plaintext. Recently answered filters the bounded `home.recent` projection; it
+is explicitly recent activity, not complete lifetime history or topic progress.
+
+The root tab retains app navigation. Topic, search, history and answer screens
+have their own Back destination and no bottom tabs. Existing chat cards still
+open specific sessions. Continue in chat targets the existing card event when
+available and keeps the question on the back stack; entering from Chat returns
+to that same conversation. No answer text is placed in routes.
+
+No partner, pending incoming/outgoing invitation, invitation-check failure,
+secure-room preparation, loading, offline, and empty history/search are distinct.
+Connect/View invitations uses the existing connection flow; no duplicate send
+is performed by the Questions screen.
 
 Either participant may answer first. Drafts use existing protected platform
 storage, scoped to account/session, and are editable until submission. Text is
@@ -34,10 +46,8 @@ Waiting displays submission status and the author's own answer when available.
 It never blurs or downloads the partner's unrevealed answer. After both submit,
 the server releases both ciphertexts and the client displays both decoded answers
 together, labelled with real names/avatars and “You.” Missing keys show secure
-sync/retry. A short 180ms fade respects reduced-motion scale. Continue in chat
-returns to the original chat when entered there; All decks opens the catalogue.
-Returning to the decks refreshes recent history so a just-finished Spark appears
-immediately. Secure-connection loading and interruption have distinct feedback.
+sync/retry. Reveal uses conversation-style bubbles without mandatory animation. Back restores
+the previous destination; resuming the catalogue refreshes recent activity. Secure-connection loading and interruption have distinct feedback.
 The screen calls answers open only after successful local decryption; a missing-key
 notice offers recovery with a user-held key and explains that answers never backed up still require an existing device.
 
@@ -61,26 +71,44 @@ epoch before encrypting/decrypting. Only its current owner may close the shared
 room. Account changes cancel outstanding work and clear UI data. Matrix access
 revocation clears already displayed answers immediately. API 401/403/404 responses
 clear private state, and late decryption cannot restore it. Polling occurs only
-while the destination is resumed (8s session, 15s Home) and is cancelled on pause.
+while the destination is resumed (8s answer session, 30s Questions catalogue; Home retains its own cadence) and is cancelled on pause.
 UI composables perform no network requests or encryption themselves; state lives
 in feature ViewModels and transport in the existing Ktor/Matrix repositories.
 
 ## Figma and intentional adaptations
 
-Source: [Sparks section 184:1634](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=184-1634),
-Home page `1:3`, design-system page `0:1`. The five Spark frames were visually
-inspected in the browser during the preceding design discussion. The connector's
-Starter-plan quota blocks current design-context extraction and artwork export.
+Source: [Questions page 1:6](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=1-6),
+clean board `251:5421`: tab `251:5437`, unpaired `251:6092`, history `251:6184`,
+search `251:6250`, topic `251:6299`, answer `251:6396`, waiting/ready `251:6463`,
+reveal `251:6530`, finished `251:6634`. The current design-context and screenshot
+calls were attempted; Figma's plan quota still blocks exports. The implementation
+uses the inspected frames and approved Stage 1 structure. Exact asset/token
+parity remains unverified.
 
-The implementation retains the four decks, outlined question card, optional
-Instrument Serif heading pairing, Satoshi controls/body text, and charcoal pill
-CTA. Deck accents reuse Spark/Ask/Planner/Moments theme roles. Answer/reveal use a
-compact question, instead of repeating the tall browsing card. Both partners can
-answer first. Waiting uses a neutral lock/status rather than blurred real text.
-The unavailable sleepy illustration is replaced with the existing icon family's
-spark glyph; no claim of exact asset parity. Dark mode derives from current theme
-tokens. Deck buttons use a 4-column layout, switching to two columns on small
-screens/larger text, so the fourth deck never clips.
+Questions uses scoped white surfaces, compact Satoshi text, lilac question
+panels, warm rows, charcoal actions and pastel topic tiles. Existing Home couple
+artwork is reused; existing Material icons identify the actual four decks.
+No replacement bitmap artwork or invented Figma exports are shipped. The existing
+Pure chat, illustrated Quick Share and Palette picker are unchanged.
+
+Content height follows text. Gutters are 20 dp (16 below 360); actions have at
+least 48 dp touch areas. Larger text puts secondary header actions in a labelled
+options menu and topic tiles in one column. Decorative hero art disappears when
+it would crowd the question. The editor uses the shared immediate TextFieldValue
+adapter so delayed model echoes cannot overwrite newer IME edits or selection.
+The scroll body and pinned primary action consume native IME/safe-area insets.
+The iOS host disables automatic whole-scene focus panning so these screen-owned
+insets do not also move the header under the status bar. Native Questions,
+Chat and Plan keyboard checks, plus the remaining physical-device/gesture
+limitations, are recorded in the
+[Stage 2 verification](../validation/questions-stage-two/README.md).
+
+Approved scope adaptations: one full-width current card; no streak, invented
+progress percentages, multi-question queue, games, answer-specific reactions,
+or new intimate-preference controls. Those Figma features require additional
+product/contracts. The recent projection is bounded by the current backend.
+The new daily-dependent client requires the already existing Home backend and
+migration `social.0023`; no backend changes/migrations are introduced here.
 
 ## Components and evidence
 

@@ -22,7 +22,7 @@ import kotlin.test.Test
 @OptIn(ExperimentalTestApi::class)
 class SparkIosRenderTest {
     private fun render(name:String,dark:Boolean=false,fontScale:Float=1f,small:Boolean=false) {
-        val width=if(small) 320 else 390;val height=if(small) 640 else 844
+        val width=if(small) 320 else 390;val height=if(small) 568 else 844
         runSkikoComposeUiTest(size=Size(width*2f,height*2f),density=Density(2f,fontScale)) {
             mainClock.autoAdvance=false
             setContent {Box(Modifier.size(width.dp,height.dp).testTag("moment-screen")) {SriSuTheme(darkTheme=dark) {Surface {SparkRenderFixture(name)}}}}
@@ -49,6 +49,14 @@ class SparkIosRenderTest {
     @Test fun recoveryUnlock()=render("recovery-unlock")
     @Test fun recoveryReady()=render("recovery-ready")
     @Test fun recoveryErrorLargeText()=render("recovery-error-small",fontScale=1.6f,small=true)
+    @Test fun unpaired()=render("unpaired")
+    @Test fun historyEmpty()=render("history-empty")
+    @Test fun search()=render("search")
+    @Test fun topic()=render("topic")
+    @Test fun quietDay()=render("quiet")
+    @Test fun smallestTwoHundredPercent()=render("catalogue-active-small-200",fontScale=2f,small=true)
+    @Test fun partnerAnsweredLargeText()=render("partner-small",fontScale=2f,small=true)
+    @Test fun smallDefault()=render("decks-small",small=true)
     @Test fun decks()=render("decks")
     @Test fun answer()=render("answer")
     @Test fun waiting()=render("waiting")

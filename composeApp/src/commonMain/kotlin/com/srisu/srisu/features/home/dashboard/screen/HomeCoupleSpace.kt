@@ -347,7 +347,7 @@ import kotlin.time.Instant
 
 /** Balance the actual text; decoration yields its column when it would force a long paragraph.
  * Uses Satoshi glyph metrics on each platform, without demo-specific breaks or character limits. */
-@Composable private fun QuestionPrompt(question: String, artSize: androidx.compose.ui.unit.Dp?) {
+@Composable internal fun QuestionPrompt(question: String, artSize: androidx.compose.ui.unit.Dp?) {
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val density = LocalDensity.current
     val style = MaterialTheme.typography.headlineMedium.copy(lineBreak = androidx.compose.ui.text.style.LineBreak.Simple)
@@ -373,7 +373,7 @@ import kotlin.time.Instant
     }
 }
 
-@Composable private fun TogetherArt(modifier: Modifier) {
+@Composable internal fun TogetherArt(modifier: Modifier) {
     Box(modifier) {
         Canvas(Modifier.fillMaxSize()) {
             fun friend(x: Float, width: Float, color: androidx.compose.ui.graphics.Color) {
