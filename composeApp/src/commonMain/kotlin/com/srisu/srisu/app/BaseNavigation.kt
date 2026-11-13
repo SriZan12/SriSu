@@ -85,12 +85,13 @@ private fun NavigationShell(access: StartupState.Available, member: CoupleAccess
         modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbars) },
         topBar = { Column {
+            if (protected && tab == BottomDestination.PROFILE) TextButton(onClick = { navigator.open(HomeNavigation.Explore) }) { Text("Explore SriSu") }
             if (protected && tab == BottomDestination.PROFILE) TextButton(onClick = { navigator.open(ProfileNav.NotificationSettings) }) { Text("Notifications & diagnostics") }
             if (protected && member?.warning != null) TextButton(onClick = onRetry) {
                 Text(stringResource(Res.string.nav_membership_retry))
             }
         } },
-        bottomBar = { AppBottomBar(navigator::selectBottomDestination, tab, tab != null) }
+        bottomBar = { AppBottomBar({ destination -> if (destination == BottomDestination.CHAT && member?.coupleId == null) navigator.open(ChatNav.PartnerFlow) else navigator.selectBottomDestination(destination) }, tab, tab != null) }
     ) { padding ->
         AppNavHost(controller, start, access.session, protected, onLeaveAuth,
             Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))

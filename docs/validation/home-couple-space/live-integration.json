@@ -1,0 +1,13 @@
+{
+  "environment": "Isolated loopback Django/PostgreSQL 17/Synapse; three synthetic accounts",
+  "platform": "iOS 26.5 simulator, Kotlin/Native Darwin and two real Trixnity clients",
+  "tests": 1,
+  "failures": 0,
+  "seconds": 3.942,
+  "checks": [
+    "HOME_LIVE: paired/unpaired state and unrelated-user denial passed",
+    "HOME_LIVE: private status, idea interest, idempotent conversion and separate Plan acceptance passed",
+    "HOME_LIVE: real encrypted Matrix message decrypted locally; Home did not mark read; conversation ownership and return retained the message",
+    "HOME_LIVE: encrypted answer omitted from Home; partner answer activity and account-loss cleanup passed"
+  ]
+}

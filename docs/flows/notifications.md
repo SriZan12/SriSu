@@ -604,3 +604,8 @@ above). Apple/APNs configuration remains blocked by that access requirement.
 The original checkout paths retain their previous branches and uncommitted files.
 Use the worktree paths above for this implementation and set `SRISU_BACKEND_DIR` when
 using the cross-repository workspace checks.
+
+
+## Home integration — 9 November 2026
+
+The Home bell now opens current Plan, Challenge and profile-sharing requests; it is not a notification inbox. Home’s token-copy debug controls were removed from the visible product screen. Registration/delivery contracts are unchanged. New private statuses and unscheduled ideas do not create a new push channel. See [Home couple space](home-couple-space.md).

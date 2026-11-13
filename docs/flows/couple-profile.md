@@ -277,3 +277,8 @@ See the refinement record for frame captures, lifecycle behavior and test result
 privacy-safe alerts for the implemented transitions. Profile settings include device
 permission, server delivery preferences/mute and separate opt-in crash diagnostics.
 See that guide for contract compatibility, backend-first rollout and verification limits.
+
+
+## Home integration — 9 November 2026
+
+The Home couple title and Day connector open the existing profile path. Private 24-hour Home statuses do not change published profile mood or consent. See [Home couple space](home-couple-space.md).

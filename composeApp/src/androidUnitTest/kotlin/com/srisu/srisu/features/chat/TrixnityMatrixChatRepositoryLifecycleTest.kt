@@ -144,6 +144,32 @@ class TrixnityMatrixChatRepositoryLifecycleTest {
             clientJob.cancel()
         }
 
+    @Test fun homeSummaryCannotStealOrCloseAConversationOwner() = runTest(dispatcher) {
+        val lifetime = ApplicationLifetime()
+        var attempts = 0
+        val repository = TrixnityMatrixChatRepository(
+            remote = object : MatrixSessionRemote {
+                override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> {
+                    attempts++
+                    return com.srisu.srisu.features.moments.MomentFixtures.failed()
+                }
+            }, sessions = coordinator(1), environment = ApiEnvironment("https://api.example.test/"),
+            engine = MockEngine { respondOk() }, platformStore = RecordingPlatformStore(), lifetime = lifetime)
+        try {
+            runCurrent()
+            val chat = MatrixChatRoomOwner(); val home = MatrixChatRoomOwner()
+            repository.openRoom(ROOM_ID, chat); runCurrent(); val first = attempts
+            repository.openSummary(ROOM_ID, home); runCurrent(); assertEquals(first, attempts)
+            repository.closeSummary(home); runCurrent()
+            repository.retryRoom(ROOM_ID, chat); runCurrent()
+            assertEquals(first + 1, attempts, "Home must not replace Chat's owner or make its retry a no-op")
+            repository.openSummary(ROOM_ID, home); repository.closeRoom(ROOM_ID, chat); runCurrent()
+            assertEquals(first + 2, attempts, "An explicitly waiting summary resumes only after Chat leaves")
+            repository.closeSummary(home); runCurrent()
+            assertIs<MatrixChatAvailability.Loading>(repository.observeRoom(ROOM_ID).first().availability)
+        } finally { repository.close(); lifetime.close() }
+    }
+
     private fun coordinator(accountId: Long): SessionCoordinator =
         SessionCoordinator(MemoryStorage()).apply {
             saveSession(

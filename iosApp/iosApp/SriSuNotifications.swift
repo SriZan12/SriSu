@@ -139,7 +139,7 @@ final class SriSuNotifications: NSObject, UIApplicationDelegate, UNUserNotificat
             } else if updated != errSecSuccess { return nil }
         }
         renewBinding=false
-        return InstallationRequest(installationId:saved.id,proof:saved.proof,version:saved.version,platform:"ios",targetKind:"fid",target:fid,permitted:permission=="granted")
+        return InstallationRequest(installationId:saved.id,proof:saved.proof,version:saved.version,platform:"ios",targetKind:"fid",target:fid,permitted:permission=="granted",capabilities:[])
     }
     func renewRegistration() {renewBinding=true;publish()}
     func clearAccount() {

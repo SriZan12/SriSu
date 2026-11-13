@@ -41,11 +41,14 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import org.koin.compose.viewmodel.koinViewModel
 
-@Composable fun PlanScreen(id:Long?,onBack:()->Unit,onChat:()->Unit,onMoment:(Long)->Unit,vm:PlanViewModel=koinViewModel(),initialCreate:Boolean=false,initialInvitations:Boolean=false) {
+@Composable fun PlanScreen(id:Long?,onBack:()->Unit,onChat:()->Unit,onMoment:(Long)->Unit,vm:PlanViewModel=koinViewModel(),initialCreate:Boolean=false,initialInvitations:Boolean=false, initialIdea:String?=null, initialEdit:Boolean=false) {
     val state by vm.state.collectAsStateWithLifecycle()
     val reminders by vm.reminders.state.collectAsStateWithLifecycle()
     var creationOpened by rememberSaveable {mutableStateOf(false)}
-    LaunchedEffect(state.canAct) {if(initialCreate && state.canAct && !creationOpened) {creationOpened=true;vm.editPlan()}}
+    LaunchedEffect(state.canAct) {if((initialCreate || initialIdea!=null || initialEdit) && state.canAct && !creationOpened) {
+        creationOpened=true
+        if(initialIdea!=null) vm.fromIdea(initialIdea) else vm.editPlan(change=initialEdit)
+    }}
     LaunchedEffect(id,initialInvitations) { vm.open(id,initialInvitations) };MomentLifecycle(vm::visible);ProtectConversation()
     PlanContent(state,reminders,onBack,onChat,onMoment,vm::retry,vm::browse,vm::detail,vm::more,vm::editPlan,
         vm::resumeDraft,vm::action,vm::reminder,vm::calendar,vm::place,vm::publishCard)

@@ -3,12 +3,14 @@ import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.core.config.ApiEnvironment
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.core.session.SessionCoordinator
+import com.srisu.srisu.core.data.remote.NetworkAPIResult
 import com.srisu.srisu.features.plans.data.*
 import com.srisu.srisu.features.plans.presentation.*
 import com.srisu.srisu.features.moments.MomentFixtures
 import com.srisu.srisu.features.sparks.FakeSparkMatrix
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
+import kotlinx.serialization.json.JsonObject
 import kotlin.test.*
 import kotlin.time.Instant
 
@@ -20,8 +22,44 @@ class PlanStateTest {
     @BeforeTest fun before() {Dispatchers.setMain(StandardTestDispatcher())}
     @AfterTest fun after() {models.forEach {it.viewModelScope.cancel()};lives.forEach {it.close()};Dispatchers.resetMain()}
     private fun reminders(source:FakePlans,sessions:SessionCoordinator,device:FakePlanDevice)=PlanReminders(source,sessions,environment,device,ApplicationLifetime().also {lives+=it})
-    private fun vm(source:FakePlans=FakePlans(),sessions:SessionCoordinator=MomentFixtures.sessions(),device:FakePlanDevice=FakePlanDevice()):PlanViewModel =
-        PlanViewModel(source,FakeSparkMatrix(),sessions,environment,reminders(source,sessions,device),device).also {models+=it}
+    private fun vm(source:FakePlans=FakePlans(),sessions:SessionCoordinator=MomentFixtures.sessions(),device:FakePlanDevice=FakePlanDevice(),ideas:DateIdeaSource?=null):PlanViewModel =
+        PlanViewModel(source,FakeSparkMatrix(),sessions,environment,reminders(source,sessions,device),device,ideas).also {models+=it}
+    private class FakeIdeas:DateIdeaSource {
+        var idea=DateIdea("11111111-1111-4111-8111-111111111111",3,2,"coffee",listOf(1,2),"open",2,"2026-11-09T10:00:00Z")
+        val requests=mutableListOf<Pair<String,JsonObject>>()
+        var loseResponse=true
+        override suspend fun list(couple:Long)=NetworkAPIResult.Success<DateIdeas?>(DateIdeas(couple,listOf(idea)))
+        override suspend fun get(id:String)=NetworkAPIResult.Success<DateIdea?>(idea)
+        override suspend fun create(couple:Long,preset:String,requestId:String)=error("Conversion must not create another idea")
+        override suspend fun act(id:String,revision:Long,requestId:String,action:String,values:JsonObject):NetworkAPIResult<DateIdea?> {
+            assertEquals(idea.id,id);assertEquals(2,revision);assertEquals("plan",action)
+            requests+=requestId to values
+            idea=idea.copy(state="planned",revision=3,planId=7)
+            return if(loseResponse) MomentFixtures.failed(null) else NetworkAPIResult.Success(idea)
+        }
+    }
+    @Test fun ideaConversionRetainsExactIntentAfterLostResponseAndRestart()=runTest {
+        val sessions=MomentFixtures.sessions();val source=FakePlans();val ideas=FakeIdeas()
+        val first=vm(source,sessions,ideas=ideas);first.open(null);runCurrent()
+        first.fromIdea(ideas.idea.id);runCurrent()
+        assertEquals("Coffee together",first.state.value.draft?.title)
+        first.edit(requireNotNull(first.state.value.draft).copy(startsAt="2099-11-03T12:00:00Z"));first.save();runCurrent()
+        assertNotNull(first.state.value.pending);first.viewModelScope.cancel()
+        val second=vm(source,sessions,ideas=ideas);second.open(null);runCurrent()
+        ideas.loseResponse=false;second.retry();runCurrent()
+        assertEquals(ideas.requests.first(),ideas.requests.last());assertEquals(2,ideas.requests.size)
+        assertTrue(source.requests.isEmpty());assertEquals(7,second.state.value.plan?.id)
+        assertEquals("pending",second.state.value.plan?.response)
+        assertNull(second.state.value.pending);assertNull(second.state.value.draft)
+    }
+    @Test fun planningSharedIdeaDoesNotReplaceAnUnrelatedDraft()=runTest {
+        val ideas=FakeIdeas();val model=vm(ideas=ideas);model.open(null);runCurrent();model.editPlan()
+        model.edit(requireNotNull(model.state.value.draft).copy(title="Keep our anniversary idea"));model.closeEditor()
+        model.fromIdea(ideas.idea.id);runCurrent()
+        assertEquals("Keep our anniversary idea",model.state.value.draft?.title)
+        assertNull(model.state.value.draft?.ideaId);assertTrue(model.state.value.editing)
+        assertNotNull(model.state.value.notice);assertTrue(ideas.requests.isEmpty())
+    }
     @Test fun invitationEntryLoadsInvitationsAndDoesNotOverrideLaterTabSelection()=runTest {
         val requested=mutableListOf<String>()
         val source=object:FakePlans(){override suspend fun list(mode:String,cursor:String?):com.srisu.srisu.core.data.remote.NetworkAPIResult.Success<PlanPage?> {

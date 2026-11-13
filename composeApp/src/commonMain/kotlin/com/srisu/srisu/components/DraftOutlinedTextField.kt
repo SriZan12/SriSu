@@ -5,8 +5,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 
 /** Keeps IME selection/composition local while the ViewModel owns the saved text. */
 @Composable
@@ -21,20 +19,11 @@ internal fun DraftOutlinedTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
-    var editor by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
-    // Echoes of local edits must not replace the IME's selection or composing range.
-    // A real model replacement (idea chip, restored draft, successful send) still wins.
-    LaunchedEffect(value) {
-        if (editor.text != value) editor = TextFieldValue(value, TextRange(value.length))
-    }
+    val editor = rememberDraftEditor(value)
     OutlinedTextField(
-        value = editor,
+        value = editor.value,
         onValueChange = { next ->
-            if (next.text.length <= maxLength) {
-                val textChanged = next.text != editor.text
-                editor = next
-                if (textChanged) onValueChange(next.text)
-            }
+            if (next.text.length <= maxLength && editor.edit(next)) onValueChange(next.text)
         },
         modifier = modifier,
         enabled = enabled,

@@ -33,7 +33,7 @@ import com.srisu.srisu.navigation.navhost.*
             "retry"->mapOf(10L to FaveStatus(false,desired=true,error="Couldn’t save your Fave. Please retry."))
             else->mapOf(10L to FaveStatus(faved))
         }))}
-    Scaffold(bottomBar={AppBottomBar({},BottomDestination.EXPLORE,true)}) {padding->
+    Scaffold(bottomBar={AppBottomBar({},null,false)}) {padding->
         Box(Modifier.fillMaxSize().padding(padding)) {
             ExploreContent(state,{state=state.copy(section=it)},{},{},{},{state=state.copy(managing=it)},{},
                 {id,value->state=state.copy(preferences=state.preferences+(id to FaveStatus(value)))},{},{},{},{},{MomentFixtures.image})

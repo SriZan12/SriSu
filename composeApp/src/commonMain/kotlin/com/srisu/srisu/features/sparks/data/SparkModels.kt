@@ -17,6 +17,8 @@ import kotlinx.serialization.json.JsonObject
     @SerialName("membership_epoch") val epoch: Long, @SerialName("question_id") val questionId: String,
     val question: String, val deck: String, val state: String, val revision: Long,
     @SerialName("submitted_by") val submittedBy: List<Long> = emptyList(),
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("finished_at") val finishedAt: String? = null,
     val answers: List<SparkAnswer> = emptyList(), @SerialName("card_event_id") val cardEventId: String = "") {
     fun submitted(account: Long?) = account in submittedBy
     val open get() = state == "open"
@@ -52,3 +54,9 @@ const val SPARK_ANSWER_LIMIT = 2000
 @Serializable data class SparkStartIntent(val id: String, val couple: Long, val question: String)
 
 @Serializable data class SparkHistoryPage(val ids: List<String> = emptyList(), val next: String? = null)
+
+@Serializable data class SparkDaily(val session: SparkSession, val day: String,
+    @SerialName("time_zone") val timeZone: String, val carried: Boolean = false,
+    @SerialName("revealed_count") val revealedCount: Int = 0,
+    @SerialName("partner_activity_at") val partnerActivityAt: String? = null, val revisit: Boolean = false,
+    @SerialName("partner_activity_kind") val partnerActivityKind: String? = null)

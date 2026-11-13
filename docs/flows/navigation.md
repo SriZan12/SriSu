@@ -166,3 +166,8 @@ Explore uses its own feature ViewModel and the shared account-scoped FaveStore, 
 by Couple Profile. See the [Moments/Explore flow](moments.md#explore-and-personal-faves--26-october-2026)
 and [validation](../validation/explore/README.md). Historical inventories above describe
 the migration at that date, not the current feature coverage.
+
+
+## Home integration — 9 November 2026
+
+The bottom tabs are now Home, Questions, Chat and Profile. Questions reuses Spark catalogue/current/history; Explore remains reachable from Profile and unpaired Home. Unpaired Chat enters partner linking. Home → feature → chat keeps the originating feature on the back stack. See [Home couple space](home-couple-space.md).

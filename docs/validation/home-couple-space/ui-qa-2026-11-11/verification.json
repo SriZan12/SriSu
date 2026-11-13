@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-11",
+  "baseline_frontend": "1d1f8f268482406d037404c91cd47cc3fa3eccaa",
+  "backend_unchanged": "3e276ad6a38b1afdd955d760be4519628bd1b3f7",
+  "android_full_suite": {
+    "tests": 509,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "android_home": {
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "ios_home": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "regression_before": "Portrait tops at 445 and 415 rendered pixels; alignment assertion failed",
+  "regression_after": "Alignment assertions pass within one rendered pixel on Android and iOS",
+  "native_device_run": false
+}

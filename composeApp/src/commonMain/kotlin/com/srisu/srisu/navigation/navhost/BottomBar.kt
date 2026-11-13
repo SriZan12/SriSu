@@ -9,45 +9,45 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.srisu.srisu.theme.HomeSpace
 import com.srisu.srisu.theme.pill
 import com.srisu.srisu.theme.spacing
 import com.srisu.srisu.theme.transparent
 
-/** Shared Home chrome. Conversation/composer/viewer routes keep their full-screen layout. */
-@Composable
-fun AppBottomBar(
-    onSelect: (BottomDestination) -> Unit,
-    currentDestination: BottomDestination?,
-    visible: Boolean
-) {
+/** Full labels remain readable at large text; full-screen feature routes have no bottom bar. */
+@Composable fun AppBottomBar(onSelect: (BottomDestination) -> Unit, currentDestination: BottomDestination?, visible: Boolean) {
     if (!visible) return
-    val colors=MaterialTheme.colorScheme
-    val space=MaterialTheme.spacing
-    val largeText=LocalDensity.current.fontScale>1.3f
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=if(largeText) space.small else space.gutter,vertical=space.small),
-        contentAlignment=Alignment.Center) {
-        Surface(modifier=Modifier.widthIn(max=480.dp).fillMaxWidth(),shape=MaterialTheme.shapes.pill,
-            color=colors.surfaceContainer,tonalElevation=0.dp,shadowElevation=2.dp) {
-            Row(Modifier.selectableGroup().padding(space.tiny).heightIn(min=space.touchTarget),
-                verticalAlignment=Alignment.CenterVertically) {
-                BottomDestination.entries.forEach { destination ->
-                    val selected=currentDestination==destination
-                    val tint=if(selected) colors.onSurface else colors.onSurfaceVariant
-                    Column(Modifier.weight(1f).clip(MaterialTheme.shapes.pill)
-                        .background(if(selected) colors.surface else colors.transparent)
-                        .selectable(selected=selected,role=Role.Tab,onClick={if(!selected) onSelect(destination)})
-                        .heightIn(min=space.touchTarget).padding(horizontal=if(largeText) 0.dp else space.small,vertical=space.tiny),
-                        horizontalAlignment=Alignment.CenterHorizontally,
-                        verticalArrangement=Arrangement.spacedBy(space.tiny,Alignment.CenterVertically)) {
-                        Icon(destination.icon,null,Modifier.size(space.icon),tint=tint)
-                        Text(destination.label,color=tint,style=MaterialTheme.typography.bodySmall,maxLines=1,softWrap=false,overflow=TextOverflow.Ellipsis)
+    val space = MaterialTheme.spacing
+    val large = LocalDensity.current.fontScale > 1.3f
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = if (large) space.small else 14.dp, vertical = space.small),
+        contentAlignment = Alignment.Center) {
+        Surface(Modifier.widthIn(max = 480.dp).fillMaxWidth(), shape = if (large) MaterialTheme.shapes.large else MaterialTheme.shapes.pill,
+            color = HomeSpace.paper, tonalElevation = 0.dp, shadowElevation = 5.dp) {
+            Column(Modifier.selectableGroup().padding(space.tiny)) {
+                BottomDestination.entries.chunked(if (large) 2 else 4).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        row.forEach { destination -> BottomItem(destination, destination == currentDestination, large, Modifier.weight(1f)) { onSelect(destination) } }
                     }
                 }
             }
         }
+    }
+}
+@Composable private fun BottomItem(destination: BottomDestination, selected: Boolean, large: Boolean, modifier: Modifier, click: () -> Unit) {
+    val space = MaterialTheme.spacing
+    val tint = if (selected) HomeSpace.ink else HomeSpace.muted
+    val item = modifier.clip(MaterialTheme.shapes.pill).background(if (selected) HomeSpace.warm else MaterialTheme.colorScheme.transparent)
+        .selectable(selected, role = Role.Tab, onClick = { if (!selected) click() }).heightIn(min = space.touchTarget)
+        .padding(horizontal = space.tiny, vertical = if (large) space.small else 5.dp)
+    if (large) Row(item, horizontalArrangement = Arrangement.spacedBy(space.tiny, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+        Icon(destination.icon, null, Modifier.size(space.icon), tint)
+        Text(destination.label, color = tint, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f, false), textAlign = TextAlign.Center)
+    } else Column(item, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)) {
+        Icon(destination.icon, null, Modifier.size(20.dp), tint)
+        Text(destination.label, color = tint, style = HomeSpace.type(MaterialTheme.typography).bodySmall, textAlign = TextAlign.Center)
     }
 }

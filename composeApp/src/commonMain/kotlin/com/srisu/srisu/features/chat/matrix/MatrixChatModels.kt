@@ -74,6 +74,8 @@ data class MatrixChatRoomState(
     val composerError: String? = null,
     val accountId: Long? = null,
     val hasOlder: Boolean = false,
+    /** Receipt-derived unread state; null until synchronized. Never a bounded-history count. */
+    val unread: Boolean? = null,
     /** Failed reaction/redaction outbox operations; never silently discard these hidden events. */
     val failedChangeIds: List<String> = emptyList(),
 )
@@ -89,6 +91,9 @@ class MatrixChatRoomOwner
 interface MatrixChatRepository {
     fun observeRoom(roomId: String): Flow<MatrixChatRoomState>
     fun openRoom(roomId: String, owner: MatrixChatRoomOwner)
+    /** A read-only Home observer must never take ownership from a conversation. */
+    fun openSummary(roomId: String, owner: MatrixChatRoomOwner) {}
+    fun closeSummary(owner: MatrixChatRoomOwner) {}
     fun setTyping(roomId: String, owner: MatrixChatRoomOwner, typing: Boolean) {}
     fun closeRoom(roomId: String, owner: MatrixChatRoomOwner)
     suspend fun sendText(roomId: String, text: String): Result<String>

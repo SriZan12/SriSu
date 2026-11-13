@@ -151,3 +151,28 @@ preview are calculated from the original app base scheme before the picker theme
 is installed, preserving all six preset colors. Short labels are presentation-only;
 stored IDs and global theme definitions remain unchanged. See [the reference and
 checks](../validation/chat-pure/theme-picker/README.md).
+
+
+## Home couple space (2026-11-09)
+
+The approved four attachments and Stage 2 preview define a Home-scoped light
+composition in `HomeCoupleSpaceTheme.kt`: white canvas, lilac question, warm rows,
+pastel counters, Satoshi typography and native illustrative artwork. This is an
+intentional user-approved override of the older Figma Home frames, not a global
+palette or chat-theme rewrite. Question text uses measured balanced wrapping.
+Content heights grow, controls wrap, and the floating bottom navigation reflows
+at large text. See [design provenance](../design/home-redesign/stage-3.md) and
+[native validation](../validation/home-couple-space/README.md).
+
+The 11 November refinement reduces accumulated padding and visual control sizes:
+22 dp gutters (17 below 360 dp), 90 dp portraits (76 on compact phones), 11 sp
+secondary text, a 27 dp default date pill inside a 48 dp touch area, and compact
+20 dp navigation icons. The partner link is a dashed quadratic arch, as requested
+in the approved attachments. It joins the inner portrait edges and moves below
+the pair at enlarged text. These are adaptive dimensions, not a whole-screen
+scale transform; text scaling and content-driven heights remain enabled.
+
+Follow-up QA keeps the portrait pair aligned independently of wrapping status
+and Moments labels. Question artwork yields its column if the measured text
+would exceed three lines beside it; the text remains complete at the requested
+font scale. The default short-question layout is preserved. See [UI QA](../validation/home-couple-space/ui-qa-2026-11-11/README.md).

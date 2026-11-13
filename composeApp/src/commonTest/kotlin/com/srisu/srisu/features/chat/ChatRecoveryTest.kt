@@ -56,6 +56,42 @@ class ChatRecoveryTest {
         } finally {vm.closeRoom();vm.viewModelScope.cancel();Dispatchers.resetMain()}
     }
 
+    @Test fun homeDraftWaitsForRestoreAndNeverSilentlyOverwritesOrSends() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val sessions = com.srisu.srisu.features.moments.MomentFixtures.sessions()
+        val room = ChatFixtures.conversation().copy(accountId = 1)
+        sessions.saveSession("""{"draft":"Already writing this"}""", "chat-ui-v1:1:${room.roomId}")
+        val repository = ChatFixtureRepository(room)
+        val vm = SecureChatViewModel(repository, storage = sessions, sessions = sessions)
+        try {
+            vm.openRoom(room.roomId); vm.offerDraftPreset("thinking"); runCurrent()
+            assertEquals("Already writing this", vm.messageInput.value)
+            assertEquals("Thinking of you 👋", vm.draftOffer.value)
+            assertTrue(repository.sent.isEmpty())
+            vm.resolveDraftOffer(false)
+            assertEquals("Already writing this\nThinking of you 👋", vm.messageInput.value)
+            vm.offerDraftPreset("thinking"); assertNull(vm.draftOffer.value)
+            assertTrue(repository.sent.isEmpty())
+            sessions.clearSession(); runCurrent(); assertEquals("", vm.messageInput.value)
+        } finally { vm.closeRoom(); vm.viewModelScope.cancel(); Dispatchers.resetMain() }
+    }
+
+    @Test fun explicitlyReplacingAHomeDraftClearsTheOldReplyContext() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val sessions = com.srisu.srisu.features.moments.MomentFixtures.sessions()
+        val room = ChatFixtures.conversation().copy(accountId = 1)
+        val repo = ChatFixtureRepository(room)
+        val vm = SecureChatViewModel(repo, storage = sessions, sessions = sessions)
+        try {
+            vm.openRoom(room.roomId); runCurrent()
+            vm.updateMessageInput("Existing reply"); vm.setReply(room.messages.first().id)
+            vm.offerDraftPreset("coffee"); runCurrent(); assertNotNull(vm.draftOffer.value)
+            vm.resolveDraftOffer(true); runCurrent()
+            assertEquals("Coffee later? ☕", vm.messageInput.value); assertNull(vm.uiState.value.reply)
+            assertTrue(repo.sent.isEmpty())
+        } finally { vm.closeRoom(); vm.viewModelScope.cancel(); runCurrent(); Dispatchers.resetMain() }
+    }
+
     @Test fun ownMessagesFromAnotherDeviceDoNotMoveTheReadingPosition() {
         val message = MatrixChatMessage("\$message", "Hello", me, true, 1, MatrixMessageDelivery.SENT)
         assertFalse(shouldFollowNewMessage(message, wasAtLatest = false))

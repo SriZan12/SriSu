@@ -113,6 +113,42 @@ class SecureChatViewModel(
         }
     }
 
+    private val _draftOffer = MutableStateFlow<String?>(null)
+    val draftOffer = _draftOffer.asStateFlow()
+    private var routeDraft: String? = null
+    private var draftOffered = false
+    fun offerDraftPreset(key: String?) {
+        if (draftOffered || routeDraft != null) return
+        routeDraft = when (key) {
+            "thinking" -> "Thinking of you 👋"
+            "coffee" -> "Coffee later? ☕"
+            "miss" -> "Miss you 🌙"
+            "ask" -> "Can I ask you something?"
+            "nudge" -> "What do you think about our plan?"
+            else -> null
+        }
+        if (savedScope != null) applyRouteDraft()
+    }
+    private fun applyRouteDraft() {
+        val text = routeDraft ?: return
+        if (draftOffered) return
+        draftOffered = true; routeDraft = null
+        if (_messageInput.value.isBlank() && local.value.reply == null && pendingMoment.value == null) { _messageInput.value = text; saveUi() }
+        else _draftOffer.value = text
+    }
+    /** null cancels; false appends; true replaces only after an explicit choice. */
+    fun resolveDraftOffer(replace: Boolean?) {
+        val offered = _draftOffer.value ?: return
+        if (replace == null) { _draftOffer.value = null; return }
+        val text = if (replace) offered else _messageInput.value.trimEnd() + "\n" + offered
+        if (text.encodeToByteArray().size > MATRIX_TEXT_MAX_PLAINTEXT_BYTES) {
+            _composerValidationError.value = "The combined draft is too long. Keep your draft or replace it."; return
+        }
+        _draftOffer.value = null
+        if (replace) { pendingMoment.value = null; routeMoment = null; local.update { it.copy(reply = null) } }
+        _messageInput.value = text
+        saveUi()
+    }
     @Serializable private data class SavedUi(val draft: String = "", val reply: ChatQuote? = null, val theme: String = ChatThemePreset.DEFAULT.id, val moment: MomentReference? = null)
     private fun restoreUi(room: MatrixChatRoomState) {
         val key = room.accountId?.let { "chat-ui-v1:$it:${room.roomId}" } ?: return
@@ -124,6 +160,7 @@ class SecureChatViewModel(
         if(routeMoment==null) pendingMoment.value=saved.moment
         local.update { it.copy(reply = saved.reply.takeIf {pendingMoment.value==null}, preferences = it.preferences.copy(chatTheme = saved.theme)) }
         if (editedDuringOpening) saveUi()
+        applyRouteDraft()
     }
     private fun saveUi() {
         val key = savedScope ?: return
@@ -326,7 +363,7 @@ class SecureChatViewModel(
     fun retryFailedChanges() { _state.value?.failedChangeIds.orEmpty().forEach(::retryMessage) }
 
     fun closeRoom() {
-        saveUi(); dismissMedia(); momentReferences.clear(); pendingMoment.value=null; routeMoment=null
+        saveUi(); dismissMedia(); _draftOffer.value = null; routeDraft = null; momentReferences.clear(); pendingMoment.value=null; routeMoment=null
         thumbnailJobs.values.forEach { it.cancel() }; thumbnailJobs.clear(); thumbnails.clear()
         prepared = null; savedScope = null; local.value = ConversationState()
         roomOperation += 1

@@ -141,9 +141,30 @@
       "flow": "docs/flows/notifications.md",
       "backend_guide": "../SriSu-backend/docs/notifications.md",
       "status": "consolidated-current-activity-notifications-matrix-chat-push-unavailable",
-      "android_debug_tools": "Home below greeting: copy registered Firebase ID for console test notifications; sensitive clipboard, no identifier logging",
+      "android_debug_tools": "Home debug token-copy tools removed in Home Stage 3; notification registration behavior retained",
       "test_kit": "tools/notification_tests/README.md",
       "consolidation_branch": "codex/consolidate-core-20261029"
+    },
+    "home": {
+      "frontend_branch": "codex/home-couple-space",
+      "frontend_start": "c1abef982b0e3a2b87bf342d08c526bc65c25bd8",
+      "backend_branch": "codex/home-couple-space",
+      "backend_start": "11891049ef323b6df3c6ee3c8f0688442b18c13f",
+      "backend_checkout_override": "../SriSu-backend-consolidated-20261029",
+      "contract": "home-1 with additive sparks-1/plans-1/challenges-1 projections",
+      "migration": "social.0023_home_couple_space",
+      "flow": "docs/flows/home-couple-space.md",
+      "backend_guide": "docs/home-couple-space.md (in selected backend checkout)",
+      "design": "docs/design/home-redesign/stage-3.md",
+      "validation": "docs/validation/home-couple-space/README.md",
+      "figma_nodes": [
+        "238:193",
+        "238:415",
+        "238:612",
+        "238:773"
+      ],
+      "visual_authority": "User attachments and approved Stage 2 preview; live Figma nodes contain older layouts",
+      "status": "implemented-local-native-validation-no-push-or-deployment"
     }
   }
 }
