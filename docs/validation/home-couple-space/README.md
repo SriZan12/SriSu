@@ -14,6 +14,10 @@ The subsequent [11 November UI QA](ui-qa-2026-11-11/README.md) fixes portrait
 alignment and long-question wrapping, removes a redundant row, and records
 the latest 20 Android / 17 iOS Home render checks and their device-testing limits.
 
+The [13 November installed-app follow-up](device-qa-2026-11-13/README.md) restores
+native Android/iOS verification and fixes rapid keyboard input loss. Its results
+supersede the earlier environment limitations for the specific journeys recorded there.
+
 ## Results actually obtained
 
 | Check | Result | Limits |

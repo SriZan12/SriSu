@@ -125,6 +125,7 @@ internal fun ConversationComposer(
     voice: @Composable () -> Unit, onFocusChanged: (Boolean) -> Unit = {}, extras: @Composable ColumnScope.() -> Unit = {}
 ) {
     val inputFocus = remember { FocusRequester() }
+    val editor = com.srisu.srisu.components.rememberDraftEditor(state.draft)
     var previousReply by remember { mutableStateOf(state.reply?.messageId) }
     LaunchedEffect(state.reply?.messageId) {
         if (state.reply != null && state.reply.messageId != previousReply && !recording) inputFocus.requestFocus()
@@ -167,8 +168,13 @@ internal fun ConversationComposer(
                     val largeType = LocalDensity.current.fontScale > 1.3f
                     val input: @Composable (Modifier) -> Unit = { modifier ->
                         BasicTextField(
-                            value = state.draft,
-                            onValueChange = onDraft,
+                            value = editor.value,
+                            onValueChange = { next ->
+                                if (next.text.encodeToByteArray().size > com.srisu.srisu.features.chat.matrix.MATRIX_TEXT_MAX_PLAINTEXT_BYTES) {
+                                    // Keep the accepted editor value; the ViewModel owns validation feedback.
+                                    onDraft(next.text)
+                                } else if (editor.edit(next)) onDraft(next.text)
+                            },
                             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             enabled = !recording,
@@ -184,7 +190,7 @@ internal fun ConversationComposer(
                                 ),
                             decorationBox = { input ->
                                 Box {
-                                    if (recording || state.draft.isEmpty()) Text(
+                                    if (recording || editor.value.text.isEmpty()) Text(
                                         if (recording) "Recording a voice message…" else if (state.mediaDraft == null) "Message ${state.preferences.nickname.ifBlank { state.partnerName }}" else "Add a caption…",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -201,7 +207,7 @@ internal fun ConversationComposer(
                         ) { Icon(PureChatIcons.Add, "Attach or share", Modifier.size(PureChatTokens.icon)) }
                     }
                     val submit: @Composable () -> Unit = {
-                        if (state.draft.isBlank() && state.mediaDraft == null) voice()
+                        if (editor.value.text.isBlank() && state.mediaDraft == null) voice()
                         else FilledIconButton(
                             onClick = onSend,
                             enabled = !busy && !recording,

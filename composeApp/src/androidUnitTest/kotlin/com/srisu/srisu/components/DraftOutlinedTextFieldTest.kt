@@ -52,4 +52,23 @@ class DraftOutlinedTextFieldTest {
         compose.runOnIdle { assertEquals("test", text.value) }
         compose.onNodeWithText("Draft").assertTextContains("test")
     }
+
+    @Test fun delayedModelEchoCannotEraseNewerTyping() {
+        val model = mutableStateOf("")
+        val edits = mutableListOf<String>()
+        compose.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalInspectionMode provides true) { org.jetbrains.compose.resources.PreviewContextConfigurationEffect() }
+            SriSuTheme { DraftOutlinedTextField(model.value, edits::add, label = { Text("Draft") }) }
+        }
+        val field = compose.onNodeWithText("Draft")
+        field.performClick().performTextInput("co")
+        field.performTextInput("ffee")
+        compose.runOnIdle { assertEquals(listOf("co", "coffee"), edits); model.value = edits.first() }
+        field.assertTextContains("coffee")
+        field.performTextInput(" together")
+        compose.runOnIdle { assertEquals("coffee together", edits.last()); model.value = edits.last() }
+        field.assertTextContains("coffee together")
+        compose.runOnIdle { model.value = "A different idea" }
+        field.assertTextContains("A different idea")
+    }
 }

@@ -68,6 +68,10 @@ it does not currently attach a specific Plan reference.
 - Restored chat text/reply/Moment context is never silently replaced by a Home
   suggestion. Explicit Keep/Append/Replace handles the conflict; replacement
   clears the old context and the existing byte limit remains enforced.
+- Chat and Plan editors apply keyboard edits immediately. Delayed screen-state
+  acknowledgements must not erase newer typing, move the caret, or cancel an
+  active IME composition. Explicit draft replacement and successful-send clearing
+  still update the editor; existing character/UTF-8 limits remain enforced.
 
 ## Matrix and privacy
 
@@ -103,3 +107,7 @@ rows so wrapped labels cannot shift the portraits. Long question text takes the
 illustration's space when needed. Coming up has one View all entry for Plans &
 ideas rather than an extra Shared ideas row beneath a featured Plan. Existing
 navigation and data actions remain unchanged. See [QA evidence](../validation/home-couple-space/ui-qa-2026-11-11/README.md).
+
+The [13 November installed-app follow-up](../validation/home-couple-space/device-qa-2026-11-13/README.md)
+records keyboard, scrolling, accessibility-text and draft-return checks, including
+the fix for rapid input lost through delayed model acknowledgements.
