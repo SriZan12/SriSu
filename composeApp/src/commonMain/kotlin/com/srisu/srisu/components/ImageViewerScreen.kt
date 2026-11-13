@@ -1,5 +1,8 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.mediaBackground
+import com.srisu.srisu.theme.onMedia
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -59,7 +61,7 @@ fun ImageViewerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.mediaBackground)
     ) {
         HorizontalPager(
             state = pagerState,
@@ -78,13 +80,13 @@ fun ImageViewerScreen(
 
         Box(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter)) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp, horizontal = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.touchTarget, horizontal = MaterialTheme.spacing.large),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "${pagerState.currentPage + 1}/${images.size}",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onMedia,
                     modifier = Modifier,
                 )
 
@@ -95,7 +97,7 @@ fun ImageViewerScreen(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onMedia
                     )
                 }
             }

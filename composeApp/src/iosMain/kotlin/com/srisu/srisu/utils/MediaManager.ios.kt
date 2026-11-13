@@ -58,57 +58,16 @@ actual fun rememberGalleryManager(
     return remember {
         GalleryManager(onLaunch = {
 
-            if (isMultiple) {
-                val config = PHPickerConfiguration().apply {
-                    selectionLimit = 5
-                    filter = when (mediaType) {
-                        MediaType.IMAGE_ONLY -> PHPickerFilter.imagesFilter()
-                        MediaType.VIDEO_ONLY -> PHPickerFilter.videosFilter()
-                        MediaType.IMAGE_AND_VIDEO,
-                        MediaType.MIME_TYPE,
-                        null -> null
-
-                        MediaType.NOTHING -> PHPickerFilter.imagesFilter()
-                    }
+            val config = PHPickerConfiguration().apply {
+                selectionLimit = if (isMultiple) 5 else 1
+                filter = when (mediaType) {
+                    MediaType.VIDEO_ONLY -> PHPickerFilter.videosFilter()
+                    MediaType.IMAGE_AND_VIDEO -> null
+                    else -> PHPickerFilter.imagesFilter()
                 }
-
-                val picker = PHPickerViewController(config).apply {
-                    delegate = multiPickerDelegate
-                }
-
-                viewController.presentViewController(
-                    picker,
-                    animated = true,
-                    completion = {
-                        onResult(emptyList())
-                    }
-                )
-
-            } else {
-                val picker = UIImagePickerController().apply {
-                    delegate = singlePickerDelegate
-                    sourceType =
-                        UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
-
-                    mediaTypes = when (mediaType) {
-                        MediaType.IMAGE_ONLY -> listOf("public.image")
-                        MediaType.VIDEO_ONLY -> listOf("public.movie")
-                        MediaType.IMAGE_AND_VIDEO,
-                        MediaType.MIME_TYPE,
-                        null -> listOf("public.image", "public.movie")
-
-                        MediaType.NOTHING -> listOf("public.image")
-                    }
-                }
-
-                viewController.presentViewController(
-                    picker,
-                    animated = true,
-                    completion = {
-                        onResult(emptyList())
-                    }
-                )
             }
+            val picker = PHPickerViewController(config).apply { delegate = multiPickerDelegate }
+            viewController.presentViewController(picker, animated = true, completion = null)
         })
     }
 }
@@ -205,6 +164,21 @@ fun rememberUIViewController(): UIViewController {
 
 
 actual class FileManager {
+    @OptIn(ExperimentalForeignApi::class)
+    actual suspend fun createProfilePhotoFromPath(path: String): MediaFile? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        try {
+            val url = if (path.startsWith("file://")) NSURL.URLWithString(path) else NSURL.fileURLWithPath(path)
+            val filePath = url?.path ?: return@withContext null
+            val handle = NSFileHandle.fileHandleForReadingAtPath(filePath) ?: return@withContext null
+            val data = try { handle.readDataOfLength((5 * 1024 * 1024 + 1).toULong()) } finally { handle.closeFile() }
+            if (data.length == 0UL || data.length > (5 * 1024 * 1024).toULong()) return@withContext null
+            val bytes = data.toByteArray()
+            if (!profileImageDimensionsValid(bytes)) return@withContext null
+            MediaFile(id = null, fileName = "profile.jpg", mimeType = "application/octet-stream", fileSize = bytes.size.toLong(), fileBytes = bytes, fileType = MediaType.IMAGE_ONLY)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+        } catch (_: Exception) { null }
+    }
+
 
     @OptIn(ExperimentalForeignApi::class)
     actual suspend fun createMediaFileFromPath(

@@ -1,5 +1,6 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.transparent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -12,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 
 @Composable
 fun Modifier.shimmerEffect(): Modifier {
@@ -30,7 +30,7 @@ fun Modifier.shimmerEffect(): Modifier {
         label = "alpha"
     )
     return this.background(
-        color = Color.LightGray.copy(alpha = alpha.value)
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = alpha.value)
     )
 }
 
@@ -52,9 +52,9 @@ fun Modifier.gradientShimmerEffect(): Modifier {
 
     val brush = Brush.linearGradient(
         colors = listOf(
-            Color.Transparent,
+            MaterialTheme.colorScheme.transparent,
             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-            Color.Transparent
+            MaterialTheme.colorScheme.transparent
         ),
         start = Offset(translateAnim.value - 200f, translateAnim.value - 200f),
         end = Offset(translateAnim.value, translateAnim.value)

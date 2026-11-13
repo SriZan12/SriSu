@@ -9,5 +9,5 @@ import com.srisu.srisu.core.session.SessionStorage
 actual val kVaultPlatformModule = module {
 //    single { KVault(serviceName = SESSION, accessGroup = SESSION_FILE) }
     single { KVault() }
-    single<SessionStorage> { IOSSessionStorage(get()) }
+    single<SessionStorage>(org.koin.core.qualifier.named("platformSessionStorage")) { IOSSessionStorage(get()) }
 }

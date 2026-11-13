@@ -1,0 +1,8 @@
+<resources>
+    <string name="nav_unavailable">This screen is no longer available. Please return and open it again.</string>
+    <string name="nav_go_back">Go back</string>
+    <string name="nav_conversations">Conversations</string>
+    <string name="nav_invitations">Partner invitations</string>
+    <string name="nav_find_partner">Find your partner</string>
+    <string name="nav_membership_retry">Connection unavailable. Retry membership check</string>
+</resources>

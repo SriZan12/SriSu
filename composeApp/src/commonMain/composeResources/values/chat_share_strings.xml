@@ -1,0 +1,15 @@
+<resources>
+    <string name="chat_share_title">Share something</string>
+    <string name="chat_share_close">Close share menu</string>
+    <string name="chat_share_photos">Photos</string>
+    <string name="chat_share_camera">Camera</string>
+    <string name="chat_share_video">Video</string>
+    <string name="chat_share_voice">Voice</string>
+    <string name="chat_share_together">TOGETHER</string>
+    <string name="chat_share_spark">Spark</string>
+    <string name="chat_share_challenge">Challenge</string>
+    <string name="chat_share_plan">Plan</string>
+    <string name="chat_share_spark_detail">A question for the two of you</string>
+    <string name="chat_share_challenge_detail">Try something new together</string>
+    <string name="chat_share_plan_detail">Make time for each other</string>
+</resources>

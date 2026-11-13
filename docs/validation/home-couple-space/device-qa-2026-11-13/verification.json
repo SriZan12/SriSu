@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-13",
+  "baseline_frontend": "7cb2e32fbcb6578bf2fabd4d39b6438e6faaff6f",
+  "backend_unchanged": "3e276ad6a38b1afdd955d760be4519628bd1b3f7",
+  "android_unit": {
+    "tests": 515,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "ios_selected": {
+    "tests": 77,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "regular_executed": 75,
+    "opt_in_early_returns": 2
+  },
+  "full_signed_ios_debug_build": "passed",
+  "android_app_and_test_builds": "passed",
+  "theme": "passed",
+  "core_contract_fixtures": "passed",
+  "input_regression_before": "failed: delayed co model echo overwrote coffee",
+  "input_regression_after": "passed: newer text, caret and IME composition retained",
+  "ios_installed_manual": {
+    "runtime": "iOS 26.5",
+    "device": "SriSu Couple Chat Evaluation",
+    "isolated_backend": true,
+    "rapid_chat_and_plan_typing": "passed",
+    "multiline_chat": "passed",
+    "draft_return_and_relaunch": "passed",
+    "plan_actions_above_keyboard": "passed",
+    "home_scroll_to_bottom": "passed",
+    "accessibility_medium_and_reduce_motion": "passed, simulator settings restored"
+  },
+  "physical_devices_tested": false,
+  "measured_frame_budget": false,
+  "ios_hitch_profiling": "unsupported on simulator",
+  "fresh_two_device_encryption_test": false,
+  "backend_suite_rerun": false,
+  "ci_baseline_frontend": {
+    "run": 42962705082,
+    "conclusion": "success"
+  },
+  "ci_backend": {
+    "run": 42571530468,
+    "conclusion": "success"
+  },
+  "android_installed_live": {
+    "tests": 1,
+    "failures": 0,
+    "skipped": 0,
+    "runtime": "Android 15 / API 35 ARM64",
+    "device": "SriSuHomeQA (Pixel 4a)",
+    "backend": "isolated loopback Django/Synapse",
+    "plan_keyboard_back_and_save": "passed",
+    "chat_keyboard_insets_and_multiline": "passed",
+    "home_scroll_return_and_draft_restore": "passed",
+    "notification_primer": "Not now; no permission enabled"
+  },
+  "android_installed_home_fixtures": {
+    "tests": 4,
+    "failures": 0,
+    "skipped": 0,
+    "large_text_scale": 2.0
+  }
+}

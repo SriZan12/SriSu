@@ -1,0 +1,561 @@
+Subject: [PATCH] test: auth flow and partner linking testing.
+---
+Index: composeApp/src/commonMain/kotlin/com/srisu/srisu/features/coupleprofile/navigation/CoupleProfileNavigation.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/coupleprofile/navigation/CoupleProfileNavigation.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/coupleprofile/navigation/CoupleProfileNavigation.kt
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/coupleprofile/navigation/CoupleProfileNavigation.kt	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/coupleprofile/navigation/CoupleProfileNavigation.kt	(date 1791640862567)
+@@ -2,20 +2,43 @@
+ 
+ import androidx.navigation.NavGraphBuilder
+ import androidx.navigation.NavController
++import androidx.navigation.NavType
+ import androidx.navigation.toRoute
+ import androidx.navigation.compose.composable
++import androidx.savedstate.SavedState
++import androidx.savedstate.read
++import androidx.savedstate.write
+ import com.srisu.srisu.navigation.AppNavigator
+ import com.srisu.srisu.navigation.graph.ChatNav
+ import com.srisu.srisu.navigation.graph.Route
+ import com.srisu.srisu.navigation.graph.HomeNavigation
+ import com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileScreen
+ import kotlinx.serialization.Serializable
++import kotlin.reflect.typeOf
+ 
+ @Serializable enum class CoupleSection { PROFILE, PREVIEW, STORY, STORY_EDIT, SONG, INTERESTS, COVER, DATE, SHARING, PLANS, NEW_PLAN, PLAN, ANSWER }
+ @Serializable data class CoupleProfileDestination(val coupleId: Long? = null, val section: CoupleSection = CoupleSection.PROFILE, val planId: Long? = null) : Route
+ 
++/** Navigation 2.9.1 does not provide enum NavTypes on non-Android targets. */
++private object CoupleSectionNavType : NavType<CoupleSection>(isNullableAllowed = false) {
++    override val name: String = "couple_section"
++
++    override fun put(bundle: SavedState, key: String, value: CoupleSection) {
++        bundle.write { putString(key, value.name) }
++    }
++
++    override fun get(bundle: SavedState, key: String): CoupleSection? =
++        bundle.read { getStringOrNull(key)?.let(CoupleSection::valueOf) }
++
++    override fun parseValue(value: String): CoupleSection = CoupleSection.valueOf(value)
++
++    override fun serializeAsValue(value: CoupleSection): String = value.name
++}
++
+ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
+-    composable<CoupleProfileDestination> { entry ->
++    composable<CoupleProfileDestination>(
++        typeMap = mapOf(typeOf<CoupleSection>() to CoupleSectionNavType)
++    ) { entry ->
+         val route = entry.toRoute<CoupleProfileDestination>()
+         val nav = AppNavigator(controller, entry)
+         if ((route.coupleId != null && route.coupleId <= 0) || (route.planId != null && route.planId <= 0)) {
+Index: composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/core/CoreLocalTransportIntegrationTest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/core/CoreLocalTransportIntegrationTest.kt b/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/core/CoreLocalTransportIntegrationTest.kt
+--- a/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/core/CoreLocalTransportIntegrationTest.kt	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/core/CoreLocalTransportIntegrationTest.kt	(date 1791639335431)
+@@ -30,6 +30,7 @@
+ import org.robolectric.annotation.SQLiteMode
+ import java.io.File
+ import kotlin.test.*
++import kotlin.time.Duration.Companion.milliseconds
+ 
+ @RunWith(RobolectricTestRunner::class)
+ @Config(sdk = [35])
+@@ -59,7 +60,7 @@
+         val path = RuntimeEnvironment.getApplication().getDatabasePath("integration-catalogue.db").absolutePath
+         val database = Room.databaseBuilder<CatalogueDatabase>(RuntimeEnvironment.getApplication(), path).setDriver(AndroidSQLiteDriver()).build()
+         try { runBlocking {
+-            withTimeout(15_000) {
++            withTimeout(15_000.milliseconds) {
+                 val catalogue = InterestCatalogueRepository(database.catalogue(), ProfileApiService(client, environment), environment, sessions)
+                 assertEquals("Synthetic hiking", catalogue.load(force = true).value?.interests?.single()?.name)
+                 assertNotNull(database.catalogue().read("interests:1:${environment.baseUrl}"))
+Index: docs/flows/navigation.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/docs/flows/navigation.md b/docs/flows/navigation.md
+--- a/docs/flows/navigation.md	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/docs/flows/navigation.md	(date 1791640918245)
+@@ -135,3 +135,11 @@
+ The navigation state remains scoped to the current session and couple membership.
+ See [the consolidation record](../integration/core-consolidation.md) for preserved
+ source commits, conflict decisions, paired PRs and validation limits.
++
++### iOS typed section arguments (2026-10-10)
++
++Compose Navigation 2.9.1 does not infer enum `NavType`s on non-Android targets.
++`coupleProfileGraph` registers a `CoupleSection` type mapping that saves and
++restores the enum by name, so typed profile routes work on iOS as well as Android.
++`compileKotlinIosSimulatorArm64` passed after this fix; device navigation was not
++run.
+Index: iosApp/Podfile.lock
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/iosApp/Podfile.lock b/iosApp/Podfile.lock
+--- a/iosApp/Podfile.lock	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/iosApp/Podfile.lock	(date 1791640645156)
+@@ -17,6 +17,6 @@
+ SPEC CHECKSUMS:
+   LibSignalClient: 2b65bad98bf695e2036871b7160598595a60ed45
+ 
+-PODFILE CHECKSUM: 18324bc692ac32d8793dfa061ebc25deb4246554
++PODFILE CHECKSUM: 880e5756ef3264cbef756dd34d055e09f15a9679
+ 
+ COCOAPODS: 1.17.0
+Index: composeApp/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/composeApp/build.gradle.kts b/composeApp/build.gradle.kts
+--- a/composeApp/build.gradle.kts	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/composeApp/build.gradle.kts	(date 1791639335425)
+@@ -12,7 +12,7 @@
+     alias(libs.plugins.room)
+ }
+ 
+-val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.73:8000/")
++val apiBaseUrl = providers.gradleProperty("srisu.apiBaseUrl").orElse("http://192.168.1.69:8000/")
+ val apiEnvironment = providers.gradleProperty("srisu.environment").orElse("development")
+ val chatAppEvaluation = providers.gradleProperty("chatAppEvaluation").orNull == "true"
+ val environmentSources = layout.buildDirectory.dir("generated/srisuEnvironment/commonMain")
+Index: iosApp/Podfile
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/iosApp/Podfile b/iosApp/Podfile
+--- a/iosApp/Podfile	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/iosApp/Podfile	(date 1791640641616)
+@@ -8,6 +8,13 @@
+ end
+ 
+ post_install do |installer|
++  # Keep CocoaPods products in Xcode's active build directory. The generated
++  # default `${SRCROOT}/../build` path is separate from DerivedData, so the app
++  # cannot find LibSignalClient when built from the project scheme.
++  installer.pods_project.build_configurations.each do |config|
++    config.build_settings.delete('SYMROOT')
++  end
++
+   installer.pods_project.targets.each do |target|
+     target.build_configurations.each do |config|
+       config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+@@ -25,6 +32,14 @@
+         config.base_configuration_reference_relative_path = nil if config.respond_to?(:base_configuration_reference_relative_path=)
+         config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+       end
++
++      # Make project-scheme builds compile CocoaPods before the app's Swift files.
++      pods_project_path = File.join(project.project_dir, 'Pods', 'Pods.xcodeproj')
++      unless project.reference_for_path(pods_project_path)
++        project.main_group.new_reference(pods_project_path, :group)
++      end
++      pods_target = installer.pods_project.targets.find { |candidate| candidate.name == 'Pods-iosApp' }
++      target.add_dependency(pods_target) if pods_target
+     end
+     project.save
+   end
+Index: iosApp/iosApp.xcodeproj/project.pbxproj
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/iosApp/iosApp.xcodeproj/project.pbxproj b/iosApp/iosApp.xcodeproj/project.pbxproj
+--- a/iosApp/iosApp.xcodeproj/project.pbxproj	(revision 9f1a7708f1aa9785fb6e046227e134f23e1ec9f1)
++++ b/iosApp/iosApp.xcodeproj/project.pbxproj	(date 1791640645589)
+@@ -7,31 +7,41 @@
+ 	objects = {
+ 
+ /* Begin PBXBuildFile section */
+-		6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 55529C763A875DDBD84BFC94 /* Foundation.framework */; };
+-		7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86666EF693A88E393B6642E4 /* ChatMediaTests.swift */; };
+-		AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */; };
++		9AA72E968031E64E080EA807 /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1CEF749FEDF1EE512480F10 /* Pods_iosApp.framework */; };
+ /* End PBXBuildFile section */
+ 
+ /* Begin PBXContainerItemProxy section */
+-		CBE08F7CDE612F522B813BCD /* PBXContainerItemProxy */ = {
++		5A93BF43041A480ABD3D794C /* PBXContainerItemProxy */ = {
++			isa = PBXContainerItemProxy;
++			containerPortal = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
++			proxyType = 2;
++			remoteGlobalIDString = B097DD7534E741D5C41838011D755842;
++			remoteInfo = Subproject;
++		};
++		6CB9498FF01CB0B9527C59C7 /* PBXContainerItemProxy */ = {
++			isa = PBXContainerItemProxy;
++			containerPortal = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
++			proxyType = 2;
++			remoteGlobalIDString = D11761D6988B5F29BB319D5189B9EF5E;
++			remoteInfo = Subproject;
++		};
++		D8AE12ECACF2EF0B279F1E44 /* PBXContainerItemProxy */ = {
+ 			isa = PBXContainerItemProxy;
+-			containerPortal = B9DA97A92DC1472C00A4DA20 /* Project object */;
++			containerPortal = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
+ 			proxyType = 1;
+-			remoteGlobalIDString = B9DA97B02DC1472C00A4DA20;
+-			remoteInfo = iosApp;
++			remoteGlobalIDString = ED39C638569286489CD697A6C8964146;
++			remoteInfo = "Pods-iosApp";
+ 		};
+ /* End PBXContainerItemProxy section */
+ 
+ /* Begin PBXFileReference section */
+-		06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SriSuChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+-		3D84D89AF61BA08443C4A305 /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
+-		55529C763A875DDBD84BFC94 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+-		86666EF693A88E393B6642E4 /* ChatMediaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatMediaTests.swift; path = ChatTests/ChatMediaTests.swift; sourceTree = "<group>"; };
+-		996363D69895B140A2C68AD3 /* Debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Configuration/Debug.xcconfig; sourceTree = "<group>"; };
+-		B07530DAE48CAFBF3FB20FAA /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
++		0DBF8330D721393F6778DFEB /* Debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Configuration/Debug.xcconfig; sourceTree = "<group>"; };
++		3815042F01C27F813B436797 /* Pods-iosApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.debug.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"; sourceTree = "<group>"; };
++		6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Pods.xcodeproj; path = Pods/Pods.xcodeproj; sourceTree = "<group>"; };
+ 		B9DA97B12DC1472C00A4DA20 /* SriSu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SriSu.app; sourceTree = BUILT_PRODUCTS_DIR; };
+-		D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+-		E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Configuration/Release.xcconfig; sourceTree = "<group>"; };
++		BF41AA95B37327E3BF739C37 /* Pods-iosApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iosApp.release.xcconfig"; path = "Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"; sourceTree = "<group>"; };
++		C1CEF749FEDF1EE512480F10 /* Pods_iosApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iosApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
++		F0C3D678A1900A0A7A8CAC51 /* Release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Configuration/Release.xcconfig; sourceTree = "<group>"; };
+ /* End PBXFileReference section */
+ 
+ /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+@@ -39,7 +49,6 @@
+ 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+ 			membershipExceptions = (
+ 				Info.plist,
+-				Info.Debug.plist,
+ 			);
+ 			target = B9DA97B02DC1472C00A4DA20 /* iosApp */;
+ 		};
+@@ -51,6 +60,10 @@
+ 			exceptions = (
+ 				B99700CA2DC9B8D800C7335B /* Exceptions for "iosApp" folder in "iosApp" target */,
+ 			);
++			explicitFileTypes = {
++			};
++			explicitFolders = (
++			);
+ 			path = iosApp;
+ 			sourceTree = "<group>";
+ 		};
+@@ -58,6 +71,10 @@
+ 			isa = PBXFileSystemSynchronizedRootGroup;
+ 			exceptions = (
+ 			);
++			explicitFileTypes = {
++			};
++			explicitFolders = (
++			);
+ 			path = Configuration;
+ 			sourceTree = "<group>";
+ 		};
+@@ -75,44 +92,17 @@
+ 			isa = PBXFrameworksBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
+-				AB33B33DC412F95816BA3AC4 /* Pods_iosApp.framework in Frameworks */,
+-			);
+-			runOnlyForDeploymentPostprocessing = 0;
+-		};
+-		E484BB396089A903F2743E45 /* Frameworks */ = {
+-			isa = PBXFrameworksBuildPhase;
+-			buildActionMask = 2147483647;
+-			files = (
+-				6B4A9AE0CA3CFA3CF685EF9B /* Foundation.framework in Frameworks */,
++				9AA72E968031E64E080EA807 /* Pods_iosApp.framework in Frameworks */,
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 		};
+ /* End PBXFrameworksBuildPhase section */
+ 
+ /* Begin PBXGroup section */
+-		061FB3E1F41EB2F553EEC279 /* iOS */ = {
+-			isa = PBXGroup;
+-			children = (
+-				55529C763A875DDBD84BFC94 /* Foundation.framework */,
+-			);
+-			name = iOS;
+-			sourceTree = "<group>";
+-		};
+-		127C89CDC0E41E040BD653EC /* Pods */ = {
++		958A432233D84632E7ADBF2A /* Frameworks */ = {
+ 			isa = PBXGroup;
+ 			children = (
+-				B07530DAE48CAFBF3FB20FAA /* Pods-iosApp.debug.xcconfig */,
+-				3D84D89AF61BA08443C4A305 /* Pods-iosApp.release.xcconfig */,
+-			);
+-			name = Pods;
+-			path = Pods;
+-			sourceTree = "<group>";
+-		};
+-		95FE106BF690857BA3089605 /* Frameworks */ = {
+-			isa = PBXGroup;
+-			children = (
+-				D1EA8F3A47956D8E59C0BA91 /* Pods_iosApp.framework */,
+-				061FB3E1F41EB2F553EEC279 /* iOS */,
++				C1CEF749FEDF1EE512480F10 /* Pods_iosApp.framework */,
+ 			);
+ 			name = Frameworks;
+ 			sourceTree = "<group>";
+@@ -124,11 +114,11 @@
+ 				B9DA97B32DC1472C00A4DA20 /* iosApp */,
+ 				CCD00CE10000000000000001 /* SecureChat */,
+ 				B9DA97B22DC1472C00A4DA20 /* Products */,
+-				127C89CDC0E41E040BD653EC /* Pods */,
+-				95FE106BF690857BA3089605 /* Frameworks */,
+-				996363D69895B140A2C68AD3 /* Debug.xcconfig */,
+-				E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */,
+-				86666EF693A88E393B6642E4 /* ChatMediaTests.swift */,
++				0DBF8330D721393F6778DFEB /* Debug.xcconfig */,
++				F0C3D678A1900A0A7A8CAC51 /* Release.xcconfig */,
++				DFAD1D64CFDCC6E27E4594BF /* Pods */,
++				958A432233D84632E7ADBF2A /* Frameworks */,
++				6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */,
+ 			);
+ 			sourceTree = "<group>";
+ 		};
+@@ -136,46 +126,40 @@
+ 			isa = PBXGroup;
+ 			children = (
+ 				B9DA97B12DC1472C00A4DA20 /* SriSu.app */,
+-				06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */,
++				554B0C5B4B58BF8AFE53C067 /* LibSignalClient.framework */,
++				40A742ED9557C5ACDC9A1C4F /* Pods_iosApp.framework */,
+ 			);
+ 			name = Products;
+ 			sourceTree = "<group>";
+ 		};
++		DFAD1D64CFDCC6E27E4594BF /* Pods */ = {
++			isa = PBXGroup;
++			children = (
++				3815042F01C27F813B436797 /* Pods-iosApp.debug.xcconfig */,
++				BF41AA95B37327E3BF739C37 /* Pods-iosApp.release.xcconfig */,
++			);
++			name = Pods;
++			path = Pods;
++			sourceTree = "<group>";
++		};
+ /* End PBXGroup section */
+ 
+ /* Begin PBXNativeTarget section */
+-		4AE5444ACD254E868FCBCFA8 /* SriSuChatTests */ = {
+-			isa = PBXNativeTarget;
+-			buildConfigurationList = 3D774B807AB9F5B987773A03 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */;
+-			buildPhases = (
+-				622D7043E62F19A70CD4F86E /* Sources */,
+-				E484BB396089A903F2743E45 /* Frameworks */,
+-				908D4164F73FDDE86DB06D9C /* Resources */,
+-			);
+-			buildRules = (
+-			);
+-			dependencies = (
+-				ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */,
+-			);
+-			name = SriSuChatTests;
+-			productName = SriSuChatTests;
+-			productReference = 06F244355CBCC801CDA57ACC /* SriSuChatTests.xctest */;
+-			productType = "com.apple.product-type.bundle.unit-test";
+-		};
+ 		B9DA97B02DC1472C00A4DA20 /* iosApp */ = {
+ 			isa = PBXNativeTarget;
+ 			buildConfigurationList = B9DA97BF2DC1472D00A4DA20 /* Build configuration list for PBXNativeTarget "iosApp" */;
+ 			buildPhases = (
+-				D2A4272B55E27A1093A691E2 /* [CP] Check Pods Manifest.lock */,
++				EF686CB5E6FD69728CA99CDA /* [CP] Check Pods Manifest.lock */,
+ 				B9DA97F42DC1497100A4DA20 /* Compile Kotlin Framework */,
+ 				B9DA97AD2DC1472C00A4DA20 /* Sources */,
+ 				B9DA97AE2DC1472C00A4DA20 /* Frameworks */,
+ 				B9DA97AF2DC1472C00A4DA20 /* Resources */,
+-				6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */,
++				15E076BF59FBAB5A747AB223 /* [CP] Embed Pods Frameworks */,
+ 			);
+ 			buildRules = (
+ 			);
+ 			dependencies = (
++				C34FDE6D27EC91995FE45B21 /* PBXTargetDependency */,
+ 			);
+ 			fileSystemSynchronizedGroups = (
+ 				CCD00CE10000000000000001 /* SecureChat */,
+@@ -213,22 +197,37 @@
+ 			preferredProjectObjectVersion = 77;
+ 			productRefGroup = B9DA97B22DC1472C00A4DA20 /* Products */;
+ 			projectDirPath = "";
++			projectReferences = (
++				{
++					ProductGroup = B9DA97B22DC1472C00A4DA20 /* Products */;
++					ProjectRef = 6CB8944BAEDD147E2DC66222 /* Pods.xcodeproj */;
++				},
++			);
+ 			projectRoot = "";
+ 			targets = (
+ 				B9DA97B02DC1472C00A4DA20 /* iosApp */,
+-				4AE5444ACD254E868FCBCFA8 /* SriSuChatTests */,
+ 			);
+ 		};
+ /* End PBXProject section */
+ 
++/* Begin PBXReferenceProxy section */
++		40A742ED9557C5ACDC9A1C4F /* Pods_iosApp.framework */ = {
++			isa = PBXReferenceProxy;
++			fileType = wrapper.framework;
++			path = Pods_iosApp.framework;
++			remoteRef = 5A93BF43041A480ABD3D794C /* PBXContainerItemProxy */;
++			sourceTree = BUILT_PRODUCTS_DIR;
++		};
++		554B0C5B4B58BF8AFE53C067 /* LibSignalClient.framework */ = {
++			isa = PBXReferenceProxy;
++			fileType = wrapper.framework;
++			path = LibSignalClient.framework;
++			remoteRef = 6CB9498FF01CB0B9527C59C7 /* PBXContainerItemProxy */;
++			sourceTree = BUILT_PRODUCTS_DIR;
++		};
++/* End PBXReferenceProxy section */
++
+ /* Begin PBXResourcesBuildPhase section */
+-		908D4164F73FDDE86DB06D9C /* Resources */ = {
+-			isa = PBXResourcesBuildPhase;
+-			buildActionMask = 2147483647;
+-			files = (
+-			);
+-			runOnlyForDeploymentPostprocessing = 0;
+-		};
+ 		B9DA97AF2DC1472C00A4DA20 /* Resources */ = {
+ 			isa = PBXResourcesBuildPhase;
+ 			buildActionMask = 2147483647;
+@@ -239,7 +238,7 @@
+ /* End PBXResourcesBuildPhase section */
+ 
+ /* Begin PBXShellScriptBuildPhase section */
+-		6B3920E735376E0A10AFCB7B /* [CP] Embed Pods Frameworks */ = {
++		15E076BF59FBAB5A747AB223 /* [CP] Embed Pods Frameworks */ = {
+ 			isa = PBXShellScriptBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
+@@ -275,7 +274,7 @@
+ 			shellPath = /bin/sh;
+ 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
+ 		};
+-		D2A4272B55E27A1093A691E2 /* [CP] Check Pods Manifest.lock */ = {
++		EF686CB5E6FD69728CA99CDA /* [CP] Check Pods Manifest.lock */ = {
+ 			isa = PBXShellScriptBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
+@@ -300,14 +299,6 @@
+ /* End PBXShellScriptBuildPhase section */
+ 
+ /* Begin PBXSourcesBuildPhase section */
+-		622D7043E62F19A70CD4F86E /* Sources */ = {
+-			isa = PBXSourcesBuildPhase;
+-			buildActionMask = 2147483647;
+-			files = (
+-				7719DE4EE053787F6722484D /* ChatMediaTests.swift in Sources */,
+-			);
+-			runOnlyForDeploymentPostprocessing = 0;
+-		};
+ 		B9DA97AD2DC1472C00A4DA20 /* Sources */ = {
+ 			isa = PBXSourcesBuildPhase;
+ 			buildActionMask = 2147483647;
+@@ -318,52 +309,14 @@
+ /* End PBXSourcesBuildPhase section */
+ 
+ /* Begin PBXTargetDependency section */
+-		ABAAD19DBF5C732B0EB282FB /* PBXTargetDependency */ = {
++		C34FDE6D27EC91995FE45B21 /* PBXTargetDependency */ = {
+ 			isa = PBXTargetDependency;
+-			name = iosApp;
+-			target = B9DA97B02DC1472C00A4DA20 /* iosApp */;
+-			targetProxy = CBE08F7CDE612F522B813BCD /* PBXContainerItemProxy */;
++			name = "Pods-iosApp";
++			targetProxy = D8AE12ECACF2EF0B279F1E44 /* PBXContainerItemProxy */;
+ 		};
+ /* End PBXTargetDependency section */
+ 
+ /* Begin XCBuildConfiguration section */
+-		2B552C6CA851C97A28533B36 /* Release */ = {
+-			isa = XCBuildConfiguration;
+-			buildSettings = {
+-				BUNDLE_LOADER = "$(TEST_HOST)";
+-				CLANG_ENABLE_OBJC_WEAK = NO;
+-				CODE_SIGN_STYLE = Automatic;
+-				GENERATE_INFOPLIST_FILE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+-				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.evaluation.SriSuChatTests;
+-				PRODUCT_NAME = SriSuChatTests;
+-				SDKROOT = iphoneos;
+-				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+-				SWIFT_VERSION = 5.0;
+-				TARGETED_DEVICE_FAMILY = "1,2";
+-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SriSu.app/SriSu";
+-				VALIDATE_PRODUCT = YES;
+-			};
+-			name = Release;
+-		};
+-		B365511BC86796F8AA9B88E3 /* Debug */ = {
+-			isa = XCBuildConfiguration;
+-			buildSettings = {
+-				BUNDLE_LOADER = "$(TEST_HOST)";
+-				CLANG_ENABLE_OBJC_WEAK = NO;
+-				CODE_SIGN_STYLE = Automatic;
+-				GENERATE_INFOPLIST_FILE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+-				PRODUCT_BUNDLE_IDENTIFIER = com.srisu.evaluation.SriSuChatTests;
+-				PRODUCT_NAME = SriSuChatTests;
+-				SDKROOT = iphoneos;
+-				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+-				SWIFT_VERSION = 5.0;
+-				TARGETED_DEVICE_FAMILY = "1,2";
+-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SriSu.app/SriSu";
+-			};
+-			name = Debug;
+-		};
+ 		B9DA97BD2DC1472D00A4DA20 /* Debug */ = {
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+@@ -485,7 +438,7 @@
+ 		};
+ 		B9DA97C02DC1472D00A4DA20 /* Debug */ = {
+ 			isa = XCBuildConfiguration;
+-			baseConfigurationReference = 996363D69895B140A2C68AD3 /* Debug.xcconfig */;
++			baseConfigurationReference = 0DBF8330D721393F6778DFEB /* Debug.xcconfig */;
+ 			buildSettings = {
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+@@ -523,7 +476,7 @@
+ 		};
+ 		B9DA97C12DC1472D00A4DA20 /* Release */ = {
+ 			isa = XCBuildConfiguration;
+-			baseConfigurationReference = E6585ED39B65EF3C8CA9BDEF /* Release.xcconfig */;
++			baseConfigurationReference = F0C3D678A1900A0A7A8CAC51 /* Release.xcconfig */;
+ 			buildSettings = {
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+@@ -561,15 +514,6 @@
+ /* End XCBuildConfiguration section */
+ 
+ /* Begin XCConfigurationList section */
+-		3D774B807AB9F5B987773A03 /* Build configuration list for PBXNativeTarget "SriSuChatTests" */ = {
+-			isa = XCConfigurationList;
+-			buildConfigurations = (
+-				2B552C6CA851C97A28533B36 /* Release */,
+-				B365511BC86796F8AA9B88E3 /* Debug */,
+-			);
+-			defaultConfigurationIsVisible = 0;
+-			defaultConfigurationName = Release;
+-		};
+ 		B9DA97AC2DC1472C00A4DA20 /* Build configuration list for PBXProject "iosApp" */ = {
+ 			isa = XCConfigurationList;
+ 			buildConfigurations = (

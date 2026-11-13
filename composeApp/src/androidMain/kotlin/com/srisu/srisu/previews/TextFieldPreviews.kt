@@ -48,7 +48,7 @@ fun OtpVerificationScreen() {
             modifier = Modifier.fillMaxWidth(),
             onOtpEntered = { otp ->
                 // Handle the entered OTP
-                println("Entered OTP: $otp")
+                Unit // Never print OTPs, including in previews.
             }
         )
     }
@@ -63,8 +63,6 @@ fun ShowCountryCodeDropDown() {
     ) { }*/
 
     SetProfilePictureScreen(
-        authViewModel = koinViewModel<AuthViewModel>(),
-        navController = rememberNavController(),
-        onSetupComplete = {}
+        authViewModel = koinViewModel<AuthViewModel>()
     )
 }

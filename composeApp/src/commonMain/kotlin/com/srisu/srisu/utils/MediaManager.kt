@@ -64,6 +64,7 @@ expect class GalleryManager(
 }
 
 expect class FileManager() {
+    suspend fun createProfilePhotoFromPath(path: String): MediaFile?
     suspend fun createMediaFileFromPath(path: String?, id: Int?, removed: Boolean?): MediaFile?
 }
 

@@ -1,5 +1,8 @@
 package com.srisu.srisu.features.auth.presentation.screen.profilesetup
 
+import org.jetbrains.compose.resources.stringResource
+import srisu.composeapp.generated.resources.*
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.MaterialTheme
@@ -9,7 +12,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,16 +30,21 @@ fun AddNameScreen(
 
     val authUIState by authViewModel.authUiState.collectAsState()
 
+    when (val state = authUIState.baseUIState) {
+        is com.srisu.srisu.baseframework.BaseUIState.Error -> com.srisu.srisu.components.ErrorDialog(title = state.errorType, errorMessage = state.message, show = true, onDismiss = authViewModel::idleScreen)
+        is com.srisu.srisu.baseframework.BaseUIState.Loading -> com.srisu.srisu.components.LoadingScrim()
+        else -> Unit
+    }
     CommonProfileContainerCompo(
         modifier = Modifier,
-        buttonTitle = "Next",
+        buttonTitle = stringResource(Res.string.auth_next),
         localFocusManager = localFocusManager,
         currentStep = authUIState.currentProgressStep,
-        isPrimaryButtonEnabled = authViewModel.isFullNameValid() && authViewModel.isUsernameValid(),
+        isPrimaryButtonEnabled = authUIState.fullName.isNotBlank() && authUIState.username.isNotBlank() && authUIState.baseUIState !is com.srisu.srisu.baseframework.BaseUIState.Loading,
         showNavBackIcon = false,
         onNavBack = {},
         onClickPrimaryButton = {
-            authViewModel.navigateNextScreen(isIncrease = true)
+            authViewModel.saveName()
         },
     ) {
 
@@ -47,16 +54,16 @@ fun AddNameScreen(
         )
 
         Text(
-            text = "What do we call you?",
+            text = stringResource(Res.string.auth_name_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
 
         Text(
-            text = "Your name is yours — your username is\nyour vibe.",
+            text = stringResource(Res.string.auth_name_subtitle),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -64,9 +71,9 @@ fun AddNameScreen(
         )
 
         LabeledTextFieldCompo(
-            label = "Full name",
+            label = stringResource(Res.string.auth_full_name),
             value = authUIState.fullName,
-            placeholder = "e.g. Thomas Shelby",
+            placeholder = stringResource(Res.string.auth_name_placeholder),
             isError = false,
             keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Next,
@@ -77,9 +84,9 @@ fun AddNameScreen(
         )
 
         LabeledTextFieldCompo(
-            label = "Username",
+            label = stringResource(Res.string.auth_username),
             value = authUIState.username,
-            placeholder = "@ tommy",
+            placeholder = stringResource(Res.string.auth_username_placeholder),
             isError = false,
             keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Done,

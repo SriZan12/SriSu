@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.connection.presentation.components
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -150,7 +150,7 @@ fun ConnectionItem(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
                 ConnectionButtonCompo(
                     label = firstButtonTitle,
                     onClick = {
@@ -181,7 +181,7 @@ fun ConnectionItem(
             model = userImage,
             contentDescription = null,
             modifier = Modifier
-                .size(100.dp).clip(shape = RoundedCornerShape(16.dp)),
+                .size(100.dp).clip(shape = MaterialTheme.shapes.medium),
             contentScale = ContentScale.Crop
 
         )
@@ -195,14 +195,14 @@ fun ConnectionItem(
 private fun ConnectionButtonCompo(label: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier.wrapContentSize(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary
         ),
         onClick = onClick
     ) {
         Text(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium, vertical = 2.dp),
             text = label,
             style = MaterialTheme.typography.titleMedium.copy(
                 color = MaterialTheme.colorScheme.onPrimary,
@@ -244,8 +244,8 @@ fun ConnectionShimmerCompo(
     showSecondButton: Boolean = false
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(all = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxWidth().padding(all = MaterialTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         repeat(7) {
             ConnectionItemShimmer(
@@ -271,7 +271,7 @@ fun ConnectionItemShimmer(
                 modifier = Modifier
                     .fillMaxWidth(0.4f)
                     .height(18.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .shimmerEffect()
             )
 
@@ -286,7 +286,7 @@ fun ConnectionItemShimmer(
                     modifier = Modifier
                         .width(42.dp)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .shimmerEffect()
                 )
 
@@ -294,7 +294,7 @@ fun ConnectionItemShimmer(
                     modifier = Modifier
                         .width(8.dp)
                         .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .shimmerEffect()
                 )
                 // Zodiac icon shimmer
@@ -309,12 +309,12 @@ fun ConnectionItemShimmer(
             Spacer(modifier = Modifier.height(4.dp))
 
             // Cancel button shimmer
-            Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
                 Box(
                     modifier = Modifier
                         .width(100.dp)
                         .height(22.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .shimmerEffect()
                 )
 
@@ -323,7 +323,7 @@ fun ConnectionItemShimmer(
                         modifier = Modifier
                             .width(100.dp)
                             .height(22.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(MaterialTheme.shapes.medium)
                             .shimmerEffect()
                     )
                 }
@@ -337,7 +337,7 @@ fun ConnectionItemShimmer(
         Box(
             modifier = Modifier
                 .size(100.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .shimmerEffect()
         )
     }

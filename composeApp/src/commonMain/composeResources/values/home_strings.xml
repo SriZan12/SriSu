@@ -1,0 +1,77 @@
+<resources>
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_evening">Good evening</string>
+    <string name="home_greeting_named">%1$s, %2$s</string>
+    <string name="home_day_with">Day %1$d with %2$s</string>
+    <string name="home_space_with">Your space with %1$s</string>
+    <string name="home_partner_fallback">your partner</string>
+    <string name="home_partner_fallback_title">Your partner</string>
+    <string name="home_open_profile">Open your couple profile</string>
+    <string name="home_notifications">Notifications</string>
+    <string name="home_notifications_new">Notifications, new items to review</string>
+    <string name="home_refreshing">Refreshing Home</string>
+
+    <string name="home_your_moment">Your moment</string>
+    <string name="home_add_moment">Add a moment</string>
+    <string name="home_moment_add_first">%1$s. Add your first moment</string>
+    <string name="home_moment_new">%1$s. %2$d new moments</string>
+    <string name="home_moment_seen">%1$s. All moments seen</string>
+    <string name="home_moment_none">%1$s. No active moments</string>
+    <string name="home_moment_refresh">%1$s. Refresh to see moments</string>
+
+    <string name="home_from">From %1$s</string>
+    <string name="home_open_chat">Open chat</string>
+    <string name="home_conversation_empty">Pick up where you left off</string>
+    <string name="home_unread">%1$d unread messages</string>
+    <string name="home_online">Online</string>
+    <string name="home_shared_photo">Shared photo</string>
+    <string name="home_reply_to">Reply to %1$s…</string>
+    <string name="home_send">Open chat to send</string>
+    <string name="home_action_spark">Spark</string>
+    <string name="home_action_ask">Ask</string>
+    <string name="home_action_planner">Planner</string>
+
+    <string name="home_todays_challenge">Today’s challenge</string>
+    <string name="home_challenge_invited">Invitation pending</string>
+    <string name="home_challenge_active">At your own pace</string>
+    <string name="home_challenge_one_confirmed">One of you has confirmed</string>
+    <string name="home_challenge_paused">Paused · no rush</string>
+    <string name="home_challenge_completed">Completed together</string>
+    <string name="home_challenge_ended">Ended</string>
+    <string name="home_challenge_empty_title">A little experience, together</string>
+    <string name="home_challenge_empty_body">Find something thoughtful, playful, or new.</string>
+    <string name="home_challenge_failed">Challenges couldn’t refresh</string>
+    <string name="home_member_confirmed">%1$s, confirmed</string>
+
+    <string name="home_coming_up">Coming up</string>
+    <string name="home_view_all">View all</string>
+    <string name="home_plan_both_going">Both going</string>
+    <string name="home_plan_awaiting">Waiting for a reply</string>
+    <string name="home_plan_change">New details suggested</string>
+    <string name="home_plan_upcoming">Upcoming</string>
+    <string name="home_plan_when">%1$s %2$d</string>
+    <string name="home_plan_separator">%1$s • %2$s</string>
+    <string name="home_time_am">%1$d:%2$s AM</string>
+    <string name="home_time_pm">%1$d:%2$s PM</string>
+    <string name="home_time_unknown">Time to be decided</string>
+    <string name="home_plan_empty_title">Something to look forward to</string>
+    <string name="home_plan_empty_body">Plan a little time for the two of you.</string>
+    <string name="home_plan_failed">Plans couldn’t refresh</string>
+    <string name="home_weekday_mon">Mon</string>
+    <string name="home_weekday_tue">Tue</string>
+    <string name="home_weekday_wed">Wed</string>
+    <string name="home_weekday_thu">Thu</string>
+    <string name="home_weekday_fri">Fri</string>
+    <string name="home_weekday_sat">Sat</string>
+    <string name="home_weekday_sun">Sun</string>
+
+    <string name="home_tap_retry">Tap to try again</string>
+    <string name="home_retry">Try again</string>
+    <string name="home_failed">Home couldn’t load. Check your connection and try again.</string>
+    <string name="home_stale">Couldn’t refresh. Showing your last update.</string>
+    <string name="home_link_title">Make this space yours</string>
+    <string name="home_link_body">Connect with your partner to share moments and start your conversation.</string>
+    <string name="home_link_find">Find your partner</string>
+    <string name="home_link_invitations">View invitations</string>
+</resources>
