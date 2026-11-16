@@ -3,6 +3,9 @@ package com.srisu.srisu.navigation
 import androidx.navigation.NavGraphNavigator
 import androidx.navigation.NavigatorProvider
 import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.compose.composable
+import com.srisu.srisu.features.sparks.navigation.SparksDestination
+import com.srisu.srisu.features.sparks.presentation.QuestionPage
 import androidx.navigation.navigation
 import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.features.coupleprofile.navigation.*
@@ -10,6 +13,21 @@ import kotlinx.serialization.json.Json
 import kotlin.test.*
 
 class NavigationContractTest {
+    @Test fun questionsRoutesBuildOnNativeWithoutEnumReflection() {
+        val provider = NavigatorProvider()
+        provider.addNavigator(NavGraphNavigator(provider))
+        provider.addNavigator(ComposeNavigator())
+        val graph = provider.navigation(startDestination = SparksDestination::class) {
+            composable<SparksDestination> { }
+        }
+        val destination = assertNotNull(graph.findNode<SparksDestination>())
+        assertTrue(destination.arguments.getValue("page").type.name.startsWith("string"))
+        QuestionPage.entries.forEach { page ->
+            val route = SparksDestination(page = page.name, selection = "deep-7-v1")
+            assertEquals(route, Json.decodeFromString<SparksDestination>(Json.encodeToString(route)))
+        }
+        assertEquals(SparksDestination(), Json.decodeFromString<SparksDestination>("{}"))
+    }
     @Test fun stalePartnerOriginCannotConsumeAcceptedNavigation() {
         var consumed = false
         consumeAcceptedNavigation(pending = true, navigate = { false }) { consumed = true }

@@ -9,6 +9,8 @@ import com.srisu.srisu.features.sparks.data.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.Json
+import kotlinx.datetime.TimeZone
+import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
 import kotlin.uuid.Uuid
 
 internal class SparkRequestFailure(val status: Int?, message: String) : Exception(message)
@@ -17,13 +19,17 @@ internal fun <T> NetworkAPIResult<T?>.required(): T = when(this) {
     is NetworkAPIResult.Error -> throw SparkRequestFailure(failure.status, failure.message)
 }
 
+data class QuestionInvitation(val name: String, val incoming: Boolean)
+
 data class SparkState(val home: SparkHome? = null, val session: SparkSession? = null,
     val account: Long? = null, val draft: SparkDraft = SparkDraft(), val answers: Map<Long, String> = emptyMap(),
     val loading: Boolean = true, val busy: Boolean = false, val fresh: Boolean = false,
     val secure: Boolean = false, val secureConnecting: Boolean = false, val secureMessage: String? = null,
     val error: String? = null, val keyError: Boolean = false,
     val recovery: SparkRecoveryUi = SparkRecoveryUi(), val backupPending: Boolean = false,
-    val deck: Int = 0, val question: Int = 0, val startPending: Boolean = false) {
+    val deck: Int = 0, val question: Int = 0, val startPending: Boolean = false,
+    val daily: SparkDaily? = null, val dailyError: String? = null,
+    val invitation: QuestionInvitation? = null, val invitationError: Boolean = false) {
     val selectedDeck get() = home?.decks?.getOrNull(deck)
     val selectedQuestion get() = selectedDeck?.questions?.getOrNull(question)
     val canEdit get() = session?.open == true && session.submitted(account).not() && draft.envelope == null && !busy
@@ -31,7 +37,7 @@ data class SparkState(val home: SparkHome? = null, val session: SparkSession? = 
 
 @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
 class SparkViewModel(private val source: SparkSource, private val matrix: MatrixChatRepository,
-    private val sessions: SessionCoordinator) : ViewModel() {
+    private val sessions: SessionCoordinator, private val connections: ConnectionRepository? = null) : ViewModel() {
     private val stamp = sessions.stamp()
     private val mutable = MutableStateFlow(SparkState(account = stamp.accountId))
     val state = mutable.asStateFlow()
@@ -39,6 +45,7 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
     private val owner = MatrixChatRoomOwner()
     private var started = false
     private var initialId: String? = null
+    private var loadDaily = false
     private var room: String? = null
     private var work: Job? = null
     private var poll: Job? = null
@@ -56,9 +63,9 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
             mutable.value = SparkState(loading = false, error = "Sign in again to open your Sparks.")
         } } }
     }
-    fun open(id: String?) {
+    fun open(id: String?, daily: Boolean = false) {
         if (started) return
-        started = true; initialId = id; refresh()
+        started = true; initialId = id; loadDaily = daily && id == null; refresh()
     }
     fun visible(value: Boolean) {
         visible = value; poll?.cancel()
@@ -66,7 +73,10 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
             mutable.update { it.copy(recovery = it.recovery.copy(key = "", confirmation = "", busy = false, creating = false)) }; return }
         if (started) refresh()
         poll = viewModelScope.launch {
-            while (isActive) { delay(8_000); if (state.value.session != null) refresh(quiet = true) }
+            while (isActive) {
+                delay(if (state.value.session != null) 8_000 else 30_000)
+                refresh(quiet = true)
+            }
         }
     }
     fun refresh(quiet: Boolean = false) = runWork(showBusy = !quiet) {
@@ -74,13 +84,49 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
             accept(source.get(state.value.session!!.id).required()); return@runWork
         }
         val home = source.home().required(); sessions.ensureCurrent(stamp)
+        if (state.value.home?.couple != null && state.value.home?.couple != home.couple) {
+            decrypt?.cancel(); roomObserver?.cancel(); recoveryWork?.cancel()
+            room?.let { matrix.closeRoom(it, owner) }; room = null
+            mutable.value = SparkState(account = stamp.accountId, loading = false)
+        }
         val intent = read<SparkStartIntent>(intentKey)
-        mutable.update { it.copy(home = home, startPending = intent != null, fresh = true) }
+        mutable.update { it.copy(home = home, startPending = intent != null, fresh = true, error = null,
+            daily = if (home.couple == it.daily?.session?.couple) it.daily else null) }
         // A destination without an ID is the catalogue, even with a Spark in progress.
         // Only an explicit card/session selection opens the private answer screen.
         val id = state.value.session?.id ?: initialId
-        initialId = null
-        if (id != null) accept(source.get(id).required())
+        if (id != null) { accept(source.get(id).required()); initialId = null }
+        else if (loadDaily && home.couple != null && home.unavailable == null) {
+            when (val result = source.daily(home.couple, TimeZone.currentSystemDefault().id)) {
+                is NetworkAPIResult.Success -> {
+                    sessions.ensureCurrent(stamp)
+                    mutable.update { it.copy(daily = result.response, dailyError = null) }
+                }
+                is NetworkAPIResult.Error -> {
+                    if (result.failure.status in listOf(401, 403, 404)) result.required()
+                    mutable.update { it.copy(dailyError = "Your daily question couldn’t refresh. Try again when you’re connected.") }
+                }
+            }
+        }
+        if (home.couple == null && connections != null) {
+            try {
+                val incoming = connections.getLoveRequests(20, 1).result.required().results.orEmpty().filterNotNull().firstOrNull { it.connectionStatus == "PENDING" }
+                val outgoing = if (incoming == null) connections.getSentLoveRequests(20, 1).result.required().results.orEmpty().filterNotNull().firstOrNull { it.connectionStatus == "PENDING" } else null
+                sessions.ensureCurrent(stamp)
+                mutable.update { it.copy(invitation = (incoming ?: outgoing)?.let { request -> QuestionInvitation(request.receiver?.fullName?.takeIf(String::isNotBlank) ?: "Your partner", incoming != null) }, invitationError = false) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) {
+                if ((failure as? SparkRequestFailure)?.status in listOf(401, 403)) throw failure
+                mutable.update { it.copy(invitationError = true) }
+            }
+        } else mutable.update { it.copy(invitation = null, invitationError = false) }
+    }
+    fun selectQuestion(id: String) {
+        if (state.value.busy || state.value.startPending) return
+        state.value.home?.decks?.forEachIndexed { deck, value ->
+            val question = value.questions.indexOfFirst { it.id == id }
+            if (question >= 0) mutable.update { it.copy(deck = deck, question = question) }
+        }
     }
     fun selectDeck(index: Int) {
         if (state.value.startPending || state.value.busy) return
@@ -272,7 +318,7 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
                     if (availability is MatrixChatAvailability.Unavailable) {
                         decrypt?.cancel(); recoveryWork?.cancel()
                         mutable.update { it.copy(answers = emptyMap(), draft = SparkDraft(), session = null,
-                            home = null, secure = false, secureConnecting = false, secureMessage = null,
+                            home = null, daily = null, invitation = null, secure = false, secureConnecting = false, secureMessage = null,
                             fresh = false, recovery = SparkRecoveryUi(), error = availability.message) }
                         return@collect
                     }
@@ -335,7 +381,8 @@ class SparkViewModel(private val source: SparkSource, private val matrix: Matrix
                 if (denied) decrypt?.cancel()
                 mutable.update { it.copy(error = (failure as? SparkRequestFailure)?.message ?: "Sparks could not be updated. Your draft is kept; please retry.", fresh = false,
                     session = if (denied) null else it.session, answers = if (denied) emptyMap() else it.answers,
-                    draft = if (denied) SparkDraft() else it.draft, home = if (denied) null else it.home) }
+                    draft = if (denied) SparkDraft() else it.draft, home = if (denied) null else it.home,
+                    daily = if (denied) null else it.daily, invitation = if (denied) null else it.invitation) }
             } finally { mutable.update { it.copy(loading = false, busy = false) } }
         }
     }

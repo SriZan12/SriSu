@@ -19,7 +19,10 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
     composable<HomeNavigation.Questions> { entry ->
         val nav = AppNavigator(controller, entry)
         com.srisu.srisu.features.sparks.presentation.SparkScreen(null, { nav.switchTab(HomeNavigation.Home) },
-            { nav.open(ChatNav.CoupleConversation(origin = "questions")) })
+            { nav.open(ChatNav.CoupleConversation(origin = "questions")) }, tab = true,
+            onSession = { nav.open(com.srisu.srisu.features.sparks.navigation.SparksDestination(it)) },
+            onNavigate = { page, selection -> nav.open(com.srisu.srisu.features.sparks.navigation.SparksDestination(page = page.name, selection = selection)) },
+            onConnect = { nav.open(ChatNav.PartnerFlow) }, onInvitations = { nav.open(ChatNav.PartnerRequests) })
     }
     composable<HomeNavigation.Home> { entry ->
         val actions = remember(controller, entry) {
