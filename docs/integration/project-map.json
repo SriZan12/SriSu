@@ -36,6 +36,7 @@
   },
   "features": {
     "couple_chat": {
+      "couple_identity": "Matrix bootstrap couple_id binds couple features; relationship_id remains the connection/storage identity. Backend-first additive rollout; no migration or key reset.",
       "frontend_branch": "dev-core-architecture",
       "backend_branch": "dev-core-architecture",
       "contract": "core-1:POST /api/chat/v2/rooms/{uuid}/matrix/session/",
@@ -71,6 +72,7 @@
       "status": "implemented-local-android-ios-postgres-http-verified-no-deployment"
     },
     "sparks": {
+      "secure_chat_binding": "Compare the explicit bootstrap couple_id with Spark couple, preserving room and epoch checks; fixes encryption refusal when connection and couple IDs differ (2026-11-16).",
       "frontend_branch": "dev-core-architecture",
       "frontend_start": "ee9742becd54bd1c30ad76e04e482085662d497b",
       "backend_branch": "dev-core-architecture",

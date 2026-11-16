@@ -50,6 +50,61 @@ notification transport, public sharing or compatibility scores were added.
 
 ## Security and lifecycle
 
+### Separate couple and connection identities (2026-11-16)
+
+The Matrix bootstrap's `relationship_id` identifies the connection record;
+Sparks' `couple` identifies the CoupleModel record. Those IDs need not match.
+The backend now supplies an additive `couple_id`, and the client uses it when
+binding Sparks, Plan/Challenge cards and Moment replies to the authorized chat.
+Existing room UUID, Matrix room, epoch, participant and session checks remain.
+Matrix storage still uses the original connection ID, preserving device keys.
+
+Deploy the backend response before the rebuilt app. An older server may omit
+`couple_id`: ordinary chat remains compatible, but feature sends require an
+explicit couple binding and never fall back to the connection ID. A foreground
+reauthorization can add this binding without replacing the crypto store.
+No migration is needed. Existing failed Spark drafts can be retried after the
+app update; do not clear app data or recreate the Matrix room to fix this error.
+The paired correction targets `dev-core-architecture` in both repositories.
+Publishing the code does not itself update an installed phone app.
+
+Validation for this correction (2026-11-16): frontend base
+`c1abef982b0e3a2b87bf342d08c526bc65c25bd8`, backend base
+`c766f706f41e283c277324a5c1641902cf153652`. Local backend
+`D:/Djangos/SriSu` and frontend `D:/StudioProjects/SriSu` were inspected separately.
+Only aggregate local records were inspected; no answer bodies, tokens or keys
+were logged. The affected open Spark used distinct couple/connection IDs.
+
+- `tools/core_contracts.py --backend D:/Djangos/SriSu --update` and the same
+  command without `--update` passed. Synchronization also picked up the backend's
+  existing Home route inventory; this correction adds no HTTP routes.
+- `gradlew.bat :composeApp:testDebugUnitTest --tests 'com.srisu.srisu.features.chat.*'
+  --tests 'com.srisu.srisu.features.sparks.*' --tests 'com.srisu.srisu.core.CoreContractTest'
+  :composeApp:assembleDebug --max-workers=2`: 202 tests passed and APK built.
+- `gradlew.bat :composeApp:testDebugUnitTest --tests 'com.srisu.srisu.features.plans.*'
+  --tests 'com.srisu.srisu.features.challenges.*' --tests 'com.srisu.srisu.features.moments.*'
+  --max-workers=2 --console=plain`: 95 tests passed.
+- Before publication, the frontend fix was rebased onto `f86afc180e597c68b052aa2b3dce531109f85a34`
+  to include the latest Home/chat changes. The same unit-test task with selectors
+  for chat, Sparks, Plans, Challenges, Moments, Home and `CoreContractTest` passed
+  all 314 tests. Contract verification also passed against backend fix `1594c3b`.
+- Backend `docker run --rm --network none srisu-backend-app:local python
+  tools/workspace.py test`: 359 tests run, 30 skipped (including PostgreSQL row-lock
+  concurrency). The Windows `.venv` run first failed on absent `firebase_admin`,
+  Windows async socket setup under the network blocker, and Unix mode assertions;
+  all runnable tests passed in the isolated Linux image with locked dependencies.
+- Backend contract/schema and migration checks passed. The rebuilt local web and
+  reconciler images were loaded; Django checks, `migrate --check`, and
+  `matrix_status --require-ready` passed. Both databases and Redis were healthy,
+  and Django, admin CSS and Synapse returned HTTP 200 over the LAN.
+
+No connected phone was available for installation or a new two-partner exchange.
+iOS compilation was not run on Windows; the common Kotlin fix must be rebuilt
+and installed from the Mac checkout. Update both apps in place to preserve drafts
+and keys. PostgreSQL concurrency and push delivery were not run; the optional
+notification worker remained stopped. These checks did not switch Git branches;
+publication of the paired fix is recorded in each repository's Git history.
+
 See [the backend security and contract record](../../../SriSu-backend/docs/sparks.md)
 for the complete threat model and release gate. E2EE uses the existing Matrix SDK;
 Django stores only ciphertext. **Release timing is still enforced by Django**, not

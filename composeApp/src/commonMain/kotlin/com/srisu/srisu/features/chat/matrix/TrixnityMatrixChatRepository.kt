@@ -421,7 +421,7 @@ class TrixnityMatrixChatRepository(
     private suspend fun sparkRoom(session: com.srisu.srisu.features.sparks.data.SparkSession): Pair<MatrixClient, ActiveRoom> {
         val pair = richRoom(session.roomId)
         val active = pair.second
-        require(active.relationshipId == session.couple && active.membershipEpoch == session.epoch &&
+        require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId) { "This Spark belongs to an unavailable conversation." }
         return pair
     }
@@ -525,7 +525,7 @@ class TrixnityMatrixChatRepository(
 
     override suspend fun publishPlanCard(session: com.srisu.srisu.features.plans.data.Plan): Result<String> = sparkOperation {
         val (current, active) = richRoom(requireNotNull(session.roomId))
-        require(active.relationshipId == session.couple && active.membershipEpoch == session.epoch &&
+        require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
         val eventId = sendPlanCard(current, session)
         ensureRichRoomCurrent(current, active)
@@ -534,7 +534,7 @@ class TrixnityMatrixChatRepository(
 
     override suspend fun publishChallengeCard(session: com.srisu.srisu.features.challenges.data.ChallengeSession): Result<String> = sparkOperation {
         val (current, active) = richRoom(requireNotNull(session.roomId))
-        require(active.relationshipId == session.couple && active.membershipEpoch == session.epoch &&
+        require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
         val eventId = sendChallengeCard(current, session)
         ensureRichRoomCurrent(current, active)
@@ -567,7 +567,7 @@ class TrixnityMatrixChatRepository(
 
     override suspend fun sendMomentReply(roomId: String, text: String, reference: com.srisu.srisu.features.moments.data.MomentReference): Result<String> = runCatching {
         val (current, active) = richRoom(roomId)
-        require(reference.id > 0 && reference.couple == active.relationshipId)
+        require(reference.id > 0 && reference.couple == active.coupleId)
         require(text.isNotBlank() && text.encodeToByteArray().size <= MATRIX_TEXT_MAX_PLAINTEXT_BYTES)
         ensureRichRoomCurrent(current, active)
         // The optional external URL lives inside the encrypted Matrix event. It contains only IDs.
@@ -774,6 +774,7 @@ class TrixnityMatrixChatRepository(
                 partnerMatrixId = bootstrap.partnerMatrixUserId,
                 stamp = bootstrapStamp,
                 relationshipId = bootstrap.relationshipId,
+                coupleId = bootstrap.coupleId,
                 membershipEpoch = bootstrap.membershipEpoch,
                 operation = operation,
             )
@@ -1310,7 +1311,8 @@ class TrixnityMatrixChatRepository(
                 discardStaleClient(currentClient, operation)
                 return
             }
-            val refreshed = expected.copy(stamp = freshStamp, operation = operation)
+            val refreshed = expected.copy(stamp = freshStamp, operation = operation,
+                coupleId = validated.coupleId ?: expected.coupleId)
             validatedRoom = refreshed
             if (wasOpen) {
                 activeRoom = refreshed
@@ -1492,6 +1494,8 @@ class TrixnityMatrixChatRepository(
             selfMatrixUserId == active.ownMatrixId &&
             partnerMatrixUserId == active.partnerMatrixId &&
             relationshipId == active.relationshipId &&
+            // A rolling server upgrade may add this binding without changing keys.
+            (coupleId == null || active.coupleId == null || coupleId == active.coupleId) &&
             membershipEpoch == active.membershipEpoch
 
     private fun ActiveRoom.sameConversation(other: ActiveRoom): Boolean =
@@ -1500,6 +1504,7 @@ class TrixnityMatrixChatRepository(
             ownMatrixId == other.ownMatrixId &&
             partnerMatrixId == other.partnerMatrixId &&
             relationshipId == other.relationshipId &&
+            coupleId == other.coupleId &&
             membershipEpoch == other.membershipEpoch
 
     private fun observeLoginState(matrixClient: MatrixClient, stamp: SessionStamp) {
@@ -1768,6 +1773,7 @@ class TrixnityMatrixChatRepository(
         val partnerMatrixId: String,
         val stamp: SessionStamp,
         val relationshipId: Long,
+        val coupleId: Long?,
         val membershipEpoch: Long,
         val operation: Long,
     )

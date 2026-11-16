@@ -8,6 +8,7 @@ import io.ktor.client.request.url
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.JsonObject
 import kotlin.test.*
 
 /** These strings are generated from the pinned backend-owned fixtures, never hand-maintained. */
@@ -25,6 +26,15 @@ class CoreContractTest {
         )
         assertEquals("matrix-e2ee-v1", matrix.protocolId)
         assertEquals("org.matrix.login.jwt", matrix.loginType)
+        assertEquals(1L, matrix.relationshipId)
+        assertEquals(3L, matrix.coupleId)
+        assertNotEquals(matrix.relationshipId, matrix.coupleId)
+        val legacy = ApiJson.decodeFromJsonElement<MatrixSessionDto>(JsonObject(
+            ApiJson.parseToJsonElement(CoreContractFixtures.MATRIX_SESSION).jsonObject
+                .getValue("data").jsonObject - "couple_id",
+        )).validated(expectedAccountId = 1)
+        assertNull(legacy.coupleId)
+        assertEquals(matrix.relationshipId, legacy.relationshipId)
         client.close()
     }
 }

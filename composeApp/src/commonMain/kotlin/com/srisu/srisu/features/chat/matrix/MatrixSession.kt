@@ -34,6 +34,8 @@ data class MatrixSessionDto(
     @SerialName("login_token_one_time") val loginTokenOneTime: Boolean,
     @SerialName("refresh_token_enabled") val refreshTokenEnabled: Boolean,
     @SerialName("access_token_expires_in_seconds") val accessTokenExpiresInSeconds: Long? = null,
+    // Optional only for older servers: never substitute the connection ID.
+    @SerialName("couple_id") val coupleId: Long? = null,
 ) {
     fun validated(expectedAccountId: Long, allowInsecureHomeserver: Boolean = false): MatrixSessionDto {
         require(protocolId == MATRIX_PROTOCOL_ID) { "Unsupported secure-chat protocol." }
@@ -47,6 +49,7 @@ data class MatrixSessionDto(
         require(loginTokenExpiresAt.isNotBlank()) { "Matrix login expiry is missing." }
         require(selfUserId == expectedAccountId) { "Matrix session belongs to another account." }
         require(selfUserId != partnerUserId && relationshipId > 0 && membershipEpoch > 0)
+        require(coupleId == null || coupleId > 0) { "Invalid couple identity." }
         require(initiatorUserId == selfUserId || initiatorUserId == partnerUserId)
         require(selfMatrixUserId.isMatrixUserId() && partnerMatrixUserId.isMatrixUserId())
         require(roomId.startsWith("!") && ':' in roomId && roomId.length <= 512) { "Invalid Matrix room." }

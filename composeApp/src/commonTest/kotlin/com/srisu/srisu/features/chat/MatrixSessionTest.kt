@@ -25,6 +25,24 @@ class MatrixSessionTest {
     }
 
     @Test
+    fun coupleIdentityIsSeparateAndLegacyBootstrapDoesNotInventIt() {
+        val legacy = validSession().validated(SELF_ID)
+        assertEquals(null, legacy.coupleId)
+        val updated = legacy.copy(coupleId = 31).validated(SELF_ID)
+        assertEquals(9L, updated.relationshipId)
+        assertEquals(31L, updated.coupleId)
+        for (invalid in listOf(0L, -1L)) {
+            assertFailsWith<IllegalArgumentException> { legacy.copy(coupleId = invalid).validated(SELF_ID) }
+        }
+        // Adding the couple binding must not rotate the device's crypto namespace.
+        fun storage(session: MatrixSessionDto) = MatrixStorageScope.create(
+            SELF_ID, "https://api.example.test/", session.homeserverUrl,
+            session.relationshipId, session.membershipEpoch, session.roomId,
+        )
+        assertEquals(storage(legacy), storage(updated))
+    }
+
+    @Test
     fun rejectsWrongAccountOrUnsafeHomeserver() {
         assertFailsWith<IllegalArgumentException> { validSession().validated(PARTNER_ID) }
         assertFailsWith<IllegalArgumentException> {
