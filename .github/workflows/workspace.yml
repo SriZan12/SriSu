@@ -38,7 +38,9 @@ jobs:
         run: ./gradlew :composeApp:testDebugUnitTest :composeApp:compileDebugKotlinAndroid :composeApp:compileDebugAndroidTestKotlinAndroid --no-daemon --max-workers=2 --console=plain
 
   ios:
-    runs-on: macos-15
+    # Keep the same OS and iOS target; the default ARM pool has cancelled jobs
+    # before startup because of hosted-runner capacity constraints.
+    runs-on: macos-15-intel
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
