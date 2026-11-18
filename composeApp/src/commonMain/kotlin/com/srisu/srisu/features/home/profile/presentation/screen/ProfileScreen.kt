@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.Scaffold
+import com.srisu.srisu.components.PrimaryToolBar
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -65,7 +67,8 @@ import srisu.composeapp.generated.resources.leo
 
 @Composable
 fun ProfileScreen(
-    profileViewModel: com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel = koinViewModel<com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel>()
+    profileViewModel: com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel = koinViewModel<com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel>(),
+    onBack: () -> Unit = {},
 ) {
 
     val profileUIState by profileViewModel.profileUIState.collectAsStateWithLifecycle()
@@ -76,9 +79,9 @@ fun ProfileScreen(
         profileUIStates = profileUIState
     )
 
-    _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.ProfilePictureContent(
-        profileUIState = profileUIState,
-    )
+    Scaffold(topBar = { PrimaryToolBar(title = "Profile", showNavButton = true, onNavigate = onBack) }) { padding ->
+        Box(Modifier.padding(padding)) { ProfilePictureContent(profileUIState = profileUIState) }
+    }
 
 }
 @Composable

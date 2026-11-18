@@ -1,5 +1,11 @@
 # Plans — implementation and design decisions
 
+November 2026 navigation follow-up: Back from a list-opened detail restores its
+agenda and reading position, retaining loaded pages while reconciling changes.
+Direct entries return to their originating screen. Opening chat retains Plan
+context; a plan opened from chat returns to the existing conversation. See the
+[navigation audit](../validation/navigation-flow/README.md) for verification.
+
 Implemented locally on 2026-10-24, without switching branches or committing.
 Frontend `SriZan12/SriSu`, `dev-core-architecture`, base
 `93fff640dd180614e78d9185355fbb287b2dc43a`.

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Explore
@@ -33,11 +34,11 @@ import com.srisu.srisu.theme.spacing
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable fun ExploreScreen(onMoment: (Long)->Unit,onProfile: (Long)->Unit,onPreferences: ()->Unit,
-    vm: ExploreViewModel=koinViewModel()) {
+    onBack: ()->Unit, vm: ExploreViewModel=koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     MomentLifecycle(vm::active)
     ExploreContent(state,vm::select,vm::refresh,vm::more,vm::broader,vm::manage,vm::library,
-        vm::fave,vm::retryFave,onMoment,onProfile,onPreferences,vm::image)
+        vm::fave,vm::retryFave,onMoment,onProfile,onPreferences,vm::image,onBack=onBack)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,13 +46,14 @@ import org.koin.compose.viewmodel.koinViewModel
     onMore: ()->Unit,onBroader: ()->Unit,onManage: (Boolean)->Unit,onLibrary: (Boolean)->Unit,
     onFave: (Long,Boolean)->Unit,onRetryFave: (Long)->Unit,onMoment: (Long)->Unit,onProfile: (Long)->Unit,
     onPreferences: ()->Unit,loadImage: suspend (String)->ByteArray?,
-    globalScroll: LazyListState=rememberLazyListState(),favesScroll: LazyListState=rememberLazyListState()) {
+    globalScroll: LazyListState=rememberLazyListState(),favesScroll: LazyListState=rememberLazyListState(), onBack: (() -> Unit)? = null) {
     val space=MaterialTheme.spacing
     val colors=MaterialTheme.colorScheme
     val feed=state.feed
     val rows=feed.cards.filter {state.section!="faves" || state.preferences[it.couple.id]?.confirmed!=false}
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal=space.gutter,vertical=space.small),verticalAlignment=Alignment.CenterVertically) {
+            onBack?.let { IconButton(onClick=it) { Icon(Icons.AutoMirrored.Outlined.ArrowBack,"Back") } }
             Column(Modifier.weight(1f)) {
                 Text("Explore",style=MaterialTheme.typography.headlineLarge,modifier=Modifier.semantics {heading()})
                 Text("Little windows into life together",style=MaterialTheme.typography.bodyMedium,color=colors.onSurfaceVariant)

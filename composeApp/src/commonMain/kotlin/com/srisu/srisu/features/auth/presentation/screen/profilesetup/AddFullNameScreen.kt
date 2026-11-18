@@ -26,6 +26,7 @@ import com.srisu.srisu.features.auth.presentation.vm.AuthViewModel
 fun AddNameScreen(
     authViewModel: AuthViewModel,
     localFocusManager: FocusManager,
+    onBack: () -> Unit = {},
 ) {
 
     val authUIState by authViewModel.authUiState.collectAsState()
@@ -41,8 +42,8 @@ fun AddNameScreen(
         localFocusManager = localFocusManager,
         currentStep = authUIState.currentProgressStep,
         isPrimaryButtonEnabled = authUIState.fullName.isNotBlank() && authUIState.username.isNotBlank() && authUIState.baseUIState !is com.srisu.srisu.baseframework.BaseUIState.Loading,
-        showNavBackIcon = false,
-        onNavBack = {},
+        showNavBackIcon = true,
+        onNavBack = onBack,
         onClickPrimaryButton = {
             authViewModel.saveName()
         },

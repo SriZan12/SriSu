@@ -46,7 +46,7 @@ class QuestionsAppDeviceTest {
             ActivityScenario.launch(MainActivity::class.java).use {
                 waitFor(hasText("You & Aatithi"))
                 if (compose.onAllNodesWithText("Stay in touch").fetchSemanticsNodes().isNotEmpty()) compose.onNodeWithText("Not now").performClick()
-                compose.onNodeWithText("Questions",useUnmergedTree=true).performClick()
+                compose.onNode(hasText("Questions") and isSelectable()).performClick()
                 waitFor(currentQuestion)
                 compose.onNode(currentQuestion).performScrollTo().performClick()
                 waitFor(hasTestTag("question-answer"))

@@ -67,6 +67,8 @@ class ChallengeStateTest {
         source.historyPage = ChallengeHistory(listOf(c.copy(id="next")))
         vm.moreHistory(); runCurrent(); assertEquals(2, vm.state.value.history.items.size)
         vm.refresh(quiet=true); runCurrent(); assertEquals(2, vm.state.value.history.items.size)
+        vm.openSession(c.id); runCurrent(); vm.browse(true); runCurrent()
+        assertNull(vm.state.value.session); assertEquals(2, vm.state.value.history.items.size)
         vm.viewModelScope.cancel()
     }
     @Test fun eachPartnerOwnsTheirPauseAndCompletion() {

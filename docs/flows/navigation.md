@@ -1,5 +1,35 @@
 # Navigation migration and dating retirement
 
+## November 2026 journey repair
+
+See the [current navigation audit](../validation/navigation-flow/README.md) for
+the complete findings, source commits, test evidence, and limitations. These
+repairs preserve the approved visual designs and existing API contracts.
+
+- Explore and read-only partner previews have visible Back actions. Preferences
+  opened from Explore use a separate profile-detail destination; the Profile
+  tab keeps its root entry and saved edits. Detail Back and system Back from the
+  tab root confirm discarding unsaved edits; Keep editing retains the form.
+  The [Edit Profile repair](../validation/profile-repair/README.md) moves Explore
+  and notifications into accessible profile-toolbar actions; the shell no longer
+  adds two text rows above that screen.
+- Chat resolution/error states remain escapable. Plan/Challenge entries retain
+  their origin when opening chat. Nested Questions routes carry their chat
+  origin and return to the existing conversation. A new message target in the
+  current conversation does not create a duplicate chat entry.
+- List-origin Plan/Challenge details return to their list and reading position;
+  directly opened details return to their originating screen. Question recovery
+  closes before its parent on system Back.
+- First partner acceptance preserves the confirmation/chat stack while fetching
+  authoritative membership. Revocation, replacement, member changes and account
+  changes still discard private saved entries. Process restoration checks the
+  newly verified membership identity before restoring navigation.
+- Profile and the first incomplete-registration step offer confirmed sign-out.
+  Failed profile reads cannot submit a blank form. Saves serialize submissions
+  and merge metadata into current credentials without replacing rotated tokens.
+
+## Original migration record
+
 Implementation date: 2026-10-01. Follow-up authorization: publish on
 `codex/modular-navigation-retire-singles`, targeting `dev-core-architecture` in both repositories.
 

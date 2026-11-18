@@ -20,11 +20,11 @@ fun NavGraphBuilder.sparkGraph(controller: NavController) {
         val nav = AppNavigator(controller, entry)
         if (page == null || (route.id != null && !route.id.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))))
             com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
-        else SparkScreen(route.id, nav::back, { if (route.fromChat) nav.back() else nav.open(ChatNav.CoupleConversation(origin = "spark")) },
+        else SparkScreen(route.id, nav::back, { nav.conversation(route.fromChat, ChatNav.CoupleConversation(origin = "spark")) },
             page = page, selection = route.selection,
-            onNavigate = { next, selection -> nav.open(SparksDestination(page = next.name, selection = selection)) },
-            onSession = { nav.open(SparksDestination(it)) },
+            onNavigate = { next, selection -> nav.open(SparksDestination(fromChat = route.fromChat, page = next.name, selection = selection)) },
+            onSession = { nav.open(SparksDestination(it, fromChat = route.fromChat)) },
             onConnect = { nav.open(ChatNav.PartnerFlow) }, onInvitations = { nav.open(ChatNav.PartnerRequests) },
-            onChatSession = { session -> if (route.fromChat) nav.back() else nav.open(ChatNav.CoupleConversation(origin = "spark", messageId = session?.cardEventId?.takeIf(String::isNotBlank))) })
+            onChatSession = { session -> nav.conversation(route.fromChat, ChatNav.CoupleConversation(origin = "spark", messageId = session?.cardEventId?.takeIf(String::isNotBlank))) })
     }
 }

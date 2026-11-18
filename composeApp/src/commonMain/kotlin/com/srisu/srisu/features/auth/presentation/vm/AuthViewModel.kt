@@ -545,6 +545,8 @@ class AuthViewModel(
         }
     }
 
+    fun signOut() { sessionStorage.clearSession() }
+
     fun navigateProfileBack() {
         if (busy) return
         val order = CustomProfileSetupScreen.registrationOrder

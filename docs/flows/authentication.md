@@ -1,5 +1,12 @@
 # Authentication phase 1 — onboarding, guest entry and secure sessions
 
+November 2026 follow-up: Profile now exposes the existing sign-out operation with
+confirmation. Back from the first incomplete-registration step offers a confirmed
+return to phone verification; later steps still go to the previous step. Profile
+metadata saves preserve current rotated tokens and cannot restore a signed-out
+or replaced session. See the [navigation audit](../validation/navigation-flow/README.md)
+for tests and native coverage; the OTP/refresh contracts remain unchanged.
+
 Implemented 2026-09-28 across both `dev-core-architecture` branches. The user-supplied
 Onboarding and Space exports unblock the visual work after the Figma MCP quota
 failure. This document distinguishes implemented behavior from the remaining

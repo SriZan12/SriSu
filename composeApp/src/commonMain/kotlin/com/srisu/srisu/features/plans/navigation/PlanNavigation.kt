@@ -14,6 +14,6 @@ fun NavGraphBuilder.planGraph(controller:NavController) {
     composable<PlansDestination> {entry->
         val route=entry.toRoute<PlansDestination>();val nav=AppNavigator(controller,entry)
         if((route.id!=null && route.id<=0) || (route.ideaId!=null && !route.ideaId.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))) com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
-        else PlanScreen(route.id,nav::back,{if(route.fromChat)nav.back() else nav.open(ChatNav.CoupleConversation(origin="plan"))},{nav.open(MomentComposerDestination(it))},initialInvitations=route.showInvitations,initialCreate=route.create,initialIdea=route.ideaId,initialEdit=route.edit)
+        else PlanScreen(route.id,nav::back,{nav.conversation(route.fromChat, ChatNav.CoupleConversation(origin="plan"))},{nav.open(MomentComposerDestination(it))},initialInvitations=route.showInvitations,initialCreate=route.create,initialIdea=route.ideaId,initialEdit=route.edit)
     }
 }

@@ -92,8 +92,10 @@ class ChallengeViewModel(private val source: ChallengeSource, private val matrix
     fun filter(apart: Boolean, quick: Boolean) { mutable.update { it.copy(apart = apart, quick = quick) } }
     fun browse(history: Boolean = false) {
         if (state.value.busy) return
+        val returningToHistory = state.value.session != null && history && state.value.historyTab
         leaveDetail()
-        mutable.update { it.copy(selected = null, session = null, historyTab = history, cardError = null) }; refresh()
+        mutable.update { it.copy(selected = null, session = null, historyTab = history, cardError = null) }
+        refresh(quiet = returningToHistory)
     }
     fun openSession(id: String) = task {
         initialId = id

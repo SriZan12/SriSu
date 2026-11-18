@@ -123,7 +123,7 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
             } else {
                 val vm = koinViewModel<ProfileViewModel>()
                 LaunchedEffect(user.id) { vm.setUserProfileData(user) }
-                ProfileScreen(vm)
+                ProfileScreen(vm, onBack = nav::back)
             }
         }
         composable<ChatNav.YoureConnected> { entry ->
@@ -153,6 +153,7 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
         if (roomId == null) {
             MatrixChatEntryScreen(
                 viewModel = koinViewModel<MatrixChatEntryViewModel>(),
+                onBack = nav::back,
                 onOpenRoom = { resolvedRoomId ->
                     nav.replace(route.copy(roomId = resolvedRoomId))
                 },
@@ -205,7 +206,9 @@ private fun NavigateOnPartnerAccepted(
     onAccepted: () -> Boolean,
 ) {
     val state by vm.findPartnerUIState.collectAsStateWithLifecycle()
+    val membership: com.srisu.srisu.navigation.CoupleAccessCoordinator = org.koin.compose.koinInject()
     LaunchedEffect(state.acceptedNavigationPending) {
+        if (state.acceptedNavigationPending) membership.retry()
         consumeAcceptedNavigation(
             pending = state.acceptedNavigationPending,
             navigate = onAccepted,

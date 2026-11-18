@@ -1,5 +1,11 @@
 # Find Your Partner
 
+November 2026 follow-up: the partner preview has a visible return action.
+Acceptance triggers an authoritative membership refresh while retaining the
+first-link confirmation/chat stack. Revoking or replacing an existing membership
+still clears private navigation state. The [navigation audit](../validation/navigation-flow/README.md)
+records a live isolated Android acceptance and the subsequent membership poll.
+
 Implemented on the existing shared Compose / typed Navigation architecture.
 
 ## Design references

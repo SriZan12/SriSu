@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +32,7 @@ import srisu.composeapp.generated.resources.chat_secure_unavailable_title
 fun MatrixChatEntryScreen(
     viewModel: MatrixChatEntryViewModel,
     onOpenRoom: (String) -> Unit,
+    onBack: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.resolve() }
@@ -37,9 +40,10 @@ fun MatrixChatEntryScreen(
         (state as? MatrixChatEntryState.Ready)?.roomId?.let(onOpenRoom)
     }
     Box(
-        modifier = Modifier.fillMaxSize().padding(androidx.compose.material3.MaterialTheme.spacing.gutter),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(androidx.compose.material3.MaterialTheme.spacing.gutter),
         contentAlignment = Alignment.Center,
     ) {
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) { Text("Back") }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(androidx.compose.material3.MaterialTheme.spacing.medium),

@@ -1,5 +1,10 @@
 # Challenges: experiences with mutual agreement
 
+November 2026 navigation follow-up: Back from a catalogue/history-opened detail
+restores that list and its reading position. History keeps loaded pages. Direct
+entries return to their origin; opening chat preserves the Challenge beneath it.
+See the [navigation audit](../validation/navigation-flow/README.md) for verification.
+
 Implemented locally on 2026-10-24. Frontend base `f0969a00c2329fd34187ef802390ef4a5ab4f01e`
 on `dev-core-architecture`; backend base `a542c87053b3dd52551da8c794367b8d97666fb5`
 on `codex/couple-chat-rebuild`. No branch switch, commit, push or deployment in this task.
