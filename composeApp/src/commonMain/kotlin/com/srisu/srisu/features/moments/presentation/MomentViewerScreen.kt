@@ -92,7 +92,7 @@ import kotlin.time.Instant
                         if(state.hasPrevious) CustomAccessibilityAction(previous) { onMove(-1); true } else null,
                         if(state.hasNext) CustomAccessibilityAction(next) { onMove(1); true } else null) }
                     .pointerInput(moment?.id,state.photo) { detectTapGestures(onPress={ held=true; try { tryAwaitRelease() } finally {held=false} },
-                        onTap={ offset -> onMove(if(offset.x<size.width/2) -1 else 1) }) },ContentScale.Crop,{pixelsPresented=true;onPresented()},{decodeFailed=true})
+                        onTap={ offset -> onMove(if(offset.x<size.width/2) -1 else 1) }) },ContentScale.Fit,{pixelsPresented=true;onPresented()},{decodeFailed=true})
             }
             MomentScrims()
             if(state.loading || state.imageLoading) CircularProgressIndicator(Modifier.align(Alignment.Center),color=colors.onMedia)

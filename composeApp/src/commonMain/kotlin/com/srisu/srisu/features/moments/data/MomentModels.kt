@@ -33,10 +33,11 @@ import kotlinx.serialization.Serializable
     val photos: List<StagedPhoto> = emptyList(), @SerialName("moment_id") val momentId: Long? = null,
     @SerialName("published_at") val publishedAt: String? = null)
 @Serializable data class PublishMoment(@SerialName("expected_revision") val revision: Long, val caption: String,
-    val visibility: String, @SerialName("photo_ids") val photoIds: List<String>)
+    val visibility: String, @SerialName("photo_ids") val photoIds: List<String>,
+    val crops: Map<String, MomentCrop> = emptyMap())
 @Serializable data class MomentDraftRecord(val id: String, val couple: Long, val caption: String = "",
     val visibility: String = "private", val order: List<String> = emptyList(),
-    val publication: PublishMoment? = null)
+    val publication: PublishMoment? = null, val crops: Map<String, MomentCrop> = emptyMap())
 @Serializable data class MomentNote(val id: Long, val message: String, val sender: Long? = null,
     val replies: List<MomentNoteReply> = emptyList())
 @Serializable data class MomentNoteReply(val id: Long, val message: String)

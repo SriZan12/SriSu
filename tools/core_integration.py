@@ -35,7 +35,7 @@ def main():
                     time.sleep(0.1)
                 if not ready: raise SystemExit('Disposable backend did not start within 10 seconds.')
                 env = {**os.environ, 'SRISU_CORE_INTEGRATION_FILE': str(fixture)}
-                result = subprocess.run(['./gradlew', ':composeApp:testDebugUnitTest', '--tests', 'com.srisu.srisu.core.CoreLocalTransportIntegrationTest', '-Psrisu.coreIntegrationRun=' + str(port), '--console=plain'], cwd=ROOT, env=env)
+                result = subprocess.run(['./gradlew', ':composeApp:testDebugUnitTest', '--tests', 'com.srisu.srisu.core.CoreLocalTransportIntegrationTest', '--tests', 'com.srisu.srisu.features.moments.MomentCropTransportIntegrationTest', '-Psrisu.coreIntegrationRun=' + str(port), '--console=plain'], cwd=ROOT, env=env)
                 if result.returncode:
                     report = ROOT / 'build/reports/core-integration-server.log'
                     report.parent.mkdir(parents=True, exist_ok=True)

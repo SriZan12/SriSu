@@ -32,3 +32,14 @@ object MomentTokens {
     const val scrimAlpha = 0.6f
     const val titleAlpha = 0.18f
 }
+
+/** Composer-only layout limits; spacing, type and color continue to use the shared theme. */
+object MomentComposerTokens {
+    val maxWidth = 960.dp
+    val twoPaneMinWidth = 600.dp
+    val compactEditorHeight = 300.dp
+    val previewMinHeight = 160.dp
+    val previewMaxHeight = 300.dp
+    const val previewFraction = 0.36f
+    const val editorControlsFraction = 0.42f
+}

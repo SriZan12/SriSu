@@ -4,8 +4,13 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -22,16 +27,26 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.srisu.srisu.components.SriSuButton
 import com.srisu.srisu.components.SriSuButtonSize
+import com.srisu.srisu.components.DraftEditor
+import com.srisu.srisu.components.rememberDraftEditor
 import com.srisu.srisu.features.couplechat.presentation.rememberNativeChatMedia
+import com.srisu.srisu.features.moments.data.MomentCrop
 import com.srisu.srisu.theme.*
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -48,7 +63,7 @@ import srisu.composeapp.generated.resources.*
     DisposableEffect(native) { onDispose { native.close() } }
     LaunchedEffect(state.publishedId,state.discarded) { state.publishedId?.let(onPublished); if(state.discarded) onBack() }
     MomentComposerContent(state,vm::image,vm::caption,vm::audience,vm::remove,vm::reorder,vm::share,vm::restore,vm::discard,onBack,
-        picking=picking,onPick={source->
+        picking=picking,onCrop=vm::crop,onPick={source->
             if(!picking) {
                 picking=true
                 val stamp=vm.pickerStamp()
@@ -59,223 +74,323 @@ import srisu.composeapp.generated.resources.*
         })
 }
 
-/** Capture stage until a photo exists, then a full-bleed preview with caption and the inline "Share to" sheet. */
+/** One safe-area shell; only the body scrolls, so publication stays reachable at any text size. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
-@Composable internal fun MomentComposerContent(state: MomentComposerState, image: suspend (String)->ByteArray?,
-    onCaption: (String)->Unit,onAudience: (String)->Unit,onRemove: (String)->Unit,onReorder: (String,Int)->Unit,
-    onShare: ()->Unit,onRetry: ()->Unit,onDiscard: ()->Unit,onBack: ()->Unit,onPick: (String)->Unit,
-    picking: Boolean=false, initialCaptionEditing: Boolean=false) {
-    val frozen=state.busy || picking || state.record?.publication!=null
+@Composable internal fun MomentComposerContent(
+    state: MomentComposerState, image: suspend (String) -> ByteArray?,
+    onCaption: (String) -> Unit, onAudience: (String) -> Unit, onRemove: (String) -> Unit,
+    onReorder: (String, Int) -> Unit, onShare: () -> Unit, onRetry: () -> Unit,
+    onDiscard: () -> Unit, onBack: () -> Unit, onPick: (String) -> Unit,
+    picking: Boolean = false, initialCaptionEditing: Boolean = false,
+    onCrop: (String, MomentCrop?) -> Unit = { _, _ -> },
+) {
+    val colors = MaterialTheme.colorScheme
+    val space = MaterialTheme.spacing
+    val enabled = !state.loading && !state.busy && !picking && state.record?.publication == null
     var leave by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var editing by rememberSaveable { mutableStateOf(initialCaptionEditing) }
-    val back={ if(state.photos.isNotEmpty() || state.record?.caption?.isNotBlank()==true || state.busy) leave=true else onBack() }
-    BackHandler(onBack=back)
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.mediaBackground)) {
-        if(state.photos.isEmpty()) MomentCaptureStage(picking,state.loading,state.error,back,{onPick("camera")},{onPick("photo")},onRetry,Modifier.fillMaxSize())
-        else {
-            val index=selected.coerceIn(state.photos.indices)
-            val photo=state.photos[index]
-            val description=stringResource(Res.string.moment_photo_selected,index+1,state.photos.size)
-            if(photo.bytes!=null) MomentImage(photo.bytes,description,Modifier.fillMaxSize(),ContentScale.Crop)
-            else GuardedMomentImage(photo.remote?.image,image,description,Modifier.fillMaxSize())
-            Column(Modifier.fillMaxSize().imePadding()) {
-                MomentComposerTopBar(editing,!frozen && !state.loading,back,{editing=!editing},Modifier.statusBarsPadding())
-                if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                Spacer(Modifier.weight(1f))
-                MomentPhotoStrip(state.photos,index,image,!frozen,state.photos.size<MAX_PHOTOS,{selected=it},
-                    onEarlier={onReorder(photo.id,-1);selected=(index-1).coerceAtLeast(0)},
-                    onLater={onReorder(photo.id,1);selected=(index+1).coerceAtMost(state.photos.lastIndex)},
-                    onRemove={onRemove(photo.id);selected=0},onAdd={onPick("photo")},onCamera={onPick("camera")})
-                MomentCaptionPill(state.record?.caption.orEmpty(),editing,!frozen && !state.loading,onCaption,{editing=true},
-                    Modifier.align(Alignment.CenterHorizontally).padding(MaterialTheme.spacing.medium))
-                MomentShareSheet(state,picking,onAudience,onShare,onRetry,onDiscard,Modifier.weight(1f,fill=false))
-            }
-        }
+    var focusedCaption by rememberSaveable { mutableStateOf(false) }
+    var cropping by rememberSaveable { mutableStateOf<String?>(null) }
+    val captionEditor = rememberDraftEditor(state.record?.caption.orEmpty())
+    val portraitScroll = rememberScrollState()
+    val detailsScroll = rememberScrollState()
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val done = { focus.clearFocus(); keyboard?.hide(); editing = false }
+    val cropPhoto = state.photos.firstOrNull { it.id == cropping }
+    if (cropPhoto != null && enabled) {
+        MomentPhotoEditor(cropPhoto, image, state.record?.crops?.get(cropPhoto.id),
+            onCancel = { cropping = null }, onApply = { onCrop(cropPhoto.id, it); cropping = null })
+        return
     }
-    if(leave) AlertDialog(onDismissRequest={leave=false},title={Text(stringResource(Res.string.moment_leave_title))},
-        text={Text(stringResource(if(state.busy) Res.string.moment_leave_busy else Res.string.moment_leave_body))},
-        confirmButton={TextButton(onClick={leave=false;if(!state.busy) onBack()}) { Text(stringResource(if(state.busy) Res.string.moment_leave_stay else Res.string.moment_leave_keep)) }},
-        dismissButton={if(!state.busy) TextButton(onClick={leave=false;onDiscard()}) {Text(stringResource(Res.string.moment_leave_discard))}})
-}
-
-@Composable internal fun MomentCaptureStage(picking: Boolean,loading: Boolean,error: String?,onClose: ()->Unit,onCamera: ()->Unit,
-    onLibrary: ()->Unit,onRetry: ()->Unit,modifier: Modifier=Modifier) {
-    val colors=MaterialTheme.colorScheme
-    val space=MaterialTheme.spacing
-    val enabled=!picking && !loading
-    Column(modifier.safeDrawingPadding()) {
-        Box(Modifier.fillMaxWidth().padding(horizontal=space.medium,vertical=space.small)) {
-            MomentChromeButton(Icons.Outlined.Close,stringResource(Res.string.moment_close),onClose,Modifier.align(Alignment.CenterStart))
-            MomentPill(stringResource(Res.string.moment_title),Modifier.align(Alignment.Center),container=colors.onMedia.copy(alpha=MomentTokens.titleAlpha))
-        }
-        if(loading) LinearProgressIndicator(Modifier.fillMaxWidth(),color=colors.onMedia)
-        Column(Modifier.weight(1f).fillMaxWidth().padding(space.large),verticalArrangement=Arrangement.spacedBy(space.medium,Alignment.CenterVertically),
-            horizontalAlignment=Alignment.CenterHorizontally) {
-            Icon(Icons.Outlined.PhotoCamera,null,Modifier.size(space.huge),tint=colors.onMedia.copy(alpha=MomentTokens.mutedAlpha))
-            Text(stringResource(if(picking) Res.string.moment_opening else Res.string.moment_capture_hint),style=MaterialTheme.typography.bodyLarge,
-                color=colors.onMedia,textAlign=TextAlign.Center)
-            error?.let { MomentError(it,onRetry) }
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal=space.extraLarge,vertical=space.large),verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.SpaceBetween) {
-            MomentLibraryButton(enabled,onLibrary)
-            MomentShutter(enabled,onCamera)
-            Spacer(Modifier.size(MomentTokens.galleryThumb))
-        }
+    val back = {
+        if (editing) done()
+        else if (state.photos.isNotEmpty() || state.record?.caption?.isNotBlank() == true || state.busy) leave = true
+        else onBack()
     }
-}
-
-@Composable internal fun MomentShutter(enabled: Boolean,onClick: ()->Unit,modifier: Modifier=Modifier) {
-    val colors=MaterialTheme.colorScheme
-    val description=stringResource(Res.string.moment_shutter)
-    Box(modifier.size(MomentTokens.shutterOuter).clip(CircleShape).border(MomentTokens.shutterRing,colors.onMedia,CircleShape)
-        .clickable(enabled=enabled,role=Role.Button,onClick=onClick).semantics { contentDescription=description },contentAlignment=Alignment.Center) {
-        Box(Modifier.size(MomentTokens.shutterInner).clip(CircleShape).background(colors.onMedia.copy(alpha=if(enabled) 1f else MomentTokens.trackAlpha)))
-    }
-}
-
-@Composable internal fun MomentLibraryButton(enabled: Boolean,onClick: ()->Unit,modifier: Modifier=Modifier) {
-    val colors=MaterialTheme.colorScheme
-    val description=stringResource(Res.string.moment_library)
-    Box(modifier.size(MomentTokens.galleryThumb).clip(MaterialTheme.shapes.medium)
-        .border(MomentTokens.galleryBorder,colors.onMedia,MaterialTheme.shapes.medium)
-        .background(colors.onMedia.copy(alpha=MomentTokens.trackAlpha))
-        .clickable(enabled=enabled,role=Role.Button,onClick=onClick).semantics { contentDescription=description },contentAlignment=Alignment.Center) {
-        Icon(Icons.Outlined.PhotoLibrary,null,tint=colors.onMedia)
-    }
-}
-
-@Composable internal fun MomentComposerTopBar(editing: Boolean,enabled: Boolean,onClose: ()->Unit,onText: ()->Unit,modifier: Modifier=Modifier) {
-    Row(modifier.fillMaxWidth().padding(horizontal=MaterialTheme.spacing.medium,vertical=MaterialTheme.spacing.small),
-        verticalAlignment=Alignment.CenterVertically) {
-        MomentChromeButton(Icons.Outlined.Close,stringResource(Res.string.moment_close),onClose)
-        Spacer(Modifier.weight(1f))
-        val label=stringResource(if(editing) Res.string.moment_caption_done else Res.string.moment_text)
-        val description=if(editing) label else stringResource(Res.string.moment_text_description)
-        MomentPill(label,Modifier.semantics { contentDescription=description },onClick=onText,enabled=enabled)
-    }
-}
-
-@Composable internal fun MomentPhotoStrip(photos: List<LocalMomentPhoto>,selected: Int,image: suspend (String)->ByteArray?,enabled: Boolean,
-    canAdd: Boolean,onSelect: (Int)->Unit,onEarlier: ()->Unit,onLater: ()->Unit,onRemove: ()->Unit,onAdd: ()->Unit,onCamera: ()->Unit,
-    modifier: Modifier=Modifier) {
-    val space=MaterialTheme.spacing
-    val colors=MaterialTheme.colorScheme
-    Column(modifier.fillMaxWidth().padding(horizontal=space.medium),verticalArrangement=Arrangement.spacedBy(space.small)) {
-        if(photos.size>1) Row(horizontalArrangement=Arrangement.spacedBy(space.small)) {
-            MomentChromeButton(Icons.AutoMirrored.Outlined.ArrowBack,stringResource(Res.string.moment_photo_earlier),onEarlier,enabled=enabled && selected>0)
-            MomentChromeButton(Icons.Outlined.DeleteOutline,stringResource(Res.string.moment_photo_remove),onRemove,enabled=enabled)
-            MomentChromeButton(Icons.AutoMirrored.Outlined.ArrowForward,stringResource(Res.string.moment_photo_later),onLater,enabled=enabled && selected<photos.lastIndex)
-        } else MomentChromeButton(Icons.Outlined.DeleteOutline,stringResource(Res.string.moment_photo_remove),onRemove,enabled=enabled)
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(space.small),verticalAlignment=Alignment.CenterVertically) {
-            itemsIndexed(photos,key={_,p->p.id}) { index,p ->
-                val description=stringResource(Res.string.moment_photo_select,index+1)
-                val shape=MaterialTheme.shapes.medium
-                Box(Modifier.size(MomentTokens.stripThumb).clip(shape)
-                    .border(if(index==selected) MomentTokens.stripBorder else space.none,colors.onMedia,shape)
-                    .clickable(role=Role.Tab) { onSelect(index) }.semantics { this.selected=index==selected }) {
-                    if(p.bytes!=null) MomentImage(p.bytes,description,Modifier.fillMaxSize())
-                    else GuardedMomentImage(p.remote?.image,image,description,Modifier.fillMaxSize())
+    BackHandler(onBack = back)
+    Surface(Modifier.fillMaxSize(), color = colors.surface) {
+        BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
+            // Height changes from the keyboard must not switch a portrait phone to a two-pane layout.
+            val wide = maxWidth >= MomentComposerTokens.twoPaneMinWidth && maxWidth > maxHeight
+            // Stay in focused editing until Done/Back; dismissing the IME must not remount and refocus the field.
+            val compactEditor = editing && (focusedCaption || maxHeight < MomentComposerTokens.compactEditorHeight)
+            SideEffect { focusedCaption = compactEditor }
+            val previewHeight = (maxHeight * MomentComposerTokens.previewFraction)
+                .coerceIn(MomentComposerTokens.previewMinHeight, MomentComposerTokens.previewMaxHeight)
+            Column(Modifier.widthIn(max = MomentComposerTokens.maxWidth).fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = space.small), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = back) { Icon(Icons.Outlined.Close, stringResource(Res.string.moment_close)) }
+                    Text(stringResource(if (compactEditor) Res.string.moment_caption_label else Res.string.moment_new),
+                        Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                    if (editing) TextButton(onClick = done, modifier = Modifier.testTag("moment-caption-done")) { Text(stringResource(Res.string.moment_caption_done)) }
+                }
+                if (state.loading || picking) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (compactEditor) {
+                    // A short landscape IME must not squeeze the editable text between two toolbars.
+                    MomentCaptionField(state.record?.caption.orEmpty(), true, enabled, onCaption, { editing = true }, done,
+                        captionEditor, Modifier.weight(1f).padding(horizontal = space.medium).padding(bottom = space.small), expanded = true)
+                } else {
+                    val media: @Composable (Modifier, Dp?) -> Unit = { modifier, height ->
+                        if (state.photos.isEmpty()) {
+                            MomentEmptyPreview(enabled, picking, { onPick("photo") }, { onPick("camera") }, modifier, height)
+                        } else {
+                            val index = selected.coerceIn(state.photos.indices)
+                            val photo = state.photos[index]
+                            MomentComposerMedia(state.photos, index, image, enabled, modifier, height,
+                                crop = state.record?.crops?.get(photo.id),
+                                onCrop = { onCrop(photo.id, it) }, onAdjust = { done(); cropping = photo.id },
+                                onSelect = { selected = it },
+                                onEarlier = { onReorder(photo.id, -1); selected = (index - 1).coerceAtLeast(0) },
+                                onLater = { onReorder(photo.id, 1); selected = (index + 1).coerceAtMost(state.photos.lastIndex) },
+                                onRemove = { onRemove(photo.id); selected = 0 },
+                                onAdd = { onPick("photo") }, onCamera = { onPick("camera") })
+                        }
+                    }
+                    val details: @Composable () -> Unit = {
+                        MomentCaptionField(state.record?.caption.orEmpty(), editing, enabled, onCaption, { editing = true }, done, captionEditor)
+                        MomentAudienceSection(state, enabled, onAudience, onShare, onRetry, onDiscard)
+                    }
+                    val footer: @Composable () -> Unit = {
+                        MomentShareFooter(state, picking) { done(); onShare() }
+                    }
+                    if (wide) {
+                        Row(Modifier.weight(1f).padding(horizontal = space.medium), horizontalArrangement = Arrangement.spacedBy(space.large)) {
+                            media(Modifier.weight(1f).fillMaxHeight().padding(bottom = space.small), null)
+                            Column(Modifier.weight(1f).fillMaxHeight()) {
+                                Column(Modifier.weight(1f).verticalScroll(detailsScroll).padding(bottom = space.medium),
+                                    verticalArrangement = Arrangement.spacedBy(space.medium)) { details() }
+                                footer()
+                            }
+                        }
+                    } else {
+                        // A bounded preview and one continuous scroll area avoid squeezing the audience/CTA off screen.
+                        Column(Modifier.weight(1f).verticalScroll(portraitScroll)
+                            .padding(horizontal = space.medium).padding(bottom = space.medium),
+                            verticalArrangement = Arrangement.spacedBy(space.medium)) {
+                            media(Modifier.fillMaxWidth(), previewHeight)
+                            details()
+                        }
+                        Box(Modifier.padding(horizontal = space.medium)) { footer() }
+                    }
                 }
             }
-            if(canAdd) {
-                item(key="add") { MomentChromeButton(Icons.Outlined.AddPhotoAlternate,stringResource(Res.string.moment_photo_add),onAdd,enabled=enabled) }
-                item(key="camera") { MomentChromeButton(Icons.Outlined.PhotoCamera,stringResource(Res.string.moment_photo_camera),onCamera,enabled=enabled) }
+        }
+    }
+    if (leave) AlertDialog(onDismissRequest = { leave = false }, title = { Text(stringResource(Res.string.moment_leave_title)) },
+        text = { Text(stringResource(if (state.busy) Res.string.moment_leave_busy else Res.string.moment_leave_body)) },
+        confirmButton = { TextButton(onClick = { leave = false; if (!state.busy) onBack() }) {
+            Text(stringResource(if (state.busy) Res.string.moment_leave_stay else Res.string.moment_leave_keep))
+        } },
+        dismissButton = { if (!state.busy) TextButton(onClick = { leave = false; onDiscard() }) { Text(stringResource(Res.string.moment_leave_discard)) } })
+}
+
+/** The same composer is shown before selection; picking starts only from an explicit photo action. */
+@Composable private fun MomentEmptyPreview(
+    enabled: Boolean, picking: Boolean, onLibrary: () -> Unit, onCamera: () -> Unit,
+    modifier: Modifier, previewHeight: Dp?,
+) {
+    val space = MaterialTheme.spacing
+    val colors = MaterialTheme.colorScheme
+    val description = stringResource(Res.string.moment_library)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(space.small)) {
+        val previewModifier = if (previewHeight == null) Modifier.weight(1f) else Modifier.height(previewHeight)
+        Box(previewModifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
+            .background(colors.surfaceContainerLow).border(MomentTokens.outline, colors.outlineVariant, MaterialTheme.shapes.medium)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onLibrary)
+            .semantics { contentDescription = description }.testTag("moment-add-first-photo"), contentAlignment = Alignment.Center) {
+            Column(Modifier.padding(space.medium), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(space.small)) {
+                Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(space.extraLarge), tint = colors.onSurfaceVariant)
+                Text(stringResource(if (picking) Res.string.moment_opening else Res.string.moment_photo_add),
+                    style = MaterialTheme.typography.titleSmall, color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
+            }
+        }
+        Row(Modifier.fillMaxWidth().heightIn(min = space.touchTarget), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(Res.string.moment_photo_limit), Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, stringResource(Res.string.moment_shutter)) }
+        }
+    }
+}
+
+@Composable private fun MomentComposerMedia(
+    photos: List<LocalMomentPhoto>, selected: Int, image: suspend (String) -> ByteArray?, enabled: Boolean,
+    modifier: Modifier, previewHeight: Dp?, onSelect: (Int) -> Unit, onEarlier: () -> Unit, onLater: () -> Unit,
+    onRemove: () -> Unit, onAdd: () -> Unit, onCamera: () -> Unit,
+    crop: MomentCrop?, onCrop: (MomentCrop?) -> Unit, onAdjust: () -> Unit,
+) {
+    val space = MaterialTheme.spacing
+    val colors = MaterialTheme.colorScheme
+    val photo = photos[selected]
+    val pixels = rememberMomentPixels(photo, image)
+    var previewSize by remember { mutableStateOf(IntSize.Zero) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(space.small)) {
+        val previewModifier = if (previewHeight == null) Modifier.weight(1f) else Modifier.height(previewHeight)
+        Box(previewModifier.fillMaxWidth().onSizeChanged { previewSize = it }.clip(MaterialTheme.shapes.medium).background(colors.mediaBackground)) {
+            val description = stringResource(Res.string.moment_photo_selected, selected + 1, photos.size)
+            MomentFramedPhoto(pixels, crop ?: MomentCrop.Full, description, Modifier.fillMaxSize().testTag("moment-photo-preview"))
+            Row(Modifier.fillMaxWidth().padding(space.tiny), verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = MaterialTheme.shapes.pill, color = colors.mediaBackground.copy(alpha = MomentTokens.pillAlpha)) {
+                    Text(stringResource(Res.string.moment_photo_position, selected + 1, photos.size),
+                        Modifier.padding(horizontal = space.compact, vertical = space.small),
+                        style = MaterialTheme.typography.labelSmall, color = colors.onMedia)
+                }
+                Spacer(Modifier.weight(1f))
+                if (photos.size > 1) {
+                    MomentChromeButton(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(Res.string.moment_photo_earlier), onEarlier, enabled = enabled && selected > 0)
+                    MomentChromeButton(Icons.AutoMirrored.Outlined.ArrowForward, stringResource(Res.string.moment_photo_later), onLater, enabled = enabled && selected < photos.lastIndex)
+                }
+                MomentChromeButton(Icons.Outlined.DeleteOutline, stringResource(Res.string.moment_photo_remove), onRemove, enabled = enabled)
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(space.small), verticalAlignment = Alignment.CenterVertically) {
+            FilterChip(selected = crop == null, onClick = { onCrop(null) }, enabled = enabled,
+                label = { Text(stringResource(Res.string.moment_crop_full)) },
+                modifier = Modifier.heightIn(min = space.touchTarget).testTag("moment-photo-full"))
+            TextButton(onClick = {
+                pixels.bitmap?.let { bitmap ->
+                    if (previewSize.width > 0 && previewSize.height > 0) onCrop(MomentCrop.centered(
+                        bitmap.width.toDouble() / bitmap.height, previewSize.width.toDouble() / previewSize.height))
+                }
+            }, enabled = enabled && pixels.bitmap != null, modifier = Modifier.testTag("moment-photo-fill")) {
+                Text(stringResource(Res.string.moment_crop_fill))
+            }
+            TextButton(onClick = onAdjust, enabled = enabled, modifier = Modifier.testTag("moment-photo-crop")) {
+                Icon(Icons.Outlined.Crop, null, Modifier.size(space.large))
+                Spacer(Modifier.width(space.tiny))
+                Text(stringResource(Res.string.moment_crop_action))
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(space.small)) {
+            LazyRow(Modifier.weight(1f).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(space.small)) {
+                itemsIndexed(photos, key = { _, p -> p.id }) { index, p ->
+                    val description = stringResource(Res.string.moment_photo_select, index + 1)
+                    Box(Modifier.size(MomentTokens.stripThumb).clip(MaterialTheme.shapes.small)
+                        .then(if (index == selected) Modifier.border(MomentTokens.stripBorder, colors.primary, MaterialTheme.shapes.small) else Modifier)
+                        .selectable(index == selected, enabled = enabled, role = Role.Tab, onClick = { onSelect(index) })
+                        .padding(MomentTokens.stripBorder).clip(MaterialTheme.shapes.small)) {
+                        if (p.bytes != null) MomentImage(p.bytes, description, Modifier.fillMaxSize())
+                        else GuardedMomentImage(p.remote?.image, image, description, Modifier.fillMaxSize())
+                    }
+                }
+            }
+            if (photos.size < MAX_PHOTOS) {
+                IconButton(onClick = onAdd, enabled = enabled) { Icon(Icons.Outlined.AddPhotoAlternate, stringResource(Res.string.moment_photo_add)) }
+                IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, stringResource(Res.string.moment_photo_camera)) }
             }
         }
     }
 }
 
-@Composable internal fun MomentCaptionPill(caption: String,editing: Boolean,enabled: Boolean,onCaption: (String)->Unit,onEdit: ()->Unit,
-    modifier: Modifier=Modifier) {
-    val colors=MaterialTheme.colorScheme
-    val focus=remember { FocusRequester() }
-    if(editing) {
+@Composable private fun MomentCaptionField(
+    caption: String, editing: Boolean, enabled: Boolean, onCaption: (String) -> Unit, onEdit: () -> Unit, onDone: () -> Unit,
+    editor: DraftEditor, modifier: Modifier = Modifier, expanded: Boolean = false,
+) {
+    val space = MaterialTheme.spacing
+    val colors = MaterialTheme.colorScheme
+    val label = stringResource(Res.string.moment_text_description)
+    if (editing) {
+        val focus = remember { FocusRequester() }
+        val reveal = remember { BringIntoViewRequester() }
+        val keyboardHeight = WindowInsets.ime.getBottom(LocalDensity.current)
         LaunchedEffect(Unit) { focus.requestFocus() }
-        Column(modifier,horizontalAlignment=Alignment.CenterHorizontally) {
-            Surface(shape=MaterialTheme.shapes.pill,color=colors.mediaBackground.copy(alpha=MomentTokens.pillAlpha)) {
-                BasicTextField(caption,onCaption,enabled=enabled,maxLines=4,cursorBrush=SolidColor(colors.onMedia),
-                    textStyle=MaterialTheme.typography.headlineSmall.copy(color=colors.onMedia,textAlign=TextAlign.Center),
-                    modifier=Modifier.focusRequester(focus).widthIn(min=MomentTokens.shutterOuter*2)
-                        .padding(horizontal=MaterialTheme.spacing.gutter,vertical=MaterialTheme.spacing.compact),
-                    decorationBox={ inner -> Box(contentAlignment=Alignment.Center) {
-                        if(caption.isEmpty()) Text(stringResource(Res.string.moment_caption_hint),style=MaterialTheme.typography.headlineSmall,
-                            color=colors.onMedia.copy(alpha=MomentTokens.mutedAlpha))
-                        inner()
-                    } })
-            }
-            Text(stringResource(Res.string.moment_caption_count,caption.length),style=MaterialTheme.typography.bodySmall,color=colors.onMedia,
-                modifier=Modifier.padding(top=MaterialTheme.spacing.tiny))
+        LaunchedEffect(keyboardHeight) {
+            // Wait for the resized scroll viewport before revealing the whole field and counter.
+            withFrameNanos { }
+            reveal.bringIntoView()
         }
-    } else if(caption.isNotBlank()) MomentPill(caption,modifier,onClick=onEdit,enabled=enabled,large=true)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun MomentShareSheet(state: MomentComposerState,picking: Boolean,onAudience: (String)->Unit,onShare: ()->Unit,
-    onRetry: ()->Unit,onDiscard: ()->Unit,modifier: Modifier=Modifier) {
-    val space=MaterialTheme.spacing
-    val colors=MaterialTheme.colorScheme
-    val frozen=state.busy || picking || state.record?.publication!=null
-    val public=state.record?.visibility=="public"
-    Surface(modifier.fillMaxWidth(),shape=BottomSheetDefaults.ExpandedShape,color=colors.surface) {
-        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal=space.gutter,vertical=space.large),
-            verticalArrangement=Arrangement.spacedBy(space.medium)) {
-            Text(stringResource(Res.string.moment_share_to),style=MaterialTheme.typography.headlineMedium)
-            MomentAudienceOption(stringResource(Res.string.moment_private_title),stringResource(Res.string.moment_private_body),!public,!frozen,{onAudience("private")}) {
-                MomentIconPlate(Icons.Outlined.People)
+        Column(modifier.bringIntoViewRequester(reveal), verticalArrangement = Arrangement.spacedBy(space.tiny)) {
+            BasicTextField(editor.value, { next -> if (next.text.length <= 1000 && editor.edit(next)) onCaption(next.text) },
+                enabled = enabled, maxLines = 4, cursorBrush = SolidColor(colors.primary),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { onDone() }),
+                modifier = (if (expanded) Modifier.weight(1f) else Modifier).fillMaxWidth().focusRequester(focus).semantics { contentDescription = label }
+                    .clip(MaterialTheme.shapes.medium).background(colors.surfaceContainerLow)
+                    .border(MomentTokens.outline, colors.outlineVariant, MaterialTheme.shapes.medium).padding(if (expanded) space.compact else space.medium),
+                decorationBox = { inner -> Box {
+                    if (editor.value.text.isEmpty()) Text(stringResource(Res.string.moment_caption_hint), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                    inner()
+                } })
+            if (!expanded) Text(stringResource(Res.string.moment_caption_count, editor.value.text.length), Modifier.align(Alignment.End),
+                style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
+    } else {
+        Surface(onClick = onEdit, enabled = enabled, shape = MaterialTheme.shapes.medium, color = colors.surfaceContainerLow,
+            modifier = modifier.fillMaxWidth().semantics { contentDescription = label }) {
+            Row(Modifier.heightIn(min = space.touchTarget).padding(space.compact), horizontalArrangement = Arrangement.spacedBy(space.compact),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(caption.ifBlank { stringResource(Res.string.moment_caption_hint) }, Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium, color = if (caption.isBlank()) colors.onSurfaceVariant else colors.onSurface,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Icon(Icons.Outlined.Edit, null, Modifier.size(space.icon), tint = colors.onSurfaceVariant)
             }
-            MomentAudienceOption(stringResource(Res.string.moment_public_title),stringResource(Res.string.moment_public_body),public,!frozen,{onAudience("public")}) {
-                MomentIconPlate(Icons.Outlined.Public)
-            }
-            Row(horizontalArrangement=Arrangement.spacedBy(space.small),verticalAlignment=Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Schedule,null,Modifier.size(space.icon),tint=colors.onSurfaceVariant)
-                Text(stringResource(Res.string.moment_disappears_after),style=MaterialTheme.typography.bodyLarge,color=colors.onSurfaceVariant)
-            }
-            if(public) Text(stringResource(Res.string.moment_public_note),style=MaterialTheme.typography.bodyMedium,color=colors.onSurfaceVariant)
-            state.error?.let { MomentError(it,if(!state.busy) { {if(state.record?.publication!=null) onShare() else onRetry()} } else null) }
-            if(state.error!=null && !state.busy) TextButton(onClick=onDiscard) { Text(stringResource(Res.string.moment_discard)) }
-            if(state.busy) {
-                Text(state.stage,style=MaterialTheme.typography.bodyMedium)
-                if(state.progress==null) LinearProgressIndicator(Modifier.fillMaxWidth())
-                else LinearProgressIndicator(progress={state.progress},modifier=Modifier.fillMaxWidth())
-            }
-            SriSuButton(stringResource(if(state.record?.publication!=null && !state.busy) Res.string.moment_check_publication else Res.string.moment_share),
-                onShare,Modifier.fillMaxWidth().heightIn(min=space.huge),enabled=!state.loading && !state.busy && !picking,
-                size=SriSuButtonSize.Large,textStyle=MaterialTheme.typography.titleLarge,
-                trailingIcon={ Icon(Icons.AutoMirrored.Outlined.ArrowForward,null) })
         }
     }
 }
 
-@Composable internal fun MomentAudienceOption(title: String,body: String,selected: Boolean,enabled: Boolean,onClick: ()->Unit,
-    modifier: Modifier=Modifier,leading: @Composable ()->Unit) {
-    val colors=MaterialTheme.colorScheme
-    Surface(onClick=onClick,enabled=enabled,modifier=modifier.fillMaxWidth().semantics { role=Role.RadioButton; this.selected=selected },
-        shape=MaterialTheme.shapes.large,color=if(selected) colors.secondaryContainer else colors.surfaceContainer) {
-        Row(Modifier.padding(horizontal=MaterialTheme.spacing.medium,vertical=MaterialTheme.spacing.gutter),verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
-            leading()
-            Column(Modifier.weight(1f)) {
-                Text(title,style=MaterialTheme.typography.titleLarge,color=colors.onSurface)
-                Text(body,style=MaterialTheme.typography.bodyLarge,color=colors.onSurfaceVariant)
-            }
-            MomentSelectionMark(selected)
+@Composable private fun MomentAudienceSection(
+    state: MomentComposerState, enabled: Boolean, onAudience: (String) -> Unit, onShare: () -> Unit, onRetry: () -> Unit, onDiscard: () -> Unit,
+) {
+    val space = MaterialTheme.spacing
+    val colors = MaterialTheme.colorScheme
+    val public = state.record?.visibility == "public"
+    Column(verticalArrangement = Arrangement.spacedBy(space.small)) {
+        Text(stringResource(Res.string.moment_share_to), style = MaterialTheme.typography.titleSmall)
+        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(space.small)) {
+            MomentAudienceOption(stringResource(Res.string.moment_private_title), stringResource(Res.string.moment_private_body),
+                Icons.Outlined.People, !public, enabled) { onAudience("private") }
+            MomentAudienceOption(stringResource(Res.string.moment_public_title), stringResource(Res.string.moment_public_body),
+                Icons.Outlined.Public, public, enabled) { onAudience("public") }
         }
+        if (public) Text(stringResource(Res.string.moment_public_note), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        state.error?.let { MomentError(it, if (!state.busy) { { if (state.record?.publication != null) onShare() else onRetry() } } else null) }
+        if (state.error != null && !state.busy) TextButton(onClick = onDiscard) { Text(stringResource(Res.string.moment_discard)) }
     }
 }
 
-@Composable internal fun MomentSelectionMark(selected: Boolean,modifier: Modifier=Modifier) {
-    val colors=MaterialTheme.colorScheme
-    val size=modifier.size(MomentTokens.selectedMark).clip(CircleShape)
-    if(selected) Box(size.background(colors.primary),contentAlignment=Alignment.Center) {
-        Icon(Icons.Outlined.Check,null,Modifier.size(MomentTokens.selectedMarkIcon),tint=colors.onPrimary)
-    } else Box(size.border(MomentTokens.outline,colors.outline,CircleShape))
+@Composable private fun MomentAudienceOption(
+    title: String, body: String, icon: ImageVector, selected: Boolean, enabled: Boolean, onClick: () -> Unit,
+) {
+    val space = MaterialTheme.spacing
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
+        .background(if (selected) colors.secondaryContainer else colors.surfaceContainerLow)
+        .selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
+        .padding(horizontal = space.compact, vertical = space.small), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(space.compact)) {
+        Icon(icon, null, Modifier.size(space.icon), tint = colors.onSurfaceVariant)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(body, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
+        RadioButton(selected, onClick = null, enabled = enabled, modifier = Modifier.size(space.chromeIcon))
+    }
 }
 
-@Composable internal fun MomentIconPlate(icon: ImageVector,modifier: Modifier=Modifier) {
-    Box(modifier.size(MomentTokens.audienceAvatar).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerLowest),
-        contentAlignment=Alignment.Center) { Icon(icon,null,tint=MaterialTheme.colorScheme.onSurface) }
+@Composable private fun MomentShareFooter(state: MomentComposerState, picking: Boolean, onShare: () -> Unit) {
+    val space = MaterialTheme.spacing
+    Column(Modifier.fillMaxWidth().padding(vertical = space.small), verticalArrangement = Arrangement.spacedBy(space.small)) {
+        if (state.busy) {
+            Text(state.stage, style = MaterialTheme.typography.bodySmall)
+            if (state.progress == null) LinearProgressIndicator(Modifier.fillMaxWidth())
+            else LinearProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
+        } else Row(horizontalArrangement = Arrangement.spacedBy(space.tiny), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Schedule, null, Modifier.size(space.medium), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.moment_disappears_after), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val label = when {
+            state.record?.publication != null && !state.busy -> Res.string.moment_check_publication
+            state.record?.visibility == "public" -> Res.string.moment_share_public
+            else -> Res.string.moment_share_private
+        }
+        SriSuButton(stringResource(label),
+            onShare, Modifier.fillMaxWidth().heightIn(min = space.touchTarget).testTag("moment-share"),
+            enabled = state.photos.isNotEmpty() && !state.loading && !state.busy && !picking, size = SriSuButtonSize.Large,
+            textStyle = MaterialTheme.typography.labelLarge.copy(textAlign = TextAlign.Center))
+    }
 }
 
 /** Translucent dark circle used for media chrome (close, reorder, add). */
