@@ -26,6 +26,101 @@ class ChatRecoveryTest {
         MessageEvent(MegolmEncryptedMessageEventContent(MegolmMessageValue("synthetic"), sessionId = "test"),
             EventId(id), UserId(sender), RoomId("!synthetic:test"), timestamp), Result.success(content))
 
+    @Test fun editsKeepIdentityAndReplyAndRejectAnotherSendersReplacement() {
+        val original = event("$" + "original", Text("Before", relatesTo = RelatesTo.Reply(RelatesTo.ReplyTo(EventId("$" + "quote")))), 1)
+        fun edit(id: String, body: String, time: Long, sender: String = me) = event(id,
+            Text("* $body", relatesTo = RelatesTo.Replace(original.event.id, Text(body))), time, sender)
+        val messages = matrixTimelineMessages(listOf(original,
+            edit("$" + "first", "First edit", 2), edit("$" + "latest", "Latest edit", 3),
+            edit("$" + "forged", "Forged", 4, partner)), me, partner, null)
+        assertEquals(1, messages.size)
+        assertEquals(original.event.id.full, messages.single().id)
+        assertEquals("Latest edit", messages.single().body)
+        assertEquals("$" + "quote", messages.single().replyTo)
+        assertEquals(1, messages.single().timestampMillis)
+        assertTrue(messages.single().edited)
+    }
+
+    @Test fun redactedOriginalCannotBeResurrectedByAnEdit() {
+        val original = TimelineEvent(MessageEvent(RedactedEventContent("m.room.encrypted"), EventId("$" + "gone"),
+            UserId(me), RoomId("!synthetic:test"), 1), Result.success(RedactedEventContent("m.room.encrypted")))
+        val edit = event("$" + "edit", Text("* Secret", relatesTo = RelatesTo.Replace(original.event.id, Text("Secret"))), 2)
+        val message = matrixTimelineMessages(listOf(original, edit), me, partner, null).single()
+        assertTrue(message.deleted); assertFalse(message.edited); assertEquals("", message.body); assertNull(message.attachment)
+    }
+
+    @Test fun editingPreservesTheNormalDraftAndKeepsFailedEditsForRetry() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val room = ChatFixtures.conversation().copy(accountId = 1)
+        val base = ChatFixtureRepository(room)
+        var succeed = false
+        var count = 0
+        val repository = object : MatrixChatRepository by base {
+            override suspend fun editMessage(roomId: String, messageId: String, text: String): Result<Unit> {
+                count++; return if (succeed) Result.success(Unit) else Result.failure(Exception("synthetic"))
+            }
+        }
+        val vm = SecureChatViewModel(repository)
+        try {
+            vm.openRoom(room.roomId); runCurrent()
+            vm.updateMessageInput("Unsent draft"); vm.setReply(room.messages.first().id); runCurrent()
+            val quote = vm.uiState.value.reply
+            vm.beginEdit(room.messages.first { it.mine }.id); vm.updateEdit("Updated text"); vm.saveEdit(); vm.saveEdit(); runCurrent()
+            assertEquals(1, count); assertEquals("Updated text", vm.edit.value?.text); assertNotNull(vm.edit.value?.error)
+            assertEquals("Unsent draft", vm.messageInput.value); assertEquals(quote, vm.uiState.value.reply)
+            succeed = true; vm.saveEdit(); runCurrent()
+            assertNull(vm.edit.value); assertEquals("Unsent draft", vm.messageInput.value)
+            vm.beginEdit(room.messages.first { !it.mine }.id); assertNull(vm.edit.value)
+        } finally { vm.closeRoom(); vm.viewModelScope.cancel(); Dispatchers.resetMain() }
+    }
+
+    @Test fun deletionClosesMediaAndIgnoresALateAttachmentResult() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val room = ChatRecoveryFixtures.media()
+        val base = ChatFixtureRepository(room)
+        val result = CompletableDeferred<Result<ByteArray>>()
+        val repository = object : MatrixChatRepository by base {
+            override suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean) =
+                withContext(NonCancellable) { result.await() }
+        }
+        val vm = SecureChatViewModel(repository)
+        try {
+            vm.openRoom(room.roomId); runCurrent(); vm.openAttachment("photo", "photo"); runCurrent()
+            assertTrue(vm.uiState.value.mediaLoading)
+            base.state.value = room.copy(messages = room.messages.map { if (it.id == "photo") it.copy(deleted = true, attachment = null, body = "") else it })
+            runCurrent(); result.complete(Result.success(ChatRecoveryFixtures.image)); runCurrent()
+            assertNull(vm.uiState.value.openedMedia); assertNull(vm.uiState.value.mediaRequest); assertFalse(vm.uiState.value.mediaLoading)
+        } finally { result.complete(Result.failure(Exception("synthetic"))); vm.closeRoom(); vm.viewModelScope.cancel(); Dispatchers.resetMain() }
+    }
+
+    @Test fun failedThumbnailsCanRetryAndDuplicateDeletesAreCoalesced() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val room = ChatRecoveryFixtures.media()
+        val base = ChatFixtureRepository(room)
+        var previews = 0
+        var deletes = 0
+        val pendingDelete = CompletableDeferred<Result<Unit>>()
+        val repository = object : MatrixChatRepository by base {
+            override suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean): Result<ByteArray> {
+                previews++; return Result.failure(Exception("synthetic"))
+            }
+            override suspend fun deleteMessage(roomId: String, messageId: String): Result<Unit> {
+                deletes++; return pendingDelete.await()
+            }
+        }
+        val vm = SecureChatViewModel(repository)
+        try {
+            vm.openRoom(room.roomId); runCurrent()
+            vm.loadThumbnail("photo"); runCurrent(); vm.loadThumbnail("photo"); runCurrent()
+            assertEquals(2, previews)
+            vm.deleteMessage("voice"); vm.deleteMessage("voice"); runCurrent()
+            assertEquals(1, deletes)
+            pendingDelete.complete(Result.failure(Exception("synthetic"))); runCurrent()
+            assertNotNull(vm.uiState.value.error)
+            vm.deleteMessage("voice"); runCurrent(); assertEquals(2, deletes)
+        } finally { pendingDelete.complete(Result.success(Unit)); vm.closeRoom(); vm.viewModelScope.cancel(); Dispatchers.resetMain() }
+    }
+
     @Test fun encryptedMomentReferenceContainsOnlyAuthoritativeIdentity() {
         val ref=com.srisu.srisu.features.moments.data.MomentReference(7,3)
         val message=matrixTimelineMessages(listOf(event("$"+"moment",Text("Thinking of this morning",externalUrl=ref.url),1)),me,partner,null).single()

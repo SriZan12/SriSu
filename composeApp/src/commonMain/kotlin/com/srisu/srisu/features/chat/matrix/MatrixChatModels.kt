@@ -15,6 +15,8 @@ enum class MatrixMessageDelivery { SENT, SENDING, FAILED }
 
 /** Leaves headroom under Matrix's event-size ceiling for Megolm/base64 and JSON envelopes. */
 internal const val MATRIX_TEXT_MAX_PLAINTEXT_BYTES = 32 * 1024
+/** A replacement carries both a fallback and m.new_content inside the encrypted event. */
+internal const val MATRIX_EDIT_MAX_PLAINTEXT_BYTES = 16 * 1024
 
 data class MatrixChatMessage(
     val id: String,
@@ -34,6 +36,7 @@ data class MatrixChatMessage(
     val ownReactionId: String? = null,
     val read: Boolean = false,
     val deleted: Boolean = false,
+    val edited: Boolean = false,
     val uploadProgress: Float? = null,
     val planReference: com.srisu.srisu.features.plans.data.PlanReference? = null,
     val challengeReference: com.srisu.srisu.features.challenges.data.ChallengeReference? = null,
@@ -76,7 +79,7 @@ data class MatrixChatRoomState(
     val hasOlder: Boolean = false,
     /** Receipt-derived unread state; null until synchronized. Never a bounded-history count. */
     val unread: Boolean? = null,
-    /** Failed reaction/redaction outbox operations; never silently discard these hidden events. */
+    /** Failed reaction/edit outbox operations; never silently discard these hidden events. */
     val failedChangeIds: List<String> = emptyList(),
 )
 
@@ -113,6 +116,7 @@ interface MatrixChatRepository {
     suspend fun sendMedia(roomId: String, media: PreparedChatMedia, caption: String, replyTo: String?): Result<String> = Result.failure(UnsupportedOperationException())
     suspend fun react(roomId: String, messageId: String, reaction: String?): Result<Unit> = Result.failure(UnsupportedOperationException())
     suspend fun deleteMessage(roomId: String, messageId: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+    suspend fun editMessage(roomId: String, messageId: String, text: String): Result<Unit> = Result.failure(UnsupportedOperationException())
     suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean = false): Result<ByteArray> = Result.failure(UnsupportedOperationException())
     suspend fun markRead(roomId: String, messageId: String): Result<Unit> = Result.failure(UnsupportedOperationException())
     fun loadOlder(roomId: String) {}

@@ -6,7 +6,9 @@ package com.srisu.srisu.features.couplechat.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -18,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextDecoration
@@ -72,7 +75,7 @@ internal fun MessageBubble(
 ) {
     val pure = MaterialTheme.chatColors.pure
     val spark = message.content is ChatContent.Spark && !message.hidden && !message.deleted && !message.unavailable
-    val showMeta = !groupContinues || message.transport != ChatTransport.SENT
+    val showMeta = !groupContinues || message.edited || message.transport != ChatTransport.SENT
     val available = !message.hidden && !message.deleted && !message.unavailable
     val attachmentMessage = (message.content as? ChatContent.Media)?.takeIf { available }
     BoxWithConstraints(
@@ -111,12 +114,9 @@ internal fun MessageBubble(
                     shape = shape,
                     color = if (spark && pure) MaterialTheme.chatColors.sparkSurface else MaterialTheme.chatColors.incoming,
                     contentColor = if (own && !(spark && pure)) MaterialTheme.chatColors.outgoingText else MaterialTheme.chatColors.text,
-                    modifier = Modifier.combinedClickable(
-                        onClick = {},
-                        onLongClickLabel = "Message options",
-                        onLongClick = onMenu
-                    )
+                    modifier = Modifier.messageLongPress(message.id, onMenu)
                         .semantics {
+                            onLongClick("Message options") { onMenu(); true }
                             customActions =
                                 listOf(CustomAccessibilityAction("Message options") { onMenu(); true }) +
                                         if (available) listOf(CustomAccessibilityAction("Reply") { onReply(); true }) else emptyList()
@@ -322,7 +322,7 @@ internal fun MessageMetadata(
         )
     FlowRow(
         modifier.clearAndSetSemantics {
-            contentDescription = time + if (own) ", $status" else ""
+            contentDescription = time + (if (message.edited) ", edited" else "") + (if (own) ", $status" else "")
         }.then(
             if (failed) Modifier.background(
                 MaterialTheme.colorScheme.errorContainer,
@@ -336,6 +336,7 @@ internal fun MessageMetadata(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
         verticalArrangement = Arrangement.Center
     ) {
+        if (message.edited) Text("Edited", style = MaterialTheme.typography.bodySmall, color = color)
         if (own && status != "Sent") Text(status, style = MaterialTheme.typography.bodySmall, color = color)
         Text(
             time,
@@ -355,12 +356,13 @@ internal fun ChatActionRow(
 ) {
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface),
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.small
     ) {
         Row(
-            Modifier.heightIn(min = MaterialTheme.spacing.touchTarget)
+            Modifier.fillMaxWidth().heightIn(min = MaterialTheme.spacing.touchTarget)
                 .padding(all = MaterialTheme.spacing.compact),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
@@ -369,4 +371,33 @@ internal fun ChatActionRow(
             Text(label, style = MaterialTheme.typography.bodyLarge)
         }
     }
+}
+
+/** Observe the initial pass so photo/play/link children cannot swallow a long press.
+ * Movement cancels before the timeout; after it, consume release so opening options
+ * cannot also start playback or open a viewer. */
+internal fun Modifier.messageLongPress(key: String, onLongPress: () -> Unit): Modifier = composed {
+    val latestAction by rememberUpdatedState(onLongPress)
+    pointerInput(key) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        val cancelled = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+            var finished = false
+            while (!finished) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val pointer = event.changes.firstOrNull { it.id == down.id }
+                finished = pointer == null || !pointer.pressed || event.changes.size > 1 ||
+                    (pointer.position - down.position).getDistance() > viewConfiguration.touchSlop
+            }
+            true
+        }
+        if (cancelled == null) {
+            latestAction()
+            do {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                event.changes.forEach { it.consume() }
+            } while (event.changes.any { it.pressed })
+        }
+    }
+}
 }

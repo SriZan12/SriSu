@@ -122,10 +122,11 @@ internal fun QuotePreview(
 internal fun ConversationComposer(
     state: ConversationState, busy: Boolean, recording: Boolean,
     onDraft: (String) -> Unit, onSend: () -> Unit, onAttach: () -> Unit, onCancelReply: () -> Unit,
-    voice: @Composable () -> Unit, onFocusChanged: (Boolean) -> Unit = {}, extras: @Composable ColumnScope.() -> Unit = {}
+    voice: @Composable () -> Unit, onFocusChanged: (Boolean) -> Unit = {}, inputEnabled: Boolean = true, editId: String? = null, onCancelEdit: () -> Unit = {}, extras: @Composable ColumnScope.() -> Unit = {}
 ) {
     val inputFocus = remember { FocusRequester() }
-    val editor = com.srisu.srisu.components.rememberDraftEditor(state.draft)
+    val editor = key(editId) { com.srisu.srisu.components.rememberDraftEditor(state.draft) }
+    LaunchedEffect(editId) { if (editId != null) inputFocus.requestFocus() }
     var previousReply by remember { mutableStateOf(state.reply?.messageId) }
     LaunchedEffect(state.reply?.messageId) {
         if (state.reply != null && state.reply.messageId != previousReply && !recording) inputFocus.requestFocus()
@@ -148,6 +149,11 @@ internal fun ConversationComposer(
                         ),
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                 ) {
+                    if (editId != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Edit, null, Modifier.size(MaterialTheme.spacing.icon))
+                        Text("Editing message", Modifier.weight(1f).padding(start = MaterialTheme.spacing.small), style = MaterialTheme.typography.labelLarge)
+                        TextButton(onClick = onCancelEdit, enabled = inputEnabled) { Text("Cancel") }
+                    }
                     if (recording || busy || state.mediaDraft != null || state.reply != null) {
                         Column(
                             Modifier.heightIn(max = previewHeight)
@@ -177,7 +183,7 @@ internal fun ConversationComposer(
                             },
                             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            enabled = !recording,
+                            enabled = !recording && inputEnabled,
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             maxLines = if (compact || largeType) 2 else 5,
                             modifier = modifier.heightIn(min = PureChatTokens.control)
@@ -207,16 +213,16 @@ internal fun ConversationComposer(
                         ) { Icon(PureChatIcons.Add, "Attach or share", Modifier.size(PureChatTokens.icon)) }
                     }
                     val submit: @Composable () -> Unit = {
-                        if (editor.value.text.isBlank() && state.mediaDraft == null) voice()
+                        if (editId == null && editor.value.text.isBlank() && state.mediaDraft == null) voice()
                         else FilledIconButton(
                             onClick = onSend,
-                            enabled = !busy && !recording,
+                            enabled = !busy && !recording && (editId == null || editor.value.text.isNotBlank()),
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             modifier = Modifier.size(PureChatTokens.control)
-                        ) { Icon(PureChatIcons.Send, "Send message", Modifier.size(PureChatTokens.icon)) }
+                        ) { Icon(if (editId != null) Icons.Outlined.Check else PureChatIcons.Send, if (editId != null) "Save edit" else "Send message", Modifier.size(PureChatTokens.icon)) }
                     }
                     Surface(
                         shape = PureChatTokens.composerShape,
@@ -229,12 +235,12 @@ internal fun ConversationComposer(
                                     .padding(horizontal = MaterialTheme.spacing.tiny),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
-                            ) { attach(); submit() }
+                            ) { if (editId == null) attach() else Spacer(Modifier.width(PureChatTokens.control)); submit() }
                         } else Row(
                             Modifier.fillMaxWidth().padding(MaterialTheme.spacing.tiny),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            attach()
+                            if (editId == null) attach()
                             input(Modifier.weight(1f))
                             submit()
                         }

@@ -203,14 +203,14 @@ final class IosChatMedia: NSObject, NativeChatMedia, PHPickerViewControllerDeleg
             "thumbnail":Self.thumbnail(rendered) ?? ""],bytes)
     }
     static func thumbnail(_ image: UIImage) -> String? {
-        // Preserve the encrypted payload bound while using the sharpest preview that fits.
-        for edge:CGFloat in [320,240,160,120] {
+        // Uploaded as separate encrypted media, sized for high-density conversation bubbles.
+        for edge:CGFloat in [1024,800,640] {
             let ratio=min(1,edge/max(image.size.width,image.size.height))
             let size=CGSize(width:max(1,image.size.width*ratio),height:max(1,image.size.height*ratio))
             let format=UIGraphicsImageRendererFormat();format.scale=1;format.opaque=true
             let small=UIGraphicsImageRenderer(size:size,format:format).image {_ in image.draw(in:CGRect(origin:.zero,size:size))}
-            for quality:CGFloat in [0.6,0.4,0.25] {
-                if let data=small.jpegData(compressionQuality:quality),data.count<=6144 {return data.base64EncodedString()}
+            for quality:CGFloat in [0.85,0.78,0.7] {
+                if let data=small.jpegData(compressionQuality:quality),data.count<=256*1024 {return data.base64EncodedString()}
             }
         }
         return nil

@@ -45,6 +45,13 @@ internal fun matrixTimelineMessages(events: List<TimelineEvent>, ownId: String, 
         .filter { (it.content?.getOrNull() as? MessageEventContent)?.relatesTo is RelatesTo.Annotation }
         .sortedBy { it.event.originTimestamp }
     val ordered = allowed.sortedBy { it.event.originTimestamp }
+    // Resolve only authenticated, same-sender text replacements. Keep the original
+    // identity, ordering and reply relation; an edit is never a second bubble.
+    val replacements = ordered.filter { it.event.isEncrypted && it.event.unsigned?.redactedBecause == null }
+        .mapNotNull { item ->
+            val relation = (item.content?.getOrNull() as? MessageEventContent)?.relatesTo as? RelatesTo.Replace
+            relation?.let { Triple(item, it.eventId, it.newContent as? RoomMessageEventContent.TextBased.Text) }
+        }.groupBy { it.second }
     val readIndex = ordered.indexOfFirst { it.event.id.full == readId }
     return ordered.mapIndexedNotNull { index, item ->
         val event = item.event
@@ -53,9 +60,17 @@ internal fun matrixTimelineMessages(events: List<TimelineEvent>, ownId: String, 
         val encryptedTombstone = (event.content as? RedactedEventContent)?.eventType == "m.room.encrypted"
         if (!event.isEncrypted && !encryptedTombstone) return@mapIndexedNotNull null
         val content = item.content?.getOrNull()
-        if (content is ReactionEventContent || content is RedactionEventContent || (content as? MessageEventContent)?.relatesTo is RelatesTo.Annotation) return@mapIndexedNotNull null
+        if (content is ReactionEventContent || content is RedactionEventContent ||
+            (content as? MessageEventContent)?.relatesTo is RelatesTo.Annotation ||
+            (content as? MessageEventContent)?.relatesTo is RelatesTo.Replace) return@mapIndexedNotNull null
         val deleted = encryptedTombstone || content is RedactedEventContent || event.unsigned?.redactedBecause != null
-        val roomMessage = (content as? RoomMessageEventContent).takeUnless { deleted }
+        val original = (content as? RoomMessageEventContent).takeUnless { deleted }
+        val replacement = if (original is RoomMessageEventContent.TextBased.Text && original.externalUrl == null)
+            replacements[event.id]?.filter { (edit, _, text) ->
+                edit.event.sender == event.sender && edit.event.originTimestamp >= event.originTimestamp &&
+                    text != null && text.body.isNotBlank() && text.externalUrl == null
+            }?.maxWithOrNull(compareBy({ it.first.event.originTimestamp }, { it.first.event.id.full }))?.third else null
+        val roomMessage = replacement?.copy(relatesTo = original?.relatesTo) ?: original
         val media = roomMessage?.attachment()
         val related = reactions.filter { ((it.content?.getOrNull() as? MessageEventContent)?.relatesTo as? RelatesTo.Annotation)?.eventId == event.id }
             .associateBy { it.event.sender.full }
@@ -72,14 +87,14 @@ internal fun matrixTimelineMessages(events: List<TimelineEvent>, ownId: String, 
             reactions = related.mapNotNull { (sender, reaction) ->
                 ((reaction.content?.getOrNull() as? MessageEventContent)?.relatesTo as? RelatesTo.Annotation)?.key?.takeIf(String::isNotBlank)?.let { sender to it }
             }.toMap(), ownReactionId = related[ownId]?.event?.id?.full,
-            read = readIndex >= 0 && index <= readIndex, deleted = deleted,
+            read = readIndex >= 0 && index <= readIndex, deleted = deleted, edited = replacement != null,
         )
     }
 }
 
 internal fun RoomOutboxMessage<*>.toMessage(ownMatrixId: String): MatrixChatMessage? {
     val message = content as? RoomMessageEventContent ?: return null
-    if (message.relatesTo is RelatesTo.Annotation) return null
+    if (message.relatesTo is RelatesTo.Annotation || message.relatesTo is RelatesTo.Replace) return null
     val progress = mediaUploadProgress.value
     return MatrixChatMessage(
         id = eventId?.full ?: "txn:$transactionId", body = message.displayBody(), senderMatrixId = ownMatrixId,

@@ -38,6 +38,7 @@ data class LocalChatMessage(
     val failure: String? = null,
     val sequence: Long? = null,
     val deleted: Boolean = false,
+    val edited: Boolean = false,
     val hidden: Boolean = false,
     val unavailable: Boolean = false,
     val replyTo: String? = null,

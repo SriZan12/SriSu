@@ -26,7 +26,7 @@ internal fun MatrixChatMessage.toDisplay(room: MatrixChatRoomState, thumbnails: 
     return LocalChatMessage(id, room.roomId, if (mine) self else PARTNER_DISPLAY_ID,
         Instant.fromEpochMilliseconds(timestampMillis).toString(), content,
         transport = when (delivery) { MatrixMessageDelivery.SENDING -> ChatTransport.SENDING; MatrixMessageDelivery.FAILED -> ChatTransport.FAILED; MatrixMessageDelivery.SENT -> ChatTransport.SENT },
-        deleted = deleted, unavailable = unavailable, read = read, delivered = read,
+        deleted = deleted, edited = edited, unavailable = unavailable, read = read, delivered = read,
         reactions = reactions.mapKeys { if (it.key == senderMatrixId && mine || it.key != senderMatrixId && !mine) self else PARTNER_DISPLAY_ID },
         timelineKey = stableKey)
 }

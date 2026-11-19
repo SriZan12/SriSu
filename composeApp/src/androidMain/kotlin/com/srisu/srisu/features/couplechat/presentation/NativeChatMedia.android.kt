@@ -282,15 +282,15 @@ internal class AndroidChatMedia(private val context: Context) : NativeChatMedia 
             } finally {if(scaled!==bitmap)scaled.recycle()}
         }
         fun thumbnail(bitmap: Bitmap): String {
-            // A sharper preview within the existing encrypted 6 KiB thumbnail budget.
-            for(edge in listOf(320,240,160,120)) {
+            // Separate encrypted media upload: enough pixels for high-density chat bubbles.
+            for(edge in listOf(1024,800,640)) {
                 val ratio=(edge.toFloat()/max(bitmap.width,bitmap.height)).coerceAtMost(1f)
                 val small=Bitmap.createScaledBitmap(bitmap,(bitmap.width*ratio).toInt().coerceAtLeast(1),
                     (bitmap.height*ratio).toInt().coerceAtLeast(1),true)
                 try {
-                    for(quality in listOf(60,40,25)) {
+                    for(quality in listOf(85,78,70)) {
                         val bytes=ByteArrayOutputStream().use {small.compress(Bitmap.CompressFormat.JPEG,quality,it);it.toByteArray()}
-                        if(bytes.size<=6144)return android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)
+                        if(bytes.size<=256*1024)return android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)
                     }
                 } finally {if(small!==bitmap)small.recycle()}
             }
@@ -333,4 +333,18 @@ internal actual fun decodePrivatePhoto(bytes: ByteArray): ImageBitmap? {
             override fun surfaceDestroyed(holder: SurfaceHolder) {driver.attachVideoSurface(null)}
         })}
     },onRelease={driver.attachVideoSurface(null)})
+}
+
+internal actual fun preparePrivateThumbnail(bytes: ByteArray): ByteArray? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth !in 1..4096 || bounds.outHeight !in 1..4096) return null
+    if (bytes.size <= 256 * 1024 && max(bounds.outWidth, bounds.outHeight) <= 1024) return bytes
+    val options = BitmapFactory.Options().apply {
+        while (max(bounds.outWidth, bounds.outHeight) / (inSampleSize.coerceAtLeast(1) * 2) >= 1024)
+            inSampleSize = inSampleSize.coerceAtLeast(1) * 2
+    }
+    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
+    return try { android.util.Base64.decode(AndroidChatMedia.thumbnail(bitmap), android.util.Base64.NO_WRAP) }
+    catch (_: Exception) { null } finally { bitmap.recycle() }
 }
