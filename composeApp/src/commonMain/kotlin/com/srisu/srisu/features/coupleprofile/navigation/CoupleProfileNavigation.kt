@@ -63,8 +63,7 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
         }
         CoupleProfileScreen(route.coupleId, onBack = nav::back, initialPage = route.section.name, planId = route.planId,
             onPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination()) },
-            onOpenCouple = { nav.open(CoupleProfileDestination(it)) },
-            onMessage = { nav.open(ChatNav.CoupleConversation(origin = "couple_profile")) })
+            onOpenCouple = { nav.open(CoupleProfileDestination(it)) })
     }
     composable<HomeNavigation.Explore> { entry ->
         val nav = AppNavigator(controller, entry)

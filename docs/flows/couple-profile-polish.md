@@ -1,5 +1,64 @@
 # Couple Profile presentation refinement — 2026-10-02
 
+## Toolbar follow-up — 19 November 2026
+
+The supplied dark-mode screenshot showed three trailing toolbar actions crowding
+the centered title. Dark surfaces were intentional; this refinement retains the
+existing palette, identity, cover, metrics, story layout and adaptive typography.
+
+- Removed the member profile's send-to-chat shortcut and its navigation callback.
+  Plan-to-chat navigation and the main Chat destination remain available.
+- Moved the eye into the existing three-dot Profile options menu as the labelled
+  **Preview profile** action. It opens the same read-only member preview, not a
+  public-visibility simulation or a sharing permission toggle. Back returns to the
+  overview; the menu closes on navigation or account/profile/permission changes.
+- Preview is separated from the editing actions. Cover, date, sharing and refresh
+  use matching labelled icon rows and existing Material touch targets/scrolling.
+  The toolbar now has balanced Back/options controls around the title.
+
+Frontend branch `codex/couple-profile-actions`, based on merged integration commit
+`61d80d9` (`dev-core-architecture`). Backend source and API are unchanged; no migration.
+Reference: the user's 19 November screenshot and Figma file
+`LztysD1YvINX7RwZpnhhTt`, page `1:4`. Both live context and screenshot requests were
+quota-limited, so this is an intentional screenshot-directed toolbar change, not
+a claim of fresh Figma layer fidelity.
+
+Native iOS verification reproduced a crash when opening the menu after scrolling
+and rotating: the UIKit popup supplied an infinite maximum height to the menu's
+scroll container. The menu now has an explicit maximum height derived from the
+current window minus safe-area insets and theme spacing. It still scrolls in short
+windows. No dependency or global popup behavior changed.
+
+Verification for this follow-up:
+
+- Theme and diff checks pass. Android and iOS simulator Kotlin compilation pass.
+- 31 Android profile render/interaction checks and 8 profile state checks pass
+  (39 total, no skips/failures). The added 640×320 dp / 1.6× text scenario checks
+  that both ends of the menu remain reachable, preview return preserves scroll,
+  the menu closes on navigation, and the date editor remains accessible.
+- Inspected dark and 320 dp / 1.6× text production-composable renders. These use
+  synthetic fixtures and do not substitute for a physical Android check.
+- Built and ran the actual iOS app on a dedicated iPhone 17 / iOS 26.5 simulator,
+  using an isolated verification bundle and a disposable local HTTP backend
+  exported from merged backend `dev-core-architecture` commit `421a982`.
+  Synthetic accounts, isolated SQLite and temporary media only; the dirty backend
+  checkout and user data were not changed.
+- Native passes: Home-to-profile entry; balanced toolbar; labelled menu;
+  read-only preview and Back; preserved scroll on preview/editor return;
+  cover editor entry; refresh; portrait/landscape rotation, including with the
+  menu open; dark/light appearance; system text size 7; story editor's bottom
+  input above the software keyboard and discard return. Repeated the sequence
+  that crashed before the fix; no uncaught Kotlin exception afterward.
+- The initial failed verification used an older local backend branch and a
+  simulator with competing URL handlers. The fresh simulator and merged backend
+  resolved that entry problem. Verification used actual local HTTP reads, not
+  a deployed backend or production accounts. Physical devices, VoiceOver traversal,
+  photo uploads and profile publication permissions were not reverified in this
+  toolbar-only task. No general frame-rate/performance claim.
+
+The user authorized pushing this feature branch and opening a frontend PR into
+`dev-core-architecture`, with CI verification. Do not merge the PR.
+
 ## Scope and baseline
 
 Frontend: SriZan12/SriSu, `dev-core-architecture`, HEAD
