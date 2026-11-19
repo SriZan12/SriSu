@@ -1,5 +1,6 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -16,13 +17,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.srisu.srisu.theme.backgroundGray
 import com.srisu.srisu.theme.success
+import com.srisu.srisu.theme.onSuccess
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -50,17 +50,17 @@ fun ErrorDialog(
         ) {
             Card(
                 modifier = Modifier,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
 
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.large, horizontal = MaterialTheme.spacing.medium)
                 ) {
                     Text(
                         text = title ?: "",
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small)
                     )
 
                     Text(
@@ -76,7 +76,7 @@ fun ErrorDialog(
                         label = "Close",
                         backgroundColor = MaterialTheme.colorScheme.primary,
                         textStyle =
-                            MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                            MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onPrimary),
                         onClick = {
                             onDismiss()
                         }
@@ -106,17 +106,17 @@ fun SuccessDialog(
         ) {
             Card(
                 modifier = Modifier,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
 
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.large, horizontal = MaterialTheme.spacing.medium)
                 ) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small)
                     )
 
                     Text(
@@ -130,9 +130,9 @@ fun SuccessDialog(
                         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)
                             .padding(top = 22.dp),
                         label = "Close",
-                        backgroundColor = success,
+                        backgroundColor = MaterialTheme.colorScheme.success,
                         textStyle =
-                            MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                            MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSuccess),
                         onClick = {
                             onDismiss()
                         }
@@ -159,18 +159,18 @@ fun RequestSentDialog(
     ) {
         Card(
             modifier = Modifier,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         ) {
 
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.large, horizontal = MaterialTheme.spacing.medium),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small)
                 )
 
                 Image(
@@ -194,7 +194,7 @@ fun RequestSentDialog(
                     label = "Okay",
                     backgroundColor = MaterialTheme.colorScheme.primary,
                     textStyle =
-                        MaterialTheme.typography.titleMedium.copy(color = Color.White),
+                        MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onPrimary),
                     onClick = {
                         onDismiss()
                     }

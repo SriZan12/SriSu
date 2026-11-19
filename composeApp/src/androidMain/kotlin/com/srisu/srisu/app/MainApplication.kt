@@ -26,6 +26,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
             androidContext(this@MainApplication)
         }*/
         AppContext.setUp(applicationContext)
+        com.srisu.srisu.notifications.AndroidNotifications.install(applicationContext)
         initLogger()
         connectivityObserver = ConnectivityObserver()
 

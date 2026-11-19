@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
@@ -48,6 +49,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun InterestScreen(
     interests: List<InterestResponse.Interest?>? = emptyList(),
     currentInterests: List<User.UserInterest?>? = emptyList(),
+    onCancel: () -> Unit = {},
     onInterestSelected: (List<User.UserInterest?>?) -> Unit = {}
 ) {
     val selectedInterests = remember { mutableStateListOf<User.UserInterest>() }
@@ -62,7 +64,7 @@ fun InterestScreen(
         topBar = {
             PrimaryToolBar(
                 title = "Interests",
-                onNavigate = { latestOnInterestSelected(selectedInterests.toList()) }
+                onNavigate = onCancel
             )
         },
         bottomBar = {
@@ -70,7 +72,7 @@ fun InterestScreen(
                 PrimaryButtonCompo(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(MaterialTheme.spacing.medium)
                         .navigationBarsPadding(),
                     label = "Save",
                     onClick = {
@@ -104,9 +106,7 @@ fun InterestScreen(
 
         }
 
-        BackHandler {
-            latestOnInterestSelected(selectedInterests.toList())
-        }
+        BackHandler { onCancel() }
     }
 }
 
@@ -138,16 +138,16 @@ fun CategorizedInterestListCompo(
         state = lazyGridState,
         modifier = Modifier.fillMaxWidth(),
         columns = GridCells.Fixed(3),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(all = 16.dp)
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        contentPadding = PaddingValues(all = MaterialTheme.spacing.medium)
     ) {
         if (interestList.isEmpty()) {
             item(span = { GridItemSpan(3) }) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(vertical = 32.dp),
+                        .padding(vertical = MaterialTheme.spacing.extraLarge),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(

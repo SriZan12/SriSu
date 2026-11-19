@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intro_tagline">Better together.</string>
+    <string name="intro_description">A little space for the moments, plans\nand things that matter to you.</string>
+    <string name="intro_start">Get started</string>
+    <string name="intro_guest">Continue as guest</string>
+    <string name="intro_existing_account">Already have an account?</string>
+    <string name="intro_login">Log in</string>
+    <string name="intro_back">Back</string>
+    <string name="intro_skip">Skip</string>
+    <string name="intro_continue">Continue</string>
+    <string name="intro_space_title">A space for the two of you.</string>
+    <string name="intro_space_description">Keep your moments, plans\nand memories all in one place.</string>
+    <string name="intro_progress">Step 1 of 5</string>
+    <string name="intro_moments">Moments</string>
+    <string name="intro_moments_description">Save the little things.</string>
+    <string name="intro_plans">Plans</string>
+    <string name="intro_plans_description">Make things happen together.</string>
+    <string name="intro_memories">Memories</string>
+    <string name="intro_memories_description">Keep your journey in one place.</string>
+    <string name="guest_label">Exploring as a guest</string>
+    <string name="guest_home">Home</string>
+    <string name="guest_explore">Explore</string>
+    <string name="guest_space">Your space</string>
+    <string name="guest_title">Make yourself at home.</string>
+    <string name="guest_description">Take a look around. Explore interests now, and create an account whenever you are ready to make a space together.</string>
+    <string name="guest_browse">Explore interests</string>
+    <string name="guest_create_account">Create an account</string>
+    <string name="guest_gate_title">Make this space yours.</string>
+    <string name="guest_gate_description">Create an account or log in to save your profile and connect with your partner. Your personal moments and conversations stay in your private space.</string>
+    <string name="guest_keep_exploring">Keep exploring</string>
+    <string name="guest_interests_title">Find your kind of things.</string>
+    <string name="guest_interests_description">Browse the things you could share. No account needed to explore.</string>
+    <string name="guest_search">Search interests</string>
+    <string name="guest_loading">Loading interests…</string>
+    <string name="guest_offline">Showing saved interests while offline.</string>
+    <string name="guest_empty">No interests available yet. Try again later.</string>
+    <string name="guest_no_results">No matching interests. Try another search.</string>
+    <string name="guest_other_interests">More interests</string>
+</resources>

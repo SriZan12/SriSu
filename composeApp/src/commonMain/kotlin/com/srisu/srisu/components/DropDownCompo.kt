@@ -1,5 +1,7 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.field
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -50,13 +51,13 @@ fun DropDownIcon(
     onClick: () -> Unit
 ) {
     IconButton(
-        modifier = Modifier.size(24.dp).clip(shape = RoundedCornerShape(8.dp)),
+        modifier = Modifier.size(24.dp).clip(shape = MaterialTheme.shapes.small),
         onClick = {
             onClick()
         },
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceDim,
-            contentColor = Color.Black
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
     ) {
 
@@ -86,7 +87,7 @@ fun CountryCodeDropDown(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = BorderStroke(
             width = 1.dp,
@@ -138,7 +139,9 @@ fun CountryDropDown(
     onOptionSelected: (CountryModel) -> Unit,
     showCountryBottomSheet: Boolean,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    onShowCountryBottomSheetChange: () -> Unit
+    onShowCountryBottomSheetChange: () -> Unit,
+    placeholder: String = "",
+    elevation: androidx.compose.ui.unit.Dp = 2.dp,
 ) {
 
     val flag by produceState<ImageBitmap?>(initialValue = null, key1 = option?.code) {
@@ -147,26 +150,26 @@ fun CountryDropDown(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.field,
         onClick = {
             onShowCountryBottomSheetChange()
         },
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         border = BorderStroke(
-            1.dp, color = Color.Gray
+            1.dp, color = MaterialTheme.colorScheme.outlineVariant
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = MaterialTheme.spacing.compact),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier,
+                modifier = Modifier.weight(1f),
                 verticalAlignment = CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
                 if (visibleLeadingIcon) {
                     if (flag == null) {
@@ -187,8 +190,8 @@ fun CountryDropDown(
                 }
 
                 Text(
-                    modifier = Modifier,
-                    text = option?.name ?: "",
+                    modifier = Modifier.weight(1f),
+                    text = option?.name ?: placeholder,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Start
@@ -225,28 +228,30 @@ fun CityDropDown(
     onCitySelected: (String) -> Unit,
     cityList: List<String?>?,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    onExpandedChange: () -> Unit
+    onExpandedChange: () -> Unit,
+    elevation: androidx.compose.ui.unit.Dp = 4.dp,
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.field,
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         onClick = {
             onExpandedChange()
         },
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        border = BorderStroke(1.dp, color = Color.Gray)
+        border = BorderStroke(1.dp, color = MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                    .padding(vertical = 14.dp, horizontal = MaterialTheme.spacing.compact),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = CenterVertically
             ) {
                 val city = if (selectedCity.isNullOrEmpty()) "Select City" else selectedCity
                 Text(
+                    modifier = Modifier.weight(1f),
                     text = city,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,

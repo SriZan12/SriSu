@@ -1,5 +1,6 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,11 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.utils.CountryModel
-import com.srisu.srisu.theme.backgroundGraySecondary
+import com.srisu.srisu.theme.sheetScrim
 import com.srisu.srisu.utils.ZodiacUtils
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
@@ -55,9 +55,10 @@ fun CommonBottomSheetCompo(
 
     if (show) {
         ModalBottomSheet(
+            scrimColor = MaterialTheme.colorScheme.sheetScrim,
             modifier = Modifier.fillMaxWidth(),
             sheetState = bottomSheetState,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             onDismissRequest = {
                 onDismiss()
             }) {
@@ -97,15 +98,16 @@ fun CountrySelectionBottomSheet(
     }
 
     ModalBottomSheet(
+            scrimColor = MaterialTheme.colorScheme.sheetScrim,
         modifier = modifier,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onClose
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(MaterialTheme.spacing.compact)
         ) {
             SearchBar(
                 modifier = Modifier.fillMaxWidth(),
@@ -117,8 +119,8 @@ fun CountrySelectionBottomSheet(
 
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                contentPadding = PaddingValues(vertical = MaterialTheme.spacing.small)
             ) {
                 items(
                     items = filteredCountries,
@@ -156,13 +158,13 @@ private fun CountryCodeSelectionItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onCountrySelected(countryModel) }
-                .padding(vertical = 10.dp, horizontal = 12.dp),
+                .padding(vertical = 10.dp, horizontal = MaterialTheme.spacing.compact),
             verticalAlignment = CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
 //                if (flag != null) {
 //                    Image(
@@ -180,14 +182,14 @@ private fun CountryCodeSelectionItem(
 
                 Text(
                     text = countryModel.name.orEmpty(),
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleSmall
                 )
             }
 
             Text(
                 text = countryModel.prefix.orEmpty(),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleSmall
             )
         }
@@ -210,10 +212,10 @@ fun OfflineBottomSheetCompo(
         }
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
         ) {
             Text(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.medium),
                 text = "Oops! You're Offline",
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleMedium
@@ -226,7 +228,7 @@ fun OfflineBottomSheetCompo(
             )
 
             Text(
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 12.dp, end = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = MaterialTheme.spacing.compact, top = MaterialTheme.spacing.compact, end = MaterialTheme.spacing.compact),
                 text = "Looks like you’re not connected to the internet. Check your network and try again.",
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium
@@ -234,7 +236,7 @@ fun OfflineBottomSheetCompo(
 
             PrimaryButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(intrinsicSize = IntrinsicSize.Max)
-                    .padding(vertical = 24.dp),
+                    .padding(vertical = MaterialTheme.spacing.large),
                 label = "Close"
             ) {
                 onDismiss()
@@ -257,13 +259,13 @@ fun SuccessBottomSheet(
         onDismiss()
     }) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "You're All Set 🎉",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.medium),
                 textAlign = TextAlign.Center
             )
 
@@ -271,7 +273,7 @@ fun SuccessBottomSheet(
                 imageVector = Icons.Outlined.CheckCircle,
                 contentDescription = "Done_icon",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(44.dp).padding(bottom = 12.dp)
+                modifier = Modifier.size(44.dp).padding(bottom = MaterialTheme.spacing.compact)
             )
 
             Text(
@@ -282,7 +284,7 @@ fun SuccessBottomSheet(
             )
 
             PrimaryButtonCompo(
-                modifier = Modifier.fillMaxWidth().padding(top = 24.dp).height(IntrinsicSize.Max),
+                modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.large).height(IntrinsicSize.Max),
                 label = "Explore now",
                 onClick = {
                     onFirstButton()
@@ -294,8 +296,8 @@ fun SuccessBottomSheet(
             CustomButtonCompo(
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                 label = "View Profile",
-                backgroundColor = backgroundGraySecondary,
-                textStyle = MaterialTheme.typography.titleMedium.copy(color = Color.Black),
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                textStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onSurface),
                 onClick = {
                     onSecondButton()
                 }
@@ -328,14 +330,15 @@ fun CitySelectionBottomSheet(
         }
 
         ModalBottomSheet(
+            scrimColor = MaterialTheme.colorScheme.sheetScrim,
             modifier = Modifier.fillMaxSize(),
             sheetState = sheetState,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             onDismissRequest = {
                 onClose()
             }) {
 
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.compact)) {
                 SearchBar(
                     modifier = Modifier.fillMaxWidth(),
                     hint = "Search City",
@@ -357,7 +360,7 @@ fun CitySelectionBottomSheet(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                 ) {
 
                     val citiesList = if (isSearchOn) filterCityList else cityList
@@ -389,7 +392,7 @@ private fun CitySelectionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 12.dp)
+                .padding(vertical = 10.dp, horizontal = MaterialTheme.spacing.compact)
                 .clickable {
                     onCitySelected(
                         city
@@ -401,11 +404,11 @@ private fun CitySelectionItem(
             Row(
                 modifier = Modifier,
                 verticalAlignment = CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
                 Text(
                     text = city,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleSmall
                 )
             }
@@ -439,14 +442,15 @@ fun ZodiacSignSelectionBottomSheet(
         }
 
         ModalBottomSheet(
+            scrimColor = MaterialTheme.colorScheme.sheetScrim,
             modifier = Modifier.fillMaxSize(),
             sheetState = sheetState,
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             onDismissRequest = {
                 onClose()
             }) {
 
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.compact)) {
                 SearchBar(
                     modifier = Modifier.fillMaxWidth(),
                     hint = "Search Zodiac Sign",
@@ -468,7 +472,7 @@ fun ZodiacSignSelectionBottomSheet(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                 ) {
 
                     val zodiacs = if (isSearchOn) filterZodiacList else zodiacList
@@ -497,7 +501,7 @@ private fun ZodiacSignSelectionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 12.dp)
+                .padding(vertical = 10.dp, horizontal = MaterialTheme.spacing.compact)
                 .clickable {
                     onZodiacSignSelected(
                         zodiacSign
@@ -515,7 +519,7 @@ private fun ZodiacSignSelectionItem(
             Row(
                 modifier = Modifier,
                 verticalAlignment = CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
                 if (zodiacLogo != null) {
                     Image(
@@ -527,7 +531,7 @@ private fun ZodiacSignSelectionItem(
 
                 Text(
                     text = zodiacSign.name ?: "",
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleSmall
                 )
             }

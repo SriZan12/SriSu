@@ -3,9 +3,7 @@ package com.srisu.srisu.features.home.profile.data.remote.api
 import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
-import com.srisu.srisu.core.data.remote.BaseApiService
-import com.srisu.srisu.features.home.suggestions.data.response.SingleConnectionResponse
-import com.srisu.srisu.core.logger.AppLogger
+import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.utils.MediaFile
@@ -18,27 +16,14 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 
-class ProfileApiService(private val httpClient: HttpClient) {
+class ProfileApiService(private val httpClient: HttpClient, private val environment: com.srisu.srisu.core.config.ApiEnvironment = httpClient.attributes[ApiEnvironmentKey]) {
 
-    suspend fun sendSingleConnectionRequest(
-        senderNumber: String?,
-        receiverNumber: String?
-    ): ResultHandler<SingleConnectionResponse?> {
 
-        val connectionRequest: HashMap<String, String> = HashMap()
-        connectionRequest["sender_number"] = senderNumber ?: ""
-        connectionRequest["receiver_number"] = receiverNumber ?: ""
-
-        return httpClient.safeRequest<SingleConnectionResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/social/connect-single/")
-            method = HttpMethod.Companion.Post
-            setBody(connectionRequest)
-        }
-    }
 
     suspend fun getInterestList(): ResultHandler<InterestResponse?> {
         return httpClient.safeRequest<InterestResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/interests/")
+            url("${environment.baseUrl}api/auth/interests/")
+            attributes.put(com.srisu.srisu.core.data.remote.PublicAuthRequestKey, true)
             method = HttpMethod.Companion.Get
         }
     }
@@ -51,22 +36,22 @@ class ProfileApiService(private val httpClient: HttpClient) {
     ): ResultHandler<ProfileResponse?> {
 
         return httpClient.safeRequest<ProfileResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/setup-profile/")
+            url("${environment.baseUrl}api/auth/setup-profile/")
             method = HttpMethod.Companion.Put
 
             setBody(
                 MultiPartFormDataContent(
                     formData {
-                        append("phone_number", profileUpdateDTO.phoneNumber ?: "")
+                        profileUpdateDTO.phoneNumber?.let { append("phone_number", it) }
                         append("full_name", profileUpdateDTO.fullName ?: "")
                         append("username", profileUpdateDTO.username ?: "")
                         append("bio", profileUpdateDTO.bio ?: "")
                         append("country", profileUpdateDTO.country ?: "")
                         append("city", profileUpdateDTO.city ?: "")
-                        append("dob", profileUpdateDTO.dob ?: "")
-                        append("gender", profileUpdateDTO.gender ?: "")
-                        append("zodiac_sign", profileUpdateDTO.zodiacSign ?: "")
-                        append("mood", profileUpdateDTO.mood ?: "")
+                        profileUpdateDTO.dob?.let { append("dob", it) }
+                        profileUpdateDTO.gender?.let { append("gender", it) }
+                        profileUpdateDTO.zodiacSign?.let { append("zodiac_sign", it) }
+                        profileUpdateDTO.mood?.let { append("mood", it) }
 
                         mediaFile?.let {
                             if (mediaFile.fileBytes != null) {
@@ -85,11 +70,8 @@ class ProfileApiService(private val httpClient: HttpClient) {
                         }
 
                         profileUpdateDTO.userInterests?.let { userInterests ->
-                            AppLogger.log("USER INTERESTS API SERVICE= $userInterests")
                             userInterests.forEachIndexed { index, interest ->
-                                AppLogger.log("USER ID = $userId")
                                 if (userId != null) {
-                                    AppLogger.log("USER ID = $userId")
                                     append("user_interests[$index][user]", userId)
                                     interest?.name?.let {
                                         append(
@@ -122,7 +104,6 @@ class ProfileApiService(private val httpClient: HttpClient) {
                                 when {
                                     // Case 1: Updating the photo
                                     galleryFile.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
-                                        AppLogger.log("INSIDE UPDATING THE PHOTO")
                                         append("user_photos[$appendIndex][user]", userId)
                                         append("user_photos[$appendIndex][id]", galleryFile.id)
                                         append(
@@ -144,7 +125,6 @@ class ProfileApiService(private val httpClient: HttpClient) {
 
                                     // Case 2: Removing photo
                                     galleryFile.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
-                                        AppLogger.log("INSIDE REMOVING THE PHOTO")
                                         append("user_photos[$appendIndex][user]", userId)
                                         append("user_photos[$appendIndex][id]", galleryFile.id)
                                         append("user_photos[$appendIndex][removed]", true)
@@ -153,8 +133,6 @@ class ProfileApiService(private val httpClient: HttpClient) {
 
                                     // Case 3: New photo or update photo(upload)
                                     galleryFile.fileBytes != null -> {
-                                        AppLogger.log("INSIDE 3 CASE NEW PHOTO UPLOAD")
-                                        AppLogger.log("gallery file id = ${galleryFile.id}")
                                         append("user_photos[$appendIndex][user]", userId)
                                         galleryFile.id?.let {
                                             append("user_photos[$appendIndex][id]", it)
@@ -195,7 +173,7 @@ class ProfileApiService(private val httpClient: HttpClient) {
 
     suspend fun getProfile(): ResultHandler<ProfileResponse?> {
         return httpClient.safeRequest<ProfileResponse?> {
-            url("${BaseApiService.Companion.BASE_URL}api/auth/setup-profile/")
+            url("${environment.baseUrl}api/auth/setup-profile/")
             method = HttpMethod.Companion.Get
         }
     }

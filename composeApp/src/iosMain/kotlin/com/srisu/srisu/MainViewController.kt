@@ -1,16 +1,11 @@
 package com.srisu.srisu
 
 import androidx.compose.ui.window.ComposeUIViewController
+import androidx.compose.ui.uikit.OnFocusBehavior
 import com.srisu.srisu.app.App
-import platform.UIKit.UIScreen
-import platform.UIKit.UIUserInterfaceStyle
 
-fun MainViewController() = ComposeUIViewController() {
-    val isDarkTheme = UIScreen.mainScreen.traitCollection.userInterfaceStyle ==
-            UIUserInterfaceStyle.UIUserInterfaceStyleDark
-
-    App(
-        darkTheme = isDarkTheme,
-        dynamicColor = false
-    )
-}
+fun MainViewController() = ComposeUIViewController(configure = {
+    // Screens own keyboard insets and scrolling. UIKit's additional whole-scene
+    // pan can move the fixed header into the status bar at accessibility sizes.
+    onFocusBehavior = OnFocusBehavior.DoNothing
+}) { App() }

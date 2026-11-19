@@ -8,6 +8,7 @@ fun createKoinConfiguration(): KoinConfiguration {
             authModule,
             kVaultPlatformModule,
             commonModule,
+            platformNetworkModule,
             sharedNetworkModule,
             mainModule,
         )
