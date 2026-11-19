@@ -42,7 +42,7 @@ import coil3.request.ErrorResult
 class CoupleProfileRenderTest {
     @get:Rule val compose=createAndroidComposeRule<androidx.activity.ComponentActivity>()
     @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class, coil3.annotation.DelicateCoilApi::class)
-    private fun render(page: ProfilePage, name: String, dark: Boolean=false, largeText: Boolean=false, visitor: Boolean=false, populated: Boolean=false, mineOnly: Boolean=false, published: Boolean=false, longNames: Boolean=false, media: Boolean=false, failedSave: Boolean=false, scrollReturn: Boolean=false, lowerProfile: Boolean=false, brokenMedia: Boolean=false, refreshing: Boolean=false, saving: Boolean=false, discardCheck: Boolean=false) {
+    private fun render(page: ProfilePage, name: String, dark: Boolean=false, largeText: Boolean=false, visitor: Boolean=false, populated: Boolean=false, mineOnly: Boolean=false, published: Boolean=false, longNames: Boolean=false, media: Boolean=false, failedSave: Boolean=false, scrollReturn: Boolean=false, lowerProfile: Boolean=false, brokenMedia: Boolean=false, refreshing: Boolean=false, saving: Boolean=false, discardCheck: Boolean=false, menuCheck: Boolean=false) {
         val imageResult = AtomicReference<String?>(null)
         val existingLoader = SingletonImageLoader.get(compose.activity)
         val renderLoader = ImageLoader.Builder(compose.activity).eventListenerFactory {
@@ -124,10 +124,11 @@ class CoupleProfileRenderTest {
                 compose.onNodeWithText("Cycling").assertExists()
             }
             if(page == ProfilePage.PREVIEW) {
-                compose.onNodeWithContentDescription("View profile").performClick()
+                compose.onNodeWithContentDescription("Profile options").performClick()
+                compose.onNodeWithText("Preview profile").performClick()
                 compose.onAllNodesWithText("Edit").assertCountEquals(0)
                 compose.onAllNodesWithText("Save").assertCountEquals(0)
-                compose.onNodeWithText("View profile").assertExists()
+                compose.onNodeWithText("Preview profile").assertExists()
             }
             if (visitor || published) {
                 compose.onAllNodesWithContentDescription("Profile options").assertCountEquals(0)
@@ -155,12 +156,30 @@ class CoupleProfileRenderTest {
                 check(kotlin.math.abs(before-after) < 2f) { "Overview scroll moved on returning from editor" }
             }
             if (lowerProfile) compose.onNodeWithText("Together").performScrollTo()
+            if (menuCheck) {
+                compose.onNodeWithText("Together").performScrollTo()
+                val before = compose.onNodeWithText("Together").fetchSemanticsNode().boundsInRoot.top
+                compose.onNodeWithContentDescription("Profile options").performClick()
+                // The menu must remain scrollable/reachable in a short window with large text.
+                compose.onNodeWithText("Refresh").performScrollTo().assertIsDisplayed()
+                compose.onNodeWithText("Preview profile").performScrollTo().performClick()
+                compose.onAllNodesWithContentDescription("Profile options").assertCountEquals(0)
+                compose.onNodeWithContentDescription("Back").performClick()
+                compose.waitForIdle()
+                check(vm.state.value.page == ProfilePage.PROFILE)
+                compose.onAllNodesWithText("Preview profile").assertCountEquals(0)
+                val after = compose.onNodeWithText("Together").fetchSemanticsNode().boundsInRoot.top
+                check(kotlin.math.abs(before - after) < 2f) { "Preview return moved the profile" }
+                compose.onNodeWithContentDescription("Profile options").performClick()
+                compose.onNode(hasText("When it started") and hasAnyAncestor(isPopup())).performScrollTo().performClick()
+                check(vm.state.value.page == ProfilePage.DATE)
+            }
             if (refreshing) {
-                val before = compose.onNodeWithContentDescription("View profile").fetchSemanticsNode().boundsInRoot
+                val before = compose.onNodeWithContentDescription("Profile options").fetchSemanticsNode().boundsInRoot
                 compose.runOnIdle { vm.refresh() }
                 compose.waitUntil(10000) { org.robolectric.shadows.ShadowLooper.idleMainLooper(); reads.get() > 1 }
-                compose.onNodeWithContentDescription("View profile").assertIsDisplayed()
-                check(compose.onNodeWithContentDescription("View profile").fetchSemanticsNode().boundsInRoot == before)
+                compose.onNodeWithContentDescription("Profile options").assertIsDisplayed()
+                check(compose.onNodeWithContentDescription("Profile options").fetchSemanticsNode().boundsInRoot == before)
             }
             if (saving) {
                 compose.onNodeWithText("Song name").performTextInput("Our draft")
@@ -194,6 +213,7 @@ class CoupleProfileRenderTest {
             renderLoader.shutdown()
         }
     }
+    @Test @Config(qualifiers="w640dp-h320dp-land-xhdpi") fun shortWindowMenuAndPreviewReturn()=render(ProfilePage.PROFILE,"android-menu-short-return",populated=true,largeText=true,menuCheck=true)
     @Test fun ownerDayOne()=render(ProfilePage.PROFILE,"android-owner-day-one")
     @Test fun visitorPrivate()=render(ProfilePage.PROFILE,"android-visitor-private",visitor=true)
     @Test fun storyEditor()=render(ProfilePage.STORY_EDIT,"android-story-editor")

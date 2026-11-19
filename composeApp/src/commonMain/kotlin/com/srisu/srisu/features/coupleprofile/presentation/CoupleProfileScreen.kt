@@ -6,7 +6,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -34,7 +34,7 @@ import srisu.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onMessage: (() -> Unit)? = null, onPlans: (() -> Unit)? = null) {
+fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onPlans: (() -> Unit)? = null) {
     val state by vm.state.collectAsState()
     com.srisu.srisu.features.notifications.ReportNotificationScreen(state.profile?.id?.let { id ->
         com.srisu.srisu.features.coupleprofile.navigation.CoupleSection.entries.firstOrNull { it.name == state.page.name }?.let { section ->
@@ -42,7 +42,13 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                 if (state.page == ProfilePage.PLAN) state.plans.firstOrNull()?.id else null)
         }
     })
-    var profileMenu by remember { mutableStateOf(false) }
+    var profileMenu by remember(vm.accountId, coupleId, state.page, state.profile?.canEdit) { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    val menuMaxHeight = with(density) {
+        (windowHeight - WindowInsets.safeDrawing.getTop(this) - WindowInsets.safeDrawing.getBottom(this))
+            .coerceAtLeast(0).toDp()
+    }.minus(MaterialTheme.spacing.small * 2).coerceAtLeast(1.dp)
     DisposableEffect(coupleId, initialPage, planId) { vm.enter(coupleId, initialPage, planId); onDispose { vm.leave() } }
     val back = { if (vm.back()) onBack() }
     val overviewScroll = rememberSaveable(vm.accountId, coupleId, saver = ScrollState.Saver) { ScrollState(0) }
@@ -62,12 +68,36 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                     }
                     else if (state.page == ProfilePage.PROFILE) {
                         if(state.profile?.canEdit == true) {
-                            onMessage?.let {message -> IconButton(onClick=message) {Icon(Icons.AutoMirrored.Filled.Send,"Message your partner")} }
-                            IconButton(onClick = { vm.open(ProfilePage.PREVIEW) }) { Icon(Icons.Default.Visibility, stringResource(Res.string.cp_view_profile)) }
                             IconButton(onClick = { profileMenu = true }) { Icon(Icons.Default.MoreHoriz, stringResource(Res.string.cp_profile_options)) }
-                            DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}) {
-                                listOf(ProfilePage.COVER to Res.string.cp_cover,ProfilePage.DATE to Res.string.cp_date,ProfilePage.SHARING to Res.string.cp_sharing).forEach { (page,label) -> DropdownMenuItem(text={Text(stringResource(label))},onClick={profileMenu=false;vm.open(page)}) }
-                                DropdownMenuItem(text={Text(stringResource(Res.string.cp_refresh))},onClick={profileMenu=false;vm.refresh()})
+                            DropdownMenu(
+                                expanded = profileMenu,
+                                onDismissRequest = { profileMenu = false },
+                                // UIKit popups may initially measure with unbounded height after rotation.
+                                // Bound the menu's own scroll container to the current safe window.
+                                modifier = Modifier.heightIn(max = menuMaxHeight),
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.cp_preview_profile)) },
+                                    leadingIcon = { Icon(Icons.Default.Visibility, null) },
+                                    onClick = { profileMenu = false; vm.open(ProfilePage.PREVIEW) },
+                                )
+                                HorizontalDivider()
+                                listOf(
+                                    Triple(ProfilePage.COVER, Res.string.cp_cover, Icons.Default.PhotoCamera),
+                                    Triple(ProfilePage.DATE, Res.string.cp_date, Icons.Default.CalendarMonth),
+                                    Triple(ProfilePage.SHARING, Res.string.cp_sharing, Icons.Default.Lock),
+                                ).forEach { (page, label, icon) ->
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(label)) },
+                                        leadingIcon = { Icon(icon, null) },
+                                        onClick = { profileMenu = false; vm.open(page) },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.cp_refresh)) },
+                                    leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                                    onClick = { profileMenu = false; vm.refresh() },
+                                )
                             }
                         } else IconButton(onClick = { vm.refresh() }, enabled = !state.loading) { Icon(Icons.Default.Refresh, stringResource(Res.string.cp_refresh)) }
                     }
@@ -147,7 +177,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
  }
 
 @Composable private fun pageTitle(page: ProfilePage, owner: Boolean): String = stringResource(when(page) {
-    ProfilePage.PREVIEW -> Res.string.cp_view_profile
+    ProfilePage.PREVIEW -> Res.string.cp_preview_profile
     ProfilePage.DISCOVER -> Res.string.cp_explore
     ProfilePage.PROFILE -> if (owner) Res.string.cp_profile else Res.string.cp_visitor
     ProfilePage.STORY, ProfilePage.STORY_EDIT, ProfilePage.ANSWER -> Res.string.cp_story
