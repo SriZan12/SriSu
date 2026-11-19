@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -82,7 +84,8 @@ class SecureChatRenderTest {
                     org.jetbrains.compose.resources.PreviewContextConfigurationEffect()
                 }
                 val density = LocalDensity.current
-                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale),
+                    androidx.compose.ui.platform.LocalCursorBlinkEnabled provides false) {
                     SriSuTheme(darkTheme = dark) { SecureChatScreen(viewModel = vm, onBack = {}, onOpenSparks = onOpenSpark) }
                 }
             }
@@ -114,8 +117,44 @@ class SecureChatRenderTest {
                 bitmap.recycle()
             }
         } finally {
-            compose.runOnIdle { store.clear() }
+            compose.runOnUiThread { store.clear() }
         }
+    }
+
+    @Test fun textOptionsSmallScreen() = render("message-options-small", ChatFixtures.conversation().copy(accountId = 1), qualifiers = "w320dp-h568dp-xhdpi") {
+        compose.onNodeWithText("Yes 💛").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithText("Edit text").assertIsDisplayed()
+        compose.onNodeWithText("Delete for everyone").assertIsDisplayed()
+    }
+    @Test fun voiceOptionsFromPlayControl() = render("message-options-voice", ChatRecoveryFixtures.media()) {
+        compose.onNodeWithContentDescription("Play voice message").performTouchInput { longClick() }
+        compose.onNodeWithText("Delete for everyone").assertIsDisplayed()
+        compose.onNodeWithText("Edit text").assertDoesNotExist()
+    }
+    @Test fun photoOptionsFromPreview() = render("message-options-photo", ChatRecoveryFixtures.media().let { state ->
+        state.copy(messages = state.messages.map { if (it.id == "photo") it.copy(mine = true) else it })
+    }) {
+        compose.onNodeWithContentDescription("Photo preview").performTouchInput { longClick() }
+        compose.onNodeWithText("Delete for everyone").assertIsDisplayed()
+    }
+    @Test fun optionsLargeTextCanScroll() = render("message-options-large-text", ChatFixtures.conversation().copy(accountId = 1), qualifiers = "w320dp-h568dp-xhdpi", fontScale = 2f) {
+        compose.onNodeWithText("Yes 💛").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithText("Delete for everyone").performScrollTo().assertIsDisplayed()
+    }
+    @Test fun editingKeepsComposerDraft() = render("edit-message", ChatFixtures.conversation().copy(accountId = 1), draft = "My unsent draft") {
+        compose.onNodeWithText("Yes 💛").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithText("Edit text").performClick()
+        compose.onNodeWithText("Editing message").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("My unsent draft").assertIsDisplayed()
+    }
+
+    @Test fun editingSmallLargeTextKeepsSaveReachable() = render("edit-small-large-text", ChatFixtures.conversation().copy(accountId = 1), qualifiers = "w320dp-h568dp-xhdpi", fontScale = 2f) {
+        compose.onNodeWithText("Yes 💛").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithText("Edit text").performScrollTo().performClick()
+        compose.onNodeWithText("Editing message").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Save edit").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithContentDescription("Attach or share").assertDoesNotExist()
     }
 
     @Test fun themePickerPure() = render("theme-picker-pure", ChatFixtures.pure(), qualifiers = "w393dp-h760dp-xhdpi", openAppearance = true) {

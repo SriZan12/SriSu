@@ -1,4 +1,4 @@
-@file:OptIn(kotlinx.coroutines.FlowPreview::class)
+@file:OptIn(kotlinx.coroutines.FlowPreview::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 package com.srisu.srisu.features.chat.matrix.presentation
 
 import androidx.compose.material.icons.outlined.WbSunny
@@ -95,13 +95,16 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
     val ready = availability is MatrixChatAvailability.Ready
     var appearance by rememberSaveable { mutableStateOf(false) }
     var attachments by remember { mutableStateOf(false) }
-    var selected by remember { mutableStateOf<String?>(null) }
-    var deleting by remember { mutableStateOf<String?>(null) }
+    var selected by remember(ui.accountId, ui.roomId) { mutableStateOf<String?>(null) }
+    var deleting by remember(ui.accountId, ui.roomId) { mutableStateOf<String?>(null) }
     var jump by rememberSaveable { mutableStateOf(initialMessageId) }
     val draftOffer by viewModel.draftOffer.collectAsState()
     val media = rememberChatMediaController(viewModel)
     val copy = rememberCopyPrivateText()
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val edit by viewModel.edit.collectAsState()
+    androidx.compose.ui.backhandler.BackHandler(enabled = edit != null) { viewModel.cancelEdit() }
     ProtectConversation()
     PrivateChatClipboard {
         SriSuChatTheme(ChatThemePreset.fromId(ui.preferences.chatTheme)) {
@@ -113,7 +116,7 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
                     TextButton(onClick = { viewModel.resolveDraftOffer(true) }) { Text("Replace") }
                 } })
             Box(Modifier.fillMaxSize()) {
-                Scaffold(topBar = { ChatHeader(partner, availability, onBack, presence = state?.partnerPresence ?: com.srisu.srisu.features.chat.matrix.MatrixPartnerPresence.UNKNOWN) { viewModel.stopTyping(); keyboard?.hide(); appearance = true } },
+                Scaffold(topBar = { ChatHeader(partner, availability, { if (edit != null) viewModel.cancelEdit() else onBack() }, presence = state?.partnerPresence ?: com.srisu.srisu.features.chat.matrix.MatrixPartnerPresence.UNKNOWN) { viewModel.stopTyping(); keyboard?.hide(); appearance = true } },
                     containerColor = MaterialTheme.colorScheme.background) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
                         (availability as? MatrixChatAvailability.Offline)?.let { ChatOfflineBanner(it.message, viewModel::retry) }
@@ -140,23 +143,28 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
                         }
                         if (state?.failedChangeIds?.isNotEmpty() == true) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.medium), verticalAlignment = Alignment.CenterVertically) {
-                                Text("A reaction or deletion wasn’t saved.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                Text("A message change wasn’t saved.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                                 TextButton(onClick = viewModel::retryFailedChanges, enabled = ready) { Text("Retry") }
                             }
                         }
-                        momentReply?.let { reference ->
+                        momentReply?.takeIf { edit == null }?.let { reference ->
                             Row(Modifier.fillMaxWidth().padding(horizontal=MaterialTheme.spacing.gutter), verticalAlignment=Alignment.CenterVertically) {
                                 Text("Replying to a Moment",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
                                 TextButton(onClick={viewModel.setMomentReply(null)}) { Text("Cancel") }
                             }
                         }
-                        ConversationComposer(ui, busy = !ready || media.preparing || state?.sending == true, recording = media.recording,
-                            onDraft = viewModel::updateMessageInput, onSend = viewModel::sendMessage,
+                        edit?.error?.let { Text(it, Modifier.padding(horizontal = MaterialTheme.spacing.gutter), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                        val composerUi = if (edit != null) ui.copy(draft = edit!!.text, reply = null, mediaDraft = null) else ui
+                        ConversationComposer(composerUi, inputEnabled = selected == null && !appearance && !attachments && edit?.saving != true,
+                            editId = edit?.id, onCancelEdit = viewModel::cancelEdit,
+                            busy = !ready || media.preparing || state?.sending == true || edit?.saving == true, recording = media.recording,
+                            onDraft = { if (edit != null) viewModel.updateEdit(it) else viewModel.updateMessageInput(it) },
+                            onSend = { if (edit != null) viewModel.saveEdit() else viewModel.sendMessage() },
                             onAttach = { viewModel.stopTyping(); keyboard?.hide(); attachments = true }, onCancelReply = { viewModel.setReply(null) },
                             voice = { VoiceRecordControl(media, ready && !media.preparing) }, onFocusChanged = viewModel::composerFocusChanged) {
                             if (media.recording) RecordingPanel(media)
                             if (media.preparing) { Text("Preparing attachment…", style = MaterialTheme.typography.bodySmall); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                            MediaDraftPreview(ui, viewModel, media) { id, _ ->
+                            if (edit == null) MediaDraftPreview(ui, viewModel, media) { id, _ ->
                                 keyboard?.hide(); media.handoffToViewer(); viewModel.coverWithMedia(); onOpenMedia(id, true)
                             }
                         }
@@ -174,29 +182,21 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
         ChatAttachmentSheet(media, { attachments = false }, { onOpenSparks(null) }, { onOpenChallenges(null) }, { onOpenPlans(null) })
     }
     val message = ui.messages.firstOrNull { it.id == selected }
-    if (message != null) ModalBottomSheet(onDismissRequest = { selected = null }) {
-        Column(Modifier.fillMaxWidth().padding(MaterialTheme.spacing.gutter).navigationBarsPadding()) {
-            Text("Message options", style = MaterialTheme.typography.titleMedium)
-            if (ready && message.transport == ChatTransport.SENT && !message.deleted && !message.unavailable) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    listOf("❤️", "😂", "🥰", "😮", "😢", "👍").forEach { emoji ->
-                        TextButton(onClick = { viewModel.react(message.id, if (message.reactions[ui.accountId] == emoji) null else emoji); selected = null },
-                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { contentDescription = "React $emoji" }) { Text(emoji) }
-                    }
-                }
-                ChatActionRow("Reply", ChatIcons.Reply, { viewModel.setReply(message.id); selected = null })
-                if (message.reactions.containsKey(ui.accountId)) ChatActionRow("Remove my reaction", ChatIcons.RemoveCircleOutline,
-                    { viewModel.react(message.id, null); selected = null })
-                if (message.authorId == ui.accountId) ChatActionRow("Delete for everyone", ChatIcons.DeleteOutline, { deleting = message.id; selected = null }, true)
-            }
-            val body = when(val content = message.content) { is ChatContent.Text -> content.body; is ChatContent.Media -> content.caption; is ChatContent.Moment -> content.body; else -> "" }
-            if (body.isNotBlank() && !message.deleted && !message.unavailable) ChatActionRow("Copy text", ChatIcons.ContentCopy, { copy(body); selected = null })
-        }
+    LaunchedEffect(selected) { if (selected != null) { viewModel.stopTyping(); focusManager.clearFocus(force = true); keyboard?.hide() } }
+    SriSuChatTheme(ChatThemePreset.fromId(ui.preferences.chatTheme)) {
+        if (message != null) ChatMessageActionsSheet(message, ui.accountId, ready,
+            onDismiss = { selected = null },
+            onReact = { viewModel.react(message.id, it); selected = null },
+            onReply = { viewModel.setReply(message.id); selected = null },
+            onEdit = { if (media.recording || media.preparing) viewModel.mediaError("Finish or cancel your recording before editing a message.")
+                else viewModel.beginEdit(message.id); selected = null },
+            onDelete = { deleting = message.id; selected = null },
+            onCopy = { copy(it); selected = null })
+        deleting?.let { id -> AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete for everyone?") },
+            text = { Text("This replaces the message with a deletion notice. Exported copies cannot be erased.") },
+            confirmButton = { TextButton(onClick = { viewModel.deleteMessage(id); deleting = null }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }) }
     }
-    deleting?.let { id -> AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete for everyone?") },
-        text = { Text("This replaces the message with a deletion notice. Exported copies cannot be erased.") },
-        confirmButton = { TextButton(onClick = { viewModel.deleteMessage(id); deleting = null }) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }) }
 }
 
 @Composable
@@ -289,7 +289,7 @@ private fun ChatTimelineList(messages: List<MatrixChatMessage>, viewModel: Secur
                     is ChatTimelineItem.Message -> {
                         val display = displayMessages[item.message.id]
                         if (display != null) {
-                            if (item.message.attachment?.kind in setOf("photo", "video")) LaunchedEffect(item.message.id, item.message.delivery) { viewModel.loadThumbnail(item.message.id) }
+                            if (item.message.attachment?.kind in setOf("photo", "video")) LaunchedEffect(item.message.id, item.message.delivery, ui.security) { viewModel.loadThumbnail(item.message.id) }
                             MessageBubble(display, item.message.mine, partner?.name ?: "Your partner", ui.accountId,
                                 item.joinsPrevious, cardContent = {
                                     item.message.planReference?.let { reference ->

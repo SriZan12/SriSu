@@ -11,7 +11,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -54,7 +59,7 @@ class SecureChatIosRenderTest {
         const val HEIGHT_PX = 844 * SCALE
     }
 
-    private fun render(name: String, state: MatrixChatRoomState, theme: ChatThemePreset = ChatThemePreset.PURE, dark: Boolean = false, fontScale: Float = 1f, draft: String = "", width: Int = 390, height: Int = 844, partner: com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity = ChatFixtures.partner, openShare: Boolean = false, openAppearance: Boolean = false) =
+    private fun render(name: String, state: MatrixChatRoomState, theme: ChatThemePreset = ChatThemePreset.PURE, dark: Boolean = false, fontScale: Float = 1f, draft: String = "", width: Int = 390, height: Int = 844, partner: com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity = ChatFixtures.partner, openShare: Boolean = false, openAppearance: Boolean = false, options: String? = null, edit: Boolean = false) =
         runSkikoComposeUiTest(size = Size(width * SCALE, height * SCALE), density = Density(SCALE, fontScale)) {
             com.srisu.srisu.features.couplechat.presentation.NativeChatMediaRuntime.installFactory { LayoutOnlyMedia() }
             val viewModel = SecureChatViewModel(ChatFixtureRepository(state), FixedPartnerSource(partner))
@@ -87,7 +92,21 @@ class SecureChatIosRenderTest {
                 onNodeWithContentDescription("Close theme picker").assertIsDisplayed()
                 onNodeWithText("Apply theme").assertIsDisplayed().assertIsNotEnabled()
             }
-            val captureTag = when { openAppearance -> "chat-theme-picker"; openShare -> "chat-quick-share-sheet"; else -> "screen" }
+            if (options != null) {
+                if (options == "text") {
+                    onNode(hasScrollAction()).performScrollToNode(hasText("Yes 💛"))
+                    onNodeWithText("Yes 💛").performTouchInput { longClick() }
+                }
+                else onNodeWithContentDescription(options).performTouchInput { longClick() }
+                onNodeWithText("Delete for everyone").performScrollTo().assertIsDisplayed()
+                if (edit) {
+                    onNodeWithText("Edit text").performScrollTo().performClick()
+                    onNodeWithText("Editing message").assertIsDisplayed()
+                    onNodeWithText("Cancel").performClick()
+                    onNodeWithText(draft).assertIsDisplayed()
+                }
+            }
+            val captureTag = when { options != null && !edit -> "chat-message-actions"; openAppearance -> "chat-theme-picker"; openShare -> "chat-quick-share-sheet"; else -> "screen" }
             val bitmap = onNodeWithTag(captureTag).captureToImage().asSkiaBitmap()
             val png = Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes
             writePng(name, png)
@@ -105,6 +124,14 @@ class SecureChatIosRenderTest {
         }
         println("CHAT_RENDER $path")
     }
+
+    @Test fun textOptionsSmallScreen() = render("message-options-small", ChatFixtures.conversation().copy(accountId = 1), width = 320, height = 568, options = "text")
+    @Test fun voiceOptionsFromPlay() = render("message-options-voice", ChatRecoveryFixtures.media(), options = "Play voice message")
+    @Test fun photoOptionsFromPreview() = render("message-options-photo", ChatRecoveryFixtures.media().let { state ->
+        state.copy(messages = state.messages.map { if (it.id == "photo") it.copy(mine = true) else it })
+    }, options = "Photo preview")
+    @Test fun optionsLargeTextCanScroll() = render("message-options-large-text", ChatFixtures.conversation().copy(accountId = 1), width = 320, height = 568, fontScale = 2f, options = "text")
+    @Test fun editingKeepsDraft() = render("edit-keeps-draft", ChatFixtures.conversation().copy(accountId = 1), draft = "My unsent draft", options = "text", edit = true)
 
     @Test fun themePickerPure() = render("theme-picker-pure", ChatFixtures.pure(), width = 393, height = 760, openAppearance = true)
     @Test fun themePickerDark() = render("theme-picker-dark", ChatFixtures.pure(), dark = true, theme = ChatThemePreset.IRIS, openAppearance = true)

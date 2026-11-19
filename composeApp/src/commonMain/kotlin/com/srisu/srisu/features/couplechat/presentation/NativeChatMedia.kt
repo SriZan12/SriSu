@@ -34,5 +34,7 @@ object NativeChatMediaRuntime {
 
 @Composable internal expect fun rememberNativeChatMedia(): NativeChatMedia
 internal expect fun decodePrivatePhoto(bytes: ByteArray): ImageBitmap?
+/** In-memory, bounded preview; call off the UI thread. Never writes plaintext media to disk. */
+internal expect fun preparePrivateThumbnail(bytes: ByteArray): ByteArray?
 
 @Composable internal expect fun NativeChatVideo(native: NativeChatMedia, modifier: androidx.compose.ui.Modifier)

@@ -7,7 +7,6 @@ import de.connect2x.trixnity.core.model.events.m.TypingEventContent
 import com.srisu.srisu.features.couplechat.data.PreparedChatMedia
 import de.connect2x.trixnity.client.room.message.reply
 import de.connect2x.trixnity.client.media
-import de.connect2x.trixnity.client.room.message.redact
 import de.connect2x.trixnity.core.model.UserId
 import de.connect2x.trixnity.core.model.EventId
 import de.connect2x.trixnity.core.model.events.m.ReceiptType
@@ -592,8 +591,10 @@ class TrixnityMatrixChatRepository(
         require(caption.encodeToByteArray().size <= MATRIX_TEXT_MAX_PLAINTEXT_BYTES)
         require(media.durationMs in 0..120_000)
         val file = current.media.prepareUploadEncryptedMedia(media.bytes.toByteArrayFlow())
-        val thumbnail = media.thumbnail?.takeIf { it.length <= 8192 }?.let {
-            current.media.prepareUploadEncryptedMedia(Base64.decode(it).toByteArrayFlow())
+        val thumbnail = media.thumbnail?.takeIf { it.isNotBlank() && it.length <= 350_000 }?.let {
+            val bytes = Base64.decode(it)
+            require(bytes.size <= 256 * 1024)
+            current.media.prepareUploadEncryptedMedia(bytes.toByteArrayFlow())
         }
         // Never use the SDK's plaintext-media branch: couple attachments always carry an EncryptedFile.
         val relation = replyTo?.let { RelatesTo.Reply(RelatesTo.ReplyTo(EventId(it))) }
@@ -629,8 +630,33 @@ class TrixnityMatrixChatRepository(
 
     override suspend fun deleteMessage(roomId: String, messageId: String): Result<Unit> = runCatching {
         val (current, active) = richRoom(roomId)
-        check(_state.value.messages.any { it.id == messageId && it.mine && it.delivery == MatrixMessageDelivery.SENT })
-        current.room.sendMessage(active.matrixRoomId) { redact(EventId(messageId)) }
+        check(_state.value.messages.any { it.id == messageId && it.mine && !it.deleted && it.delivery == MatrixMessageDelivery.SENT })
+        // The dedicated endpoint handles the room-version-specific redacts location.
+        // A stable transaction ID makes a retry after a lost response idempotent.
+        current.api.room.redactEvent(active.matrixRoomId, EventId(messageId),
+            txnId = "srisu-delete-" + messageId.encodeUtf8().sha256().hex()).getOrThrow()
+        ensureRichRoomCurrent(current, active)
+    }
+
+    override suspend fun editMessage(roomId: String, messageId: String, text: String): Result<Unit> = runCatching {
+        val (current, active) = richRoom(roomId)
+        require(text.isNotBlank() && text.encodeToByteArray().size <= MATRIX_EDIT_MAX_PLAINTEXT_BYTES)
+        check(_state.value.messages.any { it.id == messageId && it.mine && !it.deleted && !it.unavailable &&
+            it.delivery == MatrixMessageDelivery.SENT && it.attachment == null && it.planReference == null &&
+            it.challengeReference == null && it.sparkReference == null && it.momentReference == null })
+        val original = current.room.getTimelineEvent(active.matrixRoomId, EventId(messageId)) {
+            allowReplaceContent = false
+        }.first()
+        check(original?.event?.sender?.full == active.ownMatrixId)
+        val source = original?.content?.getOrNull() as? RoomMessageEventContent.TextBased.Text
+            ?: error("Only text messages can be edited.")
+        check(source.externalUrl == null && source.relatesTo !is RelatesTo.Replace)
+        ensureRichRoomCurrent(current, active)
+        val updated = source.copy(body = text.trim(), format = null, formattedBody = null)
+        current.room.sendMessage(active.matrixRoomId) {
+            content(updated.copy(body = "* ${text.trim()}", relatesTo = RelatesTo.Replace(EventId(messageId), updated)))
+        }
+        Unit
     }
 
     override suspend fun attachment(roomId: String, messageId: String, thumbnail: Boolean): Result<ByteArray> = runCatching {
@@ -638,11 +664,18 @@ class TrixnityMatrixChatRepository(
         val media = checkNotNull(_state.value.messages.firstOrNull { it.id == messageId }?.attachment)
         val file = if (thumbnail) media.thumbnail ?: media.file.takeIf { media.kind == "photo" }
             ?: error("No thumbnail.") else media.file
-        val limit = if (thumbnail) 512 * 1024L else 16 * 1024 * 1024L
-        val bytes = current.media.getEncryptedMedia(file, maxSize = limit).getOrThrow()
+        val limit = if (thumbnail && file != media.file) 512 * 1024L else 16 * 1024 * 1024L
+        var bytes = current.media.getEncryptedMedia(file, maxSize = limit).getOrThrow()
             .toByteArray(maxSize = limit) ?: error("Attachment is too large.")
+        // Older clients produced 6 KiB previews. Upgrade visible legacy photos from
+        // their encrypted original; the UI downsamples off-main into a bounded cache.
+        if (thumbnail && media.kind == "photo" && file != media.file && bytes.size <= 8192) {
+            current.media.getEncryptedMedia(media.file, maxSize = 16 * 1024 * 1024L).getOrNull()
+                ?.toByteArray(maxSize = 16 * 1024 * 1024L)?.let { bytes = it }
+        }
         sessions.ensureCurrent(active.stamp)
         check(activeRoom == active && client === current)
+        check(_state.value.messages.any { it.id == messageId && !it.deleted && !it.unavailable && it.attachment == media })
         bytes
     }
 
@@ -1056,6 +1089,7 @@ class TrixnityMatrixChatRepository(
         val observedGate = checkNotNull(clientOutboxGate) { "Matrix outbox gate is unavailable." }
         timelineLimit.value = TIMELINE_SIZE
         val timeline = matrixClient.room.getLastTimelineEvents(active.matrixRoomId) {
+            allowReplaceContent = false
             minSize = 1
             maxSize = 2000
             decryptionTimeout = TIMELINE_EVENT_TIMEOUT

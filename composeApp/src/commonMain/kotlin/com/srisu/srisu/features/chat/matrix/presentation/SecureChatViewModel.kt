@@ -93,6 +93,40 @@ class SecureChatViewModel(
     private var savedStamp: com.srisu.srisu.core.session.SessionStamp? = null
     private var mediaGeneration = 0
     private var editedDuringOpening = false
+    data class MessageEdit(val id: String, val text: String, val original: String, val saving: Boolean = false, val error: String? = null)
+    private val _edit = MutableStateFlow<MessageEdit?>(null)
+    val edit = _edit.asStateFlow()
+    private val deletingIds = mutableSetOf<String>()
+    private val thumbnailSlots = kotlinx.coroutines.sync.Semaphore(2)
+
+    fun beginEdit(id: String) {
+        val message = _state.value?.messages?.firstOrNull { it.id == id } ?: return
+        if (!message.mine || message.deleted || message.unavailable || message.delivery != MatrixMessageDelivery.SENT ||
+            message.attachment != null || message.planReference != null || message.challengeReference != null ||
+            message.sparkReference != null || message.momentReference != null) return
+        stopTyping()
+        _edit.value = MessageEdit(id, message.body, message.body)
+    }
+    fun updateEdit(text: String) {
+        _edit.update { it?.takeUnless { edit -> edit.saving }?.let { edit ->
+            if (text.encodeToByteArray().size <= MATRIX_EDIT_MAX_PLAINTEXT_BYTES) edit.copy(text = text, error = null)
+            else edit.copy(error = "This edit is too long.")
+        } ?: it }
+    }
+    fun cancelEdit() { if (_edit.value?.saving != true) _edit.value = null }
+    fun saveEdit() {
+        val edit = _edit.value?.takeUnless { it.saving || it.text.isBlank() } ?: return
+        val room = roomId ?: return
+        val operation = roomOperation
+        if (edit.text.trim() == edit.original) { _edit.value = null; return }
+        _edit.value = edit.copy(saving = true, error = null)
+        viewModelScope.launch {
+            val result = repository.editMessage(room, edit.id, edit.text.trim())
+            if (operation == roomOperation && _edit.value?.id == edit.id) {
+                _edit.value = if (result.isSuccess) null else edit.copy(error = "Couldn’t save the edit. Your changes are still here.")
+            }
+        }
+    }
 
     init {
         val sessionSource = sessions
@@ -203,7 +237,8 @@ class SecureChatViewModel(
         local.update { it.copy(mediaRequest = ChatMediaRequest(messageId, attachmentId, media.kind), mediaLoading = true) }
         mediaJob = viewModelScope.launch {
             val result = repository.attachment(room, messageId)
-            if (operation != roomOperation || generation != mediaGeneration) return@launch
+            if (operation != roomOperation || generation != mediaGeneration ||
+                _state.value?.messages?.none { it.id == messageId && !it.deleted && !it.unavailable } != false) return@launch
             local.update { it.copy(mediaLoading = false, openedMedia = result.getOrNull()?.let { bytes -> OpenedChatMedia(messageId, media, bytes) },
                 mediaRequestError = if (result.isFailure) "Couldn’t open this attachment. Tap to retry." else null) }
         }
@@ -211,19 +246,36 @@ class SecureChatViewModel(
     fun loadThumbnail(id: String) {
         if (id in thumbnails || id in thumbnailJobs || _state.value?.availability !is MatrixChatAvailability.Ready) return
         val room = roomId ?: return; val operation = roomOperation
-        thumbnailJobs[id] = viewModelScope.launch {
-            val result = repository.attachment(room, id, thumbnail = true)
-            if (operation != roomOperation) return@launch
-            result.getOrNull()?.let { bytes ->
-                if (thumbnails.size >= 32) thumbnails.remove(thumbnails.keys.first())
-                thumbnails[id] = Base64.encode(bytes)
-                // Only the affected immutable display message changes; playback does not flow through this state.
-                local.update { it.copy(offlineMedia = thumbnails.keys.toSet()) }
-            }
+        val job = viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+            try {
+                thumbnailSlots.acquire()
+                try {
+                    val bytes = repository.attachment(room, id, thumbnail = true).getOrNull() ?: return@launch
+                    val preview = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { preparePrivateThumbnail(bytes) } ?: return@launch
+                    if (operation != roomOperation || _state.value?.messages?.none { it.id == id && !it.deleted && !it.unavailable } != false) return@launch
+                    val encoded = Base64.encode(preview)
+                    while (thumbnails.isNotEmpty() && (thumbnails.size >= 24 || thumbnails.values.sumOf { it.length } + encoded.length > 6 * 1024 * 1024))
+                        thumbnails.remove(thumbnails.keys.first())
+                    thumbnails[id] = encoded
+                    local.update { it.copy(offlineMedia = thumbnails.keys.toSet()) }
+                } finally { thumbnailSlots.release() }
+            } finally { if (operation == roomOperation) thumbnailJobs.remove(id) }
         }
+        thumbnailJobs[id] = job
+        job.start()
     }
     fun react(id: String, emoji: String?) = richAction { repository.react(it, id, emoji) }
-    fun deleteMessage(id: String) = richAction { repository.deleteMessage(it, id) }
+    fun deleteMessage(id: String) {
+        val room = roomId ?: return
+        val operation = roomOperation
+        if (!deletingIds.add(id)) return
+        viewModelScope.launch {
+            try {
+                val result = repository.deleteMessage(room, id)
+                if (operation == roomOperation && result.isFailure) mediaError("Couldn’t delete the message. Please try again.")
+            } finally { if (operation == roomOperation) deletingIds.remove(id) }
+        }
+    }
     private fun richAction(action: suspend (String) -> Result<Unit>) {
         val room = roomId ?: return; val operation = roomOperation
         viewModelScope.launch { val result = action(room); if (operation == roomOperation && result.isFailure) mediaError("That change wasn’t saved. Please try again.") }
@@ -237,6 +289,7 @@ class SecureChatViewModel(
         dismissMedia()
         thumbnailJobs.values.forEach { it.cancel() }; thumbnailJobs.clear(); thumbnails.clear()
         prepared = null; savedScope = null; arrivals = RomanticArrivalTracker(); local.value = ConversationState()
+        _edit.value = null; deletingIds.clear()
         val operation = ++roomOperation
         sendJob?.cancel()
         sendJob = null
@@ -259,6 +312,12 @@ class SecureChatViewModel(
                         saveUi()
                     }
                     _state.value = it
+                    val unavailable = it.messages.filter { message -> message.deleted || message.unavailable }.map { message -> message.id }.toSet()
+                    unavailable.forEach { id -> thumbnails.remove(id); thumbnailJobs.remove(id)?.cancel() }
+                    if (local.value.mediaRequest?.messageId in unavailable || local.value.openedMedia?.messageId in unavailable ||
+                        it.availability !is MatrixChatAvailability.Ready) dismissMedia()
+                    if (_edit.value?.id in unavailable) { _edit.value = null; mediaError("This message is no longer available to edit.") }
+                    local.update { ui -> ui.copy(offlineMedia = thumbnails.keys.toSet()) }
                     arrivals.accept(it).lastOrNull()?.let(effects::tryEmit)
                 }
             }
@@ -366,6 +425,7 @@ class SecureChatViewModel(
         saveUi(); dismissMedia(); _draftOffer.value = null; routeDraft = null; momentReferences.clear(); pendingMoment.value=null; routeMoment=null
         thumbnailJobs.values.forEach { it.cancel() }; thumbnailJobs.clear(); thumbnails.clear()
         prepared = null; savedScope = null; local.value = ConversationState()
+        _edit.value = null; deletingIds.clear()
         roomOperation += 1
         sendJob?.cancel()
         sendJob = null
