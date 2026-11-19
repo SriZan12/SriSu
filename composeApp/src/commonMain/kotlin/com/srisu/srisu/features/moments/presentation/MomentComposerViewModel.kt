@@ -71,6 +71,10 @@ class MomentComposerViewModel(private val source: MomentSource, private val sess
     }
     fun caption(value: String) { updateRecord { it.copy(caption=value.take(1000)) } }
     fun audience(value: String) { if(value in setOf("private","public")) updateRecord { it.copy(visibility=value) } }
+    fun crop(id: String, crop: MomentCrop?) {
+        if (sessions.stamp()!=stamp || state.value.loading || state.value.photos.none { it.id==id } || crop?.valid==false) return
+        updateRecord { record -> record.copy(crops=if(crop==null || crop.full) record.crops-id else record.crops+(id to crop)) }
+    }
     private fun updateRecord(change: (MomentDraftRecord)->MomentDraftRecord) {
         if(state.value.busy || state.value.record?.publication!=null) return
         mutable.update { it.copy(record=it.record?.let(change)) }; persist()
@@ -130,7 +134,7 @@ class MomentComposerViewModel(private val source: MomentSource, private val sess
         if(state.value.busy || work?.isActive==true || state.value.record?.publication!=null) return
         val photo=state.value.photos.firstOrNull { it.id==id } ?: return
         fun removed(draft: MomentDraft?) {
-            mutable.update { s -> val photos=s.photos.filterNot { it.id==id }; s.copy(photos=photos,draft=draft ?: s.draft,busy=false,record=s.record?.copy(order=photos.map { it.id })) }; persist()
+            mutable.update { s -> val photos=s.photos.filterNot { it.id==id }; s.copy(photos=photos,draft=draft ?: s.draft,busy=false,record=s.record?.copy(order=photos.map { it.id },crops=s.record.crops-id)) }; persist()
         }
         if(photo.remote==null && id !in attemptedUploads) { removed(null); return }
         work=viewModelScope.launch {
@@ -170,7 +174,8 @@ class MomentComposerViewModel(private val source: MomentSource, private val sess
                 }
                 mutable.update { s -> s.copy(draft=draft,photos=s.photos.map { p -> p.copy(remote=draft.photos.firstOrNull { it.id==p.id } ?: p.remote) }) }
             }
-            val intent=record.publication ?: PublishMoment(draft.revision,record.caption,record.visibility,photos.map { it.id })
+            val intent=record.publication ?: PublishMoment(draft.revision,record.caption,record.visibility,photos.map { it.id },
+                record.crops.filterKeys { id -> photos.any { it.id==id } })
             mutable.update { it.copy(record=it.record?.copy(publication=intent),stage="Publishing your Moment",progress=null) }
             if(!persist()) { mutable.update { it.copy(busy=false) }; return@launch }
             when(val result=source.publish(record.id,intent)) {

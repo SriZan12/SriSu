@@ -1,4 +1,9 @@
 <resources>
+    <string name="moment_photo_limit">Up to 5 photos</string>
+    <string name="moment_new">New moment</string>
+    <string name="moment_share_private">Share with partner</string>
+    <string name="moment_share_public">Share publicly</string>
+    <string name="moment_photo_position">%1$d / %2$d</string>
     <string name="moment_title">Moment</string>
     <string name="moment_close">Close Moment</string>
     <string name="moment_shutter">Take a photo</string>
@@ -85,4 +90,18 @@
     <string name="moment_note_reply">Reply privately</string>
     <string name="moment_note_reply_label">Private reply</string>
     <string name="moment_note_reply_send">Send reply</string>
+    <string name="moment_crop_full">Full</string>
+    <string name="moment_crop_fill">Fill</string>
+    <string name="moment_crop_action">Crop</string>
+    <string name="moment_crop_title">Adjust photo</string>
+    <string name="moment_crop_apply">Apply</string>
+    <string name="moment_crop_original">Original</string>
+    <string name="moment_crop_hint">Drag to position · Pinch to zoom. This is the photo you’ll share.</string>
+    <string name="moment_crop_canvas">Photo crop. Drag to position or pinch to zoom.</string>
+    <string name="moment_crop_zoom">Zoom</string>
+    <string name="moment_crop_reset">Reset to full photo</string>
+    <string name="moment_crop_left">Move photo left</string>
+    <string name="moment_crop_right">Move photo right</string>
+    <string name="moment_crop_up">Move photo up</string>
+    <string name="moment_crop_down">Move photo down</string>
 </resources>

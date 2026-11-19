@@ -1,6 +1,6 @@
 package com.srisu.srisu.features.moments
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
@@ -27,11 +27,22 @@ import com.srisu.srisu.features.moments.presentation.*
         }
         name.startsWith("create")->{
             val empty=name.contains("select")
-            val state=MomentComposerState(record=MomentDraftRecord("synthetic",3,caption=if(empty) "" else "A quiet morning, and a little thought of you."),
+            var state by remember { mutableStateOf(MomentComposerState(record=MomentDraftRecord("synthetic",3,
+                visibility=if(name.contains("audience")) "public" else "private",
+                caption=if(empty) "" else "A quiet morning, and a little thought of you."),
                 loading=false,photos=if(empty) emptyList() else listOf(LocalMomentPhoto("one",MomentFixtures.image),LocalMomentPhoto("two",MomentFixtures.image)),
                 busy=name.contains("progress"),stage="Uploading photo 1 of 2",progress=if(name.contains("progress")) .35f else null,
-                error=if(name.contains("failure")) "Upload interrupted. Your photos and caption are kept. Try again." else null)
-            MomentComposerContent(state,source,{},{},{},{_,_->},{},{},{},{},{},initialCaptionEditing=name.contains("caption"))
+                error=if(name.contains("failure")) "Upload interrupted. Your photos and caption are kept. Try again." else null)) }
+            MomentComposerContent(state,source,
+                onCaption={state=state.copy(record=state.record?.copy(caption=it))},
+                onAudience={state=state.copy(record=state.record?.copy(visibility=it))},
+                onCrop={id,crop->state=state.copy(record=state.record?.let { it.copy(crops=if(crop==null) it.crops-id else it.crops+(id to crop)) })},
+                onRemove={id->state=state.copy(photos=state.photos.filterNot {it.id==id})},
+                onReorder={id,offset->val photos=state.photos.toMutableList();val from=photos.indexOfFirst {it.id==id}
+                    val to=from+offset;if(from>=0 && to in photos.indices) {photos.add(to,photos.removeAt(from));state=state.copy(photos=photos)}},
+                onShare={},onRetry={},onDiscard={},onBack={},
+                onPick={if(!name.contains("cancel")) state=state.copy(photos=state.photos+LocalMomentPhoto("picked",MomentFixtures.image))},
+                initialCaptionEditing=name.contains("caption"))
         }
         else->{
             val mine=name.contains("creator")
