@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -41,6 +42,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable fun PlanScreen(id:Long?,onBack:()->Unit,onChat:()->Unit,onMoment:(Long)->Unit,vm:PlanViewModel=koinViewModel(),initialCreate:Boolean=false,initialInvitations:Boolean=false, initialIdea:String?=null, initialEdit:Boolean=false) {
     val state by vm.state.collectAsStateWithLifecycle()
     val reminders by vm.reminders.state.collectAsStateWithLifecycle()
@@ -50,7 +52,16 @@ import org.koin.compose.viewmodel.koinViewModel
         if(initialIdea!=null) vm.fromIdea(initialIdea) else vm.editPlan(change=initialEdit)
     }}
     LaunchedEffect(id,initialInvitations) { vm.open(id,initialInvitations) };MomentLifecycle(vm::visible);ProtectConversation()
-    PlanContent(state,reminders,onBack,onChat,onMoment,vm::retry,vm::browse,vm::detail,vm::more,vm::editPlan,
+    var detailFromList by rememberSaveable { mutableStateOf(false) }
+    val back: () -> Unit = {
+        if (detailFromList && !state.busy && state.pending == null) {
+            vm.browse(); detailFromList = false
+        } else onBack()
+    }
+    BackHandler(enabled = detailFromList && !state.editing, onBack = back)
+    PlanContent(state,reminders,back,onChat,onMoment,vm::retry,
+        { if (!state.busy && state.pending == null) { vm.browse(it); detailFromList = false } },
+        { if (!state.busy && state.pending == null) { detailFromList = true; vm.detail(it) } },vm::more,vm::editPlan,
         vm::resumeDraft,vm::action,vm::reminder,vm::calendar,vm::place,vm::publishCard)
     if(state.editing && state.draft!=null) PlanEditor(state,vm::edit,vm::save,vm::closeEditor,vm::discardDraft,vm::retry)
 }
@@ -72,10 +83,18 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
     val space=MaterialTheme.spacing;val colors=MaterialTheme.colorScheme;val plan=state.plan
     val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current
     fun finishTyping() {focus.clearFocus();keyboard?.hide()}
-    val scroll=rememberLazyListState()
+    val upcomingScroll=rememberLazyListState()
+    val invitationsScroll=rememberLazyListState()
+    val pastScroll=rememberLazyListState()
+    val detailScroll=rememberLazyListState()
+    val scroll=if(plan!=null) detailScroll else when(state.tab) {
+        "invitations" -> invitationsScroll
+        "past" -> pastScroll
+        else -> upcomingScroll
+    }
     val snackbar=remember {SnackbarHostState()}
     LaunchedEffect(state.notice,state.editing) {if(!state.editing) state.notice?.let {snackbar.showSnackbar(it,duration=SnackbarDuration.Long)}}
-    LaunchedEffect(plan?.id,state.tab) { scroll.scrollToItem(0) }
+    LaunchedEffect(plan?.id) { if(plan!=null) detailScroll.scrollToItem(0) }
     var cancel by remember(plan?.id) { mutableStateOf(false) }
     var remove by remember(plan?.id) { mutableStateOf<String?>(null) }
     var itemText by rememberSaveable(plan?.id) { mutableStateOf("") }

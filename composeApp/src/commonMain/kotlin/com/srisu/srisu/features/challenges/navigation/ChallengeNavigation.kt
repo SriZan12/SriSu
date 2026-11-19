@@ -19,7 +19,7 @@ fun NavGraphBuilder.challengeGraph(controller: NavController) {
         if (route.id != null && !route.id.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")))
             com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
         else ChallengeScreen(route.id, nav::back,
-            { if (route.fromChat) nav.back() else nav.replace(ChatNav.CoupleConversation(origin = "challenge")) },
+            { nav.conversation(route.fromChat, ChatNav.CoupleConversation(origin = "challenge")) },
             { nav.open(MomentComposerDestination(it)) })
     }
 }

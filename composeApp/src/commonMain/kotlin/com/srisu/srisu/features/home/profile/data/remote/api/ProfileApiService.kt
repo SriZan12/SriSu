@@ -4,7 +4,6 @@ import com.srisu.srisu.features.home.profile.data.dto.ProfileUpdateDTO
 import com.srisu.srisu.core.data.remote.ResultHandler
 import com.srisu.srisu.core.data.remote.safeRequest
 import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
-import com.srisu.srisu.core.logger.AppLogger
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.ProfileResponse
 import com.srisu.srisu.utils.MediaFile
@@ -43,16 +42,16 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
             setBody(
                 MultiPartFormDataContent(
                     formData {
-                        append("phone_number", profileUpdateDTO.phoneNumber ?: "")
+                        profileUpdateDTO.phoneNumber?.let { append("phone_number", it) }
                         append("full_name", profileUpdateDTO.fullName ?: "")
                         append("username", profileUpdateDTO.username ?: "")
                         append("bio", profileUpdateDTO.bio ?: "")
                         append("country", profileUpdateDTO.country ?: "")
                         append("city", profileUpdateDTO.city ?: "")
-                        append("dob", profileUpdateDTO.dob ?: "")
-                        append("gender", profileUpdateDTO.gender ?: "")
-                        append("zodiac_sign", profileUpdateDTO.zodiacSign ?: "")
-                        append("mood", profileUpdateDTO.mood ?: "")
+                        profileUpdateDTO.dob?.let { append("dob", it) }
+                        profileUpdateDTO.gender?.let { append("gender", it) }
+                        profileUpdateDTO.zodiacSign?.let { append("zodiac_sign", it) }
+                        profileUpdateDTO.mood?.let { append("mood", it) }
 
                         mediaFile?.let {
                             if (mediaFile.fileBytes != null) {
@@ -71,11 +70,8 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
                         }
 
                         profileUpdateDTO.userInterests?.let { userInterests ->
-                            AppLogger.log("USER INTERESTS API SERVICE= $userInterests")
                             userInterests.forEachIndexed { index, interest ->
-                                AppLogger.log("USER ID = $userId")
                                 if (userId != null) {
-                                    AppLogger.log("USER ID = $userId")
                                     append("user_interests[$index][user]", userId)
                                     interest?.name?.let {
                                         append(
@@ -108,7 +104,6 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
                                 when {
                                     // Case 1: Updating the photo
                                     galleryFile.removed == true && galleryFile.fileBytes != null && galleryFile.id != null -> {
-                                        AppLogger.log("INSIDE UPDATING THE PHOTO")
                                         append("user_photos[$appendIndex][user]", userId)
                                         append("user_photos[$appendIndex][id]", galleryFile.id)
                                         append(
@@ -130,7 +125,6 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
 
                                     // Case 2: Removing photo
                                     galleryFile.removed == true && galleryFile.fileBytes == null && galleryFile.id != null -> {
-                                        AppLogger.log("INSIDE REMOVING THE PHOTO")
                                         append("user_photos[$appendIndex][user]", userId)
                                         append("user_photos[$appendIndex][id]", galleryFile.id)
                                         append("user_photos[$appendIndex][removed]", true)
@@ -139,8 +133,6 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
 
                                     // Case 3: New photo or update photo(upload)
                                     galleryFile.fileBytes != null -> {
-                                        AppLogger.log("INSIDE 3 CASE NEW PHOTO UPLOAD")
-                                        AppLogger.log("gallery file id = ${galleryFile.id}")
                                         append("user_photos[$appendIndex][user]", userId)
                                         galleryFile.id?.let {
                                             append("user_photos[$appendIndex][id]", it)

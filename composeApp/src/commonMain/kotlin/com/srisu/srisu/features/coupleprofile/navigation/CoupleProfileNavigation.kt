@@ -69,7 +69,8 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
     composable<HomeNavigation.Explore> { entry ->
         val nav = AppNavigator(controller, entry)
         com.srisu.srisu.features.explore.presentation.ExploreScreen(
-            onPreferences = { nav.open(com.srisu.srisu.navigation.graph.ProfileNav.EditProfile) },
+            onBack = nav::back,
+            onPreferences = { nav.open(com.srisu.srisu.navigation.graph.ProfileNav.EditProfileDetails) },
             onMoment = { couple -> nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(coupleId=couple)) },
             onProfile = { nav.open(CoupleProfileDestination(it)) })
     }

@@ -3,6 +3,8 @@ package com.srisu.srisu.components
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 
@@ -18,6 +20,7 @@ internal fun DraftOutlinedTextField(
     maxLength: Int = Int.MAX_VALUE,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
+    shape: Shape = OutlinedTextFieldDefaults.shape,
 ) {
     val editor = rememberDraftEditor(value)
     OutlinedTextField(
@@ -31,5 +34,6 @@ internal fun DraftOutlinedTextField(
         maxLines = maxLines,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
+        shape = shape,
     )
 }

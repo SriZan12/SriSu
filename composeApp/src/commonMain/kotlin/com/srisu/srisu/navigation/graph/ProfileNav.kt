@@ -19,6 +19,7 @@ import kotlin.uuid.ExperimentalUuidApi
 sealed interface ProfileNav : Route {
     @Serializable data object NotificationSettings : ProfileNav
     @Serializable data object EditProfile : ProfileNav
+    @Serializable data object EditProfileDetails : ProfileNav
     @Serializable data class InterestScreen(val requester: String, val requestId: String) : ProfileNav
 }
 private const val REQUEST = "interest.request.v2"
@@ -29,38 +30,9 @@ fun NavGraphBuilder.profileGraph(controller: NavController) {
     composable<ProfileNav.NotificationSettings> { entry ->
         com.srisu.srisu.features.notifications.NotificationSettings { AppNavigator(controller,entry).back() }
     }
-    composable<ProfileNav.EditProfile> { entry ->
-        val vm = koinViewModel<EditProfileViewModel>()
-        val result by entry.savedStateHandle.getStateFlow<String?>(RESULT, null).collectAsState()
-        val initialized by vm.isInitialized.collectAsState()
-        val profileState by vm.editProfileUIState.collectAsState()
-        LaunchedEffect(result, initialized, profileState.interestList) {
-            if (!initialized || profileState.interestList == null) return@LaunchedEffect
-            result?.let { encoded ->
-                val selection = decodeInterestResult(entry.savedStateHandle[REQUEST], encoded)
-                if (selection == null) {
-                    entry.savedStateHandle[RESULT] = null
-                    return@LaunchedEffect
-                }
-                val ids = selection.ids
-                val state = vm.editProfileUIState.value
-                val old = state.currentInterests.orEmpty().filterNotNull()
-                val updated = old.map { it.copy(removed = it.interest !in ids) } +
-                    state.interestList.orEmpty().filterNotNull().filter { it.id in ids && old.none { o -> o.interest == it.id } }
-                        .map { User.UserInterest(interest = it.id, name = it.name, removed = false) }
-                vm.updateCurrentInterests(updated)
-                entry.savedStateHandle[RESULT] = null
-                entry.savedStateHandle.remove<String>(REQUEST)
-            }
-        }
-        EditProfileScreen(editProfileViewModel = vm, onNavigateInterestScreen = { _, _ ->
-            val navigator = AppNavigator(controller, entry)
-            if (navigator.isCurrent()) {
-                val id = Uuid.random().toString()
-                entry.savedStateHandle[REQUEST] = id
-                navigator.open(ProfileNav.InterestScreen(entry.id, id))
-            }
-        })
+    composable<ProfileNav.EditProfile> { entry -> ProfileEditorDestination(controller, entry) }
+    composable<ProfileNav.EditProfileDetails> { entry ->
+        ProfileEditorDestination(controller, entry, AppNavigator(controller, entry)::back)
     }
     composable<ProfileNav.InterestScreen> { entry ->
         val route = entry.toRoute<ProfileNav.InterestScreen>()
@@ -85,4 +57,44 @@ fun NavGraphBuilder.profileGraph(controller: NavController) {
                 })
         }
     }
+}
+
+@OptIn(ExperimentalUuidApi::class)
+@Composable
+private fun ProfileEditorDestination(controller: NavController, entry: androidx.navigation.NavBackStackEntry,
+    onBack: (() -> Unit)? = null) {
+        val vm = koinViewModel<EditProfileViewModel>()
+        val result by entry.savedStateHandle.getStateFlow<String?>(RESULT, null).collectAsState()
+        val initialized by vm.isInitialized.collectAsState()
+        val profileState by vm.editProfileUIState.collectAsState()
+        LaunchedEffect(result, initialized, profileState.interestList) {
+            if (!initialized || profileState.interestList == null) return@LaunchedEffect
+            result?.let { encoded ->
+                val selection = decodeInterestResult(entry.savedStateHandle[REQUEST], encoded)
+                if (selection == null) {
+                    entry.savedStateHandle[RESULT] = null
+                    return@LaunchedEffect
+                }
+                val ids = selection.ids
+                val state = vm.editProfileUIState.value
+                val old = state.currentInterests.orEmpty().filterNotNull()
+                val updated = old.map { it.copy(removed = it.interest !in ids) } +
+                    state.interestList.orEmpty().filterNotNull().filter { it.id in ids && old.none { o -> o.interest == it.id } }
+                        .map { User.UserInterest(interest = it.id, name = it.name, removed = false) }
+                vm.updateCurrentInterests(updated)
+                entry.savedStateHandle[RESULT] = null
+                entry.savedStateHandle.remove<String>(REQUEST)
+            }
+        }
+        EditProfileScreen(editProfileViewModel = vm, onBack = onBack,
+            onExplore = if(onBack==null) ({AppNavigator(controller,entry).open(HomeNavigation.Explore)}) else null,
+            onNotifications = if(onBack==null) ({AppNavigator(controller,entry).open(ProfileNav.NotificationSettings)}) else null,
+            onSystemBack = AppNavigator(controller, entry)::back, onNavigateInterestScreen = { _, _ ->
+            val navigator = AppNavigator(controller, entry)
+            if (navigator.isCurrent()) {
+                val id = Uuid.random().toString()
+                entry.savedStateHandle[REQUEST] = id
+                navigator.open(ProfileNav.InterestScreen(entry.id, id))
+            }
+        })
 }

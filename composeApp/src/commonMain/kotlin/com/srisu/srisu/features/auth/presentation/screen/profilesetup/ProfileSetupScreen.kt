@@ -7,7 +7,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -29,13 +32,22 @@ fun ProfileSetupScreen(
     val localFocusManager: FocusManager = LocalFocusManager.current
     val authUIState by authViewModel.authUiState.collectAsState()
 
-    androidx.compose.ui.backhandler.BackHandler {
-        authViewModel.navigateProfileBack()
+    var confirmLeave by remember { mutableStateOf(false) }
+    val back: () -> Unit = {
+        if (authUIState.currentScreen == CustomProfileSetupScreen.AddFullNameScreen) confirmLeave = true
+        else authViewModel.navigateProfileBack()
     }
+    androidx.compose.ui.backhandler.BackHandler(onBack = back)
+    if (confirmLeave) AlertDialog(onDismissRequest = { confirmLeave = false },
+        title = { Text("Use another account?") },
+        text = { Text("Sign out to return to phone verification. Saved setup progress stays with this account.") },
+        confirmButton = { TextButton(onClick = authViewModel::signOut) { Text("Sign out") } },
+        dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep setting up") } })
     ProfileScreenContent(
         authViewModel = authViewModel,
         authUIState = authUIState,
-        localFocusManager = localFocusManager
+        localFocusManager = localFocusManager,
+        onBack = back
     )
 
 
@@ -46,7 +58,8 @@ fun ProfileSetupScreen(
 private fun ProfileScreenContent(
     authViewModel: AuthViewModel,
     localFocusManager: FocusManager,
-    authUIState: AuthUIStates
+    authUIState: AuthUIStates,
+    onBack: () -> Unit
 ) {
 
     AnimatedContent(
@@ -64,7 +77,7 @@ private fun ProfileScreenContent(
         when (currentScreen) {
             CustomProfileSetupScreen.SetProfilePictureScreen -> SetProfilePictureScreen(authViewModel)
             CustomProfileSetupScreen.SelectGenderScreen -> SelectGenderScreen(authViewModel)
-            else -> AddNameScreen(authViewModel, localFocusManager)
+            else -> AddNameScreen(authViewModel, localFocusManager, onBack)
         }
     }
 }

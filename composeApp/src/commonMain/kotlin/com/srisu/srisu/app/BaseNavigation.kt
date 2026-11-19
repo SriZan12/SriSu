@@ -48,7 +48,11 @@ fun BaseNavigation(sessionStorage: SessionStorage) {
         StartupPresentation((memberState as? CoupleAccess.Recovery)?.message, membership::retry)
         return
     }
-    val scopeKey = "navigation-v2:${available.stamp}:$protected:${member?.coupleId}:${member?.members}"
+    val membershipScope = remember(available.stamp) { MembershipNavigationScope() }
+    // After process recreation, saved routes must match the newly verified membership.
+    val membershipAnchor = remember(available.stamp, protected) { "${member?.coupleId}:${member?.members}" }
+    val membershipRevision = membershipScope.observe(member?.coupleId, member?.members.orEmpty())
+    val scopeKey = "navigation-v3:${available.stamp}:$protected:$membershipAnchor:$membershipRevision"
     key(scopeKey) {
         // Changing access destroys both active and saved tab entry ViewModel stores.
         val owner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
@@ -84,9 +88,7 @@ private fun NavigationShell(access: StartupState.Available, member: CoupleAccess
     Scaffold(
         modifier = Modifier.fillMaxSize(), contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbars) },
-        topBar = { Column {
-            if (protected && tab == BottomDestination.PROFILE) TextButton(onClick = { navigator.open(HomeNavigation.Explore) }) { Text("Explore SriSu") }
-            if (protected && tab == BottomDestination.PROFILE) TextButton(onClick = { navigator.open(ProfileNav.NotificationSettings) }) { Text("Notifications & diagnostics") }
+        topBar = { Column(if (protected && member?.warning != null) Modifier.statusBarsPadding() else Modifier) {
             if (protected && member?.warning != null) TextButton(onClick = onRetry) {
                 Text(stringResource(Res.string.nav_membership_retry))
             }

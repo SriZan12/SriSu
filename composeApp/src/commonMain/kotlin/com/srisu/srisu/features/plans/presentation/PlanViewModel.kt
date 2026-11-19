@@ -90,7 +90,12 @@ class PlanViewModel(private val source: PlanSource, private val matrix: MatrixCh
     }
     fun browse(tab:String=state.value.tab) {
         if(state.value.busy || state.value.pending!=null) return
-        leaveDetail();mutable.update { it.copy(plan=null,tab=tab,editing=false,page=PlanPage(),cardError=null,notice=null) };refresh()
+        val returningToList=state.value.plan!=null && tab==state.value.tab
+        leaveDetail()
+        mutable.update { it.copy(plan=null,tab=tab,editing=false,
+            page=if(returningToList) it.page else PlanPage(),cardError=null,notice=null) }
+        // Keep already loaded pages while reconciling a detail's return path.
+        refresh(quiet=returningToList)
     }
     fun detail(id:Long)=task { desiredId=id;accept(readPlan(id));desiredId=null }
     private class MissingPlan(val id:Long):Exception("This plan is no longer available.")

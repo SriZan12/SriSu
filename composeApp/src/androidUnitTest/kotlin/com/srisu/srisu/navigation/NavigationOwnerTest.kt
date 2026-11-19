@@ -9,6 +9,8 @@ import com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestinatio
 import com.srisu.srisu.features.coupleprofile.navigation.CoupleSection
 import com.srisu.srisu.features.coupleprofile.navigation.coupleProfileDestination
 import com.srisu.srisu.navigation.graph.*
+import com.srisu.srisu.features.challenges.navigation.ChallengesDestination
+import com.srisu.srisu.features.sparks.navigation.SparksDestination
 import com.srisu.srisu.navigation.navhost.BottomDestination
 import com.srisu.srisu.navigation.navhost.selectBottomDestination
 import org.junit.Rule
@@ -40,9 +42,66 @@ class NavigationOwnerTest {
                     SideEffect { probes[entry.id] = probe }
                 }
                 composable<ProfileNav.EditProfile> { }
+                composable<ProfileNav.EditProfileDetails> { }
+                composable<ChallengesDestination> { }
+                composable<SparksDestination> { }
             }
         }
         compose.waitForIdle()
+    }
+    @Test fun challengeToChatKeepsTheChallengeForBack() {
+        host()
+        compose.runOnIdle { AppNavigator(controller).open(ChallengesDestination()) }
+        compose.waitForIdle()
+        val challengeEntry = controller.currentBackStackEntry!!.id
+        compose.runOnIdle { AppNavigator(controller).conversation(false, ChatNav.CoupleConversation(origin = "challenge")) }
+        compose.waitForIdle()
+        compose.runOnIdle { AppNavigator(controller).back() }
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals(challengeEntry, controller.currentBackStackEntry!!.id) }
+    }
+    @Test fun nestedQuestionsReturnToExistingChatAndReleaseTheirChildren() {
+        host()
+        compose.runOnIdle { AppNavigator(controller).open(ChatNav.CoupleConversation(origin = "bottom_bar")) }
+        compose.waitForIdle()
+        val chatEntry = controller.currentBackStackEntry!!.id
+        compose.runOnIdle { AppNavigator(controller).open(SparksDestination(fromChat = true)) }
+        compose.waitForIdle()
+        compose.runOnIdle { AppNavigator(controller).open(SparksDestination(fromChat = true, page = "SEARCH")) }
+        compose.waitForIdle()
+        compose.runOnIdle { AppNavigator(controller).conversation(true, ChatNav.CoupleConversation(origin = "spark")) }
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals(chatEntry, controller.currentBackStackEntry!!.id); AppNavigator(controller).back() }
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(controller.currentDestination!!.hasRoute<HomeNavigation.Home>()) }
+    }
+    @Test fun explorePreferencesAreADetailWithAReturnPathInsteadOfAProfileTab() {
+        host()
+        compose.runOnIdle { AppNavigator(controller).open(HomeNavigation.Explore) }
+        compose.waitForIdle()
+        val exploreEntry = controller.currentBackStackEntry!!.id
+        compose.runOnIdle { AppNavigator(controller).open(ProfileNav.EditProfileDetails) }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertNull(BottomDestination.fromDestination(controller.currentDestination))
+            AppNavigator(controller).back()
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals(exploreEntry, controller.currentBackStackEntry!!.id) }
+    }
+    @Test fun messageLinkWithinCurrentChatUpdatesTargetWithoutDuplicatingTheScreen() {
+        host()
+        val chat = ChatNav.CoupleConversation("00000000-0000-4000-8000-000000000001")
+        compose.runOnIdle { AppNavigator(controller).open(chat) }
+        compose.waitForIdle()
+        compose.runOnIdle { AppNavigator(controller).open(chat.copy(messageId = "synthetic-event", origin = "notification")) }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals("synthetic-event", controller.currentBackStackEntry!!.toRoute<ChatNav.CoupleConversation>().messageId)
+            AppNavigator(controller).back()
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(controller.currentDestination!!.hasRoute<HomeNavigation.Home>()) }
     }
     @Test fun poppedEntriesReleaseTheirViewModels() {
         host()

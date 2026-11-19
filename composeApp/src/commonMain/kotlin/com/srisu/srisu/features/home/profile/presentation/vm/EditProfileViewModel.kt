@@ -22,6 +22,7 @@ import com.srisu.srisu.utils.Country.getAllCountriesFromJson
 import com.srisu.srisu.utils.CountryModel
 import com.srisu.srisu.utils.MediaFile
 import com.srisu.srisu.utils.getMediaFileFromUri
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,18 @@ class EditProfileViewModel(
     val editProfileUIState = _editProfileUIState.asStateFlow()
     private val initialized = MutableStateFlow(false)
     val isInitialized = initialized.asStateFlow()
+    private var initializationJob: Job? = null
+    private var saveJob: Job? = null
+    private var cityJob: Job? = null
+    private val initialError = MutableStateFlow<String?>(null)
+    val initializationError = initialError.asStateFlow()
+    fun signOut() { sessionStorage.clearSession() }
+    private var savedFields: List<Any?>? = null
+    private fun editableFields(state: com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState) = listOf(
+        state.fullName, state.userName, state.bio.orEmpty(), state.country?.name, state.city.orEmpty(),
+        state.currentInterests, state.profilePictureUri, state.largePhotos, state.smallPhotos)
+    fun hasUnsavedChanges() = initialized.value && savedFields != editableFields(_editProfileUIState.value)
+
 
     private val catalogue = com.srisu.srisu.features.home.profile.presentation.state.InterestCatalogueStateHolder(viewModelScope) { force -> profileRepository.loadCatalogue(force) }
     val catalogueState = catalogue.state
@@ -53,22 +66,33 @@ class EditProfileViewModel(
         viewModelScope.launch { catalogue.state.collect { value ->
             _editProfileUIState.update { it.copy(interestList = value.items) }
         } }
-        viewModelScope.launch {
-            val session = loadSession()
-            val countries = loadCountries()
-            val interests = catalogue.state.value.items
-            val profile = loadProfile()
+        retryInitialization()
+    }
 
-            val mergedState = buildInitialState(
-                session = session,
-                profile = profile,
-                countries = countries,
-                interests = interests
-            )
-
-            _editProfileUIState.value = mergedState.copy(interestList = catalogue.state.value.items)
-            initialized.value = true
-
+    fun retryInitialization() {
+        if (initialized.value || initializationJob?.isActive == true) return
+        initialError.value = null
+        val coordinator = sessionStorage as? com.srisu.srisu.core.session.SessionCoordinator
+        val stamp = coordinator?.stamp()
+        initializationJob = viewModelScope.launch {
+            try {
+                val session = loadSession()
+                val countries = loadCountries()
+                val profile = loadProfile()
+                if (stamp != null) coordinator.ensureCurrent(stamp)
+                if (profile?.user == null) {
+                    initialError.value = "Your profile couldn’t be loaded. Try again to edit it."
+                    idleScreen()
+                    return@launch
+                }
+                _editProfileUIState.value = buildInitialState(session, profile, countries, catalogue.state.value.items)
+                savedFields = editableFields(_editProfileUIState.value)
+                initialized.value = true
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+            } catch (_: Exception) {
+                initialError.value = "Your profile couldn’t be loaded. Try again to edit it."
+                idleScreen()
+            }
         }
     }
 
@@ -185,6 +209,7 @@ class EditProfileViewModel(
     }
 
     fun idleScreen() {
+        if (saveJob?.isActive == true) return
         this._editProfileUIState.value =
             this._editProfileUIState.value.copy(baseUIState = BaseUIState.Idle)
     }
@@ -358,9 +383,8 @@ class EditProfileViewModel(
         updateCurrentInterests(profileData.userInterests)
         updateProfilePictureUri(profileData.profilePhoto?.toUri())
 
+        resetGalleryPhotos()
         if (!profileData.userPhotos.isNullOrEmpty()) {
-
-            resetGalleryPhotos()
 
             // Large photos
             profileData.userPhotos.take(2).forEachIndexed { index, photo ->
@@ -390,111 +414,93 @@ class EditProfileViewModel(
 
 
     fun getCityList(country: String? = null, showLoading: Boolean = false) {
-
-        if (showLoading) {
-            showLoading()
-        }
-
-        val countryCity = country ?: _editProfileUIState.value.session?.country
-
-        viewModelScope.launch {
+        val requestedCountry = country ?: _editProfileUIState.value.country?.name
+        cityJob?.cancel()
+        cityJob = viewModelScope.launch {
             try {
-                val cities = profileRepository.getCityList(country = countryCity)
-                if (cities?.error == false) {
-                    setCities(cities = cities.data)
+                val cities = profileRepository.getCityList(country = requestedCountry)
+                if (cities?.error == false && _editProfileUIState.value.country?.name?.equals(requestedCountry, ignoreCase = true) == true) {
+                    setCities(cities.data)
                 }
-                idleScreen()
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
-        } catch (exception: Exception) {
-                showErrorMessage(message = exception.message, errorType = "ERROR")
+            } catch (_: Exception) {
+                // This optional lookup must not dismiss a save or clear a user's chosen city.
             }
-
-
         }
     }
 
     fun updateProfile() {
+        if (!initialized.value || saveJob?.isActive == true) return
+        val snapshot = _editProfileUIState.value
+        if(snapshot.fullName.isNullOrBlank()) { showErrorMessage("Validation","Enter your full name."); return }
+        if(snapshot.userName.isNullOrBlank()) { showErrorMessage("Validation","Enter a username."); return }
         showLoading()
         val stamp = (sessionStorage as? com.srisu.srisu.core.session.SessionCoordinator)?.stamp()
-        viewModelScope.launch {
+        saveJob = viewModelScope.launch {
             try {
-                val dto = buildProfileUpdateDTO()
-                val profile = buildProfileMedia()
-                val gallery = buildGalleryMedia()
+                val dto = buildProfileUpdateDTO(snapshot)
+                val profile = buildProfileMedia(snapshot)
+                val gallery = buildGalleryMedia(snapshot)
 
                 profileRepository.sendUpdateProfileRequest(
                     profileUpdateDTO = dto,
-                    userId = _editProfileUIState.value.session?.id,
+                    userId = snapshot.session?.id,
                     profilePhoto = profile,
                     gallery = gallery
                 ).onSuccess { profileResponse, _ ->
-                    AppLogger.log("Profile Updated Successfully")
-                    stamp?.let { (sessionStorage as com.srisu.srisu.core.session.SessionCoordinator).ensureCurrent(it) }
-                    updateProfileResponse(profileResponse = profileResponse)
-                    updateSessionWithCredentials(
-                        access = _editProfileUIState.value.session?.access,
-                        refresh = _editProfileUIState.value.session?.refresh,
-                        userInfo = profileResponse?.user
-                    )
-                }.onError { error, _ ->
-                    AppLogger.log("Profile Update Error = $error")
-                    showErrorMessage(message = error, errorType = "Profile Update Error")
+                    val user = profileResponse?.user ?: error("The server returned an empty profile.")
+                    val coordinator = sessionStorage as? com.srisu.srisu.core.session.SessionCoordinator
+                    if (stamp != null) {
+                        if (!coordinator!!.updateProfileIfCurrent(user, stamp)) throw com.srisu.srisu.core.session.SessionChangedException()
+                    } else {
+                        val current = loadSession()
+                        check(current?.id == user.id) { "The account changed. Reopen your profile." }
+                        sessionStorage.saveSession(setUserWholeCredentials(current?.access, current?.refresh, user), SESSION_KEY)
+                    }
+                    updateProfileResponse(profileResponse)
+                    updateSession(loadSession())
+                    setUserProfileData()
+                    savedFields = editableFields(_editProfileUIState.value)
+                    showSuccessMessage<Unit>(message = "Profile updated")
+                }.onFailure { failure ->
+                    showErrorMessage(message = profileUpdateError(failure), errorType = "Profile Update Error")
                 }
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
         } catch (exception: Exception) {
-                AppLogger.log("Exception = ${exception.message}")
-                showErrorMessage(message = exception.message, errorType = "Exception")
+                showErrorMessage(message = if(exception is InvalidProfileImage) exception.message else "Your profile couldn’t be saved. Please try again.", errorType = "Profile Update Error")
             }
         }
     }
 
-    private fun buildProfileUpdateDTO() = ProfileUpdateDTO(
-        phoneNumber = _editProfileUIState.value.session?.phoneNumber,
-        gender = _editProfileUIState.value.session?.gender,
-        dob = _editProfileUIState.value.session?.dob,
-        zodiacSign = _editProfileUIState.value.session?.zodiacSign,
-        fullName = _editProfileUIState.value.fullName,
-        username = _editProfileUIState.value.userName,
-        bio = _editProfileUIState.value.bio,
-        country = _editProfileUIState.value.country?.name,
-        city = _editProfileUIState.value.city,
-        userInterests = _editProfileUIState.value.currentInterests,
+    private fun buildProfileUpdateDTO(snapshot: com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState) = ProfileUpdateDTO(
+        fullName = snapshot.fullName?.trim(),
+        username = snapshot.userName?.trim(),
+        bio = snapshot.bio,
+        country = snapshot.country?.name,
+        city = snapshot.city,
+        userInterests = snapshot.currentInterests,
     )
 
-    private suspend fun buildProfileMedia() =
-        getMediaFileFromUri(
-            uri = _editProfileUIState.value.profilePictureUri,
-            id = null,
-            removed = false
-        )
+    private class InvalidProfileImage: Exception("Choose a JPEG, PNG or WebP image under 5 MB and 20 megapixels, then try again.")
+    private suspend fun selectedImage(uri: Uri?, id: Int? = null): MediaFile? {
+        val path=uri?.toString()?.takeIf {it.isNotBlank()} ?: return null
+        // Server images are already saved. Only user-selected local images are uploads.
+        if(path.startsWith("https://",ignoreCase=true) || path.startsWith("http://",ignoreCase=true)) return null
+        return com.srisu.srisu.utils.FileManager().createProfilePhotoFromPath(path)?.copy(id=id,removed=false)
+            ?: throw InvalidProfileImage()
+    }
+    private suspend fun buildProfileMedia(snapshot: com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState) =
+        selectedImage(snapshot.profilePictureUri)
 
-    private suspend fun buildGalleryMedia(): ArrayList<MediaFile?> {
+    private suspend fun buildGalleryMedia(snapshot: com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState): ArrayList<MediaFile?> {
         val gallery = arrayListOf<MediaFile?>()
-        _editProfileUIState.value.largePhotos?.forEach {
-            gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
-        }
-        _editProfileUIState.value.smallPhotos?.forEach {
-            gallery.add(getMediaFileFromUri(it?.photoUri, it?.id, it?.removed ?: false))
+        (snapshot.largePhotos.orEmpty()+snapshot.smallPhotos.orEmpty()).filterNotNull().forEach {
+            if(it.removed && it.id!=null) gallery.add(MediaFile(id=it.id,removed=true))
+            else if(!it.removed) selectedImage(it.photoUri,it.id)?.let(gallery::add)
         }
         return gallery
     }
 
-
-    private fun updateSessionWithCredentials(
-        access: String?,
-        refresh: String?,
-        userInfo: ProfileResponse.User?,
-    ) {
-        val credentials = setUserWholeCredentials(access, refresh, userInfo)
-        saveSession(credentials)
-        setSession()
-        setUserProfileData()
-    }
-
-
-    private fun saveSession(credentials: String) {
-        sessionStorage.saveSession(credentials, SESSION_KEY)
-    }
 
     fun setSession() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -514,4 +520,15 @@ class EditProfileViewModel(
 
 
     }
+}
+
+internal fun profileUpdateError(error: com.srisu.srisu.core.data.remote.ApiError): String = when {
+    error.fields["username"]?.contains("unique") == true -> "This username is taken. Choose another."
+    error.fields.containsKey("username") -> "Enter a valid username, up to 150 characters."
+    error.fields.containsKey("full_name") -> "Enter your full name, up to 100 characters."
+    error.fields.keys.any {it.startsWith("profile_photo") || it.startsWith("user_photos")} -> "Choose a JPEG, PNG or WebP image under 5 MB and 20 megapixels."
+    error.fields.keys.any {it.startsWith("user_interests")} -> "Some interests are no longer available. Reopen Interests and choose them again."
+    error.fields.containsKey("country") || error.fields.containsKey("city") -> "Check your country and city, then try again."
+    error.fields.containsKey("bio") -> "Check your bio and try again."
+    else -> error.message
 }

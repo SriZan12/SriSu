@@ -89,6 +89,17 @@ class SessionCoordinator(private val storage: SessionStorage, val epochSeconds: 
         true
     }
 
+    /** Profile writes must not roll back a refresh that finished while the editor was open. */
+    fun updateProfileIfCurrent(user: com.srisu.srisu.features.auth.data.remote.response.ProfileResponse.User,
+        stamp: SessionStamp): Boolean = synchronized(lock) {
+        if (_state.value != stamp || user.id != session?.id) return@synchronized false
+        val current = session ?: return@synchronized false
+        val updated = json.decodeFromString<Session>(setUserWholeCredentials(current.access, current.refresh, user))
+            .copy(refreshRequestId = current.refreshRequestId)
+        saveSession(json.encodeToString(updated), SESSION_KEY)
+        true
+    }
+
     override fun clearSession(): Boolean = synchronized(lock) {
         val refreshToRevoke = session?.refresh
         credentials = null

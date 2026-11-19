@@ -139,7 +139,9 @@ fun CountryDropDown(
     onOptionSelected: (CountryModel) -> Unit,
     showCountryBottomSheet: Boolean,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    onShowCountryBottomSheetChange: () -> Unit
+    onShowCountryBottomSheetChange: () -> Unit,
+    placeholder: String = "",
+    elevation: androidx.compose.ui.unit.Dp = 2.dp,
 ) {
 
     val flag by produceState<ImageBitmap?>(initialValue = null, key1 = option?.code) {
@@ -155,7 +157,7 @@ fun CountryDropDown(
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         border = BorderStroke(
             1.dp, color = MaterialTheme.colorScheme.outlineVariant
         )
@@ -165,7 +167,7 @@ fun CountryDropDown(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier,
+                modifier = Modifier.weight(1f),
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
@@ -188,8 +190,8 @@ fun CountryDropDown(
                 }
 
                 Text(
-                    modifier = Modifier,
-                    text = option?.name ?: "",
+                    modifier = Modifier.weight(1f),
+                    text = option?.name ?: placeholder,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Start
@@ -226,12 +228,13 @@ fun CityDropDown(
     onCitySelected: (String) -> Unit,
     cityList: List<String?>?,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
-    onExpandedChange: () -> Unit
+    onExpandedChange: () -> Unit,
+    elevation: androidx.compose.ui.unit.Dp = 4.dp,
 ) {
     Card(
         modifier = modifier,
         shape = MaterialTheme.shapes.field,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         onClick = {
             onExpandedChange()
         },
@@ -248,6 +251,7 @@ fun CityDropDown(
             ) {
                 val city = if (selectedCity.isNullOrEmpty()) "Select City" else selectedCity
                 Text(
+                    modifier = Modifier.weight(1f),
                     text = city,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,

@@ -89,13 +89,13 @@ class ChallengeRenderTest {
         compose.onNodeWithText("I’ve done my part").assertDoesNotExist()
     }
 
-    @Test fun openingAnActivityFromLowerInTheListStartsAtItsHeading() {
+    @Test fun openingAnActivityStartsAtItsHeadingAndBackRestoresTheListPosition() {
         val state = androidx.compose.runtime.mutableStateOf(ChallengeState(home=ChallengeFixtures.home,
             account=1,loading=false,fresh=true))
         compose.setContent {
             CompositionLocalProvider(androidx.compose.ui.platform.LocalInspectionMode provides true) { org.jetbrains.compose.resources.PreviewContextConfigurationEffect() }
             SriSuTheme {
-                ChallengeContent(state.value, {}, {}, {}, {}, { state.value=state.value.copy(selected=it) },
+                ChallengeContent(state.value, { state.value=state.value.copy(selected=null) }, {}, {}, {}, { state.value=state.value.copy(selected=it) },
                     {}, {_,_->}, {}, {}, {}, {}, {}, {})
             }
         }
@@ -103,6 +103,9 @@ class ChallengeRenderTest {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(title,substring=true))
         compose.onNodeWithText(title).performClick()
         compose.onNodeWithText("All activities").assertIsDisplayed()
+        compose.onNodeWithText(title).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("All activities").assertDoesNotExist()
         compose.onNodeWithText(title).assertIsDisplayed()
     }
     @Test fun completedChallengeOpensExistingMomentAndChatActionsWithoutSendingAnInvitation() {

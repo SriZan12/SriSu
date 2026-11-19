@@ -68,6 +68,23 @@ class PlanRenderTest {
     @Test fun empty()=render("empty")
     @Test fun dark()=render("agenda-dark",dark=true)
     @Test fun largeText()=render("invited-small-large-text",fontScale=1.6f,small=true)
+    @Test fun returningFromPlanDetailRestoresTheAgendaPosition() {
+        val plans=(1L..10L).map {PlanFixtures.agreed.copy(id=it,title="Shared plan $it")}
+        val state=androidx.compose.runtime.mutableStateOf(PlanFixtures.base.copy(page=com.srisu.srisu.features.plans.data.PlanPage(plans)))
+        compose.setContent {
+            CompositionLocalProvider(androidx.compose.ui.platform.LocalInspectionMode provides true) {org.jetbrains.compose.resources.PreviewContextConfigurationEffect()}
+            SriSuTheme {
+                PlanContent(state.value,com.srisu.srisu.features.plans.data.ReminderState(),
+                    {state.value=state.value.copy(plan=null)},{},{},{},{},
+                    {id->state.value=state.value.copy(plan=plans.first {it.id==id})},{},{},{},{_,_->},{},{},{},{})
+            }
+        }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Shared plan 10"))
+        compose.onNodeWithText("Shared plan 10").performClick()
+        compose.onNodeWithText("Shared plan 10").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Shared plan 10").assertIsDisplayed()
+    }
     @Test fun acceptanceIsReachableWithLargeText() {
         RuntimeEnvironment.setQualifiers("w320dp-h640dp-xhdpi")
         var chosen:String?=null

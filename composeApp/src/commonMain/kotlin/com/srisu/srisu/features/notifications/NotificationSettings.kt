@@ -16,7 +16,7 @@ import org.koin.compose.koinInject
     val state by repository.state.collectAsState()
     val native by NativeNotifications.state.collectAsState()
     LaunchedEffect(Unit) { repository.reload();NativeNotifications.driver?.refresh() }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(MaterialTheme.spacing.gutter),
+    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(MaterialTheme.spacing.gutter),
         verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
         TextButton(onClick=onBack) { Text("Back") }
         Text("Notifications & diagnostics",style=MaterialTheme.typography.headlineSmall)

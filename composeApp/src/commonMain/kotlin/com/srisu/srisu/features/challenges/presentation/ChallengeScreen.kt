@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
@@ -30,14 +32,24 @@ import com.srisu.srisu.features.moments.presentation.MomentError
 import com.srisu.srisu.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable fun ChallengeScreen(id: String?, onBack: () -> Unit, onChat: () -> Unit,
     onMoment: (Long) -> Unit, vm: ChallengeViewModel = koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { vm.open(id) }
     MomentLifecycle(vm::visible)
     ProtectConversation()
-    ChallengeContent(state, onBack, onChat, onMoment, vm::retry, vm::select, vm::collection,
-        vm::filter, vm::browse, vm::openSession, vm::invite, vm::action, vm::moreHistory, vm::publishCard)
+    var detailFromList by rememberSaveable { mutableStateOf(false) }
+    val back: () -> Unit = {
+        if (detailFromList && !state.busy && state.pending == null) {
+            vm.browse(state.historyTab); detailFromList = false
+        } else onBack()
+    }
+    BackHandler(enabled = detailFromList, onBack = back)
+    ChallengeContent(state, back, onChat, onMoment, vm::retry,
+        { if (!state.busy && state.pending == null) { detailFromList = true; vm.select(it) } }, vm::collection,
+        vm::filter, { if (!state.busy) { vm.browse(it); detailFromList = false } },
+        { if (!state.busy) { detailFromList = true; vm.openSession(it) } }, vm::invite, vm::action, vm::moreHistory, vm::publishCard)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -50,9 +62,12 @@ import org.koin.compose.viewmodel.koinViewModel
     val colors = MaterialTheme.colorScheme
     val session = state.session
     val activity = session?.activity ?: state.selected
-    val listState = rememberLazyListState()
-    // Opening a detail/history screen starts at its heading; progress polls keep the reading position.
-    LaunchedEffect(activity?.id, session?.id, state.historyTab) { listState.scrollToItem(0) }
+    val catalogueScroll = rememberLazyListState()
+    val historyScroll = rememberLazyListState()
+    val detailScroll = rememberLazyListState()
+    val listState = if (activity != null) detailScroll else if (state.historyTab) historyScroll else catalogueScroll
+    // Returning from a detail keeps the catalogue/history reading position.
+    LaunchedEffect(activity?.id, session?.id) { if (activity != null) detailScroll.scrollToItem(0) }
     var confirmEnd by remember(session?.id) { mutableStateOf(false) }
     Scaffold(containerColor = colors.background, topBar = {
         TopAppBar(title = { Text("Challenges", style = MaterialTheme.typography.titleLarge) },

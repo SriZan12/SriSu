@@ -69,6 +69,10 @@ the design's countdown/share action is not supported by the documented API;
 dark mode is derived; some connected-confirmation artwork remains a placeholder.
 Recheck these against live sources before extending the feature.
 
+The [18 November navigation and journey audit](validation/navigation-flow/README.md)
+records the current local repairs, source commits, platform evidence, and remaining
+verification limits. It does not replace the source map or authorize publication.
+
 ## Use the connected local workspace
 
 Both repositories now have instructions linking their counterpart and Figma.
@@ -236,6 +240,10 @@ For Docker LAN errors and the complete mobile HTTP route inventory, read the
 pre-routing host rejection, backend version mismatch and record-level 404s.
 
 ## Couple Profile
+
+For the personal Edit Profile screen, see the [November profile repair](validation/profile-repair/README.md):
+compact header/form, native photo selection, editable-only save payload, actionable
+validation, and Android/iOS evidence. This is separate from the shared Couple Profile.
 
 See [the Couple Profile implementation and validation record](flows/couple-profile.md)
 for Figma page1:4, the supplied complete board, separate editors, current-member

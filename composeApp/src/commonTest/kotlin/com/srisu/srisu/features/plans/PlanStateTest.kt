@@ -38,6 +38,21 @@ class PlanStateTest {
             return if(loseResponse) MomentFixtures.failed(null) else NetworkAPIResult.Success(idea)
         }
     }
+    @Test fun returningFromDetailPreservesLoadedPagesDuringReconciliation()=runTest {
+        val first=PlanFixtures.agreed
+        val second=first.copy(id=8,title="A second shared plan")
+        val source=object:FakePlans() {
+            override suspend fun list(mode:String,cursor:String?)=NetworkAPIResult.Success<PlanPage?>(
+                if(cursor==null) PlanPage(listOf(first),"page2") else PlanPage(listOf(second)))
+        }
+        val model=vm(source);model.open(null);runCurrent();model.more();runCurrent()
+        assertEquals(listOf(first.id,second.id),model.state.value.page.items.map {it.id})
+        source.plan=second;model.detail(second.id);runCurrent();model.browse()
+        assertNull(model.state.value.plan)
+        assertEquals(2,model.state.value.page.items.size)
+        runCurrent()
+        assertEquals(listOf(first.id,second.id),model.state.value.page.items.map {it.id})
+    }
     @Test fun ideaConversionRetainsExactIntentAfterLostResponseAndRestart()=runTest {
         val sessions=MomentFixtures.sessions();val source=FakePlans();val ideas=FakeIdeas()
         val first=vm(source,sessions,ideas=ideas);first.open(null);runCurrent()
