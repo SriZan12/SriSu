@@ -36,6 +36,19 @@
     }
   },
   "features": {
+    "partner_profiles": {
+      "frontend_branch": "codex/couple-profile-actions",
+      "backend_branch": "codex/partner-profile-details",
+      "integration_branch": "dev-core-architecture",
+      "contract": "core-1:GET /api/social/partner-profiles/{id}/",
+      "flow": "docs/flows/partner-linking.md",
+      "backend_guide": "../SriSu-backend/docs/partner-profiles.md",
+      "figma_node": "14:220",
+      "privacy": "Exact-phone discovery grant or current invitation; bio and interests opt-in before linking; extra photos private",
+      "migration": "authentication.0023_usermodel_share_partner_details",
+      "related_prs": ["SriZan12/SriSu#33", "SrizanKhadka/SriSu#43"],
+      "status": "Android and iOS tests and isolated two-account HTTP verified; no deployment"
+    },
     "couple_chat": {
       "couple_identity": "Matrix bootstrap couple_id binds couple features; relationship_id remains the connection/storage identity. Backend-first additive rollout; no migration or key reset.",
       "frontend_branch": "dev-core-architecture",
