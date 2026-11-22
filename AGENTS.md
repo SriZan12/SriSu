@@ -2,6 +2,9 @@
 
 ## Identify the project before changing it
 
+- For KMP/frontend work, use the existing primary SriSu checkout. Do not create
+  a separate frontend worktree unless the user explicitly requests one.
+
 - Read `docs/project-context.md` for the frontend, backend, and Figma map. Read the
   relevant feature documentation before implementation.
 - The default backend checkout is `../SriSu-backend`. Run
