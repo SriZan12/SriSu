@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class FindYourPartnerResponse(
+    @SerialName("profile_access_token")
+    val profileAccessToken: String? = null,
     @SerialName("bio")
     val bio: String? = null,
     @SerialName("city")

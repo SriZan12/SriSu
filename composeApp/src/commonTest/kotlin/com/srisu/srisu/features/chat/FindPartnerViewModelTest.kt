@@ -120,6 +120,46 @@ class FindPartnerViewModelTest {
         assertEquals(PartnerSearchStatus.Found, vm.findPartnerUIState.value.searchStatus)
     }
 
+    @Test fun profileInvitationPreservesSearchAndPreventsDuplicateSends() = runTest(dispatcher) {
+        findPartner()
+        val before = vm.findPartnerUIState.value.partnerResponse
+        vm.sendProfileInvitation(com.srisu.srisu.features.auth.data.remote.response.User(
+            id = 2, fullName = "Maya", phoneNumber = "+9779812345678"))
+        vm.sendProfileInvitation(com.srisu.srisu.features.auth.data.remote.response.User(
+            id = 2, fullName = "Maya", phoneNumber = "+9779812345678"))
+        advanceUntilIdle()
+        assertEquals(1, calls.count { it.first == "/api/social/connect-couple/" })
+        assertEquals(before, vm.findPartnerUIState.value.partnerResponse)
+        assertTrue(vm.findPartnerUIState.value.navigateToInviteSent)
+        assertEquals("Maya", vm.findPartnerUIState.value.sentInvitation?.name)
+    }
+
+    @Test fun searchPreviewKeepsTheSelectedIdentityWithoutAnotherRequest() = runTest(dispatcher) {
+        // Extra legacy fields must not expand the backend's pre-link projection.
+        searchData = """{"id":2,"full_name":"Maya Sharma","username":"maya","phone_number":"+9779812345678","profile_photo":"https://example.test/avatar.jpg","bio":"Not part of discovery"}"""
+        findPartner()
+        val requestCount = calls.size
+        assertEquals(2L, vm.previewSearchResult(2))
+        val user = assertNotNull(vm.previewUser(2))
+        assertEquals("Maya Sharma", user.fullName)
+        assertEquals("maya", user.username)
+        assertEquals("https://example.test/avatar.jpg", user.profilePhoto)
+        assertNull(user.bio)
+        assertEquals(requestCount, calls.size)
+        assertNull(vm.previewUser(3))
+        assertEquals(PartnerSearchStatus.Found, vm.findPartnerUIState.value.searchStatus)
+    }
+
+    @Test fun staleOrMissingSearchIdentityCannotOpenAnotherUsersPreview() = runTest(dispatcher) {
+        assertNull(vm.previewSearchResult(2))
+        findPartner()
+        assertNull(vm.previewSearchResult(3))
+        assertNull(vm.previewSearchResult(0))
+        vm.updatePhoneNumber("9811111111")
+        assertNull(vm.previewSearchResult(2))
+        assertNull(vm.previewUser(2))
+    }
+
     @Test fun defersNetworkUntilEntryAndChecksStatusOnlyOnce() = runTest(dispatcher) {
         advanceUntilIdle()
         assertTrue(calls.isEmpty())

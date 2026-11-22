@@ -117,6 +117,9 @@ fun FindYourPartnerScreen(
                                 onConnect = findPartnerViewModel::sendCoupleConnectionRequest,
                                 onCancel = findPartnerViewModel::cancelSearch,
                                 onRetry = search,
+                                onProfile = { id ->
+                                    findPartnerViewModel.previewSearchResult(id)?.let(onNavigateToProfile)
+                                },
                                 onCheckInvitation = findPartnerViewModel::sendHaveCoupleConnectionRequested
                             )
                         }
@@ -207,12 +210,13 @@ private fun PartnerPhoneInput(
 }
 
 @Composable
-private fun PartnerSearchResult(
+internal fun PartnerSearchResult(
     state: FindPartnerState,
     onConnect: () -> Unit,
     onCancel: () -> Unit,
     onRetry: () -> Unit,
     onCheckInvitation: () -> Unit,
+    onProfile: (Long) -> Unit,
 ) {
     when (state.searchStatus) {
         PartnerSearchStatus.Idle -> Unit
@@ -268,7 +272,10 @@ private fun PartnerSearchResult(
                                     ?: "Your partner",
                                     detail = partner.phoneNumber.orEmpty(),
                                     photoUrl = partner.profilePhoto,
-                                    Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    onProfile = partner.id?.toLong()?.takeIf { it > 0 }?.let { id ->
+                                        { onProfile(id) }
+                                    },
                                 )
                                 if (!stackAction) SriSuButton(
                                     label = if (state.isSendingInvitation) "Sending…" else "Connect",

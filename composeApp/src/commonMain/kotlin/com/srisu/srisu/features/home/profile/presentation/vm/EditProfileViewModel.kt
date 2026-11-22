@@ -52,7 +52,7 @@ class EditProfileViewModel(
     fun signOut() { sessionStorage.clearSession() }
     private var savedFields: List<Any?>? = null
     private fun editableFields(state: com.srisu.srisu.features.home.profile.presentation.state.EditProfileUIState) = listOf(
-        state.fullName, state.userName, state.bio.orEmpty(), state.country?.name, state.city.orEmpty(),
+        state.fullName, state.userName, state.bio.orEmpty(), state.sharePartnerDetails, state.country?.name, state.city.orEmpty(),
         state.currentInterests, state.profilePictureUri, state.largePhotos, state.smallPhotos)
     fun hasUnsavedChanges() = initialized.value && savedFields != editableFields(_editProfileUIState.value)
 
@@ -159,6 +159,7 @@ class EditProfileViewModel(
             fullName = profileData.fullName.orEmpty(),
             userName = profileData.username.orEmpty(),
             bio = profileData.bio,
+            sharePartnerDetails = profileData.sharePartnerDetails,
             country = Country.getCountryModelFromName(profileData.country),
             city = profileData.city,
             currentInterests = profileData.userInterests,
@@ -221,6 +222,10 @@ class EditProfileViewModel(
 
     fun updateUserName(userName: String) {
         _editProfileUIState.value = _editProfileUIState.value.copy(userName = userName)
+    }
+
+    fun updatePartnerDetailsSharing(share: Boolean) {
+        _editProfileUIState.update { it.copy(sharePartnerDetails = share) }
     }
 
     fun updateBio(bio: String?) {
@@ -377,6 +382,7 @@ class EditProfileViewModel(
         updateFullName(profileData.fullName.orEmpty())
         updateUserName(profileData.username.orEmpty())
         updateBio(profileData.bio)
+        _editProfileUIState.update { it.copy(sharePartnerDetails = profileData.sharePartnerDetails) }
         updateCountry(Country.getCountryModelFromName(profileData.country))
         getCityList()
         updateCity(profileData.city)
@@ -476,6 +482,7 @@ class EditProfileViewModel(
         fullName = snapshot.fullName?.trim(),
         username = snapshot.userName?.trim(),
         bio = snapshot.bio,
+        sharePartnerDetails = snapshot.sharePartnerDetails,
         country = snapshot.country?.name,
         city = snapshot.city,
         userInterests = snapshot.currentInterests,

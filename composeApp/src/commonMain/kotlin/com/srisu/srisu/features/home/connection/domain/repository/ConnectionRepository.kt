@@ -12,6 +12,8 @@ import com.srisu.srisu.features.home.connection.data.remote.response.HaveCoupleC
 class ConnectionRepository(
     private val connectionApiService: ConnectionApiService,
 ) {
+    suspend fun getPartnerProfile(userId: Long, accessToken: String?) =
+        connectionApiService.getPartnerProfile(userId, accessToken)
 
 
 

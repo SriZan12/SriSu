@@ -24,7 +24,7 @@ val mainModule = module {
     viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get(), get()) }
 
 
-    viewModel { ProfileViewModel() }
+    viewModel { ProfileViewModel(get()) }
 
     viewModel {
         EditProfileViewModel(

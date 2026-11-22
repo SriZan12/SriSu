@@ -67,6 +67,7 @@ class ApiRouteContractTest {
             check("couple-sent") { connections.getSentLoveRequests(20, 1) }
             check("couple-received") { connections.getLoveRequests(1, 20) }
             check("find-partner") { connections.sendFindYourPartnerRequest("+15005550123") }
+            check("partner-profile-detail") { connections.getPartnerProfile(1, "synthetic-access") }
             check("connection-requested") { connections.haveCoupleConnectionRequested() }
             val couple = com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository(client, environment, sessions)
             check("couple-profile-discovery") { ResultHandler(couple.discovery("synthetic-cursor")) }

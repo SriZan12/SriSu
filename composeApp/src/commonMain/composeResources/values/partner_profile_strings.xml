@@ -1,0 +1,28 @@
+<resources>
+    <string name="partner_preview_open">View %1$s’s profile</string>
+    <string name="partner_preview_title">Profile</string>
+    <string name="partner_preview_back">Go back</string>
+    <string name="partner_preview_loading">Loading profile…</string>
+    <string name="partner_preview_unavailable">Profile unavailable</string>
+    <string name="partner_preview_unavailable_body">This profile is unavailable or your search has expired. Go back and search again.</string>
+    <string name="partner_preview_person">SriSu member</string>
+    <string name="partner_preview_named_photo">%1$s’s profile photo</string>
+    <string name="partner_preview_photo">Profile photo</string>
+    <string name="partner_preview_no_photo">No profile photo</string>
+    <string name="partner_preview_photo_error">Photo unavailable</string>
+    <string name="partner_preview_retry">Retry</string>
+    <string name="partner_preview_about">About</string>
+    <string name="partner_preview_interests">Interests</string>
+    <string name="partner_preview_photos">Photos</string>
+    <string name="partner_profile_load_error">Couldn’t load profile</string>
+    <string name="partner_profile_connect">Connect</string>
+    <string name="partner_profile_request_sent">Request sent · View</string>
+    <string name="partner_profile_view_invitation">View invitation</string>
+    <string name="partner_profile_connected">You’re connected · Continue</string>
+    <string name="partner_profile_working">Please wait…</string>
+    <string name="partner_profile_connect_hint">They’ll receive an invitation to connect with you.</string>
+    <string name="partner_profile_connection_unavailable">A new connection isn’t available right now.</string>
+    <string name="partner_profile_check_invitation">Check invitation status</string>
+    <string name="partner_profile_no_details">No bio or interests added yet.</string>
+    <string name="partner_profile_private_details">Bio and interests are private until you’re connected.</string>
+</resources>
