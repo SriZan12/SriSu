@@ -46,6 +46,7 @@ class ProfileApiService(private val httpClient: HttpClient, private val environm
                         append("full_name", profileUpdateDTO.fullName ?: "")
                         append("username", profileUpdateDTO.username ?: "")
                         append("bio", profileUpdateDTO.bio ?: "")
+                        profileUpdateDTO.sharePartnerDetails?.let { append("share_partner_details", it.toString()) }
                         append("country", profileUpdateDTO.country ?: "")
                         append("city", profileUpdateDTO.city ?: "")
                         profileUpdateDTO.dob?.let { append("dob", it) }

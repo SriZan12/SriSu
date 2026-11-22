@@ -34,6 +34,37 @@ class ProfileSaveFlowTest {
         override suspend fun insert(snapshot: CatalogueSnapshot) {}
         override suspend fun delete(scope: String) {}
     }
+    @Test fun sharingPreferenceIsSavedAndRestoredWithTheProfile() = runBlocking {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        AppContext.setUp(ApplicationProvider.getApplicationContext())
+        val sessions = session()
+        var sharing = false
+        val client = HttpClientFactory.create(sessions, environment, MockEngine { request ->
+            if (request.url.encodedPath.endsWith("interests/")) respond("""{"data":{"interests":[]}}""", headers=headers)
+            else {
+                if (request.method == HttpMethod.Put) {
+                    val body = request.body.toByteArray().decodeToString()
+                    assertTrue(body.contains("share_partner_details"))
+                    sharing = true
+                }
+                respond(profile.replace("\"username\":\"synthetic\"", "\"username\":\"synthetic\",\"share_partner_details\":$sharing"), headers=headers)
+            }
+        })
+        val api = ProfileApiService(client, environment)
+        val vm = EditProfileViewModel(ConnectivityObserver(), sessions,
+            ProfileRepository(api, BaseApiService(client), InterestCatalogueRepository(dao, api, environment, sessions)))
+        try {
+            withTimeout(5000) { vm.isInitialized.first { it } }
+            assertEquals(false, vm.editProfileUIState.value.sharePartnerDetails)
+            vm.updatePartnerDetailsSharing(true)
+            assertTrue(vm.hasUnsavedChanges())
+            vm.updateProfile()
+            withTimeout(5000) { vm.editProfileUIState.first { it.baseUIState is BaseUIState.Success<*> } }
+            assertEquals(true, vm.editProfileUIState.value.sharePartnerDetails)
+            assertEquals(true, sessions.currentSession()?.sharePartnerDetails)
+            assertFalse(vm.hasUnsavedChanges())
+        } finally { androidx.lifecycle.ViewModelStore().also { it.put("profile", vm); it.clear() }; client.close(); Dispatchers.resetMain() }
+    }
     @Test fun savedPhotoTextEditOmitsHiddenFieldsAndInvalidNewPhotoKeepsTheDraft() = runBlocking {
         Dispatchers.setMain(Dispatchers.Unconfined)
         val context=ApplicationProvider.getApplicationContext<android.content.Context>()

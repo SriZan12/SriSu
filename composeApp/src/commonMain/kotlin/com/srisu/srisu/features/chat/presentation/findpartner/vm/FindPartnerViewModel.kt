@@ -171,8 +171,18 @@ class FindPartnerViewModel(
     }
 
     fun sendCoupleConnectionRequest() {
+        _findPartnerUIState.value.partnerResponse?.let(::sendInvitation)
+    }
+
+    fun sendProfileInvitation(user: com.srisu.srisu.features.auth.data.remote.response.User) {
+        if ((user.id ?: 0) <= 0) return
+        sendInvitation(com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse(
+            fullName = user.fullName, username = user.username, phoneNumber = user.phoneNumber,
+            profilePhoto = user.profilePhoto))
+    }
+
+    private fun sendInvitation(partner: com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse) {
         val state = _findPartnerUIState.value
-        val partner = state.partnerResponse ?: return
         val receiver = partner.phoneNumber?.takeIf { it.isNotBlank() } ?: return
         if (state.isSendingInvitation || state.sentInvitation != null || state.acceptedPartnerName != null ||
             state.isCheckingInvitation || !state.invitationStatusChecked || state.updatingRequestIds.isNotEmpty()) return
@@ -406,10 +416,20 @@ class FindPartnerViewModel(
     }
 
     private var preview: com.srisu.srisu.features.auth.data.remote.response.User? = null
+    /** Resolve the tapped identity against the current result, never an obsolete search. */
+    fun previewSearchResult(userId: Long): Long? {
+        val state = _findPartnerUIState.value
+        val user = state.partnerResponse?.takeIf {
+            state.searchStatus == PartnerSearchStatus.Found && userId > 0 && it.id?.toLong() == userId
+        }?.toUser() ?: return null
+        return rememberPreview(user)
+    }
     fun getUserProfile(userProfile: CoupleConnectionRequestResponse.Result.Receiver?): Long? {
         preview = userProfile?.toUser()
         return preview?.id
     }
+    fun previewAccessToken(id: Long) = _findPartnerUIState.value.partnerResponse
+        ?.takeIf { it.id?.toLong() == id }?.profileAccessToken
     fun previewUser(id: Long) = preview?.takeIf { it.id == id }
     fun rememberPreview(user: com.srisu.srisu.features.auth.data.remote.response.User): Long? {
         preview = user

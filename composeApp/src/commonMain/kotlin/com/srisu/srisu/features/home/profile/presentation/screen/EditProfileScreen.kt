@@ -261,6 +261,7 @@ internal data class ProfileFormActions(
     val gallery: (GalleyPhotoModel, PhotoType) -> Unit = { _, _ -> },
     val interests: () -> Unit = {}, val save: () -> Unit = {}, val signOut: () -> Unit = {},
     val retryInterests: () -> Unit = {},
+    val sharePartnerDetails: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -287,7 +288,8 @@ fun EditProfileScreenContent(
         city=editProfileViewModel::updateCity, photo=editProfileViewModel::updateProfilePictureUri,
         gallery={photo,type -> if(type==PhotoType.LARGE) editProfileViewModel.updateLargePhoto(photo) else editProfileViewModel.updateSmallPhotos(photo)},
         interests={onNavigateInterestScreen(editProfileUIState.currentInterests)}, save=editProfileViewModel::updateProfile,
-        signOut=onSignOut, retryInterests=editProfileViewModel::refreshCatalogue),
+        signOut=onSignOut, retryInterests=editProfileViewModel::refreshCatalogue,
+        sharePartnerDetails=editProfileViewModel::updatePartnerDetailsSharing),
         onBack,onExplore,onNotifications,notice,catalogue.error!=null)
 }
 
@@ -322,6 +324,19 @@ internal fun EditProfileForm(
                 interestsNotice?.let { Text(it,style=MaterialTheme.typography.bodySmall) }
                 if(retryInterests) TextButton(onClick=actions.retryInterests) {Text("Retry interests")}
                 InterestCompo(state.currentInterests.orEmpty().filterNotNull().filter {it.removed!=true}.map {it.name},actions.interests)
+                Column(Modifier.fillMaxWidth(), verticalArrangement=Arrangement.spacedBy(space.tiny)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically,
+                        horizontalArrangement=Arrangement.spacedBy(space.compact)) {
+                        Text("Share bio and interests in Find Partner", style=MaterialTheme.typography.titleSmall,
+                            modifier=Modifier.weight(1f))
+                        Switch(checked=state.sharePartnerDetails == true, onCheckedChange=actions.sharePartnerDetails,
+                            enabled=state.sharePartnerDetails != null,
+                            modifier=Modifier.semantics { contentDescription = "Share bio and interests in Find Partner" })
+                    }
+                    Text(if (state.sharePartnerDetails == null) "Reload your profile to change this preference."
+                        else "People who find you can see these details. Extra photos stay private. Save to apply.",
+                        style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 GalleryCompo(largePhotos=state.largePhotos,smallPhotos=state.smallPhotos,
                     onAddImageClicked={index,type,id -> galleryTarget=Triple(index,type,id)},
                     onRemoveImage={index,type,id -> actions.gallery(GalleyPhotoModel(id=id,photoUri=null,removed=true,index=index),type)})

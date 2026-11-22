@@ -1,6 +1,7 @@
 package com.srisu.srisu.features.chat.presentation.findpartner.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -12,6 +13,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.paging.LoadState
@@ -26,9 +29,11 @@ import com.srisu.srisu.theme.PartnerLinkTokens
 import com.srisu.srisu.theme.spacing
 import com.srisu.srisu.utils.Constants
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.image_placeholder
 import srisu.composeapp.generated.resources.partner_link_back
+import srisu.composeapp.generated.resources.partner_preview_open
 
 @Composable
 internal fun PartnerLinkTopBar(onBack: () -> Unit) {
@@ -60,9 +65,17 @@ internal fun PartnerIdentity(
     photoUrl: String?,
     modifier: Modifier = Modifier,
     pending: Boolean = false,
+    onProfile: (() -> Unit)? = null,
 ) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
+        val openLabel = stringResource(Res.string.partner_preview_open, name)
+        Box(
+            modifier = if (onProfile != null) Modifier.size(MaterialTheme.spacing.touchTarget)
+                .clip(CircleShape).clickable(role = Role.Button, onClickLabel = openLabel, onClick = onProfile)
+                .semantics { contentDescription = openLabel } else Modifier,
+            contentAlignment = Alignment.Center,
+        ) {
         AsyncImage(
             model = photoUrl,
             placeholder = painterResource(Res.drawable.image_placeholder),
@@ -72,6 +85,7 @@ internal fun PartnerIdentity(
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(if (pending) PartnerLinkTokens.pendingAvatar else PartnerLinkTokens.avatar).clip(CircleShape),
         )
+        }
         Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

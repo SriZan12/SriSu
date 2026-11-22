@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--backend', type=Path, default=ROOT.parent / 'SriSu-backend')
+    parser.add_argument('--test', action='append', help='Fully qualified integration test class; defaults to the core and Moment checks')
     args = parser.parse_args()
     backend = args.backend.resolve()
     with tempfile.TemporaryDirectory(prefix='srisu-core-integration-') as tmp:
@@ -26,16 +27,16 @@ def main():
             server = subprocess.Popen([str(backend / '.venv/bin/python'), 'tools/core_integration_server.py', '--fixture', str(fixture), '--port', str(port)], cwd=backend, stdout=log, stderr=log, env={**os.environ, 'TMPDIR': tmp})
             try:
                 ready = False
-                for _ in range(100):
+                for _ in range(600):
                     if server.poll() is not None: raise SystemExit('Disposable backend stopped; inspect its local test setup.')
                     if fixture.exists():
                         try:
                             with socket.create_connection(('127.0.0.1', port), timeout=0.1): ready = True; break
                         except OSError: pass
                     time.sleep(0.1)
-                if not ready: raise SystemExit('Disposable backend did not start within 10 seconds.')
+                if not ready: raise SystemExit('Disposable backend did not start within 60 seconds.')
                 env = {**os.environ, 'SRISU_CORE_INTEGRATION_FILE': str(fixture)}
-                result = subprocess.run(['./gradlew', ':composeApp:testDebugUnitTest', '--tests', 'com.srisu.srisu.core.CoreLocalTransportIntegrationTest', '--tests', 'com.srisu.srisu.features.moments.MomentCropTransportIntegrationTest', '-Psrisu.coreIntegrationRun=' + str(port), '--console=plain'], cwd=ROOT, env=env)
+                result = subprocess.run(['./gradlew', ':composeApp:testDebugUnitTest', *[arg for name in (args.test or ['com.srisu.srisu.core.CoreLocalTransportIntegrationTest', 'com.srisu.srisu.features.moments.MomentCropTransportIntegrationTest']) for arg in ['--tests', name]], '-Psrisu.coreIntegrationRun=' + str(port), '--console=plain'], cwd=ROOT, env=env)
                 if result.returncode:
                     report = ROOT / 'build/reports/core-integration-server.log'
                     report.parent.mkdir(parents=True, exist_ok=True)

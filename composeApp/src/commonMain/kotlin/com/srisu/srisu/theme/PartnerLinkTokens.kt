@@ -11,5 +11,9 @@ object PartnerLinkTokens {
     val pendingAvatar = 44.dp
     val pendingBadge = 72.dp
     val pendingIcon = 30.dp
+    // Derived profile-preview geometry; not a new Figma specimen.
+    val previewAvatar = 96.dp
+    val previewStackWidth = 300.dp
+    val previewGalleryTileMax = 180.dp
     const val landscapeAspectRatio = 393f / 230f
 }

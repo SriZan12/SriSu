@@ -50,7 +50,7 @@ sealed interface ChatNav : Route {
     @Serializable data object PartnerFlow : ChatNav
     @Serializable data object PartnerRequests : ChatNav
     @Serializable data object FindPartnerScreen : ChatNav
-    @Serializable data class PartnerPreview(val userId: Long) : ChatNav
+    @Serializable data class PartnerPreview(val userId: Long, val accessToken: String? = null) : ChatNav
     @Serializable data object RequestReceivedScreen : ChatNav
     @Serializable data object InviteSent : ChatNav
     @Serializable data object YoureConnected : ChatNav
@@ -77,7 +77,7 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
                 coupleConnectionViewModel = requestsVm,
                 onNavigateBack = nav::back,
             ) { user ->
-                user?.let { vm.rememberPreview(it) }?.let { nav.open(ChatNav.PartnerPreview(it)) }
+                user?.let { vm.rememberPreview(it) }?.let { nav.open(ChatNav.PartnerPreview(it, vm.previewAccessToken(it))) }
             }
         }
         composable<ChatNav.FindPartnerScreen> { entry ->
@@ -90,7 +90,7 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
                 findPartnerViewModel = vm,
                 onNavigateBack = nav::back,
                 onNavigateToInviteSent = { nav.open(ChatNav.InviteSent) },
-                onNavigateToProfile = { id -> id?.let { nav.open(ChatNav.PartnerPreview(it)) } },
+                onNavigateToProfile = { id -> id?.let { nav.open(ChatNav.PartnerPreview(it, vm.previewAccessToken(it))) } },
                 onContinue = { nav.root(HomeNavigation.Home) },
             )
         }
@@ -111,20 +111,39 @@ fun NavGraphBuilder.chatGraph(controller: NavController) {
             ReceivedLoveRequestScreen(
                 findPartnerViewModel = vm,
                 onNavigateBack = nav::back,
-                onNavigateToProfile = { id -> id?.let { nav.open(ChatNav.PartnerPreview(it)) } },
+                onNavigateToProfile = { id -> id?.let { nav.open(ChatNav.PartnerPreview(it, vm.previewAccessToken(it))) } },
             )
         }
         composable<ChatNav.PartnerPreview> { entry ->
-            val user = partnerModel(controller, entry)
-                .previewUser(entry.toRoute<ChatNav.PartnerPreview>().userId)
+            val route = entry.toRoute<ChatNav.PartnerPreview>()
+            val partner = partnerModel(controller, entry)
+            val linking by partner.findPartnerUIState.collectAsStateWithLifecycle()
             val nav = AppNavigator(controller, entry)
-            if (user == null) {
-                com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
-            } else {
-                val vm = koinViewModel<ProfileViewModel>()
-                LaunchedEffect(user.id) { vm.setUserProfileData(user) }
-                ProfileScreen(vm, onBack = nav::back)
+            val vm = koinViewModel<ProfileViewModel>()
+            androidx.lifecycle.compose.LifecycleResumeEffect(route.userId, route.accessToken) {
+                partner.onScreenEntered()
+                vm.loadProfile(route.userId, route.accessToken, refresh = true)
+                onPauseOrDispose { }
             }
+            LaunchedEffect(linking.navigateToInviteSent) {
+                if (linking.navigateToInviteSent) {
+                    nav.open(ChatNav.InviteSent)
+                    partner.onInviteSentNavigated()
+                }
+            }
+            ProfileScreen(vm, onBack = nav::back,
+                actionBusy = linking.isSendingInvitation || linking.isCheckingInvitation,
+                canConnect = linking.invitationStatusChecked && linking.sentInvitation == null && linking.acceptedPartnerName == null,
+                actionError = linking.invitationError ?: linking.invitationStatusError,
+                onRetryAction = { partner.sendHaveCoupleConnectionRequested(); vm.retry() },
+                onAction = { user, connection -> when (connection) {
+                    "available" -> partner.sendProfileInvitation(user)
+                    "outgoing" -> nav.open(ChatNav.InviteSent)
+                    "incoming" -> nav.open(ChatNav.PartnerRequests)
+                    "connected" -> nav.root(HomeNavigation.Home)
+                    else -> Unit
+                } },
+            )
         }
         composable<ChatNav.YoureConnected> { entry ->
             val vm = partnerModel(controller, entry)

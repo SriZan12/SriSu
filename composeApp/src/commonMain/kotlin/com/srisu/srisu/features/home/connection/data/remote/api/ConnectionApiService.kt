@@ -19,6 +19,13 @@ class ConnectionApiService(private val httpClient: HttpClient) {
 
     private val environment = httpClient.attributes[ApiEnvironmentKey]
 
+    suspend fun getPartnerProfile(userId: Long, accessToken: String?) =
+        httpClient.safeRequest<com.srisu.srisu.features.home.connection.data.remote.response.PartnerProfileResponse> {
+            url("${environment.baseUrl}api/social/partner-profiles/$userId/")
+            method = HttpMethod.Get
+            accessToken?.takeIf(String::isNotBlank)?.let { header("X-Partner-Profile-Access", it) }
+        }
+
 
 
     suspend fun sendFindYourPartnerRequest(partnerNumber: String): ResultHandler<FindYourPartnerResponse?> {
