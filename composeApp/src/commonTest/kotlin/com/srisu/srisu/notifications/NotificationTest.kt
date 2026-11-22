@@ -13,6 +13,23 @@ class NotificationTest {
     private val room="11111111-1111-4111-8111-111111111111"
     private val message="22222222-2222-4222-8222-222222222222"
     @AfterTest fun clear() { NativeNotifications.clear() }
+    @Test fun newDestinationsAreTypedAndNeverStartAnActionOnTap() {
+        assertEquals(com.srisu.srisu.features.challenges.navigation.ChallengesDestination(room),NotificationDestination("challenge",challengeId=room).route())
+        assertEquals(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(2,3),NotificationDestination("moment",momentId=2,coupleId=3).route())
+        assertEquals(com.srisu.srisu.features.moments.navigation.MomentNoteDestination(9),NotificationDestination("moment_note",noteId=9).route())
+        assertEquals(com.srisu.srisu.features.plans.navigation.DateIdeaDestination(room),NotificationDestination("idea",ideaId=room).route())
+        assertEquals(com.srisu.srisu.navigation.graph.HomeNavigation.Home,NotificationDestination("home").route())
+        for (value in listOf(NotificationDestination("moment",momentId=2),NotificationDestination("moment_note",noteId=-1),
+            NotificationDestination("idea",ideaId="../../private"),NotificationDestination("challenge",challengeId="invalid"))) assertNull(value.route())
+    }
+    @Test fun categoryWritesArePartialAndUnknownServerCategoriesDoNotBreakOlderClients() {
+        val body=ApiJson.encodeToJsonElement(PreferenceWrite(2,true,true,true,categories=mapOf("plans" to false))).jsonObject
+        assertEquals(setOf("plans"),body.getValue("categories").jsonObject.keys)
+        val value=ApiJson.decodeFromString<NotificationPreferences>("""{"categories":{"plans":false,"future":true},"capabilities":["notification-catalogue-2"]}""")
+        assertEquals(false,value.categories["plans"])
+        assertEquals(12,notificationCategories.size)
+        assertFalse(notificationCategories.first { it.key=="status" }.enabledByDefault)
+    }
     @Test fun preferenceSwitchSendsRequiredUnchangedMuteCommand() {
         val body=ApiJson.encodeToJsonElement(PreferenceWrite(2,false,true,true)).jsonObject
         assertEquals("unchanged",body.getValue("mute").jsonPrimitive.content)

@@ -1,5 +1,50 @@
 # Notifications and crash diagnostics V1
 
+## Catalogue rollout — 22 November 2026
+
+`codex/notification-rollout` starts from current `dev-core-architecture` in both
+repositories. It fixes the three audited issues: duplicated domain/Matrix cards,
+chat/activity tray entries replacing each other, and Plan responses expiring at
+the former time or being invalidated by checklist-only revisions.
+
+Android advertises `notification-catalogue-2` and adds twelve category controls
+under Notifications & diagnostics. New alerts cover Plan cancellation; Challenge
+invitations, responses, completion/cancellation and optional progress; quiet partner
+Moments and optional hearts/appreciations; quiet appreciation replies; optional
+hourly status updates and shared ideas; manual questions, optional first answers
+and quiet mutual reveals; and sharing approval. Generic lock-screen copy stays
+unchanged. Chat still uses its own preference and mute controls.
+
+Before publishing an encrypted Plan/Challenge/Spark card, the client reserves an
+opaque sender/room/resource key from Django and adds it outside the ciphertext.
+The backend suppresses only a matching, single-use card event; it never reads
+encrypted contents. Failed reservation uses the existing card retry UI. Older
+unmarked senders can still produce a duplicate; upgrade senders as well as receivers.
+
+New taps open the exact Challenge, Moment, appreciation thread or shared idea;
+status opens the current Home space. A private note thread is independent of the
+Moment's 24-hour lifetime, shows its latest 50 replies and server-authorized reply
+controls, and clears private content on background/account change. Idea taps do
+not create a Plan or express interest automatically. Home's bell still lists
+current requests rather than a history of notifications. Local reminders are unchanged.
+
+Deploy the additive backend migration `notifications.0005` before this Android
+build. Existing clients preserve category choices when saving older preferences;
+new destinations are gated to capable Android registrations. Quiet activity uses
+normal FCM priority, so idle delivery can be delayed. Tray tags are distinct per
+chat/feature resource, but the two existing provider collapse keys may coalesce
+offline activity. No delivery or sound guarantee is inferred from provider acceptance.
+
+Apple enrollment/APNs stays skipped. See the
+[implementation validation](../validation/notifications/rollout-20261122.md) and
+[backend catalogue and deployment instructions](https://github.com/SrizanKhadka/SriSu/blob/codex/notification-rollout/docs/notification-rollout.md).
+
+Figma `LztysD1YvINX7RwZpnhhTt`, Home/Moments page `1:3`, could not be read through
+the current connector; the screenshot request hit the Starter-plan tool limit.
+The settings additions and compact note/idea destinations intentionally reuse
+existing Compose Material components and SriSu tokens. Their layouts are derived,
+not a claim of a live Figma match. No Figma file was changed.
+
 ## Matrix chat push — 30 October 2026
 
 Matrix encrypted message events now use an authenticated Synapse application-service

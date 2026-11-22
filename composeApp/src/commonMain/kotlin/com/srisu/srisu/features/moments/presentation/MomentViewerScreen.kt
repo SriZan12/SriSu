@@ -42,6 +42,12 @@ import kotlin.time.Instant
 @Composable fun MomentViewerScreen(momentId: Long?,coupleId: Long?,creatorId: Long?,onBack: ()->Unit,
     onReply: (MomentReference)->Unit, vm: MomentViewerViewModel=koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val notificationOwner=remember { Any() }
+    DisposableEffect(state.moment?.id) {
+        state.moment?.let { com.srisu.srisu.features.notifications.NotificationVisibility.show(notificationOwner,
+            com.srisu.srisu.features.moments.navigation.MomentViewerDestination(it.id,it.couple)) }
+        onDispose { com.srisu.srisu.features.notifications.NotificationVisibility.hide(notificationOwner) }
+    }
     LaunchedEffect(momentId,coupleId,creatorId) { vm.open(momentId,coupleId,creatorId) }
     MomentLifecycle(vm::active)
     MomentViewerContent(state,onBack,vm::refresh,vm::move,vm::presented,vm::react,vm::editCaption,vm::saveCaption,vm::delete,

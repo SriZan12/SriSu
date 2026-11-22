@@ -47,12 +47,12 @@ internal suspend fun decryptSpark(services: List<RoomEventEncryptionService>, st
     return sparkJson.decodeFromString<SparkPlaintext>(content.body).validated(session, answer.sender)
 }
 
-internal suspend fun sendSparkCard(client: MatrixClient, session: SparkSession): String {
+internal suspend fun sendSparkCard(client: MatrixClient, session: SparkSession, notificationKey: String): String {
     val reference = SparkReference(session.id, session.couple)
     val encrypted = client.di.getAll<RoomEventEncryptionService>().encrypt(
         RoomMessageEventContent.TextBased.Text(body = session.question, externalUrl = reference.url),
         RoomId(session.matrixRoomId))?.getOrThrow()
     require(encrypted is MegolmEncryptedMessageEventContent)
-    return client.api.room.sendMessageEvent(RoomId(session.matrixRoomId), encrypted,
+    return client.api.room.sendMessageEvent(RoomId(session.matrixRoomId), encrypted.notificationCard(client.api.json, notificationKey),
         txnId = "srisu-spark-${session.id}").getOrThrow().full
 }

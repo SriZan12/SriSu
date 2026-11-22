@@ -111,3 +111,8 @@ navigation and data actions remain unchanged. See [QA evidence](../validation/ho
 The [13 November installed-app follow-up](../validation/home-couple-space/device-qa-2026-11-13/README.md)
 records keyboard, scrolling, accessibility-text and draft-return checks, including
 the fix for rapid input lost through delayed model acknowledgements.
+
+
+## Notification rollout — 22 November 2026
+
+See the [notification rollout](notifications.md#catalogue-rollout--22-november-2026) for current triggers, category controls, private tap destinations and mixed-client compatibility. Apple/APNs remains skipped.

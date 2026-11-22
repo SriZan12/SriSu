@@ -96,12 +96,14 @@ class NotificationRepository(private val api: NotificationApi, private val sessi
             error=if(value != null) null else "Couldn’t load notification settings. Try again.") }
     }
     fun reload() { lifetime.scope.launch { writes.withLock { loadLocked() } } }
-    fun save(push: Boolean?=null, chat: Boolean?=null, activity: Boolean?=null, mute: String="unchanged") {
+    fun save(push: Boolean?=null, chat: Boolean?=null, activity: Boolean?=null, mute: String="unchanged", category: Pair<String, Boolean>?=null) {
         lifetime.scope.launch { writes.withLock {
             val stamp=sessions.stamp()
             val old=mutable.value.preferences ?: return@withLock
+            if (category != null && (NOTIFICATION_CATALOGUE !in old.capabilities || notificationCategories.none { it.key == category.first })) return@withLock
             mutable.update { it.copy(busy=true,error=null) }
-            val result=api.save(PreferenceWrite(old.revision,push ?: old.push,chat ?: old.chat,activity ?: old.activity,mute)).result
+            val result=api.save(PreferenceWrite(old.revision,push ?: old.push,chat ?: old.chat,activity ?: old.activity,mute,
+                category?.let { mapOf(it) })).result
             sessions.ensureCurrent(stamp)
             val value=(result as? NetworkAPIResult.Success)?.response?.takeIf {it.contract=="notifications-1"}
             mutable.update { it.copy(busy=false,preferences=value ?: old,

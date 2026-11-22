@@ -39,7 +39,7 @@ import kotlinx.serialization.Serializable
     val visibility: String = "private", val order: List<String> = emptyList(),
     val publication: PublishMoment? = null, val crops: Map<String, MomentCrop> = emptyMap())
 @Serializable data class MomentNote(val id: Long, val message: String, val sender: Long? = null,
-    val replies: List<MomentNoteReply> = emptyList())
+    val replies: List<MomentNoteReply> = emptyList(), @SerialName("can_reply") val canReply: Boolean = false)
 @Serializable data class MomentNoteReply(val id: Long, val message: String)
 @Serializable data class MomentNotePage(val results: List<MomentNote> = emptyList(), val next: String? = null)
 @Serializable data class MomentDiscoveryCouple(val id: Long)

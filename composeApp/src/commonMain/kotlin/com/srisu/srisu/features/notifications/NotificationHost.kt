@@ -10,11 +10,16 @@ import com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestinatio
 import org.koin.compose.koinInject
 import com.srisu.srisu.features.plans.navigation.PlansDestination
 import com.srisu.srisu.features.sparks.navigation.SparksDestination
+import com.srisu.srisu.features.challenges.navigation.ChallengesDestination
+import com.srisu.srisu.features.moments.navigation.*
+import com.srisu.srisu.features.plans.navigation.DateIdeaDestination
 
 fun notificationMatches(route: Route, current: Route?): Boolean = when {
     route is ChatNav.CoupleConversation && current is ChatNav.CoupleConversation -> route.roomId == current.roomId
     route is PlansDestination && current is PlansDestination -> route.id == current.id
     route is SparksDestination && current is SparksDestination -> route.id == current.id
+    route is ChallengesDestination && current is ChallengesDestination -> route.id == current.id
+    route is MomentViewerDestination && current is MomentViewerDestination -> route.momentId == current.momentId
     route is CoupleProfileDestination && current is CoupleProfileDestination -> route == current
     else -> route == current
 }
@@ -31,11 +36,17 @@ fun notificationMatches(route: Route, current: Route?): Boolean = when {
         entry?.destination?.hasRoute<ChatNav.PartnerRequests>() == true -> ChatNav.PartnerRequests
         entry?.destination?.hasRoute<PlansDestination>() == true -> entry.toRoute<PlansDestination>()
         entry?.destination?.hasRoute<SparksDestination>() == true -> entry.toRoute<SparksDestination>()
+        entry?.destination?.hasRoute<ChallengesDestination>() == true -> entry.toRoute<ChallengesDestination>()
+        entry?.destination?.hasRoute<MomentViewerDestination>() == true -> entry.toRoute<MomentViewerDestination>()
+        entry?.destination?.hasRoute<MomentNoteDestination>() == true -> entry.toRoute<MomentNoteDestination>()
+        entry?.destination?.hasRoute<DateIdeaDestination>() == true -> entry.toRoute<DateIdeaDestination>()
+        entry?.destination?.hasRoute<HomeNavigation.Home>() == true -> HomeNavigation.Home
         else -> null
     }
     val currentRoute by rememberUpdatedState(when {
         current is ChatNav.CoupleConversation && visible is ChatNav.CoupleConversation -> visible
         current is CoupleProfileDestination && visible is CoupleProfileDestination -> visible
+        current is MomentViewerDestination && visible is MomentViewerDestination -> visible
         else -> current
     })
     LaunchedEffect(signal,protected,retry) {

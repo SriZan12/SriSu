@@ -160,3 +160,25 @@ have just been rerun.
 References: [Firebase console payload behavior](https://firebase.google.com/docs/cloud-messaging/send/firebase-console),
 [message lifetime](https://firebase.google.com/docs/cloud-messaging/customize-messages/setting-message-lifespan),
 and [Analytics requirements for A/B experiments](https://firebase.google.com/docs/ab-testing/abtest-with-console).
+# Catalogue rollout — 22 November 2026
+
+The seven direct-provider probes below still test delivery mechanics. For the new
+domain catalogue, use actual feature actions after deploying the matching backend
+and Android `codex/notification-rollout` branches. See
+[triggers and defaults](../../docs/flows/notifications.md#catalogue-rollout--22-november-2026).
+
+In addition to the historical cases, verify Plan cancellation and a future
+reschedule after the original date; Challenge invite/accept/decline, both-person
+completion and active cancellation; partner Moment publication; private appreciation
+and visitor reply; manually started questions and mutual reveal; and sharing approval.
+Enable the optional category before testing hearts, appreciations, question or
+Challenge progress, status changes and shared ideas. Test status twice within an
+hour: only the first may enqueue. Converting an idea creates one Plan invitation.
+
+For each feature card, use an upgraded sender and confirm one dedicated activity
+entry, with an ordinary chat entry still visible alongside it. Repeat with that
+activity category disabled: the encrypted card must not bypass the preference.
+Open the exact resource from foreground/background/closed app, then revoke access
+or end the feature and confirm a stale tap cannot reveal private content. Test an
+appreciation reply after its Moment expires. Verify optional categories start off.
+Capture audible confirmation separately from FCM acceptance. Apple remains skipped.

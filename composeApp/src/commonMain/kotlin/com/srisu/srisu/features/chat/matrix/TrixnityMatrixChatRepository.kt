@@ -519,14 +519,18 @@ class TrixnityMatrixChatRepository(
     override suspend fun publishSparkCard(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<String> = sparkOperation {
         val (current, active) = sparkRoom(session)
         require(session.creator == active.stamp.accountId)
-        sendSparkCard(current, session).also { ensureRichRoomCurrent(current, active) }
+        val key = reserveNotificationCard("spark", session.id)
+        ensureRichRoomCurrent(current, active)
+        sendSparkCard(current, session, key).also { ensureRichRoomCurrent(current, active) }
     }
 
     override suspend fun publishPlanCard(session: com.srisu.srisu.features.plans.data.Plan): Result<String> = sparkOperation {
         val (current, active) = richRoom(requireNotNull(session.roomId))
         require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
-        val eventId = sendPlanCard(current, session)
+        val key = reserveNotificationCard("plan", session.id.toString())
+        ensureRichRoomCurrent(current, active)
+        val eventId = sendPlanCard(current, session, key)
         ensureRichRoomCurrent(current, active)
         eventId
     }
@@ -535,9 +539,18 @@ class TrixnityMatrixChatRepository(
         val (current, active) = richRoom(requireNotNull(session.roomId))
         require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
-        val eventId = sendChallengeCard(current, session)
+        val key = reserveNotificationCard("challenge", session.id)
+        ensureRichRoomCurrent(current, active)
+        val eventId = sendChallengeCard(current, session, key)
         ensureRichRoomCurrent(current, active)
         eventId
+    }
+
+    private suspend fun reserveNotificationCard(kind: String, resource: String): String {
+        val result = remote.reserveCard(kind, resource)
+        val key = (result as? NetworkAPIResult.Success)?.response?.key
+        check(com.srisu.srisu.features.notifications.validNotificationId(key)) { "Couldn’t prepare the chat card. Try again." }
+        return requireNotNull(key)
     }
 
     private suspend fun <T> sparkOperation(block: suspend () -> T): Result<T> = try {

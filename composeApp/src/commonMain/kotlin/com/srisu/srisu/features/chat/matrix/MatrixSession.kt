@@ -5,7 +5,8 @@ import com.srisu.srisu.core.data.remote.ApiEnvironmentKey
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
 import com.srisu.srisu.core.data.remote.safeRequest
 import io.ktor.client.HttpClient
-import io.ktor.client.request.url
+import io.ktor.client.request.*
+import kotlinx.serialization.json.*
 import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
@@ -78,12 +79,21 @@ internal fun validatedDjangoRoomId(roomId: String): String =
 
 interface MatrixSessionRemote {
     suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?>
+    suspend fun reserveCard(kind: String, resource: String): NetworkAPIResult<NotificationCardKey?> =
+        NetworkAPIResult.Error("Feature card notifications are unavailable.")
 }
+
+@Serializable data class NotificationCardKey(val key: String)
 
 class MatrixSessionApiService(
     private val httpClient: HttpClient,
     private val environment: ApiEnvironment = httpClient.attributes[ApiEnvironmentKey],
 ) : MatrixSessionRemote {
+    override suspend fun reserveCard(kind: String, resource: String) = httpClient.safeRequest<NotificationCardKey> {
+        url(environment.baseUrl + "api/notifications/v1/cards/")
+        method = HttpMethod.Post
+        setBody(buildJsonObject { put("kind", kind); put("resource", resource) })
+    }.result
     override suspend fun create(roomId: String): NetworkAPIResult<MatrixSessionDto?> =
         httpClient.safeRequest<MatrixSessionDto> {
             url(environment.baseUrl + "api/chat/v2/rooms/${validatedDjangoRoomId(roomId)}/matrix/session/")

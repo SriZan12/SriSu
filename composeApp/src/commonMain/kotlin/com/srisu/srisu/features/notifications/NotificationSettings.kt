@@ -45,6 +45,14 @@ import org.koin.compose.koinInject
             }
             } else Text("Chat push notifications are not available yet.")
             SettingSwitch("Invitations & shared activity",prefs.activity,!state.busy) {repository.save(activity=it)}
+            if (NOTIFICATION_CATALOGUE in prefs.capabilities) {
+                Text("Activity categories", style=MaterialTheme.typography.titleMedium)
+                Text("Requests and Plan invitations can sound. Moments, questions and other activity arrive quietly. Status updates are limited to one per hour.")
+                notificationCategories.forEach { category ->
+                    SettingSwitch(category.label, prefs.categories[category.key] ?: category.enabledByDefault,
+                        !state.busy && prefs.push && prefs.activity) { repository.save(category=category.key to it) }
+                }
+            }
         }
         HorizontalDivider()
         Text("Crash reports",style=MaterialTheme.typography.titleMedium)

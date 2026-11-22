@@ -35,7 +35,7 @@ class NotificationSettingsTest {
         val lifetime=ApplicationLifetime()
         val client=HttpClientFactory.create(sessions,environment,MockEngine { request ->
             if(request.method==HttpMethod.Put) respond("{}",HttpStatusCode.Conflict,headersOf(HttpHeaders.ContentType,"application/json"))
-            else respond("""{"data":{"contract":"notifications-1","push":true,"chat":true,"activity":true,"revision":1,"capabilities":[${if(matrixChat) "\"matrix-chat-push-1\"" else ""}]}}""",headers=headersOf(HttpHeaders.ContentType,"application/json"))
+            else respond("""{"data":{"contract":"notifications-1","push":true,"chat":true,"activity":true,"revision":1,"capabilities":[${if(matrixChat) "\"matrix-chat-push-1\",\"notification-catalogue-2\"" else ""}]}}""",headers=headersOf(HttpHeaders.ContentType,"application/json"))
         })
         val repository=NotificationRepository(NotificationApi(client,environment),sessions,lifetime)
         NativeNotifications.update(true,"denied",false,true)
@@ -56,6 +56,10 @@ class NotificationSettingsTest {
                 compose.onNodeWithContentDescription("Chat messages").performScrollTo().assertIsOn()
                 compose.onNodeWithText("Mute 1 hour").performScrollTo().assertIsDisplayed()
                 compose.onNodeWithText("Chat push notifications are not available yet.").assertDoesNotExist()
+                compose.onNodeWithContentDescription("Plan invitations & changes").performScrollTo().assertIsOn()
+                compose.onNodeWithContentDescription("Partner’s status updates").performScrollTo().assertIsOff()
+                compose.onNodeWithContentDescription("Challenge progress").performScrollTo().assertIsOff()
+                capture("categories-dark-large")
             } else {
                 compose.onNodeWithContentDescription("Chat messages").assertDoesNotExist()
                 compose.onNodeWithText("Chat push notifications are not available yet.").performScrollTo().assertIsDisplayed()
@@ -84,4 +88,11 @@ class NotificationSettingsTest {
     }
     @Test fun deniedPermissionAndFailedSaveKeepConfirmedSettings()=render(false,false)
     @Test @Config(qualifiers="w320dp-h640dp-xhdpi") fun darkLargeTextSettingsRemainReachable()=render(true,true,matrixChat=true)
+    private fun capture(name: String) = compose.runOnIdle {
+        val view=compose.activity.window.decorView
+        val bitmap=Bitmap.createBitmap(view.width,view.height,Bitmap.Config.ARGB_8888)
+        view.draw(android.graphics.Canvas(bitmap))
+        val file=File("build/reports/notifications/$name.png");file.parentFile?.mkdirs()
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle()
+    }
 }

@@ -20,6 +20,8 @@ val mainModule = module {
     viewModel { com.srisu.srisu.features.home.dashboard.vm.HomeViewModel(get(), get(), get(), get(), sparks = get(), statuses = get(), ideas = get(), matrix = get(), resolver = get(), connections = get(), apiOrigin = get<com.srisu.srisu.core.config.ApiEnvironment>().baseUrl, profiles = get(), reminders = get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentComposerViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.moments.presentation.MomentViewerViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.moments.presentation.MomentNoteViewModel(get(), get()) }
+    viewModel { com.srisu.srisu.features.plans.presentation.DateIdeaViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.explore.presentation.ExploreViewModel(get(), get(), get(), get()) }
     viewModel { com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileViewModel(get(), get(), get(), get(), get()) }
 
