@@ -16,7 +16,7 @@ object PureChatIcons {
         path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.65f,
             strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, pathBuilder = draw)
     }.build()
-    val Back = icon("PureBack") { moveTo(15f, 18f); lineTo(9f, 12f); lineTo(15f, 6f) }
+    val Back = NavigationBackIcon
     val Add = icon("PureAdd") { moveTo(12f, 5f); verticalLineTo(19f); moveTo(5f, 12f); horizontalLineTo(19f) }
     val Send = icon("PureSend") { moveTo(12f, 19f); verticalLineTo(5f); moveTo(5f, 12f); lineTo(12f, 5f); lineTo(19f, 12f) }
     val Open = icon("PureOpen") { moveTo(7f, 17f); lineTo(17f, 7f); moveTo(7f, 7f); horizontalLineTo(17f); verticalLineTo(17f) }

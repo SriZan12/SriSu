@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.challenges.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.tween
@@ -10,7 +11,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -71,7 +71,7 @@ import org.koin.compose.viewmodel.koinViewModel
     var confirmEnd by remember(session?.id) { mutableStateOf(false) }
     Scaffold(containerColor = colors.background, topBar = {
         TopAppBar(title = { Text("Challenges", style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } },
+            navigationIcon = { NavigationBackButton(onBack) },
             actions = { IconButton(onClick = onRetry, enabled = !state.busy) { Icon(Icons.Outlined.Refresh, "Refresh Challenges") } },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background))
     }) { padding ->

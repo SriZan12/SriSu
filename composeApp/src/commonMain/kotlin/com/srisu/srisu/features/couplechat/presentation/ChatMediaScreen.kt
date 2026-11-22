@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.couplechat.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -62,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
     Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.mediaBackground,contentColor=MaterialTheme.colorScheme.onMedia) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal=MaterialTheme.spacing.small),verticalAlignment=Alignment.CenterVertically) {
-                IconButton(onClick=onBack) {Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back to conversation")}
+                NavigationBackButton(onBack)
                 Text(if(opened?.media?.kind=="video")"Video" else if(opened?.media?.kind=="photo")"Photo" else "Attachment",
                     modifier=Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                 if(onExport!=null) IconButton(onClick=onExport) {Icon(Icons.Outlined.Download,"Save or export attachment")}

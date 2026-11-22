@@ -79,7 +79,7 @@ class AuthApiService(private val httpClient: HttpClient, private val environment
         else setBody(MultiPartFormDataContent(formData {
             append("profile_photo", requireNotNull(mediaFile.fileBytes), Headers.build {
                 append(HttpHeaders.ContentDisposition, "filename=profile.jpg")
-                append(HttpHeaders.ContentType, "application/octet-stream")
+                append(HttpHeaders.ContentType, mediaFile.mimeType ?: "image/jpeg")
             })
         }))
     }

@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.chat.presentation.findpartner.screen
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyListScope
@@ -32,16 +33,12 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import srisu.composeapp.generated.resources.Res
 import srisu.composeapp.generated.resources.image_placeholder
-import srisu.composeapp.generated.resources.partner_link_back
 import srisu.composeapp.generated.resources.partner_preview_open
 
 @Composable
 internal fun PartnerLinkTopBar(onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = MaterialTheme.spacing.small)) {
-        IconButton(onClick = onBack) {
-            Icon(painterResource(Res.drawable.partner_link_back), contentDescription = "Back",
-                modifier = Modifier.size(MaterialTheme.spacing.icon))
-        }
+        NavigationBackButton(onBack)
     }
 }
 

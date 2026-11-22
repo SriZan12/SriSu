@@ -201,3 +201,7 @@ the migration at that date, not the current feature coverage.
 ## Home integration — 9 November 2026
 
 The bottom tabs are now Home, Questions, Chat and Profile. Questions reuses Spark catalogue/current/history; Explore remains reachable from Profile and unpaired Home. Unpaired Chat enters partner linking. Home → feature → chat keeps the originating feature on the back stack. See [Home couple space](home-couple-space.md).
+
+## Photo, interest and loading repair (2026-11-22)
+
+See [the local repair handoff](profile-onboarding-loading-repair.md) for prepared-photo uploads, interest catalogue/save behavior, shared back controls and Home skeleton verification.

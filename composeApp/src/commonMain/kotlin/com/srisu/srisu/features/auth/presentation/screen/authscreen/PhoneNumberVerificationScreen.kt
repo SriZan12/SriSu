@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.auth.presentation.screen.authscreen
 
+import com.srisu.srisu.components.NavigationBackButton
 import org.jetbrains.compose.resources.stringResource
 import srisu.composeapp.generated.resources.*
 
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -200,12 +200,7 @@ private fun PhoneNumberVerificationContent(
                 title = {},
                 modifier = Modifier,
                 navigationIcon = {
-                    IconButton(onClick = onBackClick, modifier = Modifier) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(Res.string.auth_back),
-                        )
-                    }
+                    NavigationBackButton(onBackClick)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.transparent)
             )

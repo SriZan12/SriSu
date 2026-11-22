@@ -1,10 +1,10 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
+import com.srisu.srisu.components.NavigationBackButton
 import com.srisu.srisu.theme.spacing
 import com.srisu.srisu.theme.field
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.foundation.text.KeyboardActions
@@ -142,7 +142,7 @@ fun EditProfileScreen(
     if (!initialized) {
         Column(Modifier.fillMaxSize().safeDrawingPadding().padding(MaterialTheme.spacing.gutter),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-            onBack?.let { TextButton(onClick = it) { Text("Back") } }
+            onBack?.let { NavigationBackButton(it) }
             Text("Edit Profile", style = MaterialTheme.typography.titleLarge)
             if (initializationError == null) CircularProgressIndicator()
             else { Text(initializationError!!); TextButton(onClick = editProfileViewModel::retryInitialization) { Text("Retry") } }
@@ -306,7 +306,7 @@ internal fun EditProfileForm(
     var galleryTarget by remember { mutableStateOf<Triple<Int,PhotoType,Int?>?>(null) }
     Scaffold(modifier=Modifier.imePadding(),containerColor=MaterialTheme.colorScheme.background,
         topBar={TopAppBar(title={Text("Edit Profile",style=MaterialTheme.typography.titleLarge)},
-            navigationIcon={onBack?.let {IconButton(onClick=it) {Icon(Icons.AutoMirrored.Outlined.ArrowBack,"navigate back icon")}}},
+            navigationIcon={onBack?.let {NavigationBackButton(it)}},
             actions={
                 onExplore?.let {IconButton(onClick=it) {Icon(Icons.Outlined.Explore,"Explore SriSu")}}
                 onNotifications?.let {IconButton(onClick=it) {Icon(Icons.Outlined.Settings,"Notifications & diagnostics")}}

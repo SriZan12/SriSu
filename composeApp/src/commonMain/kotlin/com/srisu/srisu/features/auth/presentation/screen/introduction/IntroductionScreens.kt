@@ -2,6 +2,8 @@
 
 package com.srisu.srisu.features.auth.presentation.screen.introduction
 
+import com.srisu.srisu.components.NavigationBackButton
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material3.*
@@ -101,9 +102,7 @@ fun SpaceScreen(onBack: () -> Unit, onContinue: () -> Unit) {
                     .verticalScroll(rememberScrollState()).heightIn(min = maxHeight)
                     .padding(horizontal = MaterialTheme.spacing.gutter)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(Res.string.intro_back))
-                        }
+                        NavigationBackButton(onBack)
                         Spacer(Modifier.weight(1f))
                         val progress = stringResource(Res.string.intro_progress)
                         Row(Modifier.semantics { contentDescription = progress }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

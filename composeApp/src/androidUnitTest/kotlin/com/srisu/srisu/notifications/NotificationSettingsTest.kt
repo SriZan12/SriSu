@@ -68,7 +68,7 @@ class NotificationSettingsTest {
             compose.onNodeWithText("Reload settings").performClick()
             compose.waitUntil(10000) { ShadowLooper.idleMainLooper();!repository.state.value.busy && repository.state.value.error == null }
             compose.onNodeWithContentDescription("Share crash diagnostics").performScrollTo().assertIsOff()
-            compose.onNodeWithText("Back").performScrollTo()
+            compose.onNodeWithContentDescription("Go back").performScrollTo()
             compose.runOnIdle {
                 val view=compose.activity.window.decorView
                 val bitmap=Bitmap.createBitmap(view.width,view.height,Bitmap.Config.ARGB_8888)

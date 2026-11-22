@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.explore.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,7 +10,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Explore
@@ -53,7 +53,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val rows=feed.cards.filter {state.section!="faves" || state.preferences[it.couple.id]?.confirmed!=false}
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal=space.gutter,vertical=space.small),verticalAlignment=Alignment.CenterVertically) {
-            onBack?.let { IconButton(onClick=it) { Icon(Icons.AutoMirrored.Outlined.ArrowBack,"Back") } }
+            onBack?.let { NavigationBackButton(it) }
             Column(Modifier.weight(1f)) {
                 Text("Explore",style=MaterialTheme.typography.headlineLarge,modifier=Modifier.semantics {heading()})
                 Text("Little windows into life together",style=MaterialTheme.typography.bodyMedium,color=colors.onSurfaceVariant)

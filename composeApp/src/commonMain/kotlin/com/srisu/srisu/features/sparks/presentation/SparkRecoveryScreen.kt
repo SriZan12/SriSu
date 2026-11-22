@@ -1,12 +1,12 @@
 package com.srisu.srisu.features.sparks.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -32,7 +32,7 @@ data class SparkRecoveryUi(val open: Boolean = false, val status: SparkRecoveryS
     val space = MaterialTheme.spacing
     val focus = LocalFocusManager.current
     Scaffold(topBar = { TopAppBar(title = { Text("Answer recovery") }, navigationIcon = {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to Sparks") }
+        NavigationBackButton(onBack)
     }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()
             .verticalScroll(rememberScrollState()).padding(space.gutter), verticalArrangement = Arrangement.spacedBy(space.medium)) {

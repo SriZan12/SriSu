@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.sparks.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -77,7 +77,7 @@ internal fun questionMatches(decks: List<SparkDeck>, query: String): List<SparkQ
             Scaffold(modifier = Modifier.imePadding(), containerColor = Q.paper, topBar = {
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = if (tab) gutter else 8.dp)
                     .heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (!tab) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
+                    if (!tab) NavigationBackButton(onBack)
                     Text(title, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineMedium)
                     if (largeText) Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreHoriz, "Question options") }
