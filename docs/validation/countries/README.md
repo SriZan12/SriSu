@@ -27,10 +27,18 @@ No migration, deployment or live account mutation was part of these checks.
 | Theme checks | Passed; 96 colors and 24 contrast role pairs checked |
 | Whitespace checks | `git diff --check` passed |
 
-The Android full suite preceded the final change from individual label resources
-to one cached string array. The 36 focused Android tests, both native Android
-tests, six iOS tests and full iOS build were rerun after that change. The final
-cleanup only indented the shared UI and used a nullable-safe test output directory.
+The complete Android suite was rerun before publication after all country-picker
+changes: 630 tests, no failures and 4 conditional integration skips. Android
+production and instrumentation compilation also passed. The 36 focused Android
+tests, both native Android tests, six iOS tests and full iOS build were rerun after
+the change from individual label resources to one cached string array.
+
+The first PR CI run failed while Robolectric downloaded Android SDK dependencies
+(`MavenArtifactFetcher` / `IOException`), before 14 Android test classes could run.
+The test configuration now uses `repo.maven.apache.org` for these separate runtime
+downloads and prints full exceptions so future download failures are diagnosable.
+No tests were removed or disabled. iOS compilation passed on that first CI run;
+the updated commit must pass both PR jobs before merge.
 
 ## Layout evidence
 
