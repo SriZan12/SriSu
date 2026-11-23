@@ -80,7 +80,7 @@ class NavigationJourneyDeviceTest {
             waitFor(hasText("Update Profile"))
             compose.onNodeWithContentDescription("navigate back icon").assertIsDisplayed().performClick()
             waitFor(hasText("Set your city & interests"))
-            compose.onNodeWithContentDescription("Back").assertIsDisplayed().performClick()
+            compose.onNodeWithContentDescription("Go back").assertIsDisplayed().performClick()
             waitFor(hasContentDescription("Notifications & diagnostics"))
             compose.onNodeWithContentDescription("Notifications & diagnostics").performClick()
             waitFor(hasText("Crash reports"))
@@ -140,7 +140,7 @@ class NavigationJourneyDeviceTest {
             back()
             compose.onNodeWithText("A small welcome").assertIsDisplayed()
             compose.onAllNodesWithText("All activities").assertCountEquals(0)
-            compose.onNodeWithContentDescription("Back").performClick()
+            compose.onNodeWithContentDescription("Go back").performClick()
             waitFor(hasText("Your challenge"))
         } } finally { vault.clear() }
     }

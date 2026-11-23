@@ -42,7 +42,9 @@ fun NavGraphBuilder.profileGraph(controller: NavController) {
         else {
             val vm = koinViewModel<EditProfileViewModel>(viewModelStoreOwner = origin)
             val state by vm.editProfileUIState.collectAsState()
+            val catalogue by vm.catalogueState.collectAsState()
             InterestScreen(interests = state.interestList, currentInterests = state.currentInterests,
+                catalogue = catalogue, onRetry = vm::refreshCatalogue,
                 onCancel = {
                     if (nav.isCurrent() && origin.savedStateHandle.get<String>(REQUEST) == route.requestId) {
                         origin.savedStateHandle.remove<String>(REQUEST); nav.back()
@@ -78,7 +80,7 @@ private fun ProfileEditorDestination(controller: NavController, entry: androidx.
                 val ids = selection.ids
                 val state = vm.editProfileUIState.value
                 val old = state.currentInterests.orEmpty().filterNotNull()
-                val updated = old.map { it.copy(removed = it.interest !in ids) } +
+                val updated = old.map { if (it.interest == null) it else it.copy(removed = it.interest !in ids) } +
                     state.interestList.orEmpty().filterNotNull().filter { it.id in ids && old.none { o -> o.interest == it.id } }
                         .map { User.UserInterest(interest = it.id, name = it.name, removed = false) }
                 vm.updateCurrentInterests(updated)

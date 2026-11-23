@@ -1,5 +1,5 @@
 <resources>
-    <string name="auth_back">Navigate back icon</string>
+    <string name="auth_back">Go back</string>
     <string name="auth_verify">Verify</string>
     <string name="auth_check_messages">Check your messages</string>
     <string name="auth_send_code">Send Code</string>

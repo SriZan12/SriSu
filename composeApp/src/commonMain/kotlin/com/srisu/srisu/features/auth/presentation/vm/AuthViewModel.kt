@@ -45,7 +45,8 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val sessionStorage: com.srisu.srisu.core.session.SessionCoordinator,
     private val dataStoreRepo: AuthDataStore,
-    private val startup: StartupCoordinator
+    private val startup: StartupCoordinator,
+    private val preparePhoto: suspend (String) -> com.srisu.srisu.utils.MediaFile? = { FileManager().createProfilePhotoFromPath(it) },
 ) : ViewModel() {
 
     private val _authUiState = MutableStateFlow(AuthUIStates())
@@ -264,12 +265,29 @@ class AuthViewModel(
 
     fun updateProfilePictureUri(uri: Uri?) {
         if (uri == null) return
-        runOperation { _ ->
-            val photo = FileManager().createProfilePhotoFromPath(uri.toString())
-            if (photo?.fileBytes == null) showErrorMessage("Unable to use this photo. Choose an image under 5 MB and 20 megapixels.")
-            else updateState { it.copy(profilePictureUri = uri) }
+        runOperation { version ->
+            val stamp = sessionStorage.stamp()
+            val photo = preparePhoto(uri.toString())
+            sessionStorage.ensureCurrent(stamp)
+            if (version != flowVersion) return@runOperation
+            if (photo?.fileBytes == null) photoSelectionFailed()
+            else updateState { it.copy(profilePictureUri = uri, preparedProfilePhoto = photo) }
         }
     }
+
+    fun updateCapturedProfilePhoto(photo: com.srisu.srisu.utils.MediaFile) {
+        if (busy) return
+        if (photo.fileBytes?.let { com.srisu.srisu.utils.profileImageDimensionsValid(it) } != true) photoSelectionFailed()
+        else updateState { it.copy(profilePictureUri = null, preparedProfilePhoto = photo, baseUIState = BaseUIState.Idle) }
+    }
+
+    fun removeProfilePhoto() {
+        if (!busy) updateState { it.copy(profilePictureUri = null, preparedProfilePhoto = null) }
+    }
+
+    fun photoSelectionFailed() = showErrorMessage(
+        "This photo couldn’t be opened. Try another photo or export it as JPEG." +
+            if (currentState.preparedProfilePhoto != null) " Your previous selection is still here." else "")
 
     fun updateGender(gender: Gender) {
         if (busy) return
@@ -490,12 +508,7 @@ class AuthViewModel(
     fun sendSetupProfileRequest() {
         runOperation { _ ->
             val stamp = sessionStorage.stamp()
-            val path = currentState.profilePictureUri?.toString()
-            val media = path?.let { FileManager().createProfilePhotoFromPath(it) }
-            if (path != null && media?.fileBytes == null) {
-                showErrorMessage("Unable to read this photo. Choose a JPEG, PNG or WebP under 5 MB and 20 megapixels.")
-                return@runOperation
-            }
+            val media = currentState.preparedProfilePhoto
             val result = authRepository.sendProfileSetupRequest(ProfileSetupDTO(), media).result
             sessionStorage.ensureCurrent(stamp)
             when (result) {
@@ -527,6 +540,8 @@ class AuthViewModel(
                 session = access.session,
                 fullName = access.session?.fullName.orEmpty(),
                 username = access.session?.username.orEmpty(),
+                profilePictureUri = it.profilePictureUri.takeIf { _ -> it.session?.id == access.session?.id },
+                preparedProfilePhoto = it.preparedProfilePhoto.takeIf { _ -> it.session?.id == access.session?.id },
                 gender = Gender.entries.firstOrNull { gender -> gender.name == access.session?.gender }
                     ?: it.gender.takeIf { _ -> it.session?.id != null && it.session.id == access.session?.id }
                     ?: Gender.NONE,

@@ -25,9 +25,11 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 actual fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?,
-    isMultiple: Boolean
+    isMultiple: Boolean,
+    onError: () -> Unit,
 ): GalleryManager {
 
+    val latestError = androidx.compose.runtime.rememberUpdatedState(onError)
     if (!isMultiple) {
         val pickMedia =
             rememberLauncherForActivityResult(
@@ -55,7 +57,7 @@ actual fun rememberGalleryManager(
                             ActivityResultContracts.PickVisualMedia.ImageOnly
                     }
                 )
-                pickMedia.launch(request)
+                try { pickMedia.launch(request) } catch (_: android.content.ActivityNotFoundException) { latestError.value() } catch (_: SecurityException) { latestError.value() }
             })
         }
 
@@ -90,7 +92,7 @@ actual fun rememberGalleryManager(
                             ActivityResultContracts.PickVisualMedia.ImageOnly
                     },
                 )
-                pickMultipleMedia.launch(request)
+                try { pickMultipleMedia.launch(request) } catch (_: android.content.ActivityNotFoundException) { latestError.value() } catch (_: SecurityException) { latestError.value() }
             })
         }
     }
@@ -98,27 +100,7 @@ actual fun rememberGalleryManager(
 
 
 actual class FileManager {
-    actual suspend fun createProfilePhotoFromPath(path: String): MediaFile? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        try {
-            val bytes = context.contentResolver.openInputStream(path.toUri())?.use { stream ->
-                val output = java.io.ByteArrayOutputStream()
-                val buffer = ByteArray(8192)
-                while (true) {
-                    val read = stream.read(buffer)
-                    if (read < 0) break
-                    if (output.size() + read > 5 * 1024 * 1024) return@withContext null
-                    output.write(buffer, 0, read)
-                }
-                output.toByteArray()
-            } ?: return@withContext null
-            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0 || bounds.outWidth.toLong() * bounds.outHeight > 20_000_000 || maxOf(bounds.outWidth, bounds.outHeight) > 8192) return@withContext null
-            if (bounds.outMimeType !in listOf("image/jpeg", "image/png", "image/webp")) return@withContext null
-            MediaFile(id = null, fileName = "profile.jpg", mimeType = bounds.outMimeType, fileSize = bytes.size.toLong(), fileBytes = bytes, fileType = MediaType.IMAGE_ONLY)
-        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
-        } catch (_: Exception) { null }
-    }
+    actual suspend fun createProfilePhotoFromPath(path: String): MediaFile? = prepareProfilePhoto(path)
 
 
     private val context = AppContext.get()

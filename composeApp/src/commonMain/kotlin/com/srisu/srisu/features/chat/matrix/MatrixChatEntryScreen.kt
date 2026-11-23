@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.chat.matrix
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +44,7 @@ fun MatrixChatEntryScreen(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(androidx.compose.material3.MaterialTheme.spacing.gutter),
         contentAlignment = Alignment.Center,
     ) {
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) { Text("Back") }
+        NavigationBackButton(onBack, Modifier.align(Alignment.TopStart))
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(androidx.compose.material3.MaterialTheme.spacing.medium),

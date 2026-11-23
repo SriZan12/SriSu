@@ -2,7 +2,6 @@ package com.srisu.srisu.components
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,19 +38,8 @@ fun PrimaryToolBar(
         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary),
         navigationIcon = {
             if (showNavButton) {
-                IconButton(
-                    onClick = {
-                        onNavigate()
-                    },
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "navigate back icon",
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+                NavigationBackButton(onNavigate, tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     )
 }
-

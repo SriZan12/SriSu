@@ -53,7 +53,8 @@ data class MediaFile(
 expect fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?,
-    isMultiple: Boolean
+    isMultiple: Boolean,
+    onError: () -> Unit = {},
 ): GalleryManager
 
 

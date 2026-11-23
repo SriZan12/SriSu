@@ -111,3 +111,7 @@ navigation and data actions remain unchanged. See [QA evidence](../validation/ho
 The [13 November installed-app follow-up](../validation/home-couple-space/device-qa-2026-11-13/README.md)
 records keyboard, scrolling, accessibility-text and draft-return checks, including
 the fix for rapid input lost through delayed model acknowledgements.
+
+## Loading skeleton update (2026-11-22)
+
+Initial and section loading now use matching Home placeholders with shared foreground-only shimmer and a static reduced-motion state. Existing content remains during refresh. See [implementation and verification](profile-onboarding-loading-repair.md).

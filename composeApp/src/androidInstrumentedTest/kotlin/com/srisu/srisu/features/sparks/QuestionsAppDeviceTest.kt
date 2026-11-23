@@ -58,18 +58,18 @@ class QuestionsAppDeviceTest {
                 draft.forEach {editor.performTextInput(it.toString())}
                 editor.assertTextContains(draft)
                 back();compose.waitUntil(10_000) {!keyboardShown()}
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 waitFor(currentQuestion);compose.onNode(currentQuestion).performScrollTo().performClick()
                 waitFor(hasTestTag("question-answer") and hasText(draft,substring=true))
                 compose.onNodeWithTag("question-primary").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 waitFor(hasContentDescription("Search questions"));compose.onNodeWithContentDescription("Search questions").performClick()
                 waitFor(hasTestTag("question-search"));compose.onNodeWithTag("question-search").performTextInput("no matching question")
                 compose.onNodeWithText("No questions found").assertExists()
-                back();compose.onNodeWithContentDescription("Back").performClick()
+                back();compose.onNodeWithContentDescription("Go back").performClick()
                 waitFor(hasContentDescription("Recently answered questions"));compose.onNodeWithContentDescription("Recently answered questions").performClick()
                 waitFor(hasText("Recent answers, together"))
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 waitFor(currentQuestion)
             }
         } finally {vault.clear();file.delete()}

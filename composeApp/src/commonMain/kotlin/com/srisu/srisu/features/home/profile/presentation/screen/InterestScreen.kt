@@ -1,293 +1,109 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
-import com.srisu.srisu.theme.spacing
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.srisu.srisu.components.PrimaryButtonCompo
-import com.srisu.srisu.components.PrimaryToolBar
+import com.srisu.srisu.components.NavigationBackButton
+import com.srisu.srisu.components.SriSuButton
 import com.srisu.srisu.features.auth.data.remote.response.InterestResponse
 import com.srisu.srisu.features.auth.data.remote.response.User
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import com.srisu.srisu.features.home.profile.presentation.state.*
+import com.srisu.srisu.theme.pill
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-@Preview
 fun InterestScreen(
     interests: List<InterestResponse.Interest?>? = emptyList(),
     currentInterests: List<User.UserInterest?>? = emptyList(),
     onCancel: () -> Unit = {},
-    onInterestSelected: (List<User.UserInterest?>?) -> Unit = {}
+    onInterestSelected: (List<User.UserInterest?>?) -> Unit = {},
+    catalogue: InterestCatalogueState = InterestCatalogueState(loading = false, loaded = true),
+    onRetry: () -> Unit = {},
 ) {
-    val selectedInterests = remember { mutableStateListOf<User.UserInterest>() }
-    val latestOnInterestSelected by rememberUpdatedState(onInterestSelected)
-
-    LaunchedEffect(currentInterests) {
-        selectedInterests.clear()
-        selectedInterests.addAll(currentInterests?.filterNotNull().orEmpty())
-    }
-
+    val current = currentInterests.orEmpty()
+    val choices = remember(interests, current) { interestChoices(interests.orEmpty(), current) }
+    val initialIds = current.filterNotNull().filter { it.removed != true }.mapNotNull { it.interest }.distinct()
+    var selected by rememberSaveable(initialIds) { mutableStateOf(initialIds) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val filtered = remember(choices, query) { choices.filter {
+        it.label.contains(query.trim(), ignoreCase = true) || it.category.contains(query.trim(), ignoreCase = true)
+    }.groupBy { it.category } }
+    BackHandler(onBack = onCancel)
     Scaffold(
-        topBar = {
-            PrimaryToolBar(
-                title = "Interests",
-                onNavigate = onCancel
-            )
-        },
+        topBar = { TopAppBar(title = { Text("Interests", style = MaterialTheme.typography.titleLarge) },
+            navigationIcon = { NavigationBackButton(onCancel) }) },
         bottomBar = {
-            if (!interests.isNullOrEmpty()) {
-                PrimaryButtonCompo(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(MaterialTheme.spacing.medium)
-                        .navigationBarsPadding(),
-                    label = "Save",
-                    onClick = {
-                        latestOnInterestSelected(selectedInterests.toList())
+            Surface {
+                Row(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("${choices.count { c -> c.aliases.any { it in selected } }} selected", Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SriSuButton("Done", { onInterestSelected(applyInterestSelection(current, choices, selected.toSet())) },
+                        enabled = catalogue.loaded || current.isNotEmpty())
+                }
+            }
+        },
+    ) { insets ->
+        Box(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(Modifier.widthIn(max = 560.dp).fillMaxSize().testTag("interest-list"),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                item("search") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Pick the things you enjoy. You can change these anytime.", style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true,
+                            placeholder = { Text("Search interests") }, label = { Text("Search interests") },
+                            leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                            trailingIcon = { if (query.isNotEmpty()) IconButton({ query = "" }) { Icon(Icons.Outlined.Close, "Clear search") } })
                     }
-                )
-            }
-        }
-    ) { innerPadding ->
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            val groupedInterests = remember(interests) {
-                _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.mapToUIModel(
-                    interests = interests
-                )
-            }
-
-            _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.CategorizedInterestListCompo(
-                interestList = groupedInterests,
-                selectedInterests = selectedInterests,
-                previousInterest = currentInterests.orEmpty(),
-                onInterestSelected = { updated ->
-                    selectedInterests.clear()
-                    selectedInterests.addAll(updated.filterNotNull())
                 }
-            )
-
-        }
-
-        BackHandler { onCancel() }
-    }
-}
-
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-fun CategorizedInterestListCompo(
-    interestList: List<com.srisu.srisu.features.home.profile.presentation.state.InterestCategoryUI> = emptyList(),
-    selectedInterests: List<User.UserInterest?>,
-    previousInterest: List<User.UserInterest?>,
-    onInterestSelected: (List<User.UserInterest?>) -> Unit
-) {
-    val lazyGridState = rememberLazyGridState()
-    val animatedItems = remember { mutableSetOf<String>() }
-
-    // Track the highest visible item index to determine scroll direction
-    var lastFirstVisibleItemIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(lazyGridState.firstVisibleItemIndex) {
-        val currentIndex = lazyGridState.firstVisibleItemIndex
-        val isScrollingDown = currentIndex >= lastFirstVisibleItemIndex
-
-        if (isScrollingDown) {
-            // Only allow animations when scrolling down
-            lastFirstVisibleItemIndex = currentIndex
-        }
-    }
-
-    LazyVerticalGrid(
-        state = lazyGridState,
-        modifier = Modifier.fillMaxWidth(),
-        columns = GridCells.Fixed(3),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-        contentPadding = PaddingValues(all = MaterialTheme.spacing.medium)
-    ) {
-        if (interestList.isEmpty()) {
-            item(span = { GridItemSpan(3) }) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(vertical = MaterialTheme.spacing.extraLarge),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = "No interests available",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                if (catalogue.loading) item("loading") {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text("Loading interests…", style = MaterialTheme.typography.bodySmall)
                 }
-            }
-        } else {
-            interestList.forEachIndexed { index, category ->
-                item(span = { GridItemSpan(3) }, key = "category_${category.category}") {
-
-                        Text(
-                            text = category.category,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier
-                        )
+                if (catalogue.error != null || catalogue.offline) item("error") {
+                    Column {
+                        Text(if (catalogue.offline) "Showing saved interests. Connect to refresh the list." else "Interests couldn’t load. Your selections are still here.",
+                            style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onRetry) { Text("Retry") }
+                    }
                 }
-
-                items(
-                    items = category.interests,
-                    key = { it.id ?: it.hashCode() },
-                    contentType = { "interest" }
-                ) { interest ->
-                    val itemKey = interest.id.toString()
-                    var isVisible by remember { mutableStateOf(animatedItems.contains(itemKey)) }
-                    val isScrollingDown = lazyGridState.firstVisibleItemIndex >= lastFirstVisibleItemIndex
-
-                    LaunchedEffect(itemKey, isScrollingDown) {
-                        if (!animatedItems.contains(itemKey) && isScrollingDown) {
-                            animatedItems.add(itemKey)
-                            isVisible = true
-                        } else if (animatedItems.contains(itemKey)) {
-                            isVisible = true
+                if (filtered.isEmpty() && !catalogue.loading && (catalogue.loaded || choices.isNotEmpty())) item("empty") {
+                    Text(if (query.isNotBlank()) "No interests match “${query.trim()}”. Try another word." else "No interests are available yet.",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                filtered.forEach { (category, options) ->
+                    item("category:$category") {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(category, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                options.forEach { option ->
+                                    val active = option.aliases.any { it in selected }
+                                    FilterChip(active, onClick = {
+                                        selected = if (active) selected.filterNot { it in option.aliases } else selected + option.id
+                                    }, modifier = Modifier.heightIn(min = 48.dp).testTag("interest:${option.id}"), shape = MaterialTheme.shapes.pill,
+                                        label = { Text(option.label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 6.dp)) },
+                                        leadingIcon = if (active) ({ Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) }) else null)
+                                }
+                            }
                         }
                     }
-
-                    val isSelected = selectedInterests.any {
-                        it?.removed == false && it.interest == interest.id
-                    }
-
-                    val backgroundColor by animateColorAsState(
-                        targetValue = if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceDim
-                        },
-                        animationSpec = tween(durationMillis = 300),
-                        label = "ChipBackgroundAnimation_${interest.id}"
-                    )
-
-                  /*  val scale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.05f else 1f,
-                        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
-                        label = "ChipScaleAnimation_${interest.id}"
-                    )
-*/
-                    AnimatedVisibility(
-                        visible = isVisible,
-                        enter = fadeIn(animationSpec = tween(300)) +
-                                slideInVertically(
-                                    animationSpec = tween(300),
-                                    initialOffsetY = { if (index % 2 == 0) -50 else 50 }
-                                ),
-                        exit = ExitTransition.None
-                    ) {
-                        _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.InterestChip(
-                            modifier = Modifier
-//                                .scale(scale)
-                                .animateItem(),
-                            label = interest.interestName.orEmpty(),
-                            backgroundColor = backgroundColor,
-                            onChipClick = {
-                                val updatedSelection =
-                                    _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.updateInterestSelection(
-                                        currentList = selectedInterests,
-                                        previousInterest = previousInterest,
-                                        interest = interest,
-                                        isSelected = isSelected
-                                    )
-                                onInterestSelected(updatedSelection)
-                            }
-                        )
-                    }
                 }
             }
-        }
-    }
-}
-
-private fun mapToUIModel(interests: List<InterestResponse.Interest?>?): List<com.srisu.srisu.features.home.profile.presentation.state.InterestCategoryUI> {
-    return interests
-        ?.groupBy { it?.category?.name ?: "" }
-        ?.map { (categoryName, interestsInCategory) ->
-            _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.state.InterestCategoryUI(
-                category = categoryName,
-                interests = interestsInCategory.map { interest ->
-                    _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.state.InterestUI(
-                        interestName = interest?.name,
-                        id = interest?.id
-                    )
-                }
-            )
-        } ?: emptyList()
-}
-
-private fun updateInterestSelection(
-    currentList: List<User.UserInterest?>,
-    previousInterest: List<User.UserInterest?>,
-    interest: com.srisu.srisu.features.home.profile.presentation.state.InterestUI,
-    isSelected: Boolean
-): List<User.UserInterest?> {
-    return if (isSelected) {
-        val isAvailableInPrevList = previousInterest.any { it?.interest == interest.id }
-        if (!isAvailableInPrevList) {
-            currentList.filter { it?.interest != interest.id }
-        } else {
-            currentList.map { userInterest ->
-                if (userInterest?.interest == interest.id) {
-                    userInterest?.copy(removed = true)
-                } else userInterest
-            }
-        }
-    } else {
-        val existing = currentList.find { it?.interest == interest.id }
-        if (existing != null) {
-            currentList.map { userInterest ->
-                if (userInterest?.interest == interest.id) {
-                    userInterest?.copy(removed = false)
-                } else userInterest
-            }
-        } else {
-            currentList + User.UserInterest(
-                interest = interest.id,
-                name = interest.interestName,
-                removed = false
-            )
         }
     }
 }
