@@ -211,6 +211,24 @@
       "status": "prepared for paired PRs; no merge or deployment",
       "migration": null,
       "integration_branch": "dev-core-architecture"
+    },
+    "country_picker": {
+      "frontend_branch": "codex/country-picker-consistency",
+      "frontend_base": "b4dbf1c280a8d03f704504738a05dadf1cd430e3",
+      "backend_reviewed_commit": "797b0a08406a7703ed07b93f41841fe67ae44705",
+      "flow": "docs/flows/countries.md",
+      "data": "tools/countries/README.md",
+      "figma_nodes": [
+        "1:2",
+        "14:220",
+        "0:1"
+      ],
+      "contract": "Existing profile country name and international phone fields; no endpoint or schema change",
+      "migration": null,
+      "status": "Android device and iOS component checks passed; native iOS keyboard/performance remains unverified; frontend-only publication",
+      "validation": "docs/validation/countries/README.md",
+      "integration_branch": "dev-core-architecture",
+      "performance": "docs/validation/countries/performance/README.md"
     }
   }
 }

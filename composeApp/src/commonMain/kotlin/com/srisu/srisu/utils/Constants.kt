@@ -5,7 +5,6 @@ object Constants {
     object Auth {
         const val OTP_LENGTH = 6
         const val TOTAL_PROGRESS = 7
-        const val COUNTRY_JSON_FILE_NAME = "Countries.json"
         const val SESSION_FILE = "Session_File"
         const val SESSION_KEY = "Session_Key"
 

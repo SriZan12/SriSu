@@ -32,18 +32,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import com.srisu.srisu.utils.Country
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.srisu.srisu.utils.CountryModel
-import com.srisu.srisu.utils.getCountryFlagFromAssets
 import org.jetbrains.compose.resources.painterResource
 import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.country_flag
 
 @Composable
 fun DropDownIcon(
@@ -81,12 +81,9 @@ fun CountryCodeDropDown(
     backgroundColor: Color
 ) {
 
-    val flag by produceState<ImageBitmap?>(initialValue = null, key1 = selectedCountryCode) {
-        value = getCountryFlagFromAssets(selectedCountryCode)
-    }
-
+    val selectedName = Country.getCountryModelFromCode(selectedCountryCode)?.let { countryDisplayName(it) }.orEmpty()
     Card(
-        modifier = modifier,
+        modifier = modifier.semantics { contentDescription = selectedName },
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = BorderStroke(
@@ -97,25 +94,11 @@ fun CountryCodeDropDown(
     ) {
         Row(
             modifier = Modifier
-                .padding(vertical = 18.dp, horizontal = 18.dp),
+                .padding(vertical = 16.dp, horizontal = 12.dp),
             verticalAlignment = CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (flag == null) {
-                Image(
-                    painter = painterResource(Res.drawable.country_flag),
-                    contentDescription = "country_flag",
-                    modifier = Modifier
-                        .size(24.dp)
-                )
-            } else {
-                Image(
-                    bitmap = flag!!,
-                    contentDescription = "flag",
-                    modifier = Modifier
-                        .size(24.dp)
-                )
-            }
+            CountryFlag(selectedCountryCode)
 
 
             Text(
@@ -124,8 +107,12 @@ fun CountryCodeDropDown(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
-
-
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -143,10 +130,6 @@ fun CountryDropDown(
     placeholder: String = "",
     elevation: androidx.compose.ui.unit.Dp = 2.dp,
 ) {
-
-    val flag by produceState<ImageBitmap?>(initialValue = null, key1 = option?.code) {
-        value = getCountryFlagFromAssets(option?.code ?: "")
-    }
 
     Card(
         modifier = modifier,
@@ -171,27 +154,11 @@ fun CountryDropDown(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
-                if (visibleLeadingIcon) {
-                    if (flag == null) {
-                        Image(
-                            painter = painterResource(Res.drawable.country_flag),
-                            contentDescription = "country_flag",
-                            modifier = Modifier
-                                .size(24.dp)
-                        )
-                    } else {
-                        Image(
-                            bitmap = flag!!,
-                            contentDescription = "flag",
-                            modifier = Modifier
-                                .size(24.dp)
-                        )
-                    }
-                }
+                if (visibleLeadingIcon) CountryFlag(option?.code)
 
                 Text(
                     modifier = Modifier.weight(1f),
-                    text = option?.name ?: placeholder,
+                    text = option?.let { countryDisplayName(it) } ?: placeholder,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Start
@@ -206,6 +173,8 @@ fun CountryDropDown(
             CountrySelectionBottomSheet(
                 show = showCountryBottomSheet,
                 countries = countryList,
+                selectedCode = option?.code,
+                callingCodes = false,
                 onCountrySelected = {
                     onOptionSelected(it)
                     onShowCountryBottomSheetChange()

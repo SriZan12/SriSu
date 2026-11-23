@@ -1,0 +1,8 @@
+// Explicit local QA opt-in: test signing/host Activity are not used by ordinary builds.
+allprojects { p ->
+    p.plugins.withId('com.android.application') {
+        p.android.testBuildType = 'release'
+        p.android.buildTypes.getByName('release').signingConfig = p.android.signingConfigs.getByName('debug')
+        p.dependencies.add('releaseImplementation', 'androidx.compose.ui:ui-test-manifest:1.9.0')
+    }
+}

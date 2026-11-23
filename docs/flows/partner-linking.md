@@ -26,8 +26,8 @@ Home → Find your partner → phone search → Connect → Invite sent. Back re
 resending. A pending invitation can be reopened, its status checked, or cancelled with confirmation.
 The existing received-invitations route and profile navigation are retained.
 
-Search uses `GET api/social/find-partner/?phone_number=<prefix><number>`. The ViewModel retains the
-existing 10-digit local-number contract, accepts formatted input, uses the selected country prefix,
+Search uses `GET api/social/find-partner/?phone_number=<prefix><number>`. The ViewModel uses the same international-number length validation as authentication and the backend,
+accepts formatted input without truncating national numbers to ten digits, and uses the selected country prefix. It
 validates blank/incomplete/self searches, cancels obsolete requests when input changes, and ignores
 cancelled responses. A result hides received invitations until Cancel search is selected. Search,
 outgoing actions and invitation-row actions have separate loading/error states.

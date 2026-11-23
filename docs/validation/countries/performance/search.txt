@@ -1,0 +1,148 @@
+Applications Graphics Acceleration Info:
+Uptime: 554701 Realtime: 554701
+
+** Graphics info for pid 2682 [com.srisu.srisu] **
+
+Stats since: 554186304305ns
+Total frames rendered: 9
+Janky frames: 1 (11.11%)
+Janky frames (legacy): 5 (55.56%)
+50th percentile: 19ms
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+Number Missed Vsync: 0
+Number High input latency: 16
+Number Slow UI thread: 1
+Number Slow bitmap uploads: 0
+Number Slow issue draw commands: 0
+Number Frame deadline missed: 1
+Number Frame deadline missed (legacy): 1
+HISTOGRAM: 5ms=0 6ms=0 7ms=0 8ms=0 9ms=0 10ms=0 11ms=0 12ms=0 13ms=1 14ms=0 15ms=0 16ms=0 17ms=0 18ms=2 19ms=2 20ms=2 21ms=0 22ms=0 23ms=0 24ms=0 25ms=1 26ms=0 27ms=1 28ms=0 29ms=0 30ms=0 31ms=0 32ms=0 34ms=0 36ms=0 38ms=0 40ms=0 42ms=0 44ms=0 46ms=0 48ms=0 53ms=0 57ms=0 61ms=0 65ms=0 69ms=0 73ms=0 77ms=0 81ms=0 85ms=0 89ms=0 93ms=0 97ms=0 101ms=0 105ms=0 109ms=0 113ms=0 117ms=0 121ms=0 125ms=0 129ms=0 133ms=0 150ms=0 200ms=0 250ms=0 300ms=0 350ms=0 400ms=0 450ms=0 500ms=0 550ms=0 600ms=0 650ms=0 700ms=0 750ms=0 800ms=0 850ms=0 900ms=0 950ms=0 1000ms=0 1050ms=0 1100ms=0 1150ms=0 1200ms=0 1250ms=0 1300ms=0 1350ms=0 1400ms=0 1450ms=0 1500ms=0 1550ms=0 1600ms=0 1650ms=0 1700ms=0 1750ms=0 1800ms=0 1850ms=0 1900ms=0 1950ms=0 2000ms=0 2050ms=0 2100ms=0 2150ms=0 2200ms=0 2250ms=0 2300ms=0 2350ms=0 2400ms=0 2450ms=0 2500ms=0 2550ms=0 2600ms=0 2650ms=0 2700ms=0 2750ms=0 2800ms=0 2850ms=0 2900ms=0 2950ms=0 3000ms=0 3050ms=0 3100ms=0 3150ms=0 3200ms=0 3250ms=0 3300ms=0 3350ms=0 3400ms=0 3450ms=0 3500ms=0 3550ms=0 3600ms=0 3650ms=0 3700ms=0 3750ms=0 3800ms=0 3850ms=0 3900ms=0 3950ms=0 4000ms=0 4050ms=0 4100ms=0 4150ms=0 4200ms=0 4250ms=0 4300ms=0 4350ms=0 4400ms=0 4450ms=0 4500ms=0 4550ms=0 4600ms=0 4650ms=0 4700ms=0 4750ms=0 4800ms=0 4850ms=0 4900ms=0 4950ms=0
+50th gpu percentile: 17ms
+90th gpu percentile: 25ms
+95th gpu percentile: 25ms
+99th gpu percentile: 25ms
+GPU HISTOGRAM: 1ms=0 2ms=0 3ms=0 4ms=0 5ms=0 6ms=1 7ms=0 8ms=1 9ms=0 10ms=0 11ms=0 12ms=1 13ms=0 14ms=0 15ms=0 16ms=1 17ms=1 18ms=2 19ms=1 20ms=0 21ms=0 22ms=0 23ms=0 24ms=0 25ms=1 4950ms=0
+
+Pipeline=Skia (OpenGL)
+Memory policy:
+  Max surface area: 2527200
+  Max resource usage: 121.31MB (x48)
+  Background retention: 50% (altUiHidden = true)
+  GPU Context timeout: 10
+Contexts: 2 (stopped = 0)
+CPU Caches:
+  Glyph Cache: 65.52 KB (1 entry)
+  Glyph Count: 12
+Total CPU memory usage:
+  67093 bytes, 65.52 KB (0.00 bytes is purgeable)
+GPU Caches:
+  Other:
+    Other: 3.27 KB (1 entry)
+    Buffer Object: 2.05 KB (2 entries)
+  Image:
+    Texture: 6.21 MB (109 entries)
+  Scratch:
+    RenderTarget: 9.64 MB (1 entry)
+    Buffer Object: 112.00 KB (3 entries)
+    Texture: 2.01 MB (5 entries)
+Total GPU memory usage:
+  18851864 bytes, 17.98 MB (15.92 MB is purgeable)
+
+GraphicBufferAllocator buffers:
+        Handle |        Size |     W (Stride) x H | Layers |   Format |      Usage | Requestor
+0xb4000076710d8a80 |     unknown | 1080 (   0) x 2340 |      1 |        1 | 0x     b00 | VRI[ComponentActivity]#0(BLAST Consumer)0
+0xb4000076710d8e70 |     unknown | 1080 (   0) x 2340 |      1 |        1 | 0x     b00 | VRI[ComponentActivity]#0(BLAST Consumer)0
+0xb4000076710ddf70 |     unknown | 1080 (   0) x 2340 |      1 |        1 | 0x     b00 | VRI[ComponentActivity]#5(BLAST Consumer)5
+0xb4000076710f2520 |     unknown | 1080 (   0) x 2340 |      1 |        1 | 0x     b00 | VRI[ComponentActivity]#0(BLAST Consumer)0
+0xb4000076710f57c0 |     unknown | 1080 (   0) x 2340 |      1 |        1 | 0x     b00 | VRI[ComponentActivity]#5(BLAST Consumer)5
+0xb4000076710f91b0 |     unknown | 1080 (   0) x 2340 |      1 |        1 | 0x     b00 | VRI[ComponentActivity]#5(BLAST Consumer)5
+Total allocated by GraphicBufferAllocator (estimate): 0.00 KB
+GoldfishAllocator::dumpDebugInfo is not implemented
+Profile data in ms:
+
+	com.srisu.srisu/androidx.activity.ComponentActivity/android.view.ViewRootImpl@b5d2e61 (visibility=0)
+Window: com.srisu.srisu/androidx.activity.ComponentActivity
+Stats since: 554185945221ns
+Total frames rendered: 0
+Janky frames: 0 (0.00%)
+Janky frames (legacy): 0 (0.00%)
+50th percentile: 4950ms
+90th percentile: 4950ms
+95th percentile: 4950ms
+99th percentile: 4950ms
+Number Missed Vsync: 0
+Number High input latency: 0
+Number Slow UI thread: 0
+Number Slow bitmap uploads: 0
+Number Slow issue draw commands: 0
+Number Frame deadline missed: 0
+Number Frame deadline missed (legacy): 0
+HISTOGRAM: 5ms=0 6ms=0 7ms=0 8ms=0 9ms=0 10ms=0 11ms=0 12ms=0 13ms=0 14ms=0 15ms=0 16ms=0 17ms=0 18ms=0 19ms=0 20ms=0 21ms=0 22ms=0 23ms=0 24ms=0 25ms=0 26ms=0 27ms=0 28ms=0 29ms=0 30ms=0 31ms=0 32ms=0 34ms=0 36ms=0 38ms=0 40ms=0 42ms=0 44ms=0 46ms=0 48ms=0 53ms=0 57ms=0 61ms=0 65ms=0 69ms=0 73ms=0 77ms=0 81ms=0 85ms=0 89ms=0 93ms=0 97ms=0 101ms=0 105ms=0 109ms=0 113ms=0 117ms=0 121ms=0 125ms=0 129ms=0 133ms=0 150ms=0 200ms=0 250ms=0 300ms=0 350ms=0 400ms=0 450ms=0 500ms=0 550ms=0 600ms=0 650ms=0 700ms=0 750ms=0 800ms=0 850ms=0 900ms=0 950ms=0 1000ms=0 1050ms=0 1100ms=0 1150ms=0 1200ms=0 1250ms=0 1300ms=0 1350ms=0 1400ms=0 1450ms=0 1500ms=0 1550ms=0 1600ms=0 1650ms=0 1700ms=0 1750ms=0 1800ms=0 1850ms=0 1900ms=0 1950ms=0 2000ms=0 2050ms=0 2100ms=0 2150ms=0 2200ms=0 2250ms=0 2300ms=0 2350ms=0 2400ms=0 2450ms=0 2500ms=0 2550ms=0 2600ms=0 2650ms=0 2700ms=0 2750ms=0 2800ms=0 2850ms=0 2900ms=0 2950ms=0 3000ms=0 3050ms=0 3100ms=0 3150ms=0 3200ms=0 3250ms=0 3300ms=0 3350ms=0 3400ms=0 3450ms=0 3500ms=0 3550ms=0 3600ms=0 3650ms=0 3700ms=0 3750ms=0 3800ms=0 3850ms=0 3900ms=0 3950ms=0 4000ms=0 4050ms=0 4100ms=0 4150ms=0 4200ms=0 4250ms=0 4300ms=0 4350ms=0 4400ms=0 4450ms=0 4500ms=0 4550ms=0 4600ms=0 4650ms=0 4700ms=0 4750ms=0 4800ms=0 4850ms=0 4900ms=0 4950ms=0
+50th gpu percentile: 4950ms
+90th gpu percentile: 4950ms
+95th gpu percentile: 4950ms
+99th gpu percentile: 4950ms
+GPU HISTOGRAM: 1ms=0 2ms=0 3ms=0 4ms=0 5ms=0 6ms=0 7ms=0 8ms=0 9ms=0 10ms=0 11ms=0 12ms=0 13ms=0 14ms=0 15ms=0 16ms=0 17ms=0 18ms=0 19ms=0 20ms=0 21ms=0 22ms=0 23ms=0 24ms=0 25ms=0 4950ms=0
+
+
+
+---PROFILEDATA---
+Flags,FrameTimelineVsyncId,IntendedVsync,Vsync,InputEventId,HandleInputStart,AnimationStart,PerformTraversalsStart,DrawStart,FrameDeadline,FrameInterval,FrameStartTime,SyncQueued,SyncStart,IssueDrawCommandsStart,SwapBuffers,FrameCompleted,DequeueBufferDuration,QueueBufferDuration,GpuCompleted,SwapBuffersCompleted,DisplayPresentTime,CommandSubmissionCompleted,
+---PROFILEDATA---
+
+
+	com.srisu.srisu/androidx.activity.ComponentActivity/android.view.ViewRootImpl@5c27d2e (visibility=0)
+Window: com.srisu.srisu/androidx.activity.ComponentActivity
+Stats since: 554186304096ns
+Total frames rendered: 9
+Janky frames: 1 (11.11%)
+Janky frames (legacy): 5 (55.56%)
+50th percentile: 19ms
+90th percentile: 27ms
+95th percentile: 27ms
+99th percentile: 27ms
+Number Missed Vsync: 0
+Number High input latency: 16
+Number Slow UI thread: 1
+Number Slow bitmap uploads: 0
+Number Slow issue draw commands: 0
+Number Frame deadline missed: 1
+Number Frame deadline missed (legacy): 1
+HISTOGRAM: 5ms=0 6ms=0 7ms=0 8ms=0 9ms=0 10ms=0 11ms=0 12ms=0 13ms=1 14ms=0 15ms=0 16ms=0 17ms=0 18ms=2 19ms=2 20ms=2 21ms=0 22ms=0 23ms=0 24ms=0 25ms=1 26ms=0 27ms=1 28ms=0 29ms=0 30ms=0 31ms=0 32ms=0 34ms=0 36ms=0 38ms=0 40ms=0 42ms=0 44ms=0 46ms=0 48ms=0 53ms=0 57ms=0 61ms=0 65ms=0 69ms=0 73ms=0 77ms=0 81ms=0 85ms=0 89ms=0 93ms=0 97ms=0 101ms=0 105ms=0 109ms=0 113ms=0 117ms=0 121ms=0 125ms=0 129ms=0 133ms=0 150ms=0 200ms=0 250ms=0 300ms=0 350ms=0 400ms=0 450ms=0 500ms=0 550ms=0 600ms=0 650ms=0 700ms=0 750ms=0 800ms=0 850ms=0 900ms=0 950ms=0 1000ms=0 1050ms=0 1100ms=0 1150ms=0 1200ms=0 1250ms=0 1300ms=0 1350ms=0 1400ms=0 1450ms=0 1500ms=0 1550ms=0 1600ms=0 1650ms=0 1700ms=0 1750ms=0 1800ms=0 1850ms=0 1900ms=0 1950ms=0 2000ms=0 2050ms=0 2100ms=0 2150ms=0 2200ms=0 2250ms=0 2300ms=0 2350ms=0 2400ms=0 2450ms=0 2500ms=0 2550ms=0 2600ms=0 2650ms=0 2700ms=0 2750ms=0 2800ms=0 2850ms=0 2900ms=0 2950ms=0 3000ms=0 3050ms=0 3100ms=0 3150ms=0 3200ms=0 3250ms=0 3300ms=0 3350ms=0 3400ms=0 3450ms=0 3500ms=0 3550ms=0 3600ms=0 3650ms=0 3700ms=0 3750ms=0 3800ms=0 3850ms=0 3900ms=0 3950ms=0 4000ms=0 4050ms=0 4100ms=0 4150ms=0 4200ms=0 4250ms=0 4300ms=0 4350ms=0 4400ms=0 4450ms=0 4500ms=0 4550ms=0 4600ms=0 4650ms=0 4700ms=0 4750ms=0 4800ms=0 4850ms=0 4900ms=0 4950ms=0
+50th gpu percentile: 17ms
+90th gpu percentile: 25ms
+95th gpu percentile: 25ms
+99th gpu percentile: 25ms
+GPU HISTOGRAM: 1ms=0 2ms=0 3ms=0 4ms=0 5ms=0 6ms=1 7ms=0 8ms=1 9ms=0 10ms=0 11ms=0 12ms=1 13ms=0 14ms=0 15ms=0 16ms=1 17ms=1 18ms=2 19ms=1 20ms=0 21ms=0 22ms=0 23ms=0 24ms=0 25ms=1 4950ms=0
+
+
+
+---PROFILEDATA---
+Flags,FrameTimelineVsyncId,IntendedVsync,Vsync,InputEventId,HandleInputStart,AnimationStart,PerformTraversalsStart,DrawStart,FrameDeadline,FrameInterval,FrameStartTime,SyncQueued,SyncStart,IssueDrawCommandsStart,SwapBuffers,FrameCompleted,DequeueBufferDuration,QueueBufferDuration,GpuCompleted,SwapBuffersCompleted,DisplayPresentTime,CommandSubmissionCompleted,
+0,87425,554544809377,554544809377,0,554545554347,554545556055,554554895347,554554937222,554561476043,554545551930,16666666,554563277430,554563371805,554563511513,554564535388,554570377222,2125,109541,554570377222,554565601013,0,554564535388,
+0,87432,554561476043,554561476043,0,554564686597,554564686847,554566658472,554566725097,554594809375,554564685013,16666666,554568712847,554568803347,554568851305,554569733472,554581497305,9337042,73125,554581497305,554579815055,0,554569733472,
+0,87440,554578142709,554578142709,0,554578642513,554578643055,554579573430,554579604722,554611476041,554578640555,16666666,554580189555,554580261722,554580282555,554580984972,554598683472,14428750,46792,554598683472,554595991472,0,554580984972,
+0,87448,554594809375,554594809375,0,554595130472,554595130805,554596948013,554596960347,554628142707,554595129388,16666666,554597638513,554597727888,554597747055,554598228722,554615274138,15505709,70125,554615274138,554614244347,0,554598228722,
+0,87456,554611476041,554611476041,0,554613453138,554613453430,554613775180,554613787430,554644809373,554613452263,16666666,554614176888,554614259347,554614285847,554614794763,554639424055,17054292,34750,554639424055,554632368555,0,554614794763,
+0,87464,554628142707,554628142707,0,554628782513,554628782888,554630525305,554630578597,554661476039,554628781263,16666666,554632660638,554637726972,554637850763,554638876805,554646760930,6323000,87916,554646760930,554645778888,0,554638876805,
+0,87472,554644809373,554644809373,0,554645112388,554645112763,554645704180,554645761305,554678142705,554645110347,16666666,554646063430,554646114222,554646149263,554646456805,554663444263,15676000,43833,554663444263,554662459597,0,554646456805,
+0,87480,554661476039,554661476039,0,554661895513,554661895722,554662135722,554662143555,554694809371,554661894888,16666666,554662642763,554662705097,554662728847,554663143805,554681517513,17468584,72416,554681517513,554680954472,0,554663143805,
+0,87488,554678142705,554678142705,0,554680224763,554680225013,554680494555,554680506055,554711476037,554680223888,16666666,554680694513,554680967722,554680990722,554681204555,554696884930,14651375,50791,554696884930,554696196472,0,554681204555,
+0,87496,554694809371,554694809371,0,554695157180,554695157472,554695674430,554695796680,554711476037,554695156138,16666666,554696210638,554696265222,554696297347,554696560972,553245409888,16412791,47042,553245409888,554713333597,0,554696560972,
+---PROFILEDATA---
+
+
+View hierarchy:
+
+  com.srisu.srisu/androidx.activity.ComponentActivity/android.view.ViewRootImpl@b5d2e61
+  11 views, 19.90 kB of render nodes
+
+  com.srisu.srisu/androidx.activity.ComponentActivity/android.view.ViewRootImpl@5c27d2e
+  9 views, 15.91 kB of render nodes
+
+
+Total ViewRootImpl   : 2
+Total attached Views : 20
+Total RenderNode     : 35.80 kB (used) / 99.51 kB (capacity)

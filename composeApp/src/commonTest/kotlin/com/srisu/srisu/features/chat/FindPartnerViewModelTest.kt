@@ -190,6 +190,20 @@ class FindPartnerViewModelTest {
         assertEquals(PartnerSearchStatus.Found, vm.findPartnerUIState.value.searchStatus)
     }
 
+    @Test fun acceptsShortAndLongNationalNumbersWithoutTruncation() = runTest(dispatcher) {
+        vm.updateCountry("CY", "+357")
+        vm.updatePhoneNumber("99 123456")
+        vm.sendFindYourPartnerRequest()
+        advanceUntilIdle()
+        assertEquals("+35799123456", calls.last().second)
+        vm.updateCountry("CN", "+86")
+        vm.updatePhoneNumber("131 2345 6789")
+        assertEquals("13123456789", vm.findPartnerUIState.value.phoneNumber)
+        vm.sendFindYourPartnerRequest()
+        advanceUntilIdle()
+        assertEquals("+8613123456789", calls.last().second)
+    }
+
     @Test fun suppressesDuplicateSearchAndDropsCancelledResults() = runTest(dispatcher) {
         latency = 1000
         vm.updatePhoneNumber("9812345678")

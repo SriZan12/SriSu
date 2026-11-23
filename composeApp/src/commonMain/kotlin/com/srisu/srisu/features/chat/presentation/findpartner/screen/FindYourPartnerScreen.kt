@@ -11,6 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import com.srisu.srisu.utils.Country
+import com.srisu.srisu.components.CountryFlag
+import com.srisu.srisu.components.countryDisplayName
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -156,6 +162,7 @@ fun FindYourPartnerScreen(
         }
         CountrySelectionBottomSheet(
             countries = state.countryList,
+            selectedCode = state.countryCode,
             show = showCountries,
             onCountrySelected = { country ->
                 country.code?.let { code ->
@@ -181,7 +188,19 @@ private fun PartnerPhoneInput(
     onSearch: () -> Unit,
     onCancelSearch: () -> Unit,
 ) {
+    val stackCountry = LocalDensity.current.fontScale > 1.3f
+    val countryName = Country.getCountryModelFromCode(state.countryCode)?.let { countryDisplayName(it) }.orEmpty()
+    val countryControl: @Composable () -> Unit = {
+        TextButton(onClick = onSelectCountry, enabled = !state.isSendingInvitation,
+            modifier = Modifier.semantics { contentDescription = countryName }) {
+            CountryFlag(state.countryCode)
+            Spacer(Modifier.width(6.dp))
+            Text(state.countryPrefix, style = MaterialTheme.typography.bodyMedium)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        if (stackCountry) countryControl()
         OutlinedTextFieldCompo(
             modifier = Modifier.fillMaxWidth(),
             value = state.phoneNumber,
@@ -192,12 +211,7 @@ private fun PartnerPhoneInput(
             keyboardType = KeyboardType.Phone,
             imeAction = ImeAction.Search,
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            leadingContent = {
-                TextButton(onClick = onSelectCountry, enabled = !state.isSendingInvitation) {
-                    Text(state.countryPrefix, style = MaterialTheme.typography.bodyMedium)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select country code")
-                }
-            },
+            leadingContent = if (stackCountry) null else countryControl,
             trailingIconDescription = if (state.searchStatus == PartnerSearchStatus.Loading) "Cancel search" else "Search by phone number",
             trailingIcon = if (state.searchStatus == PartnerSearchStatus.Loading) Icons.Default.Close else Icons.Default.Search,
             onClickTrailingIcon = if (state.searchStatus == PartnerSearchStatus.Loading) onCancelSearch else onSearch,

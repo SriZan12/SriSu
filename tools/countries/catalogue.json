@@ -1,0 +1,2071 @@
+[
+  {
+    "code": "AD",
+    "name": "Andorra",
+    "displayName": "Andorra",
+    "prefix": "+376",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AE",
+    "name": "United Arab Emirates",
+    "displayName": "United Arab Emirates",
+    "prefix": "+971",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AF",
+    "name": "Afghanistan",
+    "displayName": "Afghanistan",
+    "prefix": "+93",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AG",
+    "name": "Antigua and Barbuda",
+    "displayName": "Antigua & Barbuda",
+    "prefix": "+1268",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AI",
+    "name": "Anguilla",
+    "displayName": "Anguilla",
+    "prefix": "+1264",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AL",
+    "name": "Albania",
+    "displayName": "Albania",
+    "prefix": "+355",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AM",
+    "name": "Armenia",
+    "displayName": "Armenia",
+    "prefix": "+374",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AN",
+    "name": "Netherlands Antilles",
+    "displayName": "Netherlands Antilles",
+    "prefix": null,
+    "legacy": true,
+    "aliases": []
+  },
+  {
+    "code": "AO",
+    "name": "Angola",
+    "displayName": "Angola",
+    "prefix": "+244",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AQ",
+    "name": "Antarctica",
+    "displayName": "Antarctica",
+    "prefix": null,
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AR",
+    "name": "Argentina",
+    "displayName": "Argentina",
+    "prefix": "+54",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AS",
+    "name": "American Samoa",
+    "displayName": "American Samoa",
+    "prefix": "+1684",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AT",
+    "name": "Austria",
+    "displayName": "Austria",
+    "prefix": "+43",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AU",
+    "name": "Australia",
+    "displayName": "Australia",
+    "prefix": "+61",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AW",
+    "name": "Aruba",
+    "displayName": "Aruba",
+    "prefix": "+297",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AX",
+    "name": "Åland Islands",
+    "displayName": "Åland Islands",
+    "prefix": "+358",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "AZ",
+    "name": "Azerbaijan",
+    "displayName": "Azerbaijan",
+    "prefix": "+994",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BA",
+    "name": "Bosnia and Herzegovina",
+    "displayName": "Bosnia & Herzegovina",
+    "prefix": "+387",
+    "legacy": false,
+    "aliases": [
+      "Bosnia"
+    ]
+  },
+  {
+    "code": "BB",
+    "name": "Barbados",
+    "displayName": "Barbados",
+    "prefix": "+1246",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BD",
+    "name": "Bangladesh",
+    "displayName": "Bangladesh",
+    "prefix": "+880",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BE",
+    "name": "Belgium",
+    "displayName": "Belgium",
+    "prefix": "+32",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BF",
+    "name": "Burkina Faso",
+    "displayName": "Burkina Faso",
+    "prefix": "+226",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BG",
+    "name": "Bulgaria",
+    "displayName": "Bulgaria",
+    "prefix": "+359",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BH",
+    "name": "Bahrain",
+    "displayName": "Bahrain",
+    "prefix": "+973",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BI",
+    "name": "Burundi",
+    "displayName": "Burundi",
+    "prefix": "+257",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BJ",
+    "name": "Benin",
+    "displayName": "Benin",
+    "prefix": "+229",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BL",
+    "name": "Saint Barthélemy",
+    "displayName": "St. Barthélemy",
+    "prefix": "+590",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BM",
+    "name": "Bermuda",
+    "displayName": "Bermuda",
+    "prefix": "+1441",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BN",
+    "name": "Brunei Darussalam",
+    "displayName": "Brunei",
+    "prefix": "+673",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BO",
+    "name": "Bolivia",
+    "displayName": "Bolivia",
+    "prefix": "+591",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BQ",
+    "name": "Caribbean Netherlands",
+    "displayName": "Caribbean Netherlands",
+    "prefix": "+599",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BR",
+    "name": "Brazil",
+    "displayName": "Brazil",
+    "prefix": "+55",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BS",
+    "name": "Bahamas",
+    "displayName": "Bahamas",
+    "prefix": "+1242",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BT",
+    "name": "Bhutan",
+    "displayName": "Bhutan",
+    "prefix": "+975",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BV",
+    "name": "Bouvet Island",
+    "displayName": "Bouvet Island",
+    "prefix": null,
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BW",
+    "name": "Botswana",
+    "displayName": "Botswana",
+    "prefix": "+267",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BY",
+    "name": "Belarus",
+    "displayName": "Belarus",
+    "prefix": "+375",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "BZ",
+    "name": "Belize",
+    "displayName": "Belize",
+    "prefix": "+501",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CA",
+    "name": "Canada",
+    "displayName": "Canada",
+    "prefix": "+1",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CC",
+    "name": "Cocos (Keeling) Islands",
+    "displayName": "Cocos (Keeling) Islands",
+    "prefix": "+61",
+    "legacy": false,
+    "aliases": [
+      "Cocos Islands"
+    ]
+  },
+  {
+    "code": "CD",
+    "name": "Congo",
+    "displayName": "Congo - Kinshasa",
+    "prefix": "+243",
+    "legacy": false,
+    "aliases": [
+      "DR Congo",
+      "Democratic Republic of Congo",
+      "Congo (DRC)"
+    ]
+  },
+  {
+    "code": "CF",
+    "name": "Central African Republic",
+    "displayName": "Central African Republic",
+    "prefix": "+236",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CG",
+    "name": "Congo",
+    "displayName": "Congo - Brazzaville",
+    "prefix": "+242",
+    "legacy": false,
+    "aliases": [
+      "Republic of Congo",
+      "Congo (Republic)"
+    ]
+  },
+  {
+    "code": "CH",
+    "name": "Switzerland",
+    "displayName": "Switzerland",
+    "prefix": "+41",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CI",
+    "name": "Cote d'Ivoire",
+    "displayName": "Côte d’Ivoire",
+    "prefix": "+225",
+    "legacy": false,
+    "aliases": [
+      "Ivory Coast"
+    ]
+  },
+  {
+    "code": "CK",
+    "name": "Cook Islands",
+    "displayName": "Cook Islands",
+    "prefix": "+682",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CL",
+    "name": "Chile",
+    "displayName": "Chile",
+    "prefix": "+56",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CM",
+    "name": "Cameroon",
+    "displayName": "Cameroon",
+    "prefix": "+237",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CN",
+    "name": "China",
+    "displayName": "China",
+    "prefix": "+86",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CO",
+    "name": "Colombia",
+    "displayName": "Colombia",
+    "prefix": "+57",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CR",
+    "name": "Costa Rica",
+    "displayName": "Costa Rica",
+    "prefix": "+506",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CU",
+    "name": "Cuba",
+    "displayName": "Cuba",
+    "prefix": "+53",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CV",
+    "name": "Cape Verde",
+    "displayName": "Cape Verde",
+    "prefix": "+238",
+    "legacy": false,
+    "aliases": [
+      "Cabo Verde"
+    ]
+  },
+  {
+    "code": "CW",
+    "name": "Curaçao",
+    "displayName": "Curaçao",
+    "prefix": "+599",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CX",
+    "name": "Christmas Island",
+    "displayName": "Christmas Island",
+    "prefix": "+61",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CY",
+    "name": "Cyprus",
+    "displayName": "Cyprus",
+    "prefix": "+357",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "CZ",
+    "name": "Czech Republic",
+    "displayName": "Czechia",
+    "prefix": "+420",
+    "legacy": false,
+    "aliases": [
+      "Czechia",
+      "Czech Republic"
+    ]
+  },
+  {
+    "code": "DE",
+    "name": "Germany",
+    "displayName": "Germany",
+    "prefix": "+49",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "DJ",
+    "name": "Djibouti",
+    "displayName": "Djibouti",
+    "prefix": "+253",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "DK",
+    "name": "Denmark",
+    "displayName": "Denmark",
+    "prefix": "+45",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "DM",
+    "name": "Dominica",
+    "displayName": "Dominica",
+    "prefix": "+1767",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "DO",
+    "name": "Dominican Republic",
+    "displayName": "Dominican Republic",
+    "prefix": "+1849",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "DZ",
+    "name": "Algeria",
+    "displayName": "Algeria",
+    "prefix": "+213",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "EC",
+    "name": "Ecuador",
+    "displayName": "Ecuador",
+    "prefix": "+593",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "EE",
+    "name": "Estonia",
+    "displayName": "Estonia",
+    "prefix": "+372",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "EG",
+    "name": "Egypt",
+    "displayName": "Egypt",
+    "prefix": "+20",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "EH",
+    "name": "Western Sahara",
+    "displayName": "Western Sahara",
+    "prefix": "+212",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ER",
+    "name": "Eritrea",
+    "displayName": "Eritrea",
+    "prefix": "+291",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ES",
+    "name": "Spain",
+    "displayName": "Spain",
+    "prefix": "+34",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ET",
+    "name": "Ethiopia",
+    "displayName": "Ethiopia",
+    "prefix": "+251",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "FI",
+    "name": "Finland",
+    "displayName": "Finland",
+    "prefix": "+358",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "FJ",
+    "name": "Fiji",
+    "displayName": "Fiji",
+    "prefix": "+679",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "FK",
+    "name": "Falkland Islands (Malvinas)",
+    "displayName": "Falkland Islands",
+    "prefix": "+500",
+    "legacy": false,
+    "aliases": [
+      "Falkland Islands (Islas Malvinas)"
+    ]
+  },
+  {
+    "code": "FM",
+    "name": "Micronesia",
+    "displayName": "Micronesia",
+    "prefix": "+691",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "FO",
+    "name": "Faroe Islands",
+    "displayName": "Faroe Islands",
+    "prefix": "+298",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "FR",
+    "name": "France",
+    "displayName": "France",
+    "prefix": "+33",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GA",
+    "name": "Gabon",
+    "displayName": "Gabon",
+    "prefix": "+241",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GB",
+    "name": "United Kingdom",
+    "displayName": "United Kingdom",
+    "prefix": "+44",
+    "legacy": false,
+    "aliases": [
+      "UK",
+      "Britain",
+      "Great Britain"
+    ]
+  },
+  {
+    "code": "GD",
+    "name": "Grenada",
+    "displayName": "Grenada",
+    "prefix": "+1473",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GE",
+    "name": "Georgia",
+    "displayName": "Georgia",
+    "prefix": "+995",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GF",
+    "name": "French Guiana",
+    "displayName": "French Guiana",
+    "prefix": "+594",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GG",
+    "name": "Guernsey",
+    "displayName": "Guernsey",
+    "prefix": "+44",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GH",
+    "name": "Ghana",
+    "displayName": "Ghana",
+    "prefix": "+233",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GI",
+    "name": "Gibraltar",
+    "displayName": "Gibraltar",
+    "prefix": "+350",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GL",
+    "name": "Greenland",
+    "displayName": "Greenland",
+    "prefix": "+299",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GM",
+    "name": "Gambia",
+    "displayName": "Gambia",
+    "prefix": "+220",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GN",
+    "name": "Guinea",
+    "displayName": "Guinea",
+    "prefix": "+224",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GP",
+    "name": "Guadeloupe",
+    "displayName": "Guadeloupe",
+    "prefix": "+590",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GQ",
+    "name": "Equatorial Guinea",
+    "displayName": "Equatorial Guinea",
+    "prefix": "+240",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GR",
+    "name": "Greece",
+    "displayName": "Greece",
+    "prefix": "+30",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GS",
+    "name": "South Georgia",
+    "displayName": "South Georgia & South Sandwich Islands",
+    "prefix": null,
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GT",
+    "name": "Guatemala",
+    "displayName": "Guatemala",
+    "prefix": "+502",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GU",
+    "name": "Guam",
+    "displayName": "Guam",
+    "prefix": "+1671",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GW",
+    "name": "Guinea-Bissau",
+    "displayName": "Guinea-Bissau",
+    "prefix": "+245",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "GY",
+    "name": "Guyana",
+    "displayName": "Guyana",
+    "prefix": "+592",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "HK",
+    "name": "Hong Kong",
+    "displayName": "Hong Kong",
+    "prefix": "+852",
+    "legacy": false,
+    "aliases": [
+      "Hong Kong"
+    ]
+  },
+  {
+    "code": "HM",
+    "name": "Heard & McDonald Islands",
+    "displayName": "Heard & McDonald Islands",
+    "prefix": null,
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "HN",
+    "name": "Honduras",
+    "displayName": "Honduras",
+    "prefix": "+504",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "HR",
+    "name": "Croatia",
+    "displayName": "Croatia",
+    "prefix": "+385",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "HT",
+    "name": "Haiti",
+    "displayName": "Haiti",
+    "prefix": "+509",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "HU",
+    "name": "Hungary",
+    "displayName": "Hungary",
+    "prefix": "+36",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ID",
+    "name": "Indonesia",
+    "displayName": "Indonesia",
+    "prefix": "+62",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IE",
+    "name": "Ireland",
+    "displayName": "Ireland",
+    "prefix": "+353",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IL",
+    "name": "Israel",
+    "displayName": "Israel",
+    "prefix": "+972",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IM",
+    "name": "Isle of Man",
+    "displayName": "Isle of Man",
+    "prefix": "+44",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IN",
+    "name": "India",
+    "displayName": "India",
+    "prefix": "+91",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IO",
+    "name": "British Indian Ocean Territory",
+    "displayName": "British Indian Ocean Territory",
+    "prefix": "+246",
+    "legacy": false,
+    "aliases": [
+      "Chagos Archipelago"
+    ]
+  },
+  {
+    "code": "IQ",
+    "name": "Iraq",
+    "displayName": "Iraq",
+    "prefix": "+964",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IR",
+    "name": "Iran",
+    "displayName": "Iran",
+    "prefix": "+98",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IS",
+    "name": "Iceland",
+    "displayName": "Iceland",
+    "prefix": "+354",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "IT",
+    "name": "Italy",
+    "displayName": "Italy",
+    "prefix": "+39",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "JE",
+    "name": "Jersey",
+    "displayName": "Jersey",
+    "prefix": "+44",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "JM",
+    "name": "Jamaica",
+    "displayName": "Jamaica",
+    "prefix": "+1876",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "JO",
+    "name": "Jordan",
+    "displayName": "Jordan",
+    "prefix": "+962",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "JP",
+    "name": "Japan",
+    "displayName": "Japan",
+    "prefix": "+81",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KE",
+    "name": "Kenya",
+    "displayName": "Kenya",
+    "prefix": "+254",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KG",
+    "name": "Kyrgyzstan",
+    "displayName": "Kyrgyzstan",
+    "prefix": "+996",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KH",
+    "name": "Cambodia",
+    "displayName": "Cambodia",
+    "prefix": "+855",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KI",
+    "name": "Kiribati",
+    "displayName": "Kiribati",
+    "prefix": "+686",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KM",
+    "name": "Comoros",
+    "displayName": "Comoros",
+    "prefix": "+269",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KN",
+    "name": "Saint Kitts and Nevis",
+    "displayName": "St. Kitts & Nevis",
+    "prefix": "+1869",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KP",
+    "name": "North Korea",
+    "displayName": "North Korea",
+    "prefix": "+850",
+    "legacy": false,
+    "aliases": [
+      "North Korea"
+    ]
+  },
+  {
+    "code": "KR",
+    "name": "South Korea",
+    "displayName": "South Korea",
+    "prefix": "+82",
+    "legacy": false,
+    "aliases": [
+      "South Korea"
+    ]
+  },
+  {
+    "code": "KW",
+    "name": "Kuwait",
+    "displayName": "Kuwait",
+    "prefix": "+965",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KY",
+    "name": "Cayman Islands",
+    "displayName": "Cayman Islands",
+    "prefix": "+1345",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "KZ",
+    "name": "Kazakhstan",
+    "displayName": "Kazakhstan",
+    "prefix": "+7",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LA",
+    "name": "Lao People's Democratic Republic",
+    "displayName": "Laos",
+    "prefix": "+856",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LB",
+    "name": "Lebanon",
+    "displayName": "Lebanon",
+    "prefix": "+961",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LC",
+    "name": "Saint Lucia",
+    "displayName": "St. Lucia",
+    "prefix": "+1758",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LI",
+    "name": "Liechtenstein",
+    "displayName": "Liechtenstein",
+    "prefix": "+423",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LK",
+    "name": "Sri Lanka",
+    "displayName": "Sri Lanka",
+    "prefix": "+94",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LR",
+    "name": "Liberia",
+    "displayName": "Liberia",
+    "prefix": "+231",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LS",
+    "name": "Lesotho",
+    "displayName": "Lesotho",
+    "prefix": "+266",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LT",
+    "name": "Lithuania",
+    "displayName": "Lithuania",
+    "prefix": "+370",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LU",
+    "name": "Luxembourg",
+    "displayName": "Luxembourg",
+    "prefix": "+352",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LV",
+    "name": "Latvia",
+    "displayName": "Latvia",
+    "prefix": "+371",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "LY",
+    "name": "Libyan Arab Jamahiriya",
+    "displayName": "Libya",
+    "prefix": "+218",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MA",
+    "name": "Morocco",
+    "displayName": "Morocco",
+    "prefix": "+212",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MC",
+    "name": "Monaco",
+    "displayName": "Monaco",
+    "prefix": "+377",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MD",
+    "name": "Moldova",
+    "displayName": "Moldova",
+    "prefix": "+373",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ME",
+    "name": "Montenegro",
+    "displayName": "Montenegro",
+    "prefix": "+382",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MF",
+    "name": "Saint Martin",
+    "displayName": "St. Martin",
+    "prefix": "+590",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MG",
+    "name": "Madagascar",
+    "displayName": "Madagascar",
+    "prefix": "+261",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MH",
+    "name": "Marshall Islands",
+    "displayName": "Marshall Islands",
+    "prefix": "+692",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MK",
+    "name": "Macedonia",
+    "displayName": "North Macedonia",
+    "prefix": "+389",
+    "legacy": false,
+    "aliases": [
+      "North Macedonia"
+    ]
+  },
+  {
+    "code": "ML",
+    "name": "Mali",
+    "displayName": "Mali",
+    "prefix": "+223",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MM",
+    "name": "Myanmar",
+    "displayName": "Myanmar (Burma)",
+    "prefix": "+95",
+    "legacy": false,
+    "aliases": [
+      "Myanmar"
+    ]
+  },
+  {
+    "code": "MN",
+    "name": "Mongolia",
+    "displayName": "Mongolia",
+    "prefix": "+976",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MO",
+    "name": "Macao",
+    "displayName": "Macao",
+    "prefix": "+853",
+    "legacy": false,
+    "aliases": [
+      "Macao"
+    ]
+  },
+  {
+    "code": "MP",
+    "name": "Northern Mariana Islands",
+    "displayName": "Northern Mariana Islands",
+    "prefix": "+1 670",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MQ",
+    "name": "Martinique",
+    "displayName": "Martinique",
+    "prefix": "+596",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MR",
+    "name": "Mauritania",
+    "displayName": "Mauritania",
+    "prefix": "+222",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MS",
+    "name": "Montserrat",
+    "displayName": "Montserrat",
+    "prefix": "+1664",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MT",
+    "name": "Malta",
+    "displayName": "Malta",
+    "prefix": "+356",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MU",
+    "name": "Mauritius",
+    "displayName": "Mauritius",
+    "prefix": "+230",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MV",
+    "name": "Maldives",
+    "displayName": "Maldives",
+    "prefix": "+960",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MW",
+    "name": "Malawi",
+    "displayName": "Malawi",
+    "prefix": "+265",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MX",
+    "name": "Mexico",
+    "displayName": "Mexico",
+    "prefix": "+52",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MY",
+    "name": "Malaysia",
+    "displayName": "Malaysia",
+    "prefix": "+60",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "MZ",
+    "name": "Mozambique",
+    "displayName": "Mozambique",
+    "prefix": "+258",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NA",
+    "name": "Namibia",
+    "displayName": "Namibia",
+    "prefix": "+264",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NC",
+    "name": "New Caledonia",
+    "displayName": "New Caledonia",
+    "prefix": "+687",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NE",
+    "name": "Niger",
+    "displayName": "Niger",
+    "prefix": "+227",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NF",
+    "name": "Norfolk Island",
+    "displayName": "Norfolk Island",
+    "prefix": "+672",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NG",
+    "name": "Nigeria",
+    "displayName": "Nigeria",
+    "prefix": "+234",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NI",
+    "name": "Nicaragua",
+    "displayName": "Nicaragua",
+    "prefix": "+505",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NL",
+    "name": "Netherlands",
+    "displayName": "Netherlands",
+    "prefix": "+31",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NO",
+    "name": "Norway",
+    "displayName": "Norway",
+    "prefix": "+47",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NP",
+    "name": "Nepal",
+    "displayName": "Nepal",
+    "prefix": "+977",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NR",
+    "name": "Nauru",
+    "displayName": "Nauru",
+    "prefix": "+674",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NU",
+    "name": "Niue",
+    "displayName": "Niue",
+    "prefix": "+683",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "NZ",
+    "name": "New Zealand",
+    "displayName": "New Zealand",
+    "prefix": "+64",
+    "legacy": false,
+    "aliases": [
+      "Aotearoa New Zealand"
+    ]
+  },
+  {
+    "code": "OM",
+    "name": "Oman",
+    "displayName": "Oman",
+    "prefix": "+968",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PA",
+    "name": "Panama",
+    "displayName": "Panama",
+    "prefix": "+507",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PE",
+    "name": "Peru",
+    "displayName": "Peru",
+    "prefix": "+51",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PF",
+    "name": "French Polynesia",
+    "displayName": "French Polynesia",
+    "prefix": "+689",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PG",
+    "name": "Papua New Guinea",
+    "displayName": "Papua New Guinea",
+    "prefix": "+675",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PH",
+    "name": "Philippines",
+    "displayName": "Philippines",
+    "prefix": "+63",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PK",
+    "name": "Pakistan",
+    "displayName": "Pakistan",
+    "prefix": "+92",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PL",
+    "name": "Poland",
+    "displayName": "Poland",
+    "prefix": "+48",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PM",
+    "name": "Saint Pierre and Miquelon",
+    "displayName": "St. Pierre & Miquelon",
+    "prefix": "+508",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PN",
+    "name": "Pitcairn",
+    "displayName": "Pitcairn Islands",
+    "prefix": null,
+    "legacy": false,
+    "aliases": [
+      "Pitcairn"
+    ]
+  },
+  {
+    "code": "PR",
+    "name": "Puerto Rico",
+    "displayName": "Puerto Rico",
+    "prefix": "+1939",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PS",
+    "name": "Palestine",
+    "displayName": "Palestinian Territories",
+    "prefix": "+970",
+    "legacy": false,
+    "aliases": [
+      "Palestine"
+    ]
+  },
+  {
+    "code": "PT",
+    "name": "Portugal",
+    "displayName": "Portugal",
+    "prefix": "+351",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PW",
+    "name": "Palau",
+    "displayName": "Palau",
+    "prefix": "+680",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "PY",
+    "name": "Paraguay",
+    "displayName": "Paraguay",
+    "prefix": "+595",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "QA",
+    "name": "Qatar",
+    "displayName": "Qatar",
+    "prefix": "+974",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "RE",
+    "name": "Réunion",
+    "displayName": "Réunion",
+    "prefix": "+262",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "RO",
+    "name": "Romania",
+    "displayName": "Romania",
+    "prefix": "+40",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "RS",
+    "name": "Serbia",
+    "displayName": "Serbia",
+    "prefix": "+381",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "RU",
+    "name": "Russia",
+    "displayName": "Russia",
+    "prefix": "+7",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "RW",
+    "name": "Rwanda",
+    "displayName": "Rwanda",
+    "prefix": "+250",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SA",
+    "name": "Saudi Arabia",
+    "displayName": "Saudi Arabia",
+    "prefix": "+966",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SB",
+    "name": "Solomon Islands",
+    "displayName": "Solomon Islands",
+    "prefix": "+677",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SC",
+    "name": "Seychelles",
+    "displayName": "Seychelles",
+    "prefix": "+248",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SD",
+    "name": "Sudan",
+    "displayName": "Sudan",
+    "prefix": "+249",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SE",
+    "name": "Sweden",
+    "displayName": "Sweden",
+    "prefix": "+46",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SG",
+    "name": "Singapore",
+    "displayName": "Singapore",
+    "prefix": "+65",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SH",
+    "name": "Saint Helena",
+    "displayName": "St. Helena",
+    "prefix": "+290",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SI",
+    "name": "Slovenia",
+    "displayName": "Slovenia",
+    "prefix": "+386",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SJ",
+    "name": "Svalbard and Jan Mayen",
+    "displayName": "Svalbard & Jan Mayen",
+    "prefix": "+47",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SK",
+    "name": "Slovakia",
+    "displayName": "Slovakia",
+    "prefix": "+421",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SL",
+    "name": "Sierra Leone",
+    "displayName": "Sierra Leone",
+    "prefix": "+232",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SM",
+    "name": "San Marino",
+    "displayName": "San Marino",
+    "prefix": "+378",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SN",
+    "name": "Senegal",
+    "displayName": "Senegal",
+    "prefix": "+221",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SO",
+    "name": "Somalia",
+    "displayName": "Somalia",
+    "prefix": "+252",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SR",
+    "name": "Suriname",
+    "displayName": "Suriname",
+    "prefix": "+597",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SS",
+    "name": "South Sudan",
+    "displayName": "South Sudan",
+    "prefix": "+211",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ST",
+    "name": "Sao Tome and Principe",
+    "displayName": "São Tomé & Príncipe",
+    "prefix": "+239",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SV",
+    "name": "El Salvador",
+    "displayName": "El Salvador",
+    "prefix": "+503",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SX",
+    "name": "Sint Maarten",
+    "displayName": "Sint Maarten",
+    "prefix": "+1721",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SY",
+    "name": "Syrian Arab Republic",
+    "displayName": "Syria",
+    "prefix": "+963",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "SZ",
+    "name": "Swaziland",
+    "displayName": "Eswatini",
+    "prefix": "+268",
+    "legacy": false,
+    "aliases": [
+      "Eswatini",
+      "Swaziland"
+    ]
+  },
+  {
+    "code": "TC",
+    "name": "Turks and Caicos Islands",
+    "displayName": "Turks & Caicos Islands",
+    "prefix": "+1 649",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TD",
+    "name": "Chad",
+    "displayName": "Chad",
+    "prefix": "+235",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TF",
+    "name": "French Southern Territories",
+    "displayName": "French Southern Territories",
+    "prefix": null,
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TG",
+    "name": "Togo",
+    "displayName": "Togo",
+    "prefix": "+228",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TH",
+    "name": "Thailand",
+    "displayName": "Thailand",
+    "prefix": "+66",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TJ",
+    "name": "Tajikistan",
+    "displayName": "Tajikistan",
+    "prefix": "+992",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TK",
+    "name": "Tokelau",
+    "displayName": "Tokelau",
+    "prefix": "+690",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TL",
+    "name": "Timor-Leste",
+    "displayName": "Timor-Leste",
+    "prefix": "+670",
+    "legacy": false,
+    "aliases": [
+      "East Timor"
+    ]
+  },
+  {
+    "code": "TM",
+    "name": "Turkmenistan",
+    "displayName": "Turkmenistan",
+    "prefix": "+993",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TN",
+    "name": "Tunisia",
+    "displayName": "Tunisia",
+    "prefix": "+216",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TO",
+    "name": "Tonga",
+    "displayName": "Tonga",
+    "prefix": "+676",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TR",
+    "name": "Turkey",
+    "displayName": "Türkiye",
+    "prefix": "+90",
+    "legacy": false,
+    "aliases": [
+      "Türkiye",
+      "Turkey"
+    ]
+  },
+  {
+    "code": "TT",
+    "name": "Trinidad and Tobago",
+    "displayName": "Trinidad & Tobago",
+    "prefix": "+1868",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TV",
+    "name": "Tuvalu",
+    "displayName": "Tuvalu",
+    "prefix": "+688",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TW",
+    "name": "Taiwan",
+    "displayName": "Taiwan",
+    "prefix": "+886",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "TZ",
+    "name": "Tanzania",
+    "displayName": "Tanzania",
+    "prefix": "+255",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "UA",
+    "name": "Ukraine",
+    "displayName": "Ukraine",
+    "prefix": "+380",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "UG",
+    "name": "Uganda",
+    "displayName": "Uganda",
+    "prefix": "+256",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "UM",
+    "name": "U.S. Outlying Islands",
+    "displayName": "U.S. Outlying Islands",
+    "prefix": null,
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "US",
+    "name": "United States",
+    "displayName": "United States",
+    "prefix": "+1",
+    "legacy": false,
+    "aliases": [
+      "USA",
+      "United States of America",
+      "US"
+    ]
+  },
+  {
+    "code": "UY",
+    "name": "Uruguay",
+    "displayName": "Uruguay",
+    "prefix": "+598",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "UZ",
+    "name": "Uzbekistan",
+    "displayName": "Uzbekistan",
+    "prefix": "+998",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "VA",
+    "name": "Vatican City",
+    "displayName": "Vatican City",
+    "prefix": "+39",
+    "legacy": false,
+    "aliases": [
+      "Vatican",
+      "Holy See"
+    ]
+  },
+  {
+    "code": "VC",
+    "name": "Saint Vincent and the Grenadines",
+    "displayName": "St. Vincent & Grenadines",
+    "prefix": "+1784",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "VE",
+    "name": "Venezuela",
+    "displayName": "Venezuela",
+    "prefix": "+58",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "VG",
+    "name": "Virgin Islands, British",
+    "displayName": "British Virgin Islands",
+    "prefix": "+1284",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "VI",
+    "name": "Virgin Islands, U.S.",
+    "displayName": "U.S. Virgin Islands",
+    "prefix": "+1340",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "VN",
+    "name": "Vietnam",
+    "displayName": "Vietnam",
+    "prefix": "+84",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "VU",
+    "name": "Vanuatu",
+    "displayName": "Vanuatu",
+    "prefix": "+678",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "WF",
+    "name": "Wallis and Futuna",
+    "displayName": "Wallis & Futuna",
+    "prefix": "+681",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "WS",
+    "name": "Samoa",
+    "displayName": "Samoa",
+    "prefix": "+685",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "XK",
+    "name": "Kosovo",
+    "displayName": "Kosovo",
+    "prefix": "+383",
+    "legacy": false,
+    "aliases": [
+      "Kosovo"
+    ]
+  },
+  {
+    "code": "YE",
+    "name": "Yemen",
+    "displayName": "Yemen",
+    "prefix": "+967",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "YT",
+    "name": "Mayotte",
+    "displayName": "Mayotte",
+    "prefix": "+262",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ZA",
+    "name": "South Africa",
+    "displayName": "South Africa",
+    "prefix": "+27",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ZM",
+    "name": "Zambia",
+    "displayName": "Zambia",
+    "prefix": "+260",
+    "legacy": false,
+    "aliases": []
+  },
+  {
+    "code": "ZW",
+    "name": "Zimbabwe",
+    "displayName": "Zimbabwe",
+    "prefix": "+263",
+    "legacy": false,
+    "aliases": []
+  }
+]

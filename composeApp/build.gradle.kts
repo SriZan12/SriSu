@@ -217,6 +217,7 @@ kotlin {
             implementation("androidx.test:runner:1.6.2")
             implementation("androidx.test.ext:junit:1.2.1")
             implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
+            implementation("androidx.test.uiautomator:uiautomator:2.3.0")
         }
 
         iosTest.dependencies {

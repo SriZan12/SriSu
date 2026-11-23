@@ -104,6 +104,7 @@ fun PhoneNumberScreen(
     CountrySelectionBottomSheet(
         modifier = Modifier,
         countries = authUIState.countryList,
+        selectedCode = authUIState.countryCode,
         show = showCountryList,
         onCountrySelected = { countryModel ->
             showCountryList = false
@@ -191,7 +192,7 @@ private fun HandleUiStateDialog(
 
 @Composable
 private fun PhoneNumberScreenContent(
-    countryCode: String = "+977",
+    countryCode: String = "NP",
     phoneNumber: String,
     countryPrefix: String,
     onPhoneNumberChange: (String) -> Unit,
