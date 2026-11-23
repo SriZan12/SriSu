@@ -14,12 +14,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -150,7 +153,7 @@ private fun PhoneNumberTextField(
         onValueChange = { value ->
             onPhoneNumberChange(value.filter { it.isDigit() })
         },
-        modifier = modifier.height(64.dp),
+        modifier = modifier.heightIn(min = 64.dp),
         placeholder = {
             Text(
                 text = "Phone number",
@@ -445,33 +448,19 @@ fun PhoneNumberCompo(
     updatePhoneNumber: (String) -> Unit,
     onShowCountryList: () -> Unit
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-    ) {
-
-        CountryCodeDropDown(
-            modifier = Modifier,
-            selectedCountryPrefix = countryPrefix,
-            selectedCountryCode = countryCode,
-            backgroundColor = backgroundColor,
-            onClick = {
-                onShowCountryList()
-            },
-        )
-
-        PhoneNumberTextField(
-            phoneNumber = phoneNumber,
-            onPhoneNumberChange = {
-                updatePhoneNumber(it)
-            },
-            modifier = Modifier.weight(0.62f)
-        )
-
-
+    BoxWithConstraints(modifier) {
+        val stack = maxWidth < 360.dp && LocalDensity.current.fontScale > 1.3f
+        val country: @Composable () -> Unit = {
+            CountryCodeDropDown(Modifier, countryPrefix, countryCode, onShowCountryList, backgroundColor)
+        }
+        if (stack) Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+            country()
+            PhoneNumberTextField(phoneNumber, updatePhoneNumber, Modifier.fillMaxWidth())
+        } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+            country()
+            PhoneNumberTextField(phoneNumber, updatePhoneNumber, Modifier.weight(1f))
+        }
     }
-
 }
 
 @Composable

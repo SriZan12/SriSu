@@ -110,7 +110,7 @@ class FindPartnerViewModel(
 
     fun updatePhoneNumber(phoneNumber: String) {
         if (_findPartnerUIState.value.isSendingInvitation) return
-        val digits = phoneNumber.filter { it in '0'..'9' }.take(10)
+        val digits = phoneNumber.filter { it in '0'..'9' }.take(14)
         if (digits == _findPartnerUIState.value.phoneNumber) return
         cancelSearch()
         _findPartnerUIState.update { it.copy(phoneNumber = digits, validationErrorMsg = "") }
@@ -135,8 +135,8 @@ class FindPartnerViewModel(
         val state = _findPartnerUIState.value
         val error = when {
             state.phoneNumber.isBlank() -> "Enter your partner’s phone number."
-            state.phoneNumber.length != 10 || state.phoneNumber.any { it !in '0'..'9' } ->
-                "Enter a 10-digit phone number."
+            !com.srisu.srisu.features.auth.domain.isInternationalPhoneValid(state.countryPrefix, state.phoneNumber) ->
+                "Enter a valid phone number for the selected calling code."
             state.countryPrefix + state.phoneNumber == state.senderPhoneNumber ->
                 "Enter your partner’s number, not your own."
             else -> ""

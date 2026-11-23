@@ -217,6 +217,7 @@ kotlin {
             implementation("androidx.test:runner:1.6.2")
             implementation("androidx.test.ext:junit:1.2.1")
             implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
+            implementation("androidx.test.uiautomator:uiautomator:2.3.0")
         }
 
         iosTest.dependencies {
@@ -236,7 +237,15 @@ kotlin {
 }
 
 android {
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Robolectric resolves Android SDK jars separately from Gradle's repositories.
+            // Use Maven Central's canonical endpoint for those runtime downloads too.
+            it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+            it.testLogging.exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+    }
     namespace = "com.srisu.srisu"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
