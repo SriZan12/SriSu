@@ -2,6 +2,8 @@
 
 ## Specific notification previews — 23 November 2026
 
+See the [executed verification and Windows/phone results](../validation/notifications/previews-20261123.md).
+
 The `notification-previews-1` capability replaces the universal update text with
 an action, actor and useful preview. Android receives a schema-2 **data-only** push,
 posts a safe event-specific fallback immediately, and schedules bounded background

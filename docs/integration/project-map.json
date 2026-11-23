@@ -176,7 +176,8 @@
       "rollout_capability": "notification-catalogue-2",
       "rollout_validation": "docs/validation/notifications/rollout-20261122.md",
       "preview_capability": "notification-previews-1",
-      "preview_branch": "codex/notification-previews"
+      "preview_branch": "codex/notification-previews",
+      "preview_validation": "docs/validation/notifications/previews-20261123.md"
     },
     "home": {
       "frontend_branch": "codex/home-couple-space",
