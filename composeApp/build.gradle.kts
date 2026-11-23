@@ -107,6 +107,7 @@ kotlin {
         androidMain.dependencies {
             implementation(project.dependencies.platform("com.google.firebase:firebase-bom:35.0.0"))
             implementation("com.google.firebase:firebase-messaging")
+            implementation("androidx.work:work-runtime-ktx:2.12.0")
             implementation("com.google.firebase:firebase-crashlytics")
             implementation("com.google.firebase:firebase-crashlytics-ndk")
             // Maintained MP4 remuxer with bounded in-memory output; no plaintext temp video.

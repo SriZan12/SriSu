@@ -11,12 +11,25 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.srisu.srisu.MainActivity
+import com.liftric.kvault.KVault
+import com.srisu.srisu.notifications.bounded
 import org.json.JSONArray
 import org.json.JSONObject
 
 object PlanPermissionHost { var request: (((String)->Unit)->Unit)? = null }
 private const val CHANNEL = "srisu-plans"
 private fun preferences(c: Context) = c.getSharedPreferences("plan-alarms",Context.MODE_PRIVATE)
+internal interface PlanPreviewStore {
+    fun read(id: String): String?
+    fun write(id: String, value: String)
+    fun remove(id: String)
+}
+private class EncryptedPlanPreviewStore(context: Context) : PlanPreviewStore {
+    private val vault by lazy { KVault(context=context, fileName="srisu_plan_previews_v1") }
+    override fun read(id: String) = vault.string(id)
+    override fun write(id: String, value: String) { check(vault.set(id,value)) }
+    override fun remove(id: String) { vault.deleteObject(id) }
+}
 private fun alarmIntent(c: Context, id: String): PendingIntent = PendingIntent.getBroadcast(c,0,
     Intent(c,PlanAlarmReceiver::class.java).setData(Uri.parse("srisu-alarm://$id")),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 private fun allowed(c: Context): Boolean = NotificationManagerCompat.from(c).areNotificationsEnabled() &&
@@ -25,7 +38,8 @@ private fun allowed(c: Context): Boolean = NotificationManagerCompat.from(c).are
 private fun channel(c: Context) {
     if(Build.VERSION.SDK_INT>=26) c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL,"Plan reminders",NotificationManager.IMPORTANCE_DEFAULT))
 }
-class AndroidPlanDevice(private val context: Context): PlanDevice {
+class AndroidPlanDevice internal constructor(private val context: Context, private val previews: PlanPreviewStore): PlanDevice {
+    constructor(context: Context) : this(context, EncryptedPlanPreviewStore(context))
     override fun permission(result:(String)->Unit) { channel(context); result(if(allowed(context)) "granted" else "denied") }
     override fun requestPermission(result:(String)->Unit) {
         channel(context)
@@ -40,9 +54,15 @@ class AndroidPlanDevice(private val context: Context): PlanDevice {
                 if(alarms.none {it.id==id && it.atMillis==row.getLong("at") && it.url==row.getString("url")}) {
                     manager.cancel(alarmIntent(context,id));NotificationManagerCompat.from(context).cancel(id.hashCode())
                 }
+                if(alarms.none {it.id==id}) previews.remove(id)
             }
             val encoded=JSONArray()
-            for(alarm in alarms) encoded.put(JSONObject().put("id",alarm.id).put("at",alarm.atMillis).put("url",alarm.url))
+            for(alarm in alarms) {
+                // Names/places stay in encrypted app storage, never alarm intents or ordinary preferences.
+                previews.write(alarm.id,JSONObject().put("title",bounded(alarm.title,120))
+                    .put("body",bounded(alarm.body,240)).toString())
+                encoded.put(JSONObject().put("id",alarm.id).put("at",alarm.atMillis).put("url",alarm.url))
+            }
             // Save before scheduling; a receiver never displays an alarm removed by logout/cancellation.
             prefs.edit().putString("alarms",encoded.toString()).commit()
             for(alarm in alarms) {
@@ -70,7 +90,8 @@ private fun scheduleSaved(context:Context) {
         if(at>System.currentTimeMillis()) manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,alarmIntent(context,row.getString("id")))
     }
 }
-class PlanAlarmReceiver: BroadcastReceiver() {
+class PlanAlarmReceiver internal constructor(private val previewStore: (Context) -> PlanPreviewStore): BroadcastReceiver() {
+    constructor() : this({ EncryptedPlanPreviewStore(it) })
     override fun onReceive(context:Context,intent:Intent) {
         if(intent.action==Intent.ACTION_BOOT_COMPLETED || intent.action==Intent.ACTION_MY_PACKAGE_REPLACED) { runCatching { scheduleSaved(context) }; return }
         val id=intent.data?.host ?: return
@@ -80,9 +101,17 @@ class PlanAlarmReceiver: BroadcastReceiver() {
         val age=System.currentTimeMillis()-row.getLong("at")
         if(age !in 0..3_600_000 || !allowed(context)) return
         val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse(row.getString("url"))),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        runCatching { NotificationManagerCompat.from(context).notify(id.hashCode(),NotificationCompat.Builder(context,CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_menu_my_calendar).setContentTitle("A plan together")
-            .setContentText("Open SriSu to check the latest details.").setContentIntent(open).setAutoCancel(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).build()) }
+        runCatching {
+            val copy=previewStore(context).read(id)?.let(::JSONObject)
+            val title=copy?.optString("title")?.takeIf(String::isNotBlank) ?: "Plan reminder"
+            val body=copy?.optString("body")?.takeIf(String::isNotBlank) ?: "Your plan is coming up."
+            val public=NotificationCompat.Builder(context,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_my_calendar)
+                .setContentTitle("Plan reminder").setContentText("Your plan is coming up.").build()
+            NotificationManagerCompat.from(context).notify(id.hashCode(),NotificationCompat.Builder(context,CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_menu_my_calendar).setContentTitle(title)
+                .setContentText(body).setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setContentIntent(open).setAutoCancel(true).setPublicVersion(public)
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).build())
+        }
     }
 }

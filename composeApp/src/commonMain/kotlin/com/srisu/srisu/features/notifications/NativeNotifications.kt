@@ -38,7 +38,7 @@ object NativeNotifications {
     @OptIn(ExperimentalTime::class)
     fun receive(schema: String?, deliveryId: String?, expiresAt: String?, tapped: Boolean) {
         val expiry = expiresAt?.toLongOrNull() ?: return
-        if (schema != "1" || !validNotificationId(deliveryId) || expiry <= Clock.System.now().epochSeconds) return
+        if (schema !in setOf("1", "2") || !validNotificationId(deliveryId) || expiry <= Clock.System.now().epochSeconds) return
         if (deliveryId in if (tapped) this.tapped else shown) return
         mutableSignal.value = NotificationSignal(deliveryId!!, expiry, tapped)
     }

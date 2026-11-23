@@ -150,3 +150,8 @@ See [integrated QA evidence and remaining gaps](../validation/full-app-qa/README
 ## Home integration — 9 November 2026
 
 Home now opens the existing Plan editor directly, including conversion of mutually interested shared ideas into separate invitations. Drafts and exact pending operation IDs survive retries. Home adds current-request access and personal reminders; elapsed unresolved invitations remain reachable. See [Home couple space](home-couple-space.md).
+
+
+## Notification rollout — 22 November 2026
+
+See the [notification rollout](notifications.md#catalogue-rollout--22-november-2026) for current triggers, category controls, private tap destinations and mixed-client compatibility. Apple/APNs remains skipped.

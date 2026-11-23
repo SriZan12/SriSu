@@ -3,7 +3,8 @@ package com.srisu.srisu.features.plans.data
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
-data class PlanAlarm(val id: String, val atMillis: Long, val url: String)
+data class PlanAlarm(val id: String, val atMillis: Long, val url: String,
+    val title: String = "Plan reminder", val body: String = "Your plan is coming up.")
 /** Platform operations only. Permission requests occur exclusively after a user tap. */
 interface PlanDevice {
     fun permission(result: (String) -> Unit)

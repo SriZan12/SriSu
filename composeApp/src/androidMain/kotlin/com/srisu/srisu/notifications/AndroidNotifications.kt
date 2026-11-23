@@ -108,18 +108,19 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
         val target=fid ?: return null
         val id=vault.string("id") ?: UUID.randomUUID().toString().also { check(vault.set("id",it)) }
         val proof=vault.string("proof") ?: android.util.Base64.encodeToString(ByteArray(32).also {SecureRandom().nextBytes(it)},android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP).also {check(vault.set("proof",it))}
-        val identity="$binding:$target:${permitted()}:matrix-chat-push-1"
+        val identity="$binding:$target:${permitted()}:matrix-chat-push-1:notification-catalogue-2:notification-previews-1"
         var version=vault.string("version")?.toLongOrNull() ?: 0L
         if(vault.string("binding")!=identity) {
             version++
             check(vault.set("version",version.toString()))
             check(vault.set("binding",identity))
         }
-        return InstallationRequest(id,proof,version,"android","fid",target,permitted(), listOf("matrix-chat-push-1"))
+        return InstallationRequest(id,proof,version,"android","fid",target,permitted(), listOf("matrix-chat-push-1", NOTIFICATION_CATALOGUE, "notification-previews-1"))
     }
     override fun renewRegistration() {check(vault.set("binding",""));publish()}
     override fun clearAccount() {
         context.getSystemService(NotificationManager::class.java).cancelAll()
+        AndroidNotificationPreviews.clear(context)
         activeBinding=null;fid=null;registering=false;registrationFailed=false
         if(configured) {
             unregistering=true
@@ -145,6 +146,10 @@ class AndroidNotifications(private val context: Context) : NotificationPlatform 
             FirebaseCrashlytics.getInstance().recordException(safe)
         }
     }
+    internal fun ownsPreview(installationId: String, version: Long, sessionId: String): Boolean =
+        vault.string("id") == installationId && vault.string("version")?.toLongOrNull() == version &&
+            vault.string("binding")?.startsWith("$sessionId:") == true
+
     companion object {
         var instance: AndroidNotifications? = null
         fun install(context:Context) {
@@ -165,6 +170,15 @@ class SriSuMessagingService : FirebaseMessagingService() {
     }
     override fun onMessageReceived(message:RemoteMessage) {
         val data=message.data
+        if (data["schema"] == "2") {
+            try {
+                AndroidNotificationPreviews.receive(applicationContext, data, message.priority == RemoteMessage.PRIORITY_HIGH)
+            } catch (_: Exception) {
+                // Never forward an exception containing a push payload or preview.
+                AndroidNotifications.instance?.report(DiagnosticCode.NATIVE_BRIDGE)
+            }
+            return
+        }
         Handler(Looper.getMainLooper()).post {
             NativeNotifications.receive(data["schema"],data["delivery_id"],data["expires_at"],false)
         }

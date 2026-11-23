@@ -156,6 +156,9 @@ class PlanStateTest {
         val plan=PlanFixtures.agreed.copy(change=PlanFixtures.change,state="change_proposed")
         val result=reminderAlarms(listOf(plan),listOf(ReminderChoice(7,3,60)))
         assertEquals(Instant.parse(plan.startsAt).toEpochMilliseconds()-3_600_000,result.single().atMillis)
+        assertEquals("Coming up: ${plan.title}",result.single().title)
+        assertTrue(result.single().body.contains(plan.place))
+        assertTrue(result.single().body.contains(plan.timeZone))
         assertTrue(reminderAlarms(listOf(plan),listOf(ReminderChoice(7,99,60))).isEmpty())
     }
     @Test fun referenceAndActionOwnershipAreBounded() {

@@ -12,8 +12,14 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class MomentComposerDestination(val coupleId: Long): Route
 @Serializable data class MomentViewerDestination(val momentId: Long?=null,val coupleId: Long?=null,val creatorId: Long?=null): Route
+@Serializable data class MomentNoteDestination(val noteId: Long): Route
 
 fun NavGraphBuilder.momentGraph(controller: NavController) {
+    composable<MomentNoteDestination> { entry ->
+        val route=entry.toRoute<MomentNoteDestination>(); val nav=AppNavigator(controller,entry)
+        if(route.noteId<=0) com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
+        else MomentNoteScreen(route.noteId,nav::back)
+    }
     composable<MomentComposerDestination> { entry ->
         val route=entry.toRoute<MomentComposerDestination>();val nav=AppNavigator(controller,entry)
         if(route.coupleId<=0) com.srisu.srisu.navigation.NavigationUnavailable(nav::back)

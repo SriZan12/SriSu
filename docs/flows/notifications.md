@@ -1,5 +1,106 @@
 # Notifications and crash diagnostics V1
 
+## Specific notification previews — 23 November 2026
+
+The `notification-previews-1` capability replaces the universal update text with
+an action, actor and useful preview. Android receives a schema-2 **data-only** push,
+posts a safe event-specific fallback immediately, and schedules bounded background
+work to load `/api/notifications/v1/deliveries/{delivery_id}/preview/`. This endpoint
+rechecks the current user, device session, installation binding, permission,
+preferences and live resource authorization. Responses are `private, no-store`.
+Older installations retain schema-1 automatic display with specific safe wording.
+
+| Notification | Detailed presentation |
+| --- | --- |
+| Chat message | Partner name and the actual text; photo/video/voice labels with a caption when present |
+| Plan invitation, response or cancellation | Partner/action, plan title, scheduled or proposed local date/time, time zone and place |
+| Local Plan reminder | “Coming up: [title]”, agreed date/time, time zone and place |
+| Partner invitation/acceptance | Person's name and connection action |
+| Sharing proposal/approval | Partner's name and sharing action |
+| Question started/answered/revealed | Partner/action and the question; unrevealed private answers are never previewed |
+| Challenge invitation/response/progress/completion/cancellation | Partner/action and challenge title |
+| Moment published/hearted | Partner/action and moment caption, title or photo label |
+| Appreciation or reply | Actual author and note/reply text |
+| Status | Partner name and current authorized status text |
+| Shared date idea/mutual interest | Partner/action and the idea, such as Coffee together |
+
+Encrypted Matrix messages are decrypted **only on the receiving device**, from the
+exact authorized event in the existing protected Matrix store. Django/FCM never
+receive their plaintext. The background reader does not enable the outbox, send
+read receipts, download media, or take over a foreground conversation. Android's
+activity and workers share one process-owned dependency graph/crypto client.
+This is necessary for a closed app to read the same keys without opening a second
+writer on the encrypted store. iOS retains its existing graph lifetime.
+
+Android uses MessagingStyle for chat and expanded text for activity. Updating a
+fallback with private detail does not alert again. A newer delivery, dismissal,
+expiry, revoked authorization, logout or account/binding change prevents stale
+work from displaying old content. WorkManager and replay metadata contain only
+opaque IDs and safe copy; private fetched content is not persisted by this feature.
+Local reminder details use encrypted KVault storage and are cleared when removed;
+reminders still reflect the last authorized sync while offline.
+
+Private details have Android PRIVATE visibility with an event-specific public
+version; the user's lock-screen settings control whether details are visible.
+Missing network or decryption keys keep a specific safe fallback, not invented
+message text. Existing sound/mute/category policies and tap destinations remain.
+Foreground banners use the same preview where available, suppressing the matching
+visible destination. Notification text is bounded and strips unsafe controls.
+
+Deploy the backend first, then install/launch the Android update to register the
+new capability. This increment adds **no migration** beyond the catalogue baseline
+`notifications.0005`. Do not roll a registered schema-2 client back before removing
+its capability. The application has no push-delivery guarantee after Android
+Force stop. Apple enrollment/APNs remains skipped.
+
+These are native Android presentation changes, with no new Figma screen or claimed
+live Figma match. Figma remains `LztysD1YvINX7RwZpnhhTt`; no design file is changed.
+
+## Catalogue rollout — 22 November 2026
+
+`codex/notification-rollout` starts from current `dev-core-architecture` in both
+repositories. It fixes the three audited issues: duplicated domain/Matrix cards,
+chat/activity tray entries replacing each other, and Plan responses expiring at
+the former time or being invalidated by checklist-only revisions.
+
+Android advertises `notification-catalogue-2` and adds twelve category controls
+under Notifications & diagnostics. New alerts cover Plan cancellation; Challenge
+invitations, responses, completion/cancellation and optional progress; quiet partner
+Moments and optional hearts/appreciations; quiet appreciation replies; optional
+hourly status updates and shared ideas; manual questions, optional first answers
+and quiet mutual reveals; and sharing approval. Generic lock-screen copy stays
+unchanged. Chat still uses its own preference and mute controls.
+
+Before publishing an encrypted Plan/Challenge/Spark card, the client reserves an
+opaque sender/room/resource key from Django and adds it outside the ciphertext.
+The backend suppresses only a matching, single-use card event; it never reads
+encrypted contents. Failed reservation uses the existing card retry UI. Older
+unmarked senders can still produce a duplicate; upgrade senders as well as receivers.
+
+New taps open the exact Challenge, Moment, appreciation thread or shared idea;
+status opens the current Home space. A private note thread is independent of the
+Moment's 24-hour lifetime, shows its latest 50 replies and server-authorized reply
+controls, and clears private content on background/account change. Idea taps do
+not create a Plan or express interest automatically. Home's bell still lists
+current requests rather than a history of notifications. Local reminders are unchanged.
+
+Deploy the additive backend migration `notifications.0005` before this Android
+build. Existing clients preserve category choices when saving older preferences;
+new destinations are gated to capable Android registrations. Quiet activity uses
+normal FCM priority, so idle delivery can be delayed. Tray tags are distinct per
+chat/feature resource, but the two existing provider collapse keys may coalesce
+offline activity. No delivery or sound guarantee is inferred from provider acceptance.
+
+Apple enrollment/APNs stays skipped. See the
+[implementation validation](../validation/notifications/rollout-20261122.md) and
+[backend catalogue and deployment instructions](https://github.com/SrizanKhadka/SriSu/blob/codex/notification-rollout/docs/notification-rollout.md).
+
+Figma `LztysD1YvINX7RwZpnhhTt`, Home/Moments page `1:3`, could not be read through
+the current connector; the screenshot request hit the Starter-plan tool limit.
+The settings additions and compact note/idea destinations intentionally reuse
+existing Compose Material components and SriSu tokens. Their layouts are derived,
+not a claim of a live Figma match. No Figma file was changed.
+
 ## Matrix chat push — 30 October 2026
 
 Matrix encrypted message events now use an authenticated Synapse application-service

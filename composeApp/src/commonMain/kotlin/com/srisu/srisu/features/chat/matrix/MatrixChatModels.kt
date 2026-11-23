@@ -92,6 +92,8 @@ data class MatrixChatRoomState(
 class MatrixChatRoomOwner
 
 interface MatrixChatRepository {
+    /** Read/decrypt one authorized event without sending messages or read receipts. */
+    suspend fun notificationPreview(roomId: String, eventId: String): String? = null
     fun observeRoom(roomId: String): Flow<MatrixChatRoomState>
     fun openRoom(roomId: String, owner: MatrixChatRoomOwner)
     /** A read-only Home observer must never take ownership from a conversation. */

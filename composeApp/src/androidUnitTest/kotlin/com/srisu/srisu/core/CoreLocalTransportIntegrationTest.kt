@@ -69,11 +69,15 @@ class CoreLocalTransportIntegrationTest {
                     com.srisu.srisu.features.notifications.InstallationRequest(java.util.UUID.randomUUID().toString(),"s".repeat(48),1,"android","fid","synthetic-integration-fid",true)).result)
                 assertEquals(1L,registered.response?.version)
                 val prefs=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.preferences().result).response)
+                assertTrue(com.srisu.srisu.features.notifications.NOTIFICATION_CATALOGUE in prefs.capabilities)
+                assertEquals(false,prefs.categories["status"])
                 val changed=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.save(
-                    com.srisu.srisu.features.notifications.PreferenceWrite(prefs.revision,false,true,true,"1h")).result).response)
+                    com.srisu.srisu.features.notifications.PreferenceWrite(prefs.revision,false,true,true,"1h",categories=mapOf("plans" to false,"status" to true))).result).response)
                 assertFalse(changed.push);assertNotNull(changed.muteUntil)
                 val toggled=assertNotNull(assertIs<NetworkAPIResult.Success<com.srisu.srisu.features.notifications.NotificationPreferences?>>(notifications.save(
                     com.srisu.srisu.features.notifications.PreferenceWrite(changed.revision,true,false,true)).result).response)
+                assertEquals(false,toggled.categories["plans"])
+                assertEquals(true,toggled.categories["status"])
                 assertTrue(toggled.push);assertFalse(toggled.chat)
                 assertEquals(changed.muteUntil,toggled.muteUntil)
                 assertEquals(404,assertIs<NetworkAPIResult.Error<*>>(notifications.resolve(java.util.UUID.randomUUID().toString()).result).failure.status)
@@ -133,6 +137,10 @@ class CoreLocalTransportIntegrationTest {
                     val note=assertNotNull(assertIs<NetworkAPIResult.Success<MomentNote?>>(visitorMoments.note(publicMoment.id,"Synthetic appreciation")).response)
                     assertEquals(note.id,assertNotNull(assertIs<NetworkAPIResult.Success<MomentNotePage?>>(partnerMoments.notes(publicMoment.id,1)).response).results.single().id)
                     assertIs<NetworkAPIResult.Success<*>>(partnerMoments.noteReply(note.id,"Synthetic reply"))
+                    val visitorThread=assertNotNull(assertIs<NetworkAPIResult.Success<MomentNote?>>(visitorMoments.noteDetail(note.id)).response)
+                    assertFalse(visitorThread.canReply)
+                    assertEquals("Synthetic reply",visitorThread.replies.single().message)
+                    assertTrue(assertNotNull(assertIs<NetworkAPIResult.Success<MomentNote?>>(partnerMoments.noteDetail(note.id)).response).canReply)
                     // Real Explore transport, conditional writes and shared Profile state.
                     val explore=ExploreRepository(visitorClient,environment,visitor)
                     val discovery=assertNotNull(assertIs<NetworkAPIResult.Success<ExplorePage?>>(explore.feed("global","local",null)).response)

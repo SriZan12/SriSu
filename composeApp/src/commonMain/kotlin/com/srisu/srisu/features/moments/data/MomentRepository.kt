@@ -26,6 +26,7 @@ interface MomentSource {
     suspend fun edit(id: Long, revision: Long, caption: String): MomentResult<Moment>
     suspend fun delete(id: Long): MomentResult<JsonObject>
     suspend fun notes(id: Long, page: Int): MomentResult<MomentNotePage>
+    suspend fun noteDetail(id: Long): MomentResult<MomentNote> = NetworkAPIResult.Error("This appreciation is unavailable.")
     suspend fun noteReply(id: Long, text: String): MomentResult<MomentNoteReply>
     suspend fun note(id: Long, text: String): MomentResult<MomentNote>
     suspend fun createDraft(id: String, couple: Long): MomentResult<MomentDraft>
@@ -72,6 +73,9 @@ class MomentRepository(private val client: HttpClient, private val environment: 
     }.result
     override suspend fun noteReply(id: Long, text: String) = client.safeRequest<MomentNoteReply> {
         url(path("moment-notes/$id/replies/")); method=HttpMethod.Post; setBody(buildJsonObject { put("message",text) })
+    }.result
+    override suspend fun noteDetail(id: Long) = client.safeRequest<MomentNote>(shape=ResponseShape.RAW) {
+        url(path("moment-notes/$id/"))
     }.result
     override suspend fun note(id: Long, text: String) = client.safeRequest<MomentNote> {
         url(path("couple-moments/$id/notes/")); method=HttpMethod.Post; setBody(buildJsonObject { put("message",text) })

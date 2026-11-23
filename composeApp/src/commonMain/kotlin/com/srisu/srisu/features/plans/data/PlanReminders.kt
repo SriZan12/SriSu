@@ -10,6 +10,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Serializable data class ReminderChoice(val plan: Long, val couple: Long, val minutes: Int)
 data class ReminderState(val choices: List<ReminderChoice> = emptyList(), val permission: String = "unknown",
@@ -85,5 +87,8 @@ fun reminderAlarms(plans: List<Plan>, choices: List<ReminderChoice>): List<PlanA
     val plan=plans.firstOrNull { it.id==choice.plan && it.couple==choice.couple && !it.ended && it.response=="yes" } ?: return@mapNotNull null
     val at=plan.instant.toEpochMilliseconds()-choice.minutes*60_000L
     // Keep delivered reminder identities until cancellation, logout or the plan ends.
-    PlanAlarm("plan-${plan.id}",at,"srisu://plans/${plan.couple}/${plan.id}")
+    val local = plan.instant.toLocalDateTime(runCatching { TimeZone.of(plan.timeZone) }.getOrDefault(TimeZone.UTC))
+    val time = "${local.date} · ${local.hour.toString().padStart(2,'0')}:${local.minute.toString().padStart(2,'0')} ${plan.timeZone}"
+    PlanAlarm("plan-${plan.id}",at,"srisu://plans/${plan.couple}/${plan.id}",
+        "Coming up: ${plan.title}", listOf(time,plan.place).filter(String::isNotBlank).joinToString(" · "))
 }

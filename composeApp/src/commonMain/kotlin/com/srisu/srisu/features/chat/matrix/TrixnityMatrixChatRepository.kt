@@ -93,6 +93,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonPrimitive
@@ -115,6 +116,8 @@ class TrixnityMatrixChatRepository(
 ) : MatrixChatRepository {
     private val scope = CoroutineScope(lifetime.scope.coroutineContext + SupervisorJob(lifetime.scope.coroutineContext[Job]))
     private val clientMutex = Mutex()
+    private val previewMutex = Mutex()
+    private var previewReading = false
     private val _state = MutableStateFlow(MatrixChatRoomState(roomId = ""))
     private var activeRoom: ActiveRoom? = null
     private var validatedRoom: ActiveRoom? = null
@@ -251,7 +254,7 @@ class TrixnityMatrixChatRepository(
                     else {
                         clearActivity()
                         clientOutboxGate?.disableAndJoin()
-                        client?.stopSync()
+                        if (!previewReading) client?.stopSync()
                     }
                 } catch (_: SessionChangedException) {
                     clientOutboxGate?.disableAndJoin()
@@ -289,6 +292,61 @@ class TrixnityMatrixChatRepository(
             if (state.roomId == normalized) state else MatrixChatRoomState(normalized)
         }.distinctUntilChanged()
     }
+
+    override suspend fun notificationPreview(roomId: String, eventId: String): String? =
+        withContext(Dispatchers.Main.immediate) { previewMutex.withLock {
+            val normalized = normalizeDjangoRoomIdOrNull(roomId) ?: return@withLock null
+            if (!eventId.startsWith('$') || eventId.length !in 2..255 || eventId.any(Char::isWhitespace)) return@withLock null
+            val account = sessions.stamp().accountId ?: return@withLock null
+            val operation = roomOperation
+            var readingClient: MatrixClient? = null
+            previewReading = true
+            try {
+                if (cleanupBlocked) {
+                    if (lifetime.foreground.value || !retryBlockedCleanup()) return@withLock null
+                    cleanupBlocked = false
+                }
+                val result = remote.create(normalized)
+                val bootstrap = (result as? NetworkAPIResult.Success)?.response
+                    ?.validated(account, allowInsecureHomeserver = environment.development) ?: return@withLock null
+                val stamp = sessions.stamp()
+                if (stamp.accountId != account || operation != roomOperation) return@withLock null
+                // A foreground conversation owns its client. Never steal its room
+                // or suspend its sender to render a notification elsewhere.
+                val current = if (lifetime.foreground.value) {
+                    if (activeRoom?.djangoRoomId != normalized || activeRoom?.matrixRoomId?.full != bootstrap.roomId)
+                        return@withLock null
+                    client ?: return@withLock null
+                } else ensureClient(bootstrap, stamp, operation)
+                readingClient = current
+                if (!startSyncForOperation(current, operation)) return@withLock null
+                val matrixRoom = RoomId(bootstrap.roomId)
+                awaitSecureRoom(current, matrixRoom, bootstrap.selfMatrixUserId, bootstrap.partnerMatrixUserId)
+                val event = current.room.getTimelineEvent(matrixRoom, EventId(eventId)) {
+                    allowReplaceContent = false
+                    decryptionTimeout = 12.seconds
+                }.filterNotNull().first { it.content?.getOrNull() != null || it.event.unsigned?.redactedBecause != null }
+                sessions.ensureCurrent(stamp)
+                if (operation != roomOperation || client !== current || event.event.sender.full != bootstrap.partnerMatrixUserId)
+                    return@withLock null
+                val message = matrixTimelineMessages(listOf(event), bootstrap.selfMatrixUserId, bootstrap.partnerMatrixUserId, null)
+                    .singleOrNull() ?: return@withLock null
+                matrixNotificationText(message)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // A missing key/network/authorization failure never logs content.
+                null
+            } finally {
+                previewReading = false
+                if (!lifetime.foreground.value && operation == roomOperation && client === readingClient) {
+                    withContext(NonCancellable) {
+                        clientOutboxGate?.disableAndJoin()
+                        runCatching { readingClient?.stopSync() }
+                    }
+                }
+            }
+        } }
 
     override fun openRoom(roomId: String, owner: MatrixChatRoomOwner) {
         if (roomOwner !== owner) typingPublisher.stop()
@@ -519,14 +577,18 @@ class TrixnityMatrixChatRepository(
     override suspend fun publishSparkCard(session: com.srisu.srisu.features.sparks.data.SparkSession): Result<String> = sparkOperation {
         val (current, active) = sparkRoom(session)
         require(session.creator == active.stamp.accountId)
-        sendSparkCard(current, session).also { ensureRichRoomCurrent(current, active) }
+        val key = reserveNotificationCard("spark", session.id)
+        ensureRichRoomCurrent(current, active)
+        sendSparkCard(current, session, key).also { ensureRichRoomCurrent(current, active) }
     }
 
     override suspend fun publishPlanCard(session: com.srisu.srisu.features.plans.data.Plan): Result<String> = sparkOperation {
         val (current, active) = richRoom(requireNotNull(session.roomId))
         require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
-        val eventId = sendPlanCard(current, session)
+        val key = reserveNotificationCard("plan", session.id.toString())
+        ensureRichRoomCurrent(current, active)
+        val eventId = sendPlanCard(current, session, key)
         ensureRichRoomCurrent(current, active)
         eventId
     }
@@ -535,9 +597,18 @@ class TrixnityMatrixChatRepository(
         val (current, active) = richRoom(requireNotNull(session.roomId))
         require(active.coupleId == session.couple && active.membershipEpoch == session.epoch &&
             active.matrixRoomId.full == session.matrixRoomId && session.creator == active.stamp.accountId)
-        val eventId = sendChallengeCard(current, session)
+        val key = reserveNotificationCard("challenge", session.id)
+        ensureRichRoomCurrent(current, active)
+        val eventId = sendChallengeCard(current, session, key)
         ensureRichRoomCurrent(current, active)
         eventId
+    }
+
+    private suspend fun reserveNotificationCard(kind: String, resource: String): String {
+        val result = remote.reserveCard(kind, resource)
+        val key = (result as? NetworkAPIResult.Success)?.response?.key
+        check(com.srisu.srisu.features.notifications.validNotificationId(key)) { "Couldn’t prepare the chat card. Try again." }
+        return requireNotNull(key)
     }
 
     private suspend fun <T> sparkOperation(block: suspend () -> T): Result<T> = try {

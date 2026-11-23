@@ -8,18 +8,14 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.srisu.srisu.di.createKoinConfiguration
 import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.theme.SriSuTheme
-import org.koin.compose.KoinMultiplatformApplication
 import org.koin.compose.koinInject
-import org.koin.core.annotation.KoinExperimentalAPI
 
-@OptIn(KoinExperimentalAPI::class)
 @Composable
 fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
-    KoinMultiplatformApplication(config = createKoinConfiguration()) {
+    ApplicationDependencies {
         val notifications: com.srisu.srisu.features.notifications.NotificationRepository = koinInject()
         val sessions: SessionCoordinator = koinInject()
         val lifetime: ApplicationLifetime = koinInject()
