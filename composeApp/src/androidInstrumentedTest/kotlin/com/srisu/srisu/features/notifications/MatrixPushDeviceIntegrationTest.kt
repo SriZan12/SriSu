@@ -109,7 +109,7 @@ class MatrixPushDeviceIntegrationTest {
         val strangerApi = NotificationApi(clients[2], environment)
         val notifications = NotificationRepository(api, sessions[1], lifetimes[1])
         val manager = context.getSystemService(NotificationManager::class.java)
-        val native = requireNotNull(NativeNotifications.driver)
+        val native = legacyPushFixtureDriver()
         var opened: android.app.Activity? = null
         fun stage(value: String) { instrumentation.sendStatus(2, Bundle().apply { putString("stream", "Matrix push: $value\n") }) }
         suspend fun waitFor(label: String, condition: () -> Boolean) {
@@ -124,8 +124,8 @@ class MatrixPushDeviceIntegrationTest {
             assertTrue("Encrypted synthetic message queued", repositories[0].sendText(room, text).isSuccess)
         }
         fun privateAlert(alert: Notification) {
-            assertEquals("SriSu", alert.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
-            assertEquals("You have an update. Open SriSu to view it.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+            assertEquals("New message", alert.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+            assertEquals("Open your chat to read the message.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
         }
         try {
             withContext(Dispatchers.Main) {
@@ -189,7 +189,7 @@ class MatrixPushDeviceIntegrationTest {
             val audio = context.getSystemService(android.media.AudioManager::class.java)
             assertEquals("Phone is not silent", android.media.AudioManager.RINGER_MODE_NORMAL, audio.ringerMode)
             assertTrue("Notification volume is nonzero", audio.getStreamVolume(android.media.AudioManager.STREAM_NOTIFICATION) > 0)
-            manager.cancelAll()
+            manager.cancelAll(); native.restore()
             stage("checking burst throttling and opening the right chat")
             send("Synthetic Matrix push tap destination")
             waitFor("Quiet follow-up arrival") { manager.activeNotifications.isNotEmpty() }

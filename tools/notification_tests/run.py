@@ -61,7 +61,8 @@ def make_message(spec, fid):
     alert = None
     android_alert = None
     if spec["notification"]:
-        alert = messaging.Notification(title="SriSu", body="You have an update. Open SriSu to view it.")
+        label = spec["case"].replace("_", " ")
+        alert = messaging.Notification(title="SriSu notification test", body=f"Testing {label} notification delivery.")
         android_alert = messaging.AndroidNotification(
             channel_id=spec["channel"], sound="default" if spec["audible"] else None,
             tag="srisu-qa-" + spec["case"], visibility="private")

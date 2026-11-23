@@ -59,8 +59,8 @@ from phone delivery; sound/visibility/tap results must be observed on the phone.
 
 ## Seven Firebase transport experiments
 
-All visible payloads use the same private, generic title/body as SriSu's real
-notifications. Run one experiment at a time, clearing previous QA alerts between
+Visible probes are labelled **SriSu notification test** and name the transport
+case. These schema-1 probes do not fetch private previews. Run one experiment at a time, clearing previous QA alerts between
 cases. Repeat sends of the same case replace its previous QA notification tag.
 Test tags/collapse keys are separate from normal app activity groups.
 
@@ -87,7 +87,8 @@ the Windows backend/worker running and both clients connected to it. An iOS clie
 can initiate domain actions, but receiving iOS push remains outside current coverage.
 
 For each row: start with the recipient backgrounded, trigger from the other account,
-verify generic lock-screen copy, then tap and verify the destination. Wait more than
+verify the specific action and authorized preview when unlocked, check the safe
+public copy with lock-screen previews hidden, then tap and verify the destination. Wait more than
 30 seconds between tests when expecting sound. Use fresh resources for foreground
 repeats so an old delivery/idempotency key does not suppress a new event.
 
@@ -123,10 +124,11 @@ real authorized delivery cannot test this positive path.
 
 Plan reminders are scheduled on the device, not Firebase. On a disposable future
 Plan, explicitly select the 15-minute reminder (for example, start time 20 minutes
-ahead), grant notification permission, then background the app. Expect a generic
-reminder and an authorized Plan on tap. Android alarms are inexact. Cancel the Plan
+ahead), grant notification permission, then background the app. Expect the Plan
+title, agreed time and place, with safe public lock-screen copy and an authorized
+Plan on tap. Android alarms are inexact. Cancel the Plan
 and sync, or log out, to test cancellation. If the app is terminated/offline, it
-cannot learn a partner's change until sync, so an old generic reminder may still
+cannot learn a partner's change until sync, so an old reminder may still
 appear; its tap must fetch current state.
 
 ## Current exclusions and evidence

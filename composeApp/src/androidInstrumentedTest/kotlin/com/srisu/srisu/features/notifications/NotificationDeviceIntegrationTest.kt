@@ -62,7 +62,7 @@ class NotificationDeviceIntegrationTest {
         val api = NotificationApi(http, environment)
         val repository = NotificationRepository(api, sessions, lifetime)
         val manager = context.getSystemService(NotificationManager::class.java)
-        val native = requireNotNull(NativeNotifications.driver)
+        val native = legacyPushFixtureDriver()
         var opened: android.app.Activity? = null
 
         // Never print response bodies, credentials, registration targets or private payloads.
@@ -150,8 +150,8 @@ class NotificationDeviceIntegrationTest {
             val backgroundInvite = invite()
             waitFor("Background OS notification") { manager.activeNotifications.isNotEmpty() }
             val alert = manager.activeNotifications.single().notification
-            assertEquals("SriSu", alert.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
-            assertEquals("You have an update. Open SriSu to view it.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+            assertEquals("Partner invitation", alert.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+            assertEquals("Someone invited you to connect on SriSu.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
             assertTrue("Private notification channel", alert.channelId in setOf("srisu_updates", "srisu_updates_quiet"))
             val vault = KVault(context = context, fileName = Constants.Auth.SESSION_FILE)
             assertTrue(vault.set(Constants.Auth.SESSION_KEY, recipient.toString()))
@@ -187,7 +187,7 @@ class NotificationDeviceIntegrationTest {
             // Controlled, sanitized nonfatal probe; the host verifies SDK upload/cloud receipt separately.
             withContext(Dispatchers.Main) { native.setDiagnostics(true); native.report(DiagnosticCode.TEST_NONFATAL) }
         } finally {
-            withContext(Dispatchers.Main) { opened?.finish(); repository.close(); lifetime.close() }
+            withContext(Dispatchers.Main) { opened?.finish(); repository.close(); lifetime.close(); native.restore() }
             http.close()
             fixtureFile.delete()
         }

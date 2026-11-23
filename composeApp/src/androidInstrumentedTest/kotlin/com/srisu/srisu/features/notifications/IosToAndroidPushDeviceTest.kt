@@ -89,7 +89,7 @@ class IosToAndroidPushDeviceTest {
         val api = NotificationApi(http, environment)
         val notifications = NotificationRepository(api, session, lifetime)
         val manager = context.getSystemService(NotificationManager::class.java)
-        val native = requireNotNull(NativeNotifications.driver)
+        val native = legacyPushFixtureDriver()
         lateinit var activity: ComponentActivity
         activityRule.scenario.onActivity { activity = it }
         var opened: android.app.Activity? = null
@@ -124,14 +124,14 @@ class IosToAndroidPushDeviceTest {
                 repository.close(); lifetime.setForeground(false)
             }
             assertTrue(vault.set(Constants.Auth.SESSION_KEY, requireNotNull(session.getSession(Constants.Auth.SESSION_KEY))))
-            manager.cancelAll()
+            manager.cancelAll(); native.restore()
             withContext(Dispatchers.Main) { activity.moveTaskToBack(true) }
             delay(1_000)
             stage("background-ready")
             waitFor("iOS message must produce an Android OS notification", 15 * 60_000) { manager.activeNotifications.isNotEmpty() }
             val alert = manager.activeNotifications.single().notification
-            assertEquals("SriSu", alert.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
-            assertEquals("You have an update. Open SriSu to view it.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+            assertEquals("New message", alert.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+            assertEquals("Open your chat to read the message.", alert.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
             assertEquals("srisu_updates", alert.channelId)
             val channel = manager.getNotificationChannel(alert.channelId)
             assertNotNull(channel.sound)
