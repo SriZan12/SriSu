@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.moments.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,7 +17,7 @@ import org.koin.compose.viewmodel.koinViewModel
     MomentLifecycle(vm::active)
     Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(MaterialTheme.spacing.gutter),
         verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-        TextButton(onClick=onBack) { Text("Back") }
+        NavigationBackButton(onBack)
         Text("Private appreciation", style=MaterialTheme.typography.headlineSmall)
         Text("Only the sender and the original couple can read this conversation.")
         if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())

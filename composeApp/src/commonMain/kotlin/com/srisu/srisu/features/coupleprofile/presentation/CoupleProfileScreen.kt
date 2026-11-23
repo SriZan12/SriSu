@@ -1,11 +1,11 @@
 package com.srisu.srisu.features.coupleprofile.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -61,7 +61,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
             topBar = { CenterAlignedTopAppBar(
                 expandedHeight = MaterialTheme.spacing.huge * LocalDensity.current.fontScale.coerceAtLeast(1f),
                 title = { Text(pageTitle(state.page, state.profile?.canEdit == true), style = MaterialTheme.typography.titleMedium, maxLines = 2) },
-                navigationIcon = { IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.cp_back)) } },
+                navigationIcon = { NavigationBackButton(back) },
                 actions = {
                     if (state.draft != null && state.page !in setOf(ProfilePage.SHARING, ProfilePage.ANSWER, ProfilePage.NEW_PLAN)) {
                         SaveButton(state, vm, modifier = Modifier.padding(end = MaterialTheme.spacing.small))

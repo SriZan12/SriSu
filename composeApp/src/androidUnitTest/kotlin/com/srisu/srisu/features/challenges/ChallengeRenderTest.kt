@@ -104,7 +104,7 @@ class ChallengeRenderTest {
         compose.onNodeWithText(title).performClick()
         compose.onNodeWithText("All activities").assertIsDisplayed()
         compose.onNodeWithText(title).assertIsDisplayed()
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Go back").performClick()
         compose.onNodeWithText("All activities").assertDoesNotExist()
         compose.onNodeWithText(title).assertIsDisplayed()
     }

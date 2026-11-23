@@ -149,7 +149,7 @@ class CoupleProfileRenderTest {
                 val before = compose.onAllNodesWithText("Our song")[0].fetchSemanticsNode().boundsInRoot.top
                 compose.runOnIdle { vm.open(ProfilePage.SONG) }
                 compose.onNodeWithText("Song name").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 compose.waitUntil(10000) { org.robolectric.shadows.ShadowLooper.idleMainLooper(); vm.state.value.page == ProfilePage.PROFILE && !vm.state.value.loading }
                 compose.waitForIdle()
                 val after = compose.onAllNodesWithText("Our song")[0].fetchSemanticsNode().boundsInRoot.top
@@ -164,7 +164,7 @@ class CoupleProfileRenderTest {
                 compose.onNodeWithText("Refresh").performScrollTo().assertIsDisplayed()
                 compose.onNodeWithText("Preview profile").performScrollTo().performClick()
                 compose.onAllNodesWithContentDescription("Profile options").assertCountEquals(0)
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 compose.waitForIdle()
                 check(vm.state.value.page == ProfilePage.PROFILE)
                 compose.onAllNodesWithText("Preview profile").assertCountEquals(0)
@@ -190,11 +190,11 @@ class CoupleProfileRenderTest {
             }
             if (discardCheck) {
                 compose.onNodeWithText("Song name").performTextInput("Our draft")
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 compose.onNodeWithText("Discard your changes?").assertIsDisplayed()
                 compose.onNodeWithText("Keep editing").performClick()
                 compose.onNodeWithText("Our draft").assertIsDisplayed()
-                compose.onNodeWithContentDescription("Back").performClick()
+                compose.onNodeWithContentDescription("Go back").performClick()
                 compose.onNodeWithText("Discard your changes?").assertIsDisplayed()
             }
             val output=File("build/reports/couple-profile/$name.png").apply{parentFile?.mkdirs()}

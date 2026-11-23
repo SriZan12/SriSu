@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.plans.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -54,7 +55,7 @@ class DateIdeaViewModel(private val source: DateIdeaSource, private val sessions
     MomentLifecycle(vm::active)
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(MaterialTheme.spacing.gutter),
         verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-        TextButton(onClick=onBack) { Text("Back") }
+        NavigationBackButton(onBack)
         Text("A shared idea",style=MaterialTheme.typography.headlineSmall)
         if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(state.unavailable) Text("This idea is no longer available.")

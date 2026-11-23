@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
@@ -62,16 +61,7 @@ fun OtpVerificationScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Go back",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
+            NavigationBackButton(onBackClick)
 
             Spacer(modifier = Modifier.height(48.dp))
 

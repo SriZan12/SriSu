@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.notifications
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,7 +19,7 @@ import org.koin.compose.koinInject
     LaunchedEffect(Unit) { repository.reload();NativeNotifications.driver?.refresh() }
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(MaterialTheme.spacing.gutter),
         verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
-        TextButton(onClick=onBack) { Text("Back") }
+        NavigationBackButton(onBack)
         Text("Notifications & diagnostics",style=MaterialTheme.typography.headlineSmall)
         Text("Alerts keep your private details off the lock screen. Open SriSu to see the update.")
         Text(when {

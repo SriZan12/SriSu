@@ -31,6 +31,7 @@ data class AuthUIStates(
     val zodiacSignList: List<ZodiacSign> = emptyList(),
     val zodiacSign: ZodiacSign? = null,
     val profilePictureUri: Uri? = null,
+    val preparedProfilePhoto: com.srisu.srisu.utils.MediaFile? = null,
     val session: Session? = null,
     val currentScreen: CustomProfileSetupScreen = CustomProfileSetupScreen.AddFullNameScreen,
     val baseUIState: BaseUIState = BaseUIState.Idle,

@@ -82,7 +82,7 @@ class PlanRenderTest {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Shared plan 10"))
         compose.onNodeWithText("Shared plan 10").performClick()
         compose.onNodeWithText("Shared plan 10").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Go back").performClick()
         compose.onNodeWithText("Shared plan 10").assertIsDisplayed()
     }
     @Test fun acceptanceIsReachableWithLargeText() {

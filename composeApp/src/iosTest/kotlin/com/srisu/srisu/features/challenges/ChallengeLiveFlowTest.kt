@@ -102,8 +102,8 @@ class ChallengeLiveFlowTest {
 
             val one = device(0); val two = device(1)
             current = sources[0].get(current.id).challengeValue()
-            val eventId = withTimeout(60_000) { sendChallengeCard(one, current) }
-            assertEquals(eventId, sendChallengeCard(one, current)) // stable Matrix transaction
+            val eventId = withTimeout(60_000) { sendChallengeCard(one, current, "synthetic-repair-test") }
+            assertEquals(eventId, sendChallengeCard(one, current, "synthetic-repair-test")) // stable Matrix transaction
             current = sources[0].card(current.id, eventId).challengeValue()
             val raw = two.api.room.getEvent(RoomId(requireNotNull(current.matrixRoomId)), EventId(eventId)).getOrThrow()
             assertTrue(raw is de.connect2x.trixnity.core.model.events.ClientEvent.RoomEvent.MessageEvent<*>)

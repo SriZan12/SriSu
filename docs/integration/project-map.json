@@ -46,7 +46,10 @@
       "figma_node": "14:220",
       "privacy": "Exact-phone discovery grant or current invitation; bio and interests opt-in before linking; extra photos private",
       "migration": "authentication.0023_usermodel_share_partner_details",
-      "related_prs": ["SriZan12/SriSu#33", "SrizanKhadka/SriSu#43"],
+      "related_prs": [
+        "SriZan12/SriSu#33",
+        "SrizanKhadka/SriSu#43"
+      ],
       "status": "Android and iOS tests and isolated two-account HTTP verified; no deployment"
     },
     "couple_chat": {
@@ -193,6 +196,23 @@
       ],
       "visual_authority": "User attachments and approved Stage 2 preview; live Figma nodes contain older layouts",
       "status": "implemented-local-native-validation-no-push-or-deployment"
+    },
+    "profile_onboarding_loading_repair": {
+      "frontend_branch": "codex/onboarding-interests-home-fixes",
+      "backend_branch": "codex/profile-interest-fixes",
+      "frontend_base": "5f22621b5ef23cce158e2d1b676e203818eff641",
+      "backend_base": "6e0935c1c4f24267b9a956d259db5d113e9bb903",
+      "flow": "docs/flows/profile-onboarding-loading-repair.md",
+      "backend_guide": "../SriSu-backend/docs/profile-interest-repair.md",
+      "contract": "Existing auth-1/core-1 profile upload and interest catalogue; no schema or response shape change",
+      "figma_nodes": [
+        "1:2",
+        "1:3",
+        "0:1"
+      ],
+      "status": "prepared for paired PRs; no merge or deployment",
+      "migration": null,
+      "integration_branch": "dev-core-architecture"
     }
   }
 }

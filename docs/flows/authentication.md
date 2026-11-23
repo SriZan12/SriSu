@@ -277,3 +277,7 @@ profile indicator is derived from the updated flow. See the
 | OTP and incremental profile | `features/auth/data/remote/api/AuthApiService.kt`, `features/auth/presentation/vm/AuthViewModel.kt`, existing auth screens (commonMain package above) | `authentication/otp.py`, `authentication/api/serializers.py`, `authentication/api/views.py` |
 | Native startup and photos | Android `MainActivity.kt`, native styles; iOS `Info*.plist`/LaunchBackground asset; platform `MediaManager` implementations | Photo validation in serializer |
 | Data and coverage | `commonTest/kotlin/com/srisu/srisu/core/AuthenticationFlowTest.kt`, `contracts/core-1/` | `authentication/models.py`, migrations `0021`/`0022`, `authentication/test_auth.py`, `tools/auth_postgres_tests.py`, `contracts/core-1/` |
+
+## Photo, interest and loading repair (2026-11-22)
+
+See [the local repair handoff](profile-onboarding-loading-repair.md) for prepared-photo uploads, interest catalogue/save behavior, shared back controls and Home skeleton verification.

@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.chat.matrix.presentation
 
+import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -94,7 +95,6 @@ import srisu.composeapp.generated.resources.chat_secure_starters_label
 import srisu.composeapp.generated.resources.chat_secure_title
 import srisu.composeapp.generated.resources.chat_secure_verifying
 import srisu.composeapp.generated.resources.chat_offline
-import srisu.composeapp.generated.resources.partner_link_back
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,9 +117,7 @@ internal fun ChatHeader(
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
             .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.size(PureChatTokens.control)) {
-                Icon(PureChatIcons.Back, stringResource(Res.string.chat_secure_back), Modifier.size(PureChatTokens.icon))
-            }
+            NavigationBackButton(onBack)
             Box(Modifier.weight(1f).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                     if (partner != null) PartnerAvatar(partner, ChatTokens.headerAvatar, pureChatSerif(avatar = true))

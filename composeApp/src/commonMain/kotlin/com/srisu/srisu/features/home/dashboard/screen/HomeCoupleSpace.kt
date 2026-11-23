@@ -57,13 +57,14 @@ import kotlin.time.Instant
         val canStatus = canAct && "status" !in state.blockedActions
         val canIdea = canAct && "idea" !in state.blockedActions
         val canPlan = canAct && "plan" !in state.blockedActions
+        HomeLoadingMotion(state.status == HomeStatus.LOADING || c?.question is HomeSection.Loading || c?.plan is HomeSection.Loading || c?.challenge is HomeSection.Loading) {
         Surface(modifier.fillMaxSize(), color = H.paper) {
             BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val compact = maxWidth < 360.dp
                 LazyColumn(Modifier.widthIn(max = 560.dp).fillMaxSize().statusBarsPadding(),
                     state = rememberLazyListState(), contentPadding = PaddingValues(horizontal = if (compact) 17.dp else 22.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(22.dp)) {
-                    item("heading") { SpaceHeading(state, actions) { requests = true } }
+                    item("heading") { if (state.status == HomeStatus.LOADING && c == null) HomeHeadingSkeleton() else SpaceHeading(state, actions) { requests = true } }
                     if (state.refreshing) item("progress") {
                         LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Refreshing Home" }, color = H.purple, trackColor = H.lilac)
                     }
@@ -75,7 +76,14 @@ import kotlin.time.Instant
                         }
                     }
                     when {
-                        state.status == HomeStatus.LOADING -> items(3) { HomePlaceholderCard() }
+                        state.status == HomeStatus.LOADING && c == null -> {
+                            item("couple") { HomePortraitSkeleton(compact) }
+                            item("question") { HomeQuestionSkeleton(compact) }
+                            item("from") { HomeSectionSkeleton("from") }
+                            item("plans") { HomeSectionSkeleton("plans") }
+                            item("challenge") { HomeSectionSkeleton("challenge") }
+                            item("story") { HomeSectionSkeleton("story") }
+                        }
                         state.status == HomeStatus.FAILED -> item("failed") { RetryRow("Home couldn’t load. Your connection hasn’t been checked yet.", retry) }
                         c == null -> item("unpaired") { Unpaired(state, actions, retry) }
                         else -> {
@@ -84,7 +92,7 @@ import kotlin.time.Instant
                                 if (c.statusState == HomeStatus.FAILED) RetryRow("Statuses couldn’t refresh.", retry)
                             } }
                             item("question") { when (val q = c.question) {
-                                HomeSection.Loading -> HomePlaceholderCard()
+                                HomeSection.Loading -> HomeQuestionSkeleton(compact)
                                 HomeSection.Failed -> Column { RetryRow("Your question couldn’t refresh.", retry); SpaceButton("Open secure chat", actions.onChat) }
                                 HomeSection.Empty -> RetryRow("Your question isn’t available yet.", retry)
                                 is HomeSection.Ready -> QuestionHero(q.value, c, load, { actions.onQuestion(q.value.session.id) }, retry, compact)
@@ -105,6 +113,7 @@ import kotlin.time.Instant
                     }
                 }
             }
+        }
         }
         if (requests) ModalBottomSheet(onDismissRequest = { requests = false }, containerColor = H.paper) {
             Column(Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -463,7 +472,7 @@ import kotlin.time.Instant
 @Composable private fun ComingUp(c: HomeCoupleUi, canAct: Boolean, actions: HomeActions, interactions: HomeInteractions, retry: () -> Unit, reminder: (Long) -> Unit, canIdea: Boolean, ideas: () -> Unit) {
     val plan = c.featuredPlan
     when {
-        c.plan is HomeSection.Loading -> HomePlaceholderCard()
+        c.plan is HomeSection.Loading -> HomeRowSkeleton()
         c.plan is HomeSection.Failed -> RetryRow("Plans couldn’t refresh.", retry)
         plan != null -> PlanPanel(plan, c, canAct, actions, interactions, reminder)
         c.plan is HomeSection.Ready -> { // Older server/preview fallback; only claims data actually supplied.
@@ -477,7 +486,7 @@ import kotlin.time.Instant
             }
         }
         else -> when (val section = c.ideas) {
-            HomeSection.Loading -> HomePlaceholderCard()
+            HomeSection.Loading -> HomeRowSkeleton()
             HomeSection.Failed -> RetryRow("Shared ideas couldn’t refresh.", retry)
             else -> {
                 val all = (section as? HomeSection.Ready)?.value?.items.orEmpty()
@@ -568,7 +577,7 @@ import kotlin.time.Instant
 
 @Composable private fun Challenge(c: HomeCoupleUi, load: HomeImageLoader, actions: HomeActions, retry: () -> Unit) {
     when (val section = c.challenge) {
-        HomeSection.Loading -> HomePlaceholderCard()
+        HomeSection.Loading -> HomeRowSkeleton(challenge = true)
         HomeSection.Failed -> RetryRow("Your challenge couldn’t refresh.", retry)
         HomeSection.Empty -> Surface(onClick = { actions.onChallenge(null) }, shape = H.card, color = H.warm, contentColor = H.ink) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

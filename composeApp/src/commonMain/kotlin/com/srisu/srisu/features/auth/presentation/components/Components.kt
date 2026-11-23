@@ -1,5 +1,8 @@
 package com.srisu.srisu.features.auth.presentation.components
 
+import com.srisu.srisu.components.NavigationBackButton
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import com.srisu.srisu.theme.spacing
 import com.srisu.srisu.theme.pill
 import com.srisu.srisu.theme.transparent
@@ -20,7 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -117,11 +119,8 @@ fun CommonProfileContainerCompo(
         modifier = modifier
             .imePadding()
             .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                localFocusManager?.clearFocus()
+            .pointerInput(localFocusManager) {
+                detectTapGestures(onTap = { localFocusManager?.clearFocus() })
             },
         topBar = {
             TopAppBar(
@@ -130,12 +129,7 @@ fun CommonProfileContainerCompo(
                 colors = TopAppBarDefaults.topAppBarColors(MaterialTheme.colorScheme.transparent),
                 navigationIcon = {
                     if (showNavBackIcon) {
-                        IconButton(onClick = onNavBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Navigate back",
-                            )
-                        }
+                        NavigationBackButton(onNavBack)
 
                     }
                 }
