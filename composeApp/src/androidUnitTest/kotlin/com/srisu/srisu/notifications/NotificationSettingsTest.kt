@@ -57,8 +57,8 @@ class NotificationSettingsTest {
                 compose.onNodeWithText("Mute 1 hour").performScrollTo().assertIsDisplayed()
                 compose.onNodeWithText("Chat push notifications are not available yet.").assertDoesNotExist()
                 compose.onNodeWithContentDescription("Plan invitations & changes").performScrollTo().assertIsOn()
-                compose.onNodeWithContentDescription("Partner’s status updates").performScrollTo().assertIsOff()
-                compose.onNodeWithContentDescription("Challenge progress").performScrollTo().assertIsOff()
+                compose.onNodeWithContentDescription("Partner’s status updates").performScrollTo().assertIsOn()
+                compose.onNodeWithContentDescription("Challenge progress").performScrollTo().assertIsOn()
                 capture("categories-dark-large")
             } else {
                 compose.onNodeWithContentDescription("Chat messages").assertDoesNotExist()

@@ -38,6 +38,11 @@ internal fun notificationFallback(route: Route): String = when (route) {
     else -> "Open SriSu to view this notification."
 }
 
+// Status opens Home, but Home is not a dedicated status thread. A partner's
+// change still needs a banner when the recipient is already on that broad page.
+internal fun notificationShowsBanner(route: Route, current: Route?): Boolean =
+    route == HomeNavigation.Home || !notificationMatches(route, current)
+
 @Composable fun NotificationHost(protected: Boolean, entry: NavBackStackEntry?, open: (Route)->Unit, snackbars: SnackbarHostState) {
     val repo: NotificationRepository = koinInject()
     val previews: NotificationPreviewReader = koinInject()
@@ -70,7 +75,7 @@ internal fun notificationFallback(route: Route): String = when (route) {
         when(val result=repo.resolve(pending)) {
             is NotificationResolution.Ready -> {
                 if(pending.tapped) open(result.route)
-                else if(!notificationMatches(result.route,currentRoute)) {
+                else if(notificationShowsBanner(result.route,currentRoute)) {
                     val preview = (previews.load(pending.deliveryId) as? PreviewResult.Ready)?.value
                     val copy = preview?.let { "${it.title}: ${it.body}" } ?: notificationFallback(result.route)
                     if(snackbars.showSnackbar(copy,"Open",withDismissAction=true)==SnackbarResult.ActionPerformed) {

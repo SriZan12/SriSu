@@ -28,7 +28,7 @@ class NotificationTest {
         val value=ApiJson.decodeFromString<NotificationPreferences>("""{"categories":{"plans":false,"future":true},"capabilities":["notification-catalogue-2"]}""")
         assertEquals(false,value.categories["plans"])
         assertEquals(12,notificationCategories.size)
-        assertFalse(notificationCategories.first { it.key=="status" }.enabledByDefault)
+        assertTrue(notificationCategories.all { it.enabledByDefault })
     }
     @Test fun preferenceSwitchSendsRequiredUnchangedMuteCommand() {
         val body=ApiJson.encodeToJsonElement(PreferenceWrite(2,false,true,true)).jsonObject
@@ -63,6 +63,12 @@ class NotificationTest {
         assertTrue(notificationMatches(ChatNav.CoupleConversation(room,message),ChatNav.CoupleConversation(room)))
         assertFalse(notificationMatches(ChatNav.CoupleConversation(room),ChatNav.CoupleConversation(message)))
         assertFalse(notificationMatches(CoupleProfileDestination(1,CoupleSection.SHARING),CoupleProfileDestination(1)))
+    }
+    @Test fun statusShowsABannerOnHomeWhileAnOpenConversationStaysQuiet() {
+        val home=com.srisu.srisu.navigation.graph.HomeNavigation.Home
+        assertTrue(notificationShowsBanner(home,home))
+        assertFalse(notificationShowsBanner(ChatNav.CoupleConversation(room),ChatNav.CoupleConversation(room)))
+        assertTrue(notificationShowsBanner(ChatNav.CoupleConversation(room),home))
     }
     @Test fun matrixChatUsesTheAuthorizedDjangoRoomWithoutTreatingEventIdsAsLegacyMessages() {
         val destination = NotificationDestination("matrix_conversation", roomId=room.uppercase())

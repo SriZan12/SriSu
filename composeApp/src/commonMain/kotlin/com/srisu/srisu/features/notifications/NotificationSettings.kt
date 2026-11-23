@@ -21,7 +21,7 @@ import org.koin.compose.koinInject
         verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
         NavigationBackButton(onBack)
         Text("Notifications & diagnostics",style=MaterialTheme.typography.headlineSmall)
-        Text("Alerts keep your private details off the lock screen. Open SriSu to see the update.")
+        Text("Get message previews and updates about your shared activity. Control lock-screen previews and sounds in device settings.")
         Text(when {
             !native.configured -> "Notifications are not configured in this build."
             native.permission == "granted" -> "Notifications are allowed on this device. Manage sounds in system settings."
@@ -48,6 +48,7 @@ import org.koin.compose.koinInject
             SettingSwitch("Invitations & shared activity",prefs.activity,!state.busy) {repository.save(activity=it)}
             if (NOTIFICATION_CATALOGUE in prefs.capabilities) {
                 Text("Activity categories", style=MaterialTheme.typography.titleMedium)
+                Text("All categories start enabled. Status, questions, Moments and progress updates arrive quietly; invitations can sound. You can turn off individual categories below.")
                 Text("Requests and Plan invitations can sound. Moments, questions and other activity arrive quietly. Status updates are limited to one per hour.")
                 notificationCategories.forEach { category ->
                     SettingSwitch(category.label, prefs.categories[category.key] ?: category.enabledByDefault,

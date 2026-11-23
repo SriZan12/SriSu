@@ -1,5 +1,33 @@
 # Notifications and crash diagnostics V1
 
+## Complete catalogue delivery — 23 November 2026
+
+All twelve activity categories now default on: requests, plans, questions,
+challenges, Moments, replies, appreciations, hearts, status, ideas, Spark progress
+and Challenge progress. Explicit category opt-outs remain unchanged; missing keys
+use these defaults. Existing push/activity switches and chat mute retain their scope.
+
+Each actual nonempty status change can notify, including changes within the same
+hour; retries and unchanged text remain silent. Status banners also appear while
+Home is visible. Challenge progress says whether the partner confirmed, paused or
+resumed their part. Questions show the question, never an unrevealed private answer.
+
+Schema-2 activity pushes no longer share a transport collapse key, so unrelated
+queued events cannot replace one another. All eligible schema-2 alerts use high
+transport priority; status, questions, Moments, progress, reactions and outcomes
+still use the quiet channel. Invitations/chat/plans remain eligible for sound,
+subject to the existing 30-second budget and device settings. Delivery is not a
+sound guarantee. Legacy schema-1 transport remains unchanged.
+
+Deploy the matching `codex/notification-previews` backend before Android. No new
+migration or credential setup is needed. Historical events are not automatically
+backfilled. Apple/APNs stays skipped. See the
+[verification record](../validation/notifications/catalogue-delivery-20261123.md).
+
+The older rollout sections below describe their original dated policies; this
+section supersedes their optional defaults, hourly status limit and schema-2
+transport policy. Settings copy reuses the existing layout; no new Figma screen.
+
 ## Specific notification previews — 23 November 2026
 
 See the [executed verification and Windows/phone results](../validation/notifications/previews-20261123.md).

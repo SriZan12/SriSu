@@ -21,12 +21,12 @@ val notificationCategories = listOf(
     NotificationCategory("challenges", "Challenge invitations & outcomes", true),
     NotificationCategory("moments", "Partner’s new Moments", true),
     NotificationCategory("moment_replies", "Replies to your appreciations", true),
-    NotificationCategory("appreciations", "New appreciations", false),
-    NotificationCategory("moment_reactions", "Hearts on your Moments", false),
-    NotificationCategory("status", "Partner’s status updates", false),
-    NotificationCategory("ideas", "Shared date ideas", false),
-    NotificationCategory("spark_progress", "Partner’s question progress", false),
-    NotificationCategory("challenge_progress", "Challenge progress", false),
+    NotificationCategory("appreciations", "New appreciations", true),
+    NotificationCategory("moment_reactions", "Hearts on your Moments", true),
+    NotificationCategory("status", "Partner’s status updates", true),
+    NotificationCategory("ideas", "Shared date ideas", true),
+    NotificationCategory("spark_progress", "Partner’s question progress", true),
+    NotificationCategory("challenge_progress", "Challenge progress", true),
 )
 
 @Serializable data class InstallationRequest(
