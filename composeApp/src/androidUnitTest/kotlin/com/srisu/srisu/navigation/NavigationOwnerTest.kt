@@ -35,6 +35,7 @@ class NavigationOwnerTest {
             controller = rememberNavController()
             NavHost(controller, startDestination = HomeNavigation.Home) {
                 composable<HomeNavigation.Home> { }
+                composable<HomeNavigation.Notifications> { }
                 composable<HomeNavigation.Explore> { }
                 composable<HomeNavigation.Questions> { }
                 composable<ChatNav.CoupleConversation> { entry ->
@@ -59,6 +60,26 @@ class NavigationOwnerTest {
         compose.runOnIdle { AppNavigator(controller).back() }
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(challengeEntry, controller.currentBackStackEntry!!.id) }
+    }
+    @Test fun inboxStatusReturnsToTheExistingHomeAndFeatureDetailsReturnToInbox() {
+        host()
+        val homeEntry = controller.currentBackStackEntry!!.id
+        compose.runOnIdle { AppNavigator(controller).open(HomeNavigation.Notifications) }
+        compose.waitForIdle()
+        val inboxEntry = controller.currentBackStackEntry!!.id
+        compose.runOnIdle { AppNavigator(controller).openInboxDestination(ChallengesDestination()) }
+        compose.waitForIdle()
+        compose.runOnIdle { AppNavigator(controller).back() }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(inboxEntry, controller.currentBackStackEntry!!.id)
+            AppNavigator(controller).openInboxDestination(HomeNavigation.Home)
+        }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(homeEntry, controller.currentBackStackEntry!!.id)
+            assertNull(controller.previousBackStackEntry)
+        }
     }
     @Test fun nestedQuestionsReturnToExistingChatAndReleaseTheirChildren() {
         host()

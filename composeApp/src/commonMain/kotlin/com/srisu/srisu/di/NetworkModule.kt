@@ -31,6 +31,7 @@ val sharedNetworkModule = module {
     single<com.srisu.srisu.features.challenges.data.ChallengeSource> { com.srisu.srisu.features.challenges.data.ChallengeRepository(get(), get()) }
     single<com.srisu.srisu.features.sparks.data.SparkSource> { com.srisu.srisu.features.sparks.data.SparkRepository(get(), get()) }
     single<com.srisu.srisu.features.moments.data.MomentSource> { com.srisu.srisu.features.moments.data.MomentRepository(get(), get(), get()) }
+    single<com.srisu.srisu.features.notifications.NotificationInboxSource> { com.srisu.srisu.features.notifications.NotificationInboxRepository(get(), get(), get(), get()) } onClose { (it as? com.srisu.srisu.features.notifications.NotificationInboxRepository)?.close() }
     single { com.srisu.srisu.features.notifications.NotificationApi(get(), get()) }
     single { com.srisu.srisu.features.notifications.NotificationPreviewReader(get(), get(), get()) }
     single { com.srisu.srisu.features.notifications.NotificationRepository(get(), get(), get()) } onClose { it?.close() }

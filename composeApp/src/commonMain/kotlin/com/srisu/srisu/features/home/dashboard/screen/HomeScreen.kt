@@ -39,6 +39,7 @@ import srisu.composeapp.generated.resources.*
 @Stable
 class HomeActions(
     val onNotifications: () -> Unit = {},
+    val onPlanInvitations: () -> Unit = {},
     val onCoupleProfile: () -> Unit = {},
     val onViewMoments: (coupleId: Long, personId: Long) -> Unit = { _, _ -> },
     val onCreateMoment: (coupleId: Long) -> Unit = {},
@@ -62,9 +63,11 @@ class HomeActions(
 @Composable
 fun HomeScreen(actions: HomeActions, modifier: Modifier = Modifier, viewModel: HomeViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val inbox: com.srisu.srisu.features.notifications.NotificationInboxSource = org.koin.compose.koinInject()
+    val unread by inbox.unreadCount.collectAsStateWithLifecycle()
     MomentLifecycle(viewModel::visible)
     com.srisu.srisu.features.couplechat.presentation.ProtectConversation()
-    HomeContent(state, viewModel::image, viewModel::refresh, actions, modifier,
+    HomeContent(state.copy(notificationUnreadCount=unread), viewModel::image, viewModel::refresh, actions, modifier,
         HomeInteractions(viewModel::setStatus, viewModel::suggest, viewModel::ideaAction, viewModel::acceptPlan, viewModel::retryAction, viewModel::reminder))
 }
 

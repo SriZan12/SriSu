@@ -36,6 +36,7 @@ data class HomeUiState(
     val invitationsFailed: Boolean = false,
     val invitationsLoading: Boolean = false,
     val reminders: ReminderState = ReminderState(),
+    val notificationUnreadCount: Int? = null,
 )
 
 enum class HomeStatus { LOADING, READY, FAILED }

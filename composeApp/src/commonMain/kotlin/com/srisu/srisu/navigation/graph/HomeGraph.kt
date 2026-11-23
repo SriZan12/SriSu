@@ -12,10 +12,21 @@ import kotlinx.serialization.Serializable
 
 sealed interface HomeNavigation : Route {
     @Serializable data object Home : HomeNavigation
+    @Serializable data object Notifications : HomeNavigation
     @Serializable data object Explore : HomeNavigation
     @Serializable data object Questions : HomeNavigation
 }
+internal fun AppNavigator.openInboxDestination(route: Route) {
+    // The inbox belongs to Home. Restoring Home's saved tab stack can restore
+    // this very inbox; pop to its existing parent instead.
+    if (route == HomeNavigation.Home) back() else open(route)
+}
 fun NavGraphBuilder.homeGraph(controller: NavHostController) {
+    composable<HomeNavigation.Notifications> { entry ->
+        val nav = AppNavigator(controller, entry)
+        com.srisu.srisu.features.notifications.NotificationInboxScreen(nav::back,
+            { nav.open(ProfileNav.NotificationSettings) }, nav::openInboxDestination)
+    }
     composable<HomeNavigation.Questions> { entry ->
         val nav = AppNavigator(controller, entry)
         com.srisu.srisu.features.sparks.presentation.SparkScreen(null, { nav.switchTab(HomeNavigation.Home) },
@@ -29,7 +40,8 @@ fun NavGraphBuilder.homeGraph(controller: NavHostController) {
             val nav = AppNavigator(controller, entry)
             val chat = { nav.open(ChatNav.CoupleConversation(origin = "home")) }
             HomeActions(
-                onNotifications = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination(showInvitations = true)) },
+                onNotifications = { nav.open(HomeNavigation.Notifications) },
+                onPlanInvitations = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination(showInvitations = true)) },
                 onCoupleProfile = { nav.open(CoupleProfileDestination()) },
                 onViewMoments = { couple, creator -> nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(coupleId = couple, creatorId = creator)) },
                 onCreateMoment = { nav.open(com.srisu.srisu.features.moments.navigation.MomentComposerDestination(it)) },

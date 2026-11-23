@@ -235,6 +235,21 @@
       "validation": "docs/validation/countries/README.md",
       "integration_branch": "dev-core-architecture",
       "performance": "docs/validation/countries/performance/README.md"
+    },
+    "notification_inbox": {
+      "frontend_branch": "codex/notification-previews",
+      "backend_branch": "codex/notification-previews",
+      "frontend_base": "5c39af65df8f2f7a5d7b8356bfdcffae355429a9",
+      "backend_base": "8585348ac1573394cd37960ae0fff1a769ce3457",
+      "contract": "notification-inbox-1",
+      "migration": "notifications.0006_notification_inbox",
+      "flow": "docs/flows/notifications.md",
+      "validation": "docs/validation/notifications/inbox-20261124.md",
+      "backend_guide": "../SriSu-backend/docs/notification-inbox.md",
+      "figma_page": "1:3",
+      "figma_note": "Live discovery unavailable: Starter-plan tool quota; intentionally derived SriSu layout; no specific notification node verified.",
+      "status": "Published on matching feature branches; Windows API/migration and Realme Home/list/read/feature navigation verified; Apple skipped",
+      "backend_commit": "9e2f5b817369119d0004bbafe7f014eed953c6ee"
     }
   }
 }

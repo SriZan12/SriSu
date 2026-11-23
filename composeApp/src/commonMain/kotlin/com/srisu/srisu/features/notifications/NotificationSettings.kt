@@ -48,7 +48,7 @@ import org.koin.compose.koinInject
             SettingSwitch("Invitations & shared activity",prefs.activity,!state.busy) {repository.save(activity=it)}
             if (NOTIFICATION_CATALOGUE in prefs.capabilities) {
                 Text("Activity categories", style=MaterialTheme.typography.titleMedium)
-                Text("All categories start enabled. Status, questions, Moments and progress updates arrive quietly; invitations can sound. You can turn off individual categories below.")
+                Text("These controls affect phone alerts. Activity stays in your notification centre. All categories start enabled. Status, questions, Moments and progress updates arrive quietly; invitations can sound. You can turn off individual categories below.")
                 Text("Requests and Plan invitations can sound. Moments, questions and other activity arrive quietly. Status updates are limited to one per hour.")
                 notificationCategories.forEach { category ->
                     SettingSwitch(category.label, prefs.categories[category.key] ?: category.enabledByDefault,

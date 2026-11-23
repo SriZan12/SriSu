@@ -1,5 +1,40 @@
 # Notifications and crash diagnostics V1
 
+## Home notification centre — November 2026
+
+Home's bell now opens **Notifications**, a 30-day account activity list with an
+unread badge, All/Unread filters, day groups, specific descriptions and category
+icons. Opening the screen does not mark activity read; tapping a row reauthorizes
+its destination and marks it read. Mark all read uses the server page boundary so
+new arrivals remain unread. Existing Home request-review actions remain available.
+
+Includes partner invitations/acceptance, sharing requests/approval, plan events,
+questions and answer progress/reveal, challenge events, Moments/hearts/private
+appreciations/replies, latest partner status and shared date ideas. **Chat is
+excluded**, as are typing/receipts, local reminders and diagnostics. Notification
+settings control phone alerts; history remains available with push disabled.
+
+Current authorized resource details are displayed, not archived private snapshots.
+Expired/deleted items show safe unavailable copy. Blocked/former-couple items are
+hidden. Typed navigation opens the exact existing feature; completed plans and
+challenges remain useful, while unavailable content cannot open a stale page.
+Private list state clears on background/account change; late requests cannot
+navigate or repopulate it. Read state is shared across devices. Refresh, retry,
+load-earlier, loading, empty and unavailable states are explicit.
+
+Backend contract: `notification-inbox-1`, four additive routes under
+`/api/notifications/v1/inbox/`. Deploy backend migration `notifications.0006` before
+installing the Android update. Old client endpoints and push behavior remain
+compatible. Domain activity capture now runs independently of the global push
+switch. Existing event history becomes unread; uncaptured history is not invented.
+
+See [validation and design references](../validation/notifications/inbox-20261124.md)
+and [backend endpoint/deployment guide](https://github.com/SrizanKhadka/SriSu/blob/codex/notification-previews/docs/notification-inbox.md).
+Figma live access hit the Starter-plan tool limit; this screen is derived from
+existing SriSu tokens and researched list patterns, with no claimed exact Figma
+node. Apple/APNs remains skipped.
+
+
 ## Complete catalogue delivery — 23 November 2026
 
 All twelve activity categories now default on: requests, plans, questions,

@@ -29,7 +29,7 @@ import java.io.File
 class HomeRenderTest {
     @get:Rule val compose = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val events = mutableListOf<String>()
-    private val actions = HomeActions(onNotifications = { events += "requests" }, onCoupleProfile = { events += "profile" },
+    private val actions = HomeActions(onNotifications = { events += "notifications" }, onCoupleProfile = { events += "profile" },
         onViewMoments = { c, p -> events += "moments:$c:$p" }, onCreateMoment = { events += "create:$it" },
         onChat = { events += "chat" }, onAsk = { events += "ask" }, onPlanner = { events += "planner" },
         onChallenge = { events += "challenge:$it" }, onPlan = { events += "plan:$it" },
@@ -70,6 +70,11 @@ class HomeRenderTest {
         scroll("Day 248").performClick()
         assertEquals(listOf("create:10", "question:11111111-1111-4111-8111-111111111111", "profile"), events)
         scroll("Your story so far"); capture("spark-bottom")
+    }
+    @Test fun homeBellOpensTheNotificationCentre() {
+        render("spark")
+        compose.onNodeWithContentDescription("Notifications").performClick()
+        assertEquals(listOf("notifications"), events)
     }
     @Test fun latestMessageOpensItsMessageAndAskIsSeparate() {
         render("message")

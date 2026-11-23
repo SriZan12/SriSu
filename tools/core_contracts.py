@@ -33,6 +33,14 @@ def main():
                 shutil.copyfile(source / name, TARGET / name)
             elif (source / name).read_bytes() != (TARGET / name).read_bytes():
                 raise SystemExit(f'Contract drift: {name}. Review the backend change before --update.')
+        # Notification endpoints and the inbox response contract are pinned too.
+        notifications = args.backend.resolve() / 'contracts/notifications-1'
+        for name in ('schema.json', 'inbox.schema.json', 'routes.json'):
+            target = ROOT / 'contracts/notifications-1' / name
+            if args.update:
+                shutil.copyfile(notifications / name, target)
+            elif (notifications / name).read_bytes() != target.read_bytes():
+                raise SystemExit(f'Notification contract drift: {name}. Review before --update.')
     fixtures = json.loads((TARGET / 'fixtures.json').read_text())
     expected = generated(fixtures, json.loads((TARGET / 'routes.json').read_text()))
     if args.update: GENERATED.write_text(expected)

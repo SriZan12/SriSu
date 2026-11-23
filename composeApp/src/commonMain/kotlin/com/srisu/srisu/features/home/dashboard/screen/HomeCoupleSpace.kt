@@ -64,7 +64,7 @@ import kotlin.time.Instant
                 LazyColumn(Modifier.widthIn(max = 560.dp).fillMaxSize().statusBarsPadding(),
                     state = rememberLazyListState(), contentPadding = PaddingValues(horizontal = if (compact) 17.dp else 22.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(22.dp)) {
-                    item("heading") { if (state.status == HomeStatus.LOADING && c == null) HomeHeadingSkeleton() else SpaceHeading(state, actions) { requests = true } }
+                    item("heading") { if (state.status == HomeStatus.LOADING && c == null) HomeHeadingSkeleton() else SpaceHeading(state, actions) }
                     if (state.refreshing) item("progress") {
                         LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Refreshing Home" }, color = H.purple, trackColor = H.lilac)
                     }
@@ -127,7 +127,7 @@ import kotlin.time.Instant
                         else -> Text("No invitations right now.", color = H.muted)
                     }
                 } else {
-                    if (c.pendingInvitations > 0) SpaceButton("${c.pendingInvitations} Plan ${if (c.pendingInvitations == 1) "request" else "requests"}", { requests = false; actions.onNotifications() }, modifier = Modifier.fillMaxWidth())
+                    if (c.pendingInvitations > 0) SpaceButton("${c.pendingInvitations} Plan ${if (c.pendingInvitations == 1) "request" else "requests"}", { requests = false; actions.onPlanInvitations() }, modifier = Modifier.fillMaxWidth())
                     else if (!c.planFresh) RetryRow("Plan requests haven’t refreshed.", retry)
                     val challenge = (c.challenge as? HomeSection.Ready)?.value
                     if (challenge?.incoming == true) SpaceButton("A challenge from ${c.partner.name}", { requests = false; actions.onChallenge(challenge.id) }, modifier = Modifier.fillMaxWidth())
@@ -191,7 +191,7 @@ import kotlin.time.Instant
     }
 }
 
-@Composable private fun SpaceHeading(state: HomeUiState, actions: HomeActions, requests: () -> Unit) {
+@Composable private fun SpaceHeading(state: HomeUiState, actions: HomeActions) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         Column(Modifier.weight(1f).clickable(role = Role.Button,
             onClickLabel = if (state.couple != null) "Open your couple profile" else "Explore SriSu",
@@ -203,12 +203,11 @@ import kotlin.time.Instant
                 Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.padding(start = 5.dp).size(16.dp), tint = H.muted)
             }
         }
-        IconButton(onClick = requests,
-            modifier = Modifier.semantics { contentDescription = "Requests${if ((state.couple?.pendingInvitations ?: 0) > 0 || state.invitation?.incoming == true || state.couple?.sharingRequest == HomeSection.Ready(true) || (state.couple?.challenge as? HomeSection.Ready)?.value?.incoming == true) ", new items to review" else ""}" }) {
-            Box {
+        val count = state.notificationUnreadCount ?: 0
+        IconButton(onClick = actions.onNotifications,
+            modifier = Modifier.semantics { contentDescription = if(count > 0) "Notifications, $count unread" else "Notifications" }) {
+            BadgedBox(badge = { if(count > 0) Badge { Text(if(count > 99) "99+" else count.toString()) } }) {
                 Icon(Icons.Outlined.Notifications, null, Modifier.size(21.dp))
-                if ((state.couple?.pendingInvitations ?: 0) > 0 || state.invitation?.incoming == true || state.couple?.sharingRequest == HomeSection.Ready(true) || (state.couple?.challenge as? HomeSection.Ready)?.value?.incoming == true)
-                    Box(Modifier.align(Alignment.TopEnd).size(7.dp).background(H.orange, CircleShape))
             }
         }
     }
