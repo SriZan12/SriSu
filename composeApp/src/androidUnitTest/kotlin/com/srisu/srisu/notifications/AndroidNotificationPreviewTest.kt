@@ -89,4 +89,23 @@ class AndroidNotificationPreviewTest {
         assertTrue(prefs().all.keys.count { it.startsWith("current:") } <= 128)
         assertTrue(prefs().all.keys.all { it.substringBefore(':') in setOf("seen", "current", "time", "expiry") })
     }
+
+    @Test fun momentMediaCopyIsDisplayedWithoutChangingSafePublicCopyOrTapDestination() {
+        val value=envelope().copy(kind="moment.published",title="New moment",
+            body="Your partner shared a new moment.",audible=false)
+        for((description,body) in listOf("video moment" to "Video moment",
+            "photo moment" to "Photo moment", "moment with photos and videos" to "Photo and video moment",
+            "video moment" to "Synthetic sunset together")) {
+            val title="Synthetic partner shared a $description"
+            AndroidNotificationPreviews.post(context,value,NotificationPreview("moment.published",title,body))
+            val notification=manager.activeNotifications.single().notification
+            assertEquals(title,notification.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals(body,notification.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals(body,notification.extras.getString(Notification.EXTRA_BIG_TEXT))
+            assertEquals(Notification.VISIBILITY_PRIVATE,notification.visibility)
+            assertEquals(value.body,notification.publicVersion.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals(value.delivery,shadowOf(notification.contentIntent).savedIntent.getStringExtra("delivery_id"))
+            assertEquals(Notification.FLAG_ONLY_ALERT_ONCE,notification.flags and Notification.FLAG_ONLY_ALERT_ONCE)
+        }
+    }
 }

@@ -96,8 +96,18 @@ class MomentRenderTest {
     @Test fun cancelledSelectionStaysInComposer()=render("create-select-cancel") {
         compose.onNodeWithTag("moment-add-first-photo").performClick()
         compose.onNodeWithTag("moment-add-first-photo").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Take a photo").assertIsEnabled()
+        compose.onNodeWithContentDescription("Open camera").assertIsEnabled()
         compose.onNodeWithTag("moment-share").assertIsNotEnabled()
+    }
+    @Test fun cameraChoices()=render("create-select-camera") {
+        compose.onNodeWithContentDescription("Open camera").performClick()
+        compose.onNodeWithText("Take photo").assertIsDisplayed()
+        compose.onNodeWithTag("moment-record-video").assertIsDisplayed()
+    }
+    @Test fun cameraChoicesSmallDarkLargeText()=render("create-select-camera-small-dark",dark=true,small=true,fontScale=1.5f) {
+        compose.onNodeWithContentDescription("Open camera").performScrollTo().performClick()
+        compose.onNodeWithText("Take photo").assertIsDisplayed()
+        compose.onNodeWithTag("moment-record-video").assertIsDisplayed()
     }
     @Test fun cropApplyCancelAndFullRestore()=render("create-crop-applied") {
         compose.onNodeWithTag("moment-photo-full").assertIsSelected()

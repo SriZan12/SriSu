@@ -33,9 +33,9 @@
 		<false/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Take a photo for your couple profile or private conversation.</string>
+	<string>Take photos for your profile and chats, or record a video Moment.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Record a voice message for your partner.</string>
+	<string>Record voice messages and sound in your video Moments.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

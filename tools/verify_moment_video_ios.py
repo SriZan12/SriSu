@@ -25,11 +25,14 @@ def run(*args, **kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--fixture', type=Path, required=True)
+    parser.add_argument('--fixture', type=Path)
+    parser.add_argument('--capture-only', action='store_true', help='Check native camera-unavailable/retry handling without an account or backend')
     parser.add_argument('--device', required=True, help='Booted arm64 simulator UDID')
     args = parser.parse_args()
-    fixture = json.loads(args.fixture.read_text())
-    if urlparse(fixture['base_url']).hostname != '127.0.0.1' or 'video_id' not in fixture:
+    if not args.capture_only and args.fixture is None:
+        parser.error('--fixture is required for playback checks')
+    fixture = json.loads(args.fixture.read_text()) if args.fixture else {}
+    if not args.capture_only and (urlparse(fixture['base_url']).hostname != '127.0.0.1' or 'video_id' not in fixture):
         parser.error('Use only a disposable --moment-video loopback fixture')
     with tempfile.TemporaryDirectory(prefix='srisu-video-ios-') as temp:
         app = Path(temp)/'VideoQA.app'; app.mkdir()
@@ -39,24 +42,26 @@ def main():
                 'MinimumOSVersion':'18.5','UIDeviceFamily':[1,2],'UILaunchScreen':{},
                 'NSAppTransportSecurity':{'NSAllowsArbitraryLoads':True}},file)
         sdk = subprocess.check_output(['xcrun','--sdk','iphonesimulator','--show-sdk-path'],text=True).strip()
-        log = ROOT/'build/reports/moments/video-ios-build.log'; log.parent.mkdir(parents=True,exist_ok=True)
+        label = 'video-capture-ios' if args.capture_only else 'video-ios'
+        log = ROOT/f'build/reports/moments/{label}-build.log'; log.parent.mkdir(parents=True,exist_ok=True)
         with log.open('w') as output:
             run('xcrun','--sdk','iphonesimulator','swiftc','-target','arm64-apple-ios18.5-simulator','-sdk',sdk,
                 '-F',str(ROOT/'composeApp/build/bin/iosSimulatorArm64/debugFramework'),'-framework','ComposeApp',
                 '-lsqlite3','-lc++','-Xlinker','-dead_strip',str(ROOT/'iosApp/iosApp/MomentVideoDriver.swift'),
-                str(ROOT/'tools/qa/MomentVideoNativeQA.swift'),'-o',str(app/'VideoQA'),stdout=output,stderr=output)
+                str(ROOT/'tools/qa'/('MomentVideoCaptureQA.swift' if args.capture_only else 'MomentVideoNativeQA.swift')),'-o',str(app/'VideoQA'),stdout=output,stderr=output)
         run('xcrun','simctl','install',args.device,str(app))
         try:
             container = Path(subprocess.check_output(['xcrun','simctl','get_app_container',args.device,BUNDLE,'data'],text=True).strip())
             documents = container/'Documents'; documents.mkdir(exist_ok=True)
-            shutil.copyfile(args.fixture,documents/'fixture.json')
+            if args.fixture:
+                shutil.copyfile(args.fixture,documents/'fixture.json')
             result = documents/'result.json'; result.unlink(missing_ok=True)
             run('xcrun','simctl','launch',args.device,BUNDLE,stdout=subprocess.DEVNULL)
             deadline = time.monotonic()+35
             while not result.exists() and time.monotonic()<deadline:
                 time.sleep(.25)
             report = json.loads(result.read_text()) if result.exists() else {'passed':False,'error':'timeout'}
-            (log.parent/'video-ios-result.json').write_text(json.dumps(report,indent=2)+'\n')
+            (log.parent/f'{label}-result.json').write_text(json.dumps(report,indent=2)+'\n')
             print(json.dumps(report))  # Only timings and fixed error codes, never credentials.
             if not report.get('passed'):
                 raise SystemExit(1)

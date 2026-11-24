@@ -8,6 +8,17 @@ import kotlinx.serialization.Serializable
 const val MOMENT_VIDEO_MAX_BYTES = 100L * 1024 * 1024
 const val MOMENT_VIDEO_MAX_DURATION = 60_000L
 
+internal const val MOMENT_VIDEO_SIZE_ERROR = "This video is too large. Choose one under 100 MiB (about 105 MB)."
+
+/** Keep duration, unreadable files and size failures distinct in both clients. */
+internal fun momentVideoSelectionError(size: Long, durationMs: Long): String? = when {
+    size <= 0 -> "This video file is empty or could not be read. Select it again."
+    size > MOMENT_VIDEO_MAX_BYTES -> MOMENT_VIDEO_SIZE_ERROR
+    durationMs < 100 -> "This video's duration could not be read. Choose another video."
+    durationMs > MOMENT_VIDEO_MAX_DURATION -> "This video is longer than 60 seconds. Choose a shorter clip."
+    else -> null
+}
+
 @Serializable data class LocalMomentVideo(val path: String, val size: Long, val durationMs: Long,
     val width: Int, val height: Int)
 
@@ -33,6 +44,8 @@ data class MomentPlaybackEvent(val state: String, val positionMs: Long = 0, val 
 
 interface MomentVideoPicker {
     fun pick(result: (MomentVideoSelection) -> Unit)
+    /** Capture privately in the app, then return through the same preparation pipeline. */
+    fun record(result: (MomentVideoSelection) -> Unit)
     fun cancel()
     fun close()
 }

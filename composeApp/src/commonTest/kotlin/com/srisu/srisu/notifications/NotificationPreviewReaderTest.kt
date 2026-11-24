@@ -19,6 +19,22 @@ class NotificationPreviewReaderTest {
     private val headers = headersOf(HttpHeaders.ContentType, "application/json")
     private val chat = """{"data":{"event_kind":"matrix.message","title":"Synthetic partner","body":"Open your chat to read the message.","room_id":"${ChatFixtures.ROOM_ID}","matrix_event_id":"${'$'}synthetic-event"}}"""
 
+    @Test fun videoMomentCopyComesFromTheAuthorizedApiWithoutChatDecryption() = runTest {
+        val sessions=session()
+        val client=HttpClientFactory.create(sessions,environment,MockEngine {
+            respond("""{"data":{"event_kind":"moment.published","title":"Synthetic partner shared a video moment","body":"Video moment"}}""",headers=headers)
+        })
+        val matrix=object:MatrixChatRepository by ChatFixtureRepository(ChatFixtures.empty()) {
+            override suspend fun notificationPreview(roomId:String,eventId:String):String = error("Moments do not use Matrix")
+        }
+        try {
+            val result=assertIs<PreviewResult.Ready>(NotificationPreviewReader(NotificationApi(client,environment),sessions,matrix).load(delivery))
+            assertEquals("Synthetic partner shared a video moment",result.value.title)
+            assertEquals("Video moment",result.value.body)
+            assertTrue(result.complete)
+        } finally {client.close()}
+    }
+
     @Test fun decryptsExactEventAndRechecksAuthorizationWithoutSendingOrMarkingRead() = runTest {
         val sessions = session()
         var calls = 0

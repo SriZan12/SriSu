@@ -9,6 +9,8 @@ import com.srisu.srisu.features.coupleprofile.data.CoupleProfileRepository
 import com.srisu.srisu.features.moments.data.*
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assume.assumeTrue
@@ -65,12 +67,24 @@ class MomentVideoTransportIntegrationTest {
                 assertNotEquals("failed", state.state)
             } while (state.state != "ready")
             val draft = assertNotNull(assertIs<NetworkAPIResult.Success<MomentDraft?>>(mine.draft(request)).response)
-            val intent = PublishMoment(draft.revision, "Synthetic video", "private", listOf(video))
+            // A captionless video exercises the media fallback that previously
+            // mislabeled a successfully published video as a photo Moment.
+            val intent = PublishMoment(draft.revision, "", "private", listOf(video))
             val moment = assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(mine.publish(request, intent)).response)
             published = moment.id
             assertEquals(moment.id, assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(mine.publish(request, intent)).response).id)
             val received = assertNotNull(assertIs<NetworkAPIResult.Success<Moment?>>(partner.get(moment.id)).response)
             assertEquals(video, received.photos.single().video?.id)
+            val inboxResponse=partnerHttp.get(env.baseUrl+"api/notifications/v1/inbox/")
+            assertEquals(200,inboxResponse.status.value)
+            val inbox=ApiJson.parseToJsonElement(inboxResponse.bodyAsText()).jsonObject
+                .getValue("data").jsonObject.getValue("items").jsonArray
+            val videoAlerts=inbox.map {it.jsonObject}.filter {
+                it.getValue("kind").jsonPrimitive.content=="moment.published" &&
+                    it.getValue("body").jsonPrimitive.content=="Video moment"
+            }
+            assertEquals(1,videoAlerts.size) // Idempotent publish does not duplicate the notification.
+            assertTrue(videoAlerts.single().getValue("title").jsonPrimitive.content.endsWith(" shared a video moment"))
             assertNotNull(partner.image(received.photos.single().image))
             val access = assertNotNull(assertIs<NetworkAPIResult.Success<MomentPlayback?>>(partner.playback(video)).response)
             assertTrue(access.url.endsWith("/master.m3u8"))

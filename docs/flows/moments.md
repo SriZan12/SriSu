@@ -788,3 +788,163 @@ runtime JAR, then Gradle plugin transitive dependencies. CI now opts into the
 for Gradle and [Robolectric runtime resolution](https://robolectric.org/configuring/).
 The normal local repository selection, dependency versions and test coverage are
 unchanged. Both failing artifact URLs returned 200 from the mirror before use.
+
+### Android selection failure follow-up — 24 November 2026
+
+A valid video could fail immediately after selection, with a misleading
+60-second / 100-MiB warning. The Android scratch-file helper used global Koin,
+while production uses `KoinIsolatedContext`. The resulting
+`KoinApplication has not been started` exception was caught as a media-limit
+failure. The old picker instrumentation fixture started global Koin itself and
+therefore hid this mismatch.
+
+- Scratch-file creation, upload reads and deletion now use the application
+  context initialized by `MainApplication`; canonical owned-path checks remain.
+  The picker test no longer creates an artificial global DI container.
+- Selection distinguishes duration, size, unreadable media, resolution, access
+  and storage/preparation failures. The shared composer also reports the actual
+  failed limit. The limits remain 60 seconds and 104,857,600 bytes (100 MiB,
+  approximately 105 decimal MB); 17 MB is well within the size limit.
+- Missing provider SIZE metadata falls back to bounded file checks. Failure to
+  generate a local poster no longer rejects otherwise valid media; the server
+  still generates the published poster. Android metadata cleanup uses `release`
+  for compatibility with the app's older supported Android versions.
+
+Verification for these uncommitted frontend changes on `codex/video-moments`
+(base `c06fc02`, paired unchanged backend `1ea9eacd`):
+
+- New storage regression tests failed before the fix with the Koin exception;
+  afterward, all **10** focused file/state tests passed, including 17 MB,
+  exact-limit acceptance, distinct size/duration failures, retry and owned-path
+  protection.
+- **3/3 Android API 35 emulator tests passed**: native picker/preparation using
+  an eight-second synthetic MP4 padded with a valid MP4 `free` atom to exactly
+  17,000,000 bytes, composer/keyboard checks, and authenticated HLS playback.
+  The picker successfully read prepared upload chunks without global Koin.
+- The real Ktor → disposable Django → FFmpeg → publication → partner-playback
+  integration passed. Android app/test APKs and iOS simulator Kotlin compiled.
+- The user's original clip/physical phone and the native iOS picker were not
+  tested in this follow-up. No backend source, migrations, limit changes,
+  production database changes, push or merge are required/performed here.
+
+### Server processing wait follow-up — 24 November 2026
+
+“Preparing video 1 of 1” is reached after upload completion. The user's other
+laptop had no running `moment_video_worker`; the backend's local launcher omitted
+that service. Backend startup now includes media-tool preflight, the worker and
+its health check. Encoder renditions/poster share one decode pass. See the paired
+backend `docs/couple_moments.md` latency follow-up and
+`docs/local-server-startup.md` recovery instructions.
+
+The shared Android/iOS composer distinguishes “Uploaded · waiting to process”
+from “Processing video”. A 30-second queued wait or a 90-second processing wait
+returns control with an explicit saved-draft message; slow status requests are
+included in the deadline. These waits do not cancel the server job, delete media,
+or publish in the background. Share safely resumes the same draft and reuses
+confirmed uploaded bytes. Success, pause, missing worker, stalled status request,
+and retry without duplicate upload/publication are regression-tested.
+
+Verification: 12 focused video file/state tests passed; Android/iOS Kotlin and
+native artifacts built; real Ktor → Django → FFmpeg → publish → partner playback
+passed; 3/3 Android API 35 native checks and the production iOS AVPlayer simulator
+check passed against disposable media from the updated encoder. Backend checks
+passed with 35 PostgreSQL-only tests skipped, and 20 local startup tests passed.
+The actual other-laptop worker cannot be started or timed from this checkout.
+No new migrations or API fields are introduced. These local changes build on
+frontend `c06fc02` and backend `1ea9eacd`, both on `codex/video-moments`; nothing
+was pushed or merged. Earlier approved UI and local Xcode/environment edits are
+preserved.
+
+Final full frontend unit run: 676 tests, zero failures/errors, five opt-in
+transport checks skipped. The video transport check was run separately and
+passed. Local evidence is retained under the ignored
+`build/reports/moments/video-processing-follow-up/` directory.
+
+### In-app video recording — 24 November 2026
+
+The composer camera action now opens two explicit choices: **Take photo** and
+**Record video · up to 60s**, both before and after media has been added. Library
+selection is unchanged. A recording returns to the existing composer preview;
+caption, audience, retry, five-media limit and explicit Share remain authoritative.
+This extends the approved Moment composer using existing theme tokens; no new
+Figma screen or backend contract is introduced.
+
+- Shared `MomentVideoPicker.record` returns the same `MomentVideoSelection` as
+  library selection, including the ViewModel's account/draft stamp checks.
+- Android uses in-app CameraX, front/back cameras, audio and a visible timer.
+  Both camera and microphone permission are required. Denial returns an
+  actionable error and releases the operation so the user can try again.
+  Capture is 720p (lower-quality fallback), targeting 3 Mbps. Native duration
+  and size limits leave a little headroom under 60 seconds / 100 MiB for final
+  frames and container metadata. Limit completion keeps a valid recorded clip.
+- Android output stays in private cache, never the gallery. A validated capture
+  is moved into the existing upload cache without another local encode pass.
+  Cancel, leaving the app, disposal and recording errors remove partial files
+  after the native writer closes. Orphan partial files from process death are
+  pruned on a later recording. Controls use the existing safe-area/theme layout.
+- iOS uses the in-app native camera with camera/microphone permissions, its
+  Retake/Use Video review and a duration limit below 60 seconds. The picker
+  requests a 720p export; the existing protected file preparation, size validation
+  and encoder handle the returned movie. Camera unavailable, denial,
+  interruption, backgrounding and cancellation do not publish a Moment.
+  Permission descriptions now include video and recorded sound.
+- Both platforms use the existing resumable upload, private/public audience,
+  server validation, FFmpeg processing, playback and media-aware notifications.
+  No backend changes or migrations are required for recording itself. Earlier
+  local worker/notification fixes remain in this branch.
+
+Native API references: [CameraX video capture](https://developer.android.com/media/camera/camerax/video-capture),
+[CameraX output limits](https://developer.android.com/reference/androidx/camera/video/FileOutputOptions.Builder),
+[Apple camera controller](https://developer.apple.com/documentation/uikit/uiimagepickercontroller),
+[Apple export preset](https://developer.apple.com/documentation/uikit/uiimagepickercontroller/videoexportpreset).
+
+QA adds emulator-only camera tests and a disposable iOS camera-availability
+harness (`tools/verify_moment_video_ios.py --capture-only --device <simulator>`).
+The paired HTTP runner accepts `--moment-video-file <synthetic-camera-file>` to
+verify the actual captured format through the real client and disposable server.
+Never use real account media or credentials for these checks.
+
+Verification for this local recording addition (frontend `c06fc02`, backend
+`1ea9eacd`, both `codex/video-moments`, plus the preserved local follow-ups):
+
+- Android/iOS Kotlin compile, Android app/test builds and native Swift harness
+  compile passed. Theme validation and whitespace checks passed.
+- The Moments unit/render suite passed: **78 tests, zero failures, two opt-in
+  transport tests skipped**. The new camera-choice renders also passed separately
+  after their alignment polish, including 320dp width, 150% text and dark mode.
+- Android API 35 emulator checks passed for recording with an audio track and
+  camera switching; cancellation/cleanup/retry; automatic duration finalization;
+  small-screen camera choices; permission denial/retry; and leaving the app
+  during recording. These tests never use the connected physical phone.
+- The actual synthetic CameraX recording (H.264 video plus the emulator's AMR
+  audio) passed real Ktor upload, the disposable Django worker, publication,
+  partner playback access and the correct “Video moment” inbox label. No real
+  couple media or push delivery was used.
+- Native iOS simulator camera-unavailable/retry checks passed on iPhone 17 Pro,
+  iOS 26.5. Actual recording, permissions, sound and performance on a physical
+  iPhone remain unverified; the simulator has no video capture source.
+- Xcode project edits, local.properties and backend .env match their preserved
+  baseline hashes. No push, PR update or merge was performed. Local evidence is
+  in ignored `build/reports/moments/video-capture/`.
+
+The final Android duration check also passed with screen timeout reduced to
+15 seconds and the emulator's charging/stay-awake override disabled: the camera
+kept the display awake and finalized the clip automatically below 60 seconds.
+Both emulator settings were restored after the test.
+
+### Publication review — 24 November 2026
+
+Combined the local follow-ups with backend `041fe7c` (the other laptop's worker
+startup fix), preserving its migration guards and environment symlink handling.
+A failed local preview now recreates its native player on Retry; a real Android
+emulator regression replaces an unavailable file at the same path and verifies
+that the recovered player renders frames. The first-party video route catalogue
+is pinned from the backend; Ktor checks cover upload/status/retry/playback calls,
+while Media3/AVPlayer streaming GET/HEAD remain native-player operations.
+
+The final full frontend suite passed 680 tests with five opt-in transport skips;
+Android/iOS compilation and APK builds passed. The paired video transport check
+is run separately. Backend review/verification and initial `social.0024` rollout
+requirements are documented in the companion PR. Physical iPhone recording
+remains unverified. Publication uses frontend PR #36 and backend PR #45, both
+into `dev-core-architecture`, with unrelated Xcode/environment/media work excluded.

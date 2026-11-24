@@ -1,5 +1,35 @@
 # Notifications and crash diagnostics V1
 
+## Video Moment wording — 24 November 2026
+
+Authorized Moment previews and Home notification history now distinguish photo-only,
+video-only and mixed attachments. The server reads the actual `video_id` relation;
+a video's JPEG poster in the legacy `photos` array does not make it a photo.
+Examples: “Sam shared a video moment” / “Video moment”, “Sam shared a photo
+moment” / “Photo moment”, and “Sam shared a moment with photos and videos” /
+“Photo and video moment”. Heart notifications use the same distinction. A caption
+or legacy title takes precedence in the body, and a legacy item without media
+uses the neutral “Moment” fallback.
+
+Android's tray, shared foreground banners and the shared Android/iOS inbox already
+render the server's authorized text unchanged; client-side media guessing is not
+needed. Regression tests cover the shared reader and Android notification title,
+expanded body, privacy, silent update and exact tap. Generic FCM/public lock-screen
+copy stays “New moment” / “Your partner shared a new moment”; private media details
+and captions are fetched only after existing authorization checks. Expiry, blocks,
+revoked sessions and hidden previews retain existing behavior. Apple/APNs delivery
+was not exercised.
+
+This is a backend display-copy change with no API fields, capability versions or
+new migrations. Updating/restarting the backend applies it to new preview fetches
+and refreshed inbox rows; already displayed OS notifications are not forcibly
+reissued. Work remains local on `codex/video-moments` in both repositories; existing
+video fixes and unrelated work are retained. Verification: 54 frontend notification
+tests passed, including Android rendering/privacy/tap checks; Android/iOS Kotlin
+compiled; backend suite passed with 35 PostgreSQL-only skips; the real video
+upload → publish → correctly labeled partner inbox test passed. No live FCM/APNs
+push was sent. Local logs: `build/reports/notifications/moment-media/`.
+
 ## Home notification centre — November 2026
 
 Home's bell now opens **Notifications**, a 30-day account activity list with an
@@ -84,7 +114,7 @@ Older installations retain schema-1 automatic display with specific safe wording
 | Sharing proposal/approval | Partner's name and sharing action |
 | Question started/answered/revealed | Partner/action and the question; unrevealed private answers are never previewed |
 | Challenge invitation/response/progress/completion/cancellation | Partner/action and challenge title |
-| Moment published/hearted | Partner/action and moment caption, title or photo label |
+| Moment published/hearted | Partner/action with photo, video or mixed-media wording; caption, title or matching media label |
 | Appreciation or reply | Actual author and note/reply text |
 | Status | Partner name and current authorized status text |
 | Shared date idea/mutual interest | Partner/action and the idea, such as Coffee together |

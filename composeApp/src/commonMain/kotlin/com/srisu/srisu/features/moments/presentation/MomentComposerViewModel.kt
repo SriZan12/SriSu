@@ -87,8 +87,8 @@ class MomentComposerViewModel(private val source: MomentSource, private val sess
         }
         if (selection.error != null) { fail(selection.error); return }
         if (video == null) return
-        if (video.durationMs !in 100..MOMENT_VIDEO_MAX_DURATION || video.size !in 1..MOMENT_VIDEO_MAX_BYTES) {
-            removeMomentVideoFile(video); fail("Choose a video up to 60 seconds and 100 MiB."); return
+        momentVideoSelectionError(video.size, video.durationMs)?.let { error ->
+            removeMomentVideoFile(video); fail(error); return
         }
         val id = Uuid.random().toString()
         val photo = LocalMomentPhoto(id,bytes=selection.poster,video=video)
@@ -263,12 +263,26 @@ class MomentComposerViewModel(private val source: MomentSource, private val sess
         }
         if(video.state=="failed" && video.errorCode=="processing") video=result(source.retryVideo(record.id,photo.id)) ?: return false
         if (!awaitReady && video.state in setOf("queued", "processing", "ready")) return true
-        var polls=0
-        while(video.state in setOf("queued","processing") && polls++<240) {
-            mutable.update {it.copy(stage="Preparing video ${index+1} of $count",progress=null)}
-            delay(2000)
-            video=result(source.videoStatus(record.id,photo.id)) ?: return false
+        suspend fun awaitStateChange(waitingState: String, timeoutMs: Long): Boolean {
+            // Bound wall-clock time, including slow status requests. Stopping
+            // this wait never discards the uploaded bytes or cancels server work.
+            val completed=withTimeoutOrNull(timeoutMs) {
+                while(video.state==waitingState) {
+                    ensureActiveVideoSession()
+                    mutable.update {it.copy(stage=if(waitingState=="queued")
+                        "Uploaded · waiting to process video ${index+1} of $count"
+                        else "Processing video ${index+1} of $count",progress=null)}
+                    delay(2000)
+                    video=result(source.videoStatus(record.id,photo.id)) ?: return@withTimeoutOrNull false
+                }
+                true
+            }
+            if(completed==null) fail(if(waitingState=="queued")
+                "Your video is uploaded, but processing hasn't started yet. Your draft is kept; tap Share again shortly."
+                else "Your video is uploaded and is taking longer to process. Your draft is kept; tap Share again shortly.")
+            return completed==true
         }
+        if(!awaitStateChange("queued",30_000) || !awaitStateChange("processing",90_000)) return false
         if(video.state!="ready") {
             fail(if(video.errorCode=="invalid_video") "This video could not be processed. Choose a valid video up to 60 seconds."
                 else "Your video is not ready yet. Your draft is kept; try Share again shortly.")
@@ -285,6 +299,6 @@ class MomentComposerViewModel(private val source: MomentSource, private val sess
         runCatching { sessions.saveSession("",key) }; state.value.photos.mapNotNull { it.video }.forEach(::removeMomentVideoFile); source.changed()
         mutable.value=MomentComposerState(loading=false,publishedId=id)
     }
-    private fun fail(message: String) { mutable.update { it.copy(loading=false,busy=false,progress=null,error=message) } }
+    private fun fail(message: String) { mutable.update { it.copy(loading=false,busy=false,progress=null,stage="",error=message) } }
     suspend fun image(url: String) = source.image(url)
 }

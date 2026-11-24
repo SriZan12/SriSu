@@ -28,13 +28,33 @@ class MomentVideoDeviceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val files get() = InstrumentationRegistry.getInstrumentation().targetContext.filesDir
 
+    @Test fun localPreviewRetryRecreatesTheFailedPlayer() {
+        val source=File(files,"moment-video-source.mp4")
+        assumeTrue(source.exists())
+        val recovered=File(files,"moment-video-retry.mp4").apply {delete()}
+        try {
+            val photo=LocalMomentPhoto("retry-video",video=LocalMomentVideo(recovered.absolutePath,source.length(),1200,360,640))
+            compose.setContent {SriSuTheme {
+                MomentComposerContent(MomentComposerState(loading=false,photos=listOf(photo)),
+                    {null},{},{},{},{_,_->},{},{},{},{},{})
+            }}
+            visibleControl("Play video").performClick()
+            compose.waitUntil(15_000) {compose.onAllNodesWithText("Video preview unavailable").fetchSemanticsNodes().isNotEmpty()}
+            source.copyTo(recovered,overwrite=true)
+            compose.onNodeWithText("Retry").performClick()
+            visibleControl("Play video").performClick()
+            compose.waitUntil(15_000) {compose.onAllNodes(SemanticsMatcher.expectValue(
+                androidx.compose.ui.semantics.SemanticsProperties.StateDescription,"Video ready"),useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+        } finally {recovered.delete()}
+    }
+
     @Test fun systemVideoPickerPreparesAnOwnedBoundedFile() {
         val source=File(files,"moment-video-source.mp4")
         assumeTrue(source.exists() && android.os.Build.VERSION.SDK_INT>=29)
         val context=InstrumentationRegistry.getInstrumentation().targetContext
-        // ComponentActivity fixtures bypass the real app's Compose/Koin bootstrap.
-        val startedKoin=org.koin.core.context.GlobalContext.getOrNull()==null
-        if(startedKoin) org.koin.core.context.startKoin {modules(org.koin.dsl.module {single<android.content.Context> {context}})}
+        // MainApplication initializes AppContext, with no global Koin registry.
+        // Starting global Koin here hid a production video-cache lookup failure.
+        assertNull(org.koin.core.context.GlobalContext.getOrNull())
         val resolver=context.contentResolver
         val values=android.content.ContentValues().apply {
             put(android.provider.MediaStore.Video.Media.DISPLAY_NAME,"SriSu synthetic video.mp4")
@@ -67,7 +87,6 @@ class MomentVideoDeviceTest {
         } finally {
             selected.get()?.video?.let(::removeMomentVideoFile)
             resolver.delete(uri,null,null)
-            if(startedKoin) org.koin.core.context.stopKoin()
         }
     }
 

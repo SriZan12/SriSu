@@ -7,12 +7,72 @@ import UniformTypeIdentifiers
 import ComposeApp
 
 /// File-backed video preparation. Scratch files are private, protected and excluded from backup.
-final class IosMomentVideoPicker: NSObject, MomentVideoPicker, PHPickerViewControllerDelegate {
+final class IosMomentVideoPicker: NSObject, MomentVideoPicker, PHPickerViewControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     private var callback:((MomentVideoSelection)->Void)?
     private var epoch=0
     private var export:AVAssetExportSession?
+    private var camera:UIImagePickerController?
+    private var observers:[NSObjectProtocol]=[]
     private var picker:PHPickerViewController?
     private let queue=DispatchQueue(label:"com.srisu.moment.video",qos:.userInitiated)
+    override init() {
+        super.init()
+        let center=NotificationCenter.default
+        observers.append(center.addObserver(forName:UIApplication.didEnterBackgroundNotification,object:nil,queue:.main) {[weak self] _ in
+            guard let self,self.camera != nil else {return};self.cancel()
+        })
+        observers.append(center.addObserver(forName:AVAudioSession.interruptionNotification,object:nil,queue:.main) {[weak self] note in
+            guard let self,self.camera != nil,
+                (note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt)==AVAudioSession.InterruptionType.began.rawValue else {return}
+            self.cancel()
+        })
+    }
+    deinit {observers.forEach {NotificationCenter.default.removeObserver($0)}}
+    func record(result:@escaping (MomentVideoSelection)->Void) {
+        guard callback==nil else {return}
+        callback=result;epoch+=1
+        let own=epoch
+        guard UIImagePickerController.isSourceTypeAvailable(.camera),
+              UIImagePickerController.availableMediaTypes(for:.camera)?.contains(UTType.movie.identifier)==true else {
+            finish(nil,error:"Video recording isn't available on this device. Choose a video from your library.");return
+        }
+        requestAccess(.video,own:own) {[weak self] in
+            self?.requestAccess(.audio,own:own) {[weak self] in
+                guard let self,self.epoch==own,self.callback != nil else {return}
+                guard UIApplication.shared.applicationState == .active else {self.finish(nil);return}
+                guard let root=self.root() else {self.finish(nil,error:"The camera could not open. Try again.");return}
+                let camera=UIImagePickerController()
+                camera.sourceType = .camera;camera.mediaTypes=[UTType.movie.identifier]
+                camera.cameraCaptureMode = .video;camera.videoQuality = .typeHigh
+                camera.videoExportPreset=AVAssetExportPreset1280x720
+                // Allow a final encoded frame without crossing the server's strict 60-second limit.
+                camera.videoMaximumDuration=59.75
+                camera.delegate=self;camera.modalPresentationStyle = .fullScreen
+                self.camera=camera;root.present(camera,animated:true)
+            }
+        }
+    }
+    private func requestAccess(_ type:AVMediaType,own:Int,granted:@escaping ()->Void) {
+        let complete:(Bool)->Void={allowed in DispatchQueue.main.async {
+            guard self.epoch==own,self.callback != nil else {return}
+            if allowed {granted()} else {self.finish(nil,error:"Allow camera and microphone access in Settings to record a video.")}
+        }}
+        switch AVCaptureDevice.authorizationStatus(for:type) {
+        case .authorized: complete(true)
+        case .notDetermined: AVCaptureDevice.requestAccess(for:type,completionHandler:complete)
+        default: complete(false)
+        }
+    }
+    func imagePickerControllerDidCancel(_ picker:UIImagePickerController) {
+        guard camera === picker else {return};cancel()
+    }
+    func imagePickerController(_ picker:UIImagePickerController,didFinishPickingMediaWithInfo info:[UIImagePickerController.InfoKey:Any]) {
+        guard camera === picker else {return}
+        let own=epoch
+        camera=nil;picker.dismiss(animated:true)
+        guard let url=info[.mediaURL] as? URL else {finish(nil,error:"This video could not be recorded. Try again.");return}
+        queue.async {self.copyAndPrepare(url,own:own)}
+    }
     private func root()->UIViewController? {
         var view=UIApplication.shared.connectedScenes.compactMap {$0 as? UIWindowScene}.flatMap(\.windows).first(where:\.isKeyWindow)?.rootViewController
         while let shown=view?.presentedViewController {view=shown}
@@ -27,27 +87,38 @@ final class IosMomentVideoPicker: NSObject, MomentVideoPicker, PHPickerViewContr
         root.present(picker,animated:true)
     }
     func picker(_ picker:PHPickerViewController,didFinishPicking results:[PHPickerResult]) {
+        guard self.picker === picker else {return}
         picker.dismiss(animated:true);self.picker=nil
         guard let provider=results.first?.itemProvider else {finish(nil);return}
         let own=epoch
         provider.loadFileRepresentation(forTypeIdentifier:UTType.movie.identifier) {[weak self] url,error in
             guard let self else {return}
             guard let url,error==nil else {DispatchQueue.main.async {if self.epoch==own {self.finish(nil,error:"This video could not be opened. Try again.")}};return}
-            // The provider URL only lives during this callback. Copy with bounded file I/O.
-            do {
-                var dir=FileManager.default.urls(for:.cachesDirectory,in:.userDomainMask)[0].appendingPathComponent("SriSuMomentVideos",isDirectory:true)
-                try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true,attributes:[.protectionKey:FileProtectionType.complete])
-                var values=URLResourceValues();values.isExcludedFromBackup=true;try dir.setResourceValues(values)
-                for old in (try? FileManager.default.contentsOfDirectory(at:dir,includingPropertiesForKeys:[.contentModificationDateKey])) ?? [] {
-                    if let date=try? old.resourceValues(forKeys:[.contentModificationDateKey]).contentModificationDate,Date().timeIntervalSince(date)>7*86400 {try? FileManager.default.removeItem(at:old)}
-                }
-                let size=try url.resourceValues(forKeys:[.fileSizeKey]).fileSize ?? 0
-                guard size>0 && size<=100*1024*1024 else {throw ChatMediaError.invalid}
-                let local=dir.appendingPathComponent(UUID().uuidString+".mp4")
-                try FileManager.default.copyItem(at:url,to:local)
-                try FileManager.default.setAttributes([.protectionKey:FileProtectionType.complete],ofItemAtPath:local.path)
-                self.queue.async {self.prepare(local,own:own)}
-            } catch {DispatchQueue.main.async {if self.epoch==own {self.finish(nil,error:"Choose a video up to 60 seconds and 100 MiB.")}}}
+            // Provider URLs only live during this callback. Copy before returning.
+            self.copyAndPrepare(url,own:own)
+        }
+    }
+    private func copyAndPrepare(_ url:URL,own:Int) {
+        var copied:URL?
+        do {
+            var dir=FileManager.default.urls(for:.cachesDirectory,in:.userDomainMask)[0].appendingPathComponent("SriSuMomentVideos",isDirectory:true)
+            try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true,attributes:[.protectionKey:FileProtectionType.complete])
+            var values=URLResourceValues();values.isExcludedFromBackup=true;try dir.setResourceValues(values)
+            for old in (try? FileManager.default.contentsOfDirectory(at:dir,includingPropertiesForKeys:[.contentModificationDateKey])) ?? [] {
+                if let date=try? old.resourceValues(forKeys:[.contentModificationDateKey]).contentModificationDate,Date().timeIntervalSince(date)>7*86400 {try? FileManager.default.removeItem(at:old)}
+            }
+            let size=try url.resourceValues(forKeys:[.fileSizeKey]).fileSize ?? 0
+            guard size>0 && size<=100*1024*1024 else {
+                DispatchQueue.main.async {if self.epoch==own {self.finish(nil,error:size>0 ? "This video is too large. Choose one under 100 MiB (about 105 MB)." : "This video file is empty or could not be read. Try again.")}}
+                return
+            }
+            let local=dir.appendingPathComponent(UUID().uuidString+".mp4");copied=local
+            try FileManager.default.copyItem(at:url,to:local)
+            try FileManager.default.setAttributes([.protectionKey:FileProtectionType.complete],ofItemAtPath:local.path)
+            self.queue.async {self.prepare(local,own:own)}
+        } catch {
+            if let copied {try? FileManager.default.removeItem(at:copied)}
+            DispatchQueue.main.async {if self.epoch==own {self.finish(nil,error:"Couldn't save this video. Check available storage and try again.")}}
         }
     }
     private func prepare(_ local:URL,own:Int) {
@@ -106,7 +177,7 @@ final class IosMomentVideoPicker: NSObject, MomentVideoPicker, PHPickerViewContr
         let result=callback;callback=nil;export=nil
         result?(MomentVideoSelection(video:video,poster:poster,error:error))
     }
-    func cancel() {epoch+=1;export?.cancelExport();export=nil;picker?.dismiss(animated:true);picker=nil;finish(nil)}
+    func cancel() {epoch+=1;export?.cancelExport();export=nil;picker?.dismiss(animated:true);picker=nil;camera?.dismiss(animated:true);camera=nil;finish(nil)}
     func close() {cancel()}
 }
 

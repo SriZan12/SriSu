@@ -71,7 +71,10 @@ import srisu.composeapp.generated.resources.*
                 picking=true
                 val stamp=vm.pickerStamp()
                 val ownEpoch=++pickerEpoch
-                if(source=="video") videoPicker.pick {result -> scope.launch {if(ownEpoch==pickerEpoch) {picking=false;vm.pickedVideo(result,stamp)} else result.video?.let(::removeMomentVideoFile)}}
+                if(source=="video" || source=="record-video") {
+                    val receive: (MomentVideoSelection)->Unit = {result -> scope.launch {if(ownEpoch==pickerEpoch) {picking=false;vm.pickedVideo(result,stamp)} else result.video?.let(::removeMomentVideoFile)}}
+                    if(source=="record-video") videoPicker.record(receive) else videoPicker.pick(receive)
+                }
                 else if(source=="photo") native.pickPhotos(vm.remainingPhotoSlots()) { batch ->
                     scope.launch { if(ownEpoch==pickerEpoch) {picking=false; vm.pickedPhotos(batch,stamp)} }
                 } else native.pick(source) { raw,bytes -> scope.launch { if(ownEpoch==pickerEpoch) {picking=false; vm.picked(raw,bytes,stamp)} } }
@@ -99,6 +102,7 @@ import srisu.composeapp.generated.resources.*
     var editing by rememberSaveable { mutableStateOf(initialCaptionEditing) }
     var focusedCaption by rememberSaveable { mutableStateOf(false) }
     var cropping by rememberSaveable { mutableStateOf<String?>(null) }
+    var cameraMenu by remember { mutableStateOf(false) }
     val captionEditor = rememberDraftEditor(state.record?.caption.orEmpty())
     val portraitScroll = rememberScrollState()
     val detailsScroll = rememberScrollState()
@@ -142,7 +146,7 @@ import srisu.composeapp.generated.resources.*
                 } else {
                     val media: @Composable (Modifier, Dp?) -> Unit = { modifier, height ->
                         if (state.photos.isEmpty()) {
-                            MomentEmptyPreview(enabled, picking, { onPick("photo") }, { onPick("camera") }, {onPick("video")}, modifier, height)
+                            MomentEmptyPreview(enabled, picking, { onPick("photo") }, { done(); cameraMenu = true }, {onPick("video")}, modifier, height)
                         } else {
                             val index = selected.coerceIn(state.photos.indices)
                             val photo = state.photos[index]
@@ -153,7 +157,7 @@ import srisu.composeapp.generated.resources.*
                                 onEarlier = { onReorder(photo.id, -1); selected = (index - 1).coerceAtLeast(0) },
                                 onLater = { onReorder(photo.id, 1); selected = (index + 1).coerceAtMost(state.photos.lastIndex) },
                                 onRemove = { onRemove(photo.id); selected = 0 },
-                                onAdd = { onPick("photo") }, onCamera = { onPick("camera") },onVideo = {onPick("video")},playback=playback)
+                                onAdd = { onPick("photo") }, onCamera = { done(); cameraMenu = true },onVideo = {onPick("video")},playback=playback)
                         }
                     }
                     val details: @Composable () -> Unit = {
@@ -186,6 +190,16 @@ import srisu.composeapp.generated.resources.*
             }
         }
     }
+    if (cameraMenu && enabled) AlertDialog(onDismissRequest = { cameraMenu = false },
+        title = { Text("Camera") },
+        text = { Column {
+            TextButton(onClick = { cameraMenu = false; onPick("camera") }, modifier = Modifier.fillMaxWidth().heightIn(min = space.touchTarget)) {
+                Icon(Icons.Outlined.PhotoCamera, null); Spacer(Modifier.width(space.small)); Text("Take photo", Modifier.weight(1f), textAlign = TextAlign.Start)
+            }
+            TextButton(onClick = { cameraMenu = false; onPick("record-video") }, modifier = Modifier.fillMaxWidth().heightIn(min = space.touchTarget).testTag("moment-record-video")) {
+                Icon(Icons.Outlined.Videocam, null); Spacer(Modifier.width(space.small)); Text("Record video · up to 60s", Modifier.weight(1f), textAlign = TextAlign.Start)
+            }
+        } }, confirmButton = {}, dismissButton = { TextButton(onClick = { cameraMenu = false }) { Text("Cancel") } })
     if (leave) AlertDialog(onDismissRequest = { leave = false }, title = { Text(stringResource(Res.string.moment_leave_title)) },
         text = { Text(stringResource(if (state.busy) Res.string.moment_leave_busy else Res.string.moment_leave_body)) },
         confirmButton = { TextButton(onClick = { leave = false; if (!state.busy) onBack() }) {
@@ -219,7 +233,7 @@ import srisu.composeapp.generated.resources.*
             Text(stringResource(Res.string.moment_photo_limit), Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             IconButton(onClick=onVideo,enabled=enabled) {Icon(Icons.Outlined.VideoLibrary,"Add video")}
-            IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, stringResource(Res.string.moment_shutter)) }
+            IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, "Open camera") }
         }
     }
 }
@@ -294,7 +308,7 @@ import srisu.composeapp.generated.resources.*
             if (photos.size < MAX_PHOTOS) {
                 IconButton(onClick=onVideo,enabled=enabled) {Icon(Icons.Outlined.VideoLibrary,"Add video")}
                 IconButton(onClick = onAdd, enabled = enabled) { Icon(Icons.Outlined.AddPhotoAlternate, stringResource(Res.string.moment_photo_add)) }
-                IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, stringResource(Res.string.moment_photo_camera)) }
+                IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, "Open camera") }
             }
         }
     }
@@ -316,9 +330,9 @@ import srisu.composeapp.generated.resources.*
     val colors=MaterialTheme.colorScheme
     val space=MaterialTheme.spacing
     Box(modifier.semantics {stateDescription=if(event.firstFrame) "Video ready" else if(event.state=="failed") "Video unavailable" else "Video loading"}) {
-        if(started) source?.let {MomentVideoPlayer(it,playing && foreground && enabled,muted,Modifier.fillMaxSize(),embedded=true) {next ->
+        if(started) source?.let {key(photo.id,retry) {MomentVideoPlayer(it,playing && foreground && enabled,muted,Modifier.fillMaxSize(),embedded=true) {next ->
             event=next;if(next.state in listOf("ended","paused","failed"))playing=false
-        }}
+        }}}
         if(!event.firstFrame) poster()
         if(source==null || event.state=="failed") Column(Modifier.align(Alignment.Center).padding(space.medium),horizontalAlignment=Alignment.CenterHorizontally) {
             Text(if(photo.remote?.video?.state in listOf("queued","processing")) "Preparing video" else "Video preview unavailable",color=colors.onMedia)

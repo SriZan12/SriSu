@@ -33,7 +33,7 @@ class ApiRouteContractTest {
             val route = routes.getValue(expected).jsonObject
             assertEquals(environment.baseUrl, "${request.url.protocol.name}://${request.url.host}:${request.url.port}/")
             assertEquals(route.getValue("method").jsonPrimitive.content, request.method.value)
-            assertEquals(route.getValue("path").jsonPrimitive.content.replace("{id}", "1").replace("{uuid}", room), request.url.encodedPath)
+            assertEquals(route.getValue("path").jsonPrimitive.content.replace("{id}", "1").replace("{uuid}", room).replace("{offset}", "0"), request.url.encodedPath)
             assertEquals(route.getValue("query").jsonArray.map { it.jsonPrimitive.content }.toSet(), request.url.parameters.names())
             if (expected == "find-partner") assertEquals("+15005550123", request.url.parameters["phone_number"])
             assertEquals("core-1", request.headers["X-SriSu-Contract"])
@@ -109,6 +109,12 @@ class ApiRouteContractTest {
             check("moment-upload") {ResultHandler(moments.upload(room,room,byteArrayOf(1)) {})}
             check("moment-upload-remove") {ResultHandler(moments.removePhoto(room,room))}
             check("moment-publish") {ResultHandler(moments.publish(room,com.srisu.srisu.features.moments.data.PublishMoment(1,"Caption","private",listOf(room))))}
+            check("moment-video-begin") {ResultHandler(moments.beginVideo(room,room,1))}
+            check("moment-video-status") {ResultHandler(moments.videoStatus(room,room))}
+            check("moment-video-chunk") {ResultHandler(moments.videoChunk(room,room,0,byteArrayOf(1)))}
+            check("moment-video-complete") {ResultHandler(moments.completeVideo(room,room))}
+            check("moment-video-retry") {ResultHandler(moments.retryVideo(room,room))}
+            check("moment-video-playback") {ResultHandler(moments.playback(room))}
             expected="moment-photo"; moments.image(environment.baseUrl+"api/social/couple-moments/1/photos/1/")
             expected="moment-creator-photo"; moments.image(environment.baseUrl+"api/social/couple-moments/1/creator-photo/")
             expected="moment-staged-photo"; moments.image(environment.baseUrl+"api/social/moment-drafts/$room/photos/$room/")
@@ -133,7 +139,9 @@ class ApiRouteContractTest {
             sessions.saveSession(ApiJson.encodeToString(Session(id = 1, access = expired, refresh = "synthetic-refresh")), SESSION_KEY)
             expected = "refresh"
             assertNull(client.refreshSessionIfNeeded())
-            assertEquals(routes.keys, visited)
+            // HLS GET/HEAD are issued by Media3/AVPlayer, not this Ktor client.
+            // Backend route tests and native authenticated playback verify those entries.
+            assertEquals(routes.filterValues {it.jsonObject["client"]?.jsonPrimitive?.content != "native-player"}.keys, visited)
         } finally { client.close() }
     }
 }
