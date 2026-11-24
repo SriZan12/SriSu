@@ -7,6 +7,8 @@ struct iOSApp: App {
     
     init(){
         NativePlanRuntime.shared.install(value: IosPlanDevice())
+        MomentVideoPickerRuntime.shared.install { IosMomentVideoPicker() }
+        MomentVideoPlayerRuntime.shared.install { source, callback in IosMomentVideo(source:source,callback:{ event in _ = callback(event) }) }
         NativeChatMediaRuntime.shared.installFactory { IosChatMedia() }
         NativeChatVideoRuntime.shared.install { native in (native as! IosChatMedia).videoViewController() }
         Platform_iosKt.debugBuild()

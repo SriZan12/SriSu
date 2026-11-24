@@ -32,6 +32,12 @@ interface MomentSource {
     suspend fun createDraft(id: String, couple: Long): MomentResult<MomentDraft>
     suspend fun draft(id: String): MomentResult<MomentDraft>
     suspend fun upload(id: String, photo: String, bytes: ByteArray, progress: (Float) -> Unit): MomentResult<MomentDraft>
+    suspend fun beginVideo(id: String, video: String, size: Long): MomentResult<MomentVideoInfo> = NetworkAPIResult.Error("Video uploads are unavailable.")
+    suspend fun videoStatus(id: String, video: String): MomentResult<MomentVideoInfo> = NetworkAPIResult.Error("Video uploads are unavailable.")
+    suspend fun videoChunk(id: String, video: String, offset: Long, bytes: ByteArray): MomentResult<MomentVideoInfo> = NetworkAPIResult.Error("Video uploads are unavailable.")
+    suspend fun completeVideo(id: String, video: String): MomentResult<MomentVideoInfo> = NetworkAPIResult.Error("Video uploads are unavailable.")
+    suspend fun retryVideo(id: String, video: String): MomentResult<MomentVideoInfo> = NetworkAPIResult.Error("Video uploads are unavailable.")
+    suspend fun playback(video: String): MomentResult<MomentPlayback> = NetworkAPIResult.Error("Video playback is unavailable.")
     suspend fun removePhoto(id: String, photo: String): MomentResult<MomentDraft>
     suspend fun discard(id: String): MomentResult<JsonObject>
     suspend fun publish(id: String, body: PublishMoment): MomentResult<Moment>
@@ -91,6 +97,37 @@ class MomentRepository(private val client: HttpClient, private val environment: 
         }) }))
         onUpload { sent,total -> if(total != null && total>0) progress((sent.toFloat()/total).coerceIn(0f,1f)) }
     }.result
+    override suspend fun beginVideo(id: String, video: String, size: Long) = client.safeRequest<MomentVideoInfo> {
+        url(path("moment-drafts/$id/videos/$video/")); method=HttpMethod.Post
+        setBody(buildJsonObject { put("source_bytes",size) })
+    }.result
+    override suspend fun videoStatus(id: String, video: String) = client.safeRequest<MomentVideoInfo> {
+        url(path("moment-drafts/$id/videos/$video/"))
+    }.result
+    override suspend fun videoChunk(id: String, video: String, offset: Long, bytes: ByteArray) = client.safeRequest<MomentVideoInfo> {
+        url(path("moment-drafts/$id/videos/$video/chunks/$offset/")); method=HttpMethod.Put
+        setBody(io.ktor.http.content.ByteArrayContent(bytes,ContentType.Application.OctetStream))
+    }.result
+    override suspend fun completeVideo(id: String, video: String) = client.safeRequest<MomentVideoInfo> {
+        url(path("moment-drafts/$id/videos/$video/complete/")); method=HttpMethod.Post; setBody(buildJsonObject {})
+    }.result
+    override suspend fun retryVideo(id: String, video: String) = client.safeRequest<MomentVideoInfo> {
+        url(path("moment-drafts/$id/videos/$video/retry/")); method=HttpMethod.Post; setBody(buildJsonObject {})
+    }.result
+    override suspend fun playback(video: String): MomentResult<MomentPlayback> {
+        val result = client.safeRequest<MomentPlayback> {
+            url(path("moment-videos/$video/playback/")); method=HttpMethod.Post; setBody(buildJsonObject {})
+        }.result
+        val access = (result as? NetworkAPIResult.Success)?.response ?: return result
+        val target = runCatching { Url(access.url) }.getOrNull()
+        val base = Url(environment.baseUrl)
+        val expected = "/api/social/moment-video-stream/$video/"
+        if (target == null || target.protocol != base.protocol || target.host != base.host || target.port != base.port ||
+            target.encodedPath != expected+"master.m3u8" || access.cookiePath != expected ||
+            access.cookieName != "srisu_moment_video" || access.cookieValue.any { it == ';' || it == '\r' || it == '\n' })
+            return NetworkAPIResult.Error("Video playback is unavailable.")
+        return result
+    }
     override suspend fun removePhoto(id: String, photo: String) = client.safeRequest<MomentDraft> {
         url(path("moment-drafts/$id/photos/$photo/")); method=HttpMethod.Delete
     }.result

@@ -148,7 +148,7 @@ class MomentRenderTest {
     @Test fun previewDark()=render("create-dark",dark=true)
     @Test fun largeTextCanChoosePublicAndReturnToPrivate()=render("create-large-interaction",small=true,fontScale=2f) {
         compose.onNodeWithText("Public").performScrollTo().performClick()
-        compose.onNodeWithText("This photo and its caption will appear in discovery. Replies from other people stay private appreciation notes.").assertExists()
+        compose.onNodeWithText("This Moment and its caption will appear in discovery. Replies from other people stay private appreciation notes.").assertExists()
         compose.onNodeWithText("Just you two").performScrollTo().performClick()
         compose.onNode(hasText("Just you two") and isSelectable()).assertIsSelected()
         compose.onNodeWithTag("moment-share").assertIsDisplayed().assertIsEnabled()

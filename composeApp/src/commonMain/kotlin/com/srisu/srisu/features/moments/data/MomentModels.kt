@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class MomentHome(val user: MomentPerson, val couple: MomentCouple? = null,
     @SerialName("server_time") val serverTime: String)
 @Serializable data class MomentPhoto(val id: Long, val image: String, val order: Int = 0,
-    val width: Int? = null, val height: Int? = null)
+    val width: Int? = null, val height: Int? = null, val video: MomentVideoInfo? = null)
 @Serializable data class Moment(
     val id: Long, val couple: Long, @SerialName("created_by") val createdBy: Long,
     val creator: MomentPerson, val caption: String = "", val visibility: String = "private",
@@ -28,7 +28,7 @@ import kotlinx.serialization.Serializable
     @SerialName("partner_reacted") val partnerReacted: Boolean = false,
 )
 @Serializable data class MomentPage(val results: List<Moment> = emptyList(), val next: String? = null)
-@Serializable data class StagedPhoto(val id: String, val image: String, val width: Int, val height: Int)
+@Serializable data class StagedPhoto(val id: String, val image: String, val width: Int, val height: Int, val video: MomentVideoInfo? = null)
 @Serializable data class MomentDraft(val id: String, val couple: Long, val revision: Long,
     val photos: List<StagedPhoto> = emptyList(), @SerialName("moment_id") val momentId: Long? = null,
     @SerialName("published_at") val publishedAt: String? = null)
@@ -37,7 +37,8 @@ import kotlinx.serialization.Serializable
     val crops: Map<String, MomentCrop> = emptyMap())
 @Serializable data class MomentDraftRecord(val id: String, val couple: Long, val caption: String = "",
     val visibility: String = "private", val order: List<String> = emptyList(),
-    val publication: PublishMoment? = null, val crops: Map<String, MomentCrop> = emptyMap())
+    val publication: PublishMoment? = null, val crops: Map<String, MomentCrop> = emptyMap(),
+    val videos: Map<String, LocalMomentVideo> = emptyMap())
 @Serializable data class MomentNote(val id: Long, val message: String, val sender: Long? = null,
     val replies: List<MomentNoteReply> = emptyList(), @SerialName("can_reply") val canReply: Boolean = false)
 @Serializable data class MomentNoteReply(val id: Long, val message: String)

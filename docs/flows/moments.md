@@ -603,3 +603,181 @@ verified.
 ## Notification rollout — 22 November 2026
 
 See the [notification rollout](notifications.md#catalogue-rollout--22-november-2026) for current triggers, category controls, private tap destinations and mixed-client compatibility. Apple/APNs remains skipped.
+
+## Video Moments — 24 November 2026
+
+Implementation brief used for this task: extend the approved Moment composer and
+viewer to support mixed photos and short videos. Audit the existing frontend,
+backend and privacy contract first. Use Instagram's documented video-delivery
+principles as a benchmark, then choose a proportionate architecture for SriSu.
+Keep memory bounded, prepare files off the main thread, resume interrupted uploads,
+process video asynchronously, use native adaptive playback, preserve existing photo
+crop/order/caption/audience behavior, and test success, cancellation, retries,
+invalid media, expired sessions and unauthorized access. Verify Android and iOS
+separately; record measured results and limitations. Preserve local work and do
+not push, create PRs, merge or deploy in this phase.
+
+### Implemented behavior
+
+- The composer still opens before the system picker. Its library-video action
+  accepts one clip at a time, up to five mixed photos/videos, 60 seconds and
+  100 MiB per source. Camera capture remains photo-only. Video previews preserve
+  the full frame with play/pause, duration and sound controls; photo crops remain
+  unchanged and are unavailable for videos.
+- Android uses Media3 Transformer; iOS uses AVAssetExportSession. Preparation is
+  file-backed, bounded to roughly 720p, and performed away from the UI thread.
+  Unsupported encoder paths can fall back to a bounded original for server
+  normalization. Private scratch files are excluded from iOS backup/protected;
+  only owned paths can be read for upload or deleted. Stale files age out.
+- Uploads use stable UUIDs and 2 MiB chunks. Confirmed server offsets allow retry
+  after a lost response. Uploading subsequent clips overlaps queued encoding.
+  Pause cancels client work without losing confirmed chunks; Share resumes.
+  The app stores pending local-video paths, order, caption and publication intent.
+  If the OS evicts a cached source, the user is asked to remove/reselect it.
+  This is resumable foreground work, not a guaranteed background upload service.
+- The backend publishes only ready media. The existing 24-hour clock starts at
+  publication. Its H.264/AAC HLS ladder uses approximately 360p/720p long-edge
+  bounds, skips duplicate higher renditions for small sources, and supplies a
+  poster for older photo-only clients.
+- Android uses ExoPlayer; iOS uses AVPlayer. Only the current item owns a player;
+  buffers are bounded (Android target 8 MiB / 10 seconds, iOS preferred six seconds).
+  These are player targets, not whole-process memory guarantees. No persistent
+  private playback cache or global cookie storage is introduced.
+- Playback starts muted. Video progress follows the media clock, buffering holds
+  progression, completion advances only when another item exists, and reduced
+  motion starts paused. Holding, app backgrounding, reply/options/editing states
+  pause playback. Interruptions and removed headphones stop playback. The poster
+  does not submit a video view receipt; actual first-frame presentation does.
+- Short-lived asset cookies are supplied through supported native APIs. The
+  backend rechecks current access on every segment. Retry refreshes expired
+  credentials after a long pause. The existing Moment reply-to-Chat path stays
+  intact; video assets are server-processed private media, not Matrix E2EE.
+
+### Research and decisions
+
+Meta describes adaptive bitrate delivery as Instagram's main video path and
+progressive output as a compatibility option in its
+[video-processing engineering article](https://engineering.fb.com/2022/11/04/video-engineering/instagram-video-processing-encoding-reduction/).
+Its [Reels/AV1 article](https://engineering.fb.com/2023/02/21/video-engineering/av1-codec-facebook-instagram-reels/)
+explains the quality/bandwidth/compute tradeoff. SriSu uses a small H.264 ladder
+for current device compatibility instead of copying Meta's larger infrastructure.
+These were documentation observations, not hands-on Instagram measurements.
+
+Native choices follow [Android Transformer](https://developer.android.com/media/media3/transformer/transformations),
+[Apple's HLS cookie API](https://developer.apple.com/documentation/avfoundation/avurlassethttpcookieskey),
+and [AVPlayer's forward-buffer guidance](https://developer.apple.com/documentation/avfoundation/avplayeritem/preferredforwardbufferduration).
+Native verification caught Apple's cookie `secure` behavior: supplying even
+`"FALSE"` enables Secure, so development HTTP origins omit that property while
+HTTPS retains it. See [Apple's definition](https://developer.apple.com/documentation/foundation/httpcookiepropertykey/secure).
+
+### Source and rollout record
+
+Implementation began in the existing dirty checkouts listed below. For the PR,
+only the video delta is assembled onto current `dev-core-architecture`, using
+`codex/video-moments` in both repositories. The original checkouts and unrelated
+local edits are retained; no worktree was created. Starting snapshots:
+
+- Frontend `codex/notification-previews`, base `fc0e72c9eae725c2f4cea9035e4513f4a03803c3`.
+- Backend `codex/couple-chat-rebuild`, base `6e0935c1c4f24267b9a956d259db5d113e9bb903`.
+- Figma file `LztysD1YvINX7RwZpnhhTt`, Moments page `1:3`. Live metadata access
+  returned a Starter-plan quota limit. Controls derive from the approved existing
+  composer/viewer; no claim of a newly inspected video-specific Figma design.
+- Backend API, worker, storage, PR migration **0024** (after current remote **0023**)
+  and deployment order: `../SriSu-backend/docs/couple_moments.md`,
+  “Video Moments — 24 November 2026”. No live migrations/deployment were run.
+
+The initial cross-repository verification stopped on pre-existing `core-1`
+contract drift (`schema.json`). That existing work was not regenerated or reset.
+Video transport is additionally covered by real client/server tests; a successful
+subset does not mean the combined workspace gate or remote CI passed.
+
+### Verification actually performed
+
+- Android full unit run: **669 tests, zero failures, five opt-in transport tests
+  skipped** (664 passed). The separately run `MomentVideoTransportIntegrationTest`
+  passed against a fresh disposable Django server with real Ktor binary bodies,
+  FFmpeg processing, idempotent chunks/publication, poster reads and partner
+  playback credentials. `tools/core_integration.py --moment-video --test
+  com.srisu.srisu.features.moments.MomentVideoTransportIntegrationTest` reproduces
+  this without production accounts. Do not reuse its short-lived fixture token
+  across long-running checks; an expired fixture caused an earlier wide test run
+  to fail authentication, and fresh isolated runs passed.
+- Backend: **330 tests passed on disposable PostgreSQL**, including concurrent
+  duplicate chunk upload, losing-file cleanup, real two-rendition FFmpeg output,
+  owner/unrelated-user boundaries, revoked device sessions, ended memberships,
+  blocking, range/HEAD responses, expiry and deletion. Django configuration,
+  migration consistency and backend core fixture validation passed. The separate
+  earlier SQLite run completed 329 tests with 26 skips before the PostgreSQL-specific
+  video concurrency test was added.
+- Native Android 15/API 35 (`SriSuNavigationQA` emulator): system Photo Picker →
+  private prepared file → bounded chunk read; native HLS first frame, actual
+  colored pixels, pause/resume and end; composer at 320×640 logical pixels and
+  1.5× text; caption keyboard/Done, scrolling and 640×320 landscape. Existing
+  photo crop and keyboard instrumentation also passed. All assets were synthetic.
+  The Activity fixture initializes only its test Koin Context, without changing
+  real account storage.
+- Native iOS 26.5 / iPhone 17 Pro simulator: full app Xcode build passed. A separate
+  QA bundle compiled the production AVPlayer driver and passed authenticated HLS
+  first frame, pause/resume and completion. Reproduce with
+  `tools/verify_moment_video_ios.py --fixture <private-loopback-fixture> --device
+  <booted-arm64-simulator>`. The helper removes its QA app/credentials afterward.
+- Theme validation and both Kotlin platform targets passed. Existing unrelated
+  dirty files, including the Xcode project changes, were checked against baseline
+  SHA-256 hashes and remain unchanged. Existing changes in overlapping backend
+  Moment files were retained.
+
+Pixel inspection exposed an initially black, paused Android preview. The composer
+now displays its poster and allocates a decoder only after Play. Embedded playback
+uses a TextureView for Compose clipping; full-screen playback retains SurfaceView
+with its Compose synchronization option. Native screenshot assertions check
+presented colored pixels with a bounded wait for SurfaceFlinger, rather than
+assuming a decoder callback proves visible content. This follows Android's
+[surface interoperability guidance](https://developer.android.com/media/media3/ui/surface).
+A separate source-size guard avoids uploading a larger transcode when the original
+is already smaller; the server still normalizes the selected source.
+
+Illustrative measurements, **not a performance SLA or cellular benchmark**:
+8-second synthetic 360×640 H.264/AAC clip; 951,807-byte input; 885,225 bytes of HLS
+plus poster/manifest output; one rendition (no duplicate upscale); encoding took
+0.359 seconds on this development host. Warm loopback native checks observed
+roughly 0.2–1.0 seconds to first frame on Android and 0.24–0.62 seconds on iOS.
+These single-run timings include test setup variability and establish no p95,
+low-end hardware, sustained frame-rate, battery or production-load claim.
+
+Local, ignored evidence is in `build/reports/moments/video-*.json` and
+`video-android-small.png`, `video-android-keyboard.png`, `video-android-landscape.png`.
+Physical-device video codecs/HDR, real cellular interruptions, thermal behavior,
+iOS Photo Picker/export through the complete app flow, and deployed worker/CDN
+capacity remain unverified. Camera video recording, trimming and guaranteed
+background uploads are outside this implementation. No remote CI run, push, PR,
+merge or deployment was performed during initial implementation. The original
+local backend still has unrelated contract drift; the PR uses current upstream
+backend contracts without importing those edits.
+
+### PR QA follow-up — 24 November 2026
+
+- Target `dev-core-architecture` explicitly reconfirmed for both repositories.
+  Frontend base `fc0e72c9eae725c2f4cea9035e4513f4a03803c3`; backend base
+  `9e2f5b8` (current notification-compatible integration branch).
+- Rebased video migration to `social.0024_moment_video`, depending on
+  `0023_home_couple_space`; this prevents a divergent migration graph on merge.
+  The original local checkout's `0022` was never applied to an application DB.
+- Exact backend PR source: **459 PostgreSQL tests passed**, zero skips; Django
+  configuration, migration consistency and authoritative contracts passed.
+- Exact paired PR source: real Ktor chunk upload → FFmpeg processing → publish
+  → partner playback credentials passed against the current backend integration
+  source. Pinned frontend contracts and theme validation also passed.
+- Android native video class rerun together: **3/3 passed** on API 35, including
+  system selection/preparation, 320×640 composer at 1.5× text and keyboard, and
+  authenticated HLS with actual pixels, pause/resume and completion.
+- iOS production AVPlayer driver rerun: passed, 386 ms to first frame on the
+  iPhone 17 Pro/iOS 26.5 simulator, pause/resume and eight-second completion.
+  Full iOS picker interaction remains unverified: the available computer-use
+  surface could not access Simulator. The temporary manual-picker harness was
+  discarded; a timeout from that blocked attempt is not a product QA pass.
+- Source exports used only for isolated PR validation, not new Git worktrees.
+  Neither the existing Xcode project edits nor unrelated backend profile,
+  interest, discovery, contract or media changes are included in these PRs.
+
+GitHub PR descriptions record the final commits, paired integration result and
+CI links. No merge or production deployment is part of this QA/PR request.

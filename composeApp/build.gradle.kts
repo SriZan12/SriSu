@@ -113,6 +113,11 @@ kotlin {
             // Maintained MP4 remuxer with bounded in-memory output; no plaintext temp video.
             implementation("androidx.media3:media3-muxer:1.10.1")
             implementation("androidx.media3:media3-container:1.10.1")
+            implementation("androidx.media3:media3-exoplayer:1.10.1")
+            implementation("androidx.media3:media3-exoplayer-hls:1.10.1")
+            implementation("androidx.media3:media3-ui:1.10.1")
+            implementation("androidx.media3:media3-transformer:1.10.1")
+            implementation("androidx.media3:media3-effect:1.10.1")
             implementation("androidx.camera:camera-camera2:1.5.3")
             implementation("androidx.camera:camera-lifecycle:1.5.3")
             implementation("androidx.camera:camera-view:1.5.3")

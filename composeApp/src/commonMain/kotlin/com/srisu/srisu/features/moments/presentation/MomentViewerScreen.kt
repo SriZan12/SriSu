@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.srisu.srisu.components.DraftOutlinedTextField
 import com.srisu.srisu.features.moments.data.Moment
+import com.srisu.srisu.features.moments.data.MomentVideoPlayer
+import com.srisu.srisu.features.moments.data.MomentPlaybackEvent
 import com.srisu.srisu.features.moments.data.MomentReference
 import com.srisu.srisu.theme.*
 import org.jetbrains.compose.resources.stringResource
@@ -52,7 +54,7 @@ import kotlin.time.Instant
     MomentLifecycle(vm::active)
     MomentViewerContent(state,onBack,vm::refresh,vm::move,vm::presented,vm::react,vm::editCaption,vm::saveCaption,vm::delete,
         vm::note,vm::sendNote,onReply, onNotes=vm::loadNotes,onCloseNotes=vm::closeNotes,onNoteReply=vm::replyToNote,
-        onSendNoteReply=vm::sendNoteReply,avatar=vm::image)
+        onSendNoteReply=vm::sendNoteReply,avatar=vm::image,onVideoPresented=vm::videoPresented)
 }
 
 @OptIn(kotlin.time.ExperimentalTime::class, ExperimentalMaterial3Api::class)
@@ -60,23 +62,27 @@ import kotlin.time.Instant
     onMove: (Int)->Unit,onPresented: ()->Unit,onReact: ()->Unit,onEdit: (String?)->Unit,onSave: ()->Unit,
     onDelete: ()->Unit,onNote: (String)->Unit,onSendNote: ()->Unit,onReply: (MomentReference)->Unit,
     onNotes: (Boolean)->Unit={},onCloseNotes: ()->Unit={},onNoteReply: (Long?,String)->Unit={_,_->},onSendNoteReply: ()->Unit={},
-    avatar: suspend (String)->ByteArray? = { null }) {
+    avatar: suspend (String)->ByteArray? = { null }, onVideoPresented: (Long)->Unit = {}) {
     val colors=MaterialTheme.colorScheme
     val space=MaterialTheme.spacing
     val moment=state.moment
     var pixelsPresented by remember(moment?.id,state.photo,state.bytes) { mutableStateOf(false) }
     var decodeFailed by remember(moment?.id,state.photo,state.bytes) { mutableStateOf(false) }
     val captionScroll=rememberScrollState()
-    var paused by remember { mutableStateOf(false) }
+    val motion=rememberCoroutineScope().coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f
+    var paused by remember { mutableStateOf(motion<=0f) }
+    var muted by remember {mutableStateOf(true)}
+    val video=moment?.photos?.getOrNull(state.photo)?.takeIf {it.video!=null}
+    var videoEvent by remember(moment?.id,state.photo,state.playback) {mutableStateOf(MomentPlaybackEvent("buffering"))}
     var held by remember { mutableStateOf(false) }
     var options by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var inForeground by remember { mutableStateOf(true) }
     MomentLifecycle { inForeground=it }
-    val motion=rememberCoroutineScope().coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f
     val progress=remember(moment?.id,state.photo) { Animatable(0f) }
-    val running=state.fresh && !state.loading && !state.imageLoading && (moment?.photos.isNullOrEmpty() || pixelsPresented) &&
-        !paused && !held && !captionScroll.isScrollInProgress && state.notes==null && !options && !confirmDelete && state.captionDraft==null && !state.busy && state.note.isBlank() && inForeground && motion>0f
+    val canPlay=state.fresh && !state.loading && !state.imageLoading && !paused && !held &&
+        !captionScroll.isScrollInProgress && state.notes==null && !options && !confirmDelete && state.captionDraft==null && !state.busy && state.note.isBlank() && inForeground
+    val running=video==null && canPlay && (moment?.photos.isNullOrEmpty() || pixelsPresented) && motion>0f
     val latestMove by rememberUpdatedState(onMove)
     LaunchedEffect(running,moment?.id,state.photo) {
         if(running && moment!=null) {
@@ -90,7 +96,26 @@ import kotlin.time.Instant
     Surface(color=colors.mediaBackground,contentColor=colors.onMedia,modifier=Modifier.fillMaxSize()) {
         if(state.unavailable!=null || (state.error!=null && !state.fresh)) MomentUnavailable(state.unavailable,state.error,onRetry,onBack)
         else Box(Modifier.fillMaxSize()) {
-            if(state.fresh && state.bytes!=null) {
+            if(state.fresh && video!=null && state.playback!=null) {
+                MomentVideoPlayer(state.playback,canPlay,muted,Modifier.fillMaxSize()) {event ->
+                    videoEvent=event
+                    if(event.firstFrame && !pixelsPresented) {pixelsPresented=true;onVideoPresented(video.id)}
+                    if(event.state=="paused") paused=true
+                    if(event.state=="ended") {if(state.hasNext && motion>0f) latestMove(1) else paused=true}
+                }
+                if(!pixelsPresented && state.bytes!=null) MomentImage(state.bytes,null,Modifier.fillMaxSize(),ContentScale.Fit)
+                val previous=stringResource(Res.string.moment_previous)
+                val next=stringResource(Res.string.moment_next)
+                Box(Modifier.fillMaxSize().semantics {
+                    contentDescription="Moment video ${state.photo+1} of ${moment.photos.size}"
+                    customActions=listOfNotNull(
+                        if(state.hasPrevious) CustomAccessibilityAction(previous) {onMove(-1);true} else null,
+                        if(state.hasNext) CustomAccessibilityAction(next) {onMove(1);true} else null)
+                }.pointerInput(moment.id,state.photo) {
+                    detectTapGestures(onPress={held=true;try {tryAwaitRelease()} finally {held=false}},
+                        onTap={offset->onMove(if(offset.x<size.width/2)-1 else 1)})
+                })
+            } else if(state.fresh && state.bytes!=null) {
                 val previous=stringResource(Res.string.moment_previous)
                 val next=stringResource(Res.string.moment_next)
                 MomentImage(state.bytes,stringResource(Res.string.moment_photo,state.photo+1,moment?.photos?.size?.coerceAtLeast(1) ?: 1),Modifier.fillMaxSize()
@@ -101,9 +126,9 @@ import kotlin.time.Instant
                         onTap={ offset -> onMove(if(offset.x<size.width/2) -1 else 1) }) },ContentScale.Fit,{pixelsPresented=true;onPresented()},{decodeFailed=true})
             }
             MomentScrims()
-            if(state.loading || state.imageLoading) CircularProgressIndicator(Modifier.align(Alignment.Center),color=colors.onMedia)
+            if(state.loading || state.imageLoading || (video!=null && videoEvent.state=="buffering" && state.playback!=null)) CircularProgressIndicator(Modifier.align(Alignment.Center),color=colors.onMedia)
             Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
-                MomentViewerHeader(moment,state.photo,{progress.value},paused,avatar,{paused=!paused},onBack,
+                MomentViewerHeader(moment,state.photo,{if(video!=null && videoEvent.durationMs>0) (videoEvent.positionMs.toFloat()/videoEvent.durationMs).coerceIn(0f,1f) else progress.value},paused,avatar,{paused=!paused},onBack,
                     menu={ if(moment!=null && (moment.canEdit || moment.canDelete)) Box {
                         MomentHeaderIcon(Icons.Outlined.MoreHoriz,stringResource(Res.string.moment_options)) { options=true }
                         DropdownMenu(expanded=options,onDismissRequest={options=false}) {
@@ -120,6 +145,10 @@ import kotlin.time.Instant
                                 .padding(horizontal=space.gutter,vertical=space.small))
                     }
                     MomentExpiry(moment)
+                    if(video!=null) {
+                        IconButton(onClick={muted=!muted}) {Icon(if(muted) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,if(muted) "Turn sound on" else "Mute video",tint=colors.onMedia)}
+                        if(videoEvent.state=="failed") MomentError("Video could not play. Check your connection and try again.",onRetry)
+                    }
                     if(decodeFailed) MomentError(stringResource(Res.string.moment_photo_failed),onRetry)
                     state.error?.let { MomentError(it,onRetry) }
                     if(moment.visibility=="public") TextButton(onClick={onNotes(false)},enabled=state.fresh) {
