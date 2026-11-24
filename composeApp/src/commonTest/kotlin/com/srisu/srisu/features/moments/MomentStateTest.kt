@@ -27,7 +27,7 @@ class MomentStateTest {
             vm.pickedPhotos(NativePhotoBatch(listOf(byteArrayOf(3),byteArrayOf(4),byteArrayOf(5),byteArrayOf(6))),vm.pickerStamp())
             assertEquals(listOf<Byte>(1,2,3,4,5),vm.state.value.photos.map {it.bytes!!.single()})
             assertEquals(originalIds,vm.state.value.photos.take(2).map {it.id})
-            assertEquals("You can add up to five photos.",vm.state.value.error)
+            assertEquals("You can add up to five photos or videos.",vm.state.value.error)
             assertEquals(0,vm.remainingPhotoSlots())
             val order=vm.state.value.photos.map {it.id}
             assertEquals(order,vm.state.value.record?.order)

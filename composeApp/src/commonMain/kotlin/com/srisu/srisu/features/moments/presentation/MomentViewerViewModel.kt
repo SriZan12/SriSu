@@ -16,6 +16,7 @@ data class MomentViewerState(val moment: Moment? = null, val photo: Int = 0, val
     val note: String = "", val noteSent: Boolean = false, val edited: Boolean = false,
     val notes: List<MomentNote>? = null, val notesLoading: Boolean = false, val notesNext: Boolean = false,
     val noteReplyId: Long? = null, val noteReplyDraft: String = "",
+    val playback: MomentPlayback? = null, val videoReady: Boolean = false,
     val captionDraft: String? = null, val hasPrevious: Boolean = false, val hasNext: Boolean = false)
 
 @OptIn(kotlin.time.ExperimentalTime::class)
@@ -48,14 +49,14 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         if(active==value) return
         active=value
         if(value && started) refresh()
-        else if(!value) { generation++; work?.cancel(); mutable.update { it.copy(bytes=null,fresh=false,imageLoading=false,notes=null,notesLoading=false,busy=false) } }
+        else if(!value) { generation++; work?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,fresh=false,imageLoading=false,notes=null,notesLoading=false,busy=false) } }
     }
     private fun current(own: Int): Boolean = generation==own && sessions.stamp()==stamp && active
     fun refresh() {
         if(!active || sessions.stamp()!=stamp) return
         work?.cancel(); val own=++generation
         work=viewModelScope.launch {
-            mutable.update { it.copy(loading=true,busy=false,error=null,unavailable=null,fresh=false,bytes=null) }
+            mutable.update { it.copy(loading=true,busy=false,error=null,unavailable=null,fresh=false,bytes=null,playback=null,videoReady=false) }
             if(currentId==null && couple!=null) {
                 val result=source.sequence(couple!!,creator,null)
                 if(!current(own)) return@launch
@@ -85,17 +86,24 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
     private suspend fun loadImage(moment: Moment, index: Int, own: Int) {
         val photo=moment.photos.getOrNull(index)
         if(photo==null) { mutable.update { it.copy(imageLoading=false) }; return }
-        val bytes=source.image(photo.image)
-        if(!current(own)) return
-        mutable.update { it.copy(bytes=bytes,imageLoading=false,error=if(bytes==null) "Photo unavailable. Retry to check access and reload." else null) }
+        coroutineScope {
+            val image=async {source.image(photo.image)}
+            val access=async {photo.video?.let {source.playback(it.id)}}
+            val bytes=image.await();val result=access.await()
+            if(!current(own)) return@coroutineScope
+            val playback=(result as? NetworkAPIResult.Success)?.response
+            mutable.update { it.copy(bytes=bytes,playback=playback,videoReady=false,imageLoading=false,
+                error=if(photo.video!=null && playback==null) (result as? NetworkAPIResult.Error)?.failure?.message ?: "Video unavailable. Retry to reload."
+                else if(bytes==null && photo.video==null) "Photo unavailable. Retry to check access and reload." else null) }
+        }
     }
     private fun expired() {
-        generation++; work?.cancel(); mutable.update { it.copy(bytes=null,moment=null,notes=null,loading=false,imageLoading=false,fresh=false,unavailable="expired",busy=false) }
+        generation++; work?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,moment=null,notes=null,loading=false,imageLoading=false,fresh=false,unavailable="expired",busy=false) }
         source.changed()
     }
     private fun failure(error: NetworkAPIResult.Error<*>?) {
         val status=error?.failure?.status
-        mutable.update { it.copy(loading=false,busy=false,imageLoading=false,bytes=null,moment=null,fresh=false,
+        mutable.update { it.copy(loading=false,busy=false,imageLoading=false,bytes=null,playback=null,videoReady=false,moment=null,fresh=false,
             unavailable=when(status) { 410->"expired";401,403,404->"unavailable";else->null },
             error=if(status in listOf(401,403,404,410)) null else error?.failure?.message ?: "This Moment could not be loaded.") }
     }
@@ -105,7 +113,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         val index=state.value.photo+direction
         if(index in moment.photos.indices) {
             work?.cancel(); val own=++generation
-            mutable.update { it.copy(photo=index,bytes=null,imageLoading=true,error=null,
+            mutable.update { it.copy(photo=index,bytes=null,playback=null,videoReady=false,imageLoading=true,error=null,
                 hasPrevious=index>0 || sequence.indexOf(moment.id)>0,
                 hasNext=index<moment.photos.lastIndex || sequence.indexOf(moment.id) in 0 until sequence.lastIndex || cursor!=null) }
             work=viewModelScope.launch { loadImage(moment,index,own) }; return
@@ -129,9 +137,13 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         }
     }
     /** Called only after pixels (or a legacy text-only Moment) are actually presented. */
+    fun videoPresented(photoId:Long) {
+        if(state.value.moment?.photos?.getOrNull(state.value.photo)?.let {it.id==photoId && it.video!=null}!=true) return
+        mutable.update {it.copy(videoReady=true)};presented()
+    }
     fun presented() {
         val moment=state.value.moment ?: return
-        if(!active || !state.value.fresh || state.value.imageLoading || (moment.photos.isNotEmpty() && state.value.bytes==null) ||
+        if(!active || !state.value.fresh || state.value.imageLoading || (moment.photos.getOrNull(state.value.photo)?.video?.let {!state.value.videoReady} ?: (moment.photos.isNotEmpty() && state.value.bytes==null)) ||
             moment.id in viewed || viewRequest==moment.id) return
         viewRequest=moment.id
         viewModelScope.launch {

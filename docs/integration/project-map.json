@@ -86,7 +86,16 @@
       "backend_guide": "../SriSu-backend/docs/couple_moments.md",
       "figma_page": "1:3",
       "migration": "social.0016_couplemomentmodel_revision_and_more",
-      "status": "implemented-local-android-ios-postgres-http-verified-no-deployment"
+      "status": "implemented-local-android-ios-postgres-http-verified-no-deployment",
+      "video_extension": {
+        "flow": "docs/flows/moments.md#video-moments--24-november-2026",
+        "backend_migration": "social.0024_moment_video",
+        "frontend_branch": "codex/video-moments",
+        "frontend_base": "fc0e72c9eae725c2f4cea9035e4513f4a03803c3",
+        "backend_branch": "codex/video-moments",
+        "backend_base": "9e2f5b8",
+        "status": "qa-verified-pr-preparation-no-deployment"
+      }
     },
     "sparks": {
       "secure_chat_binding": "Compare the explicit bootstrap couple_id with Spark couple, preserving room and epoch checks; fixes encryption refusal when connection and couple IDs differ (2026-11-16).",

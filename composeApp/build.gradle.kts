@@ -113,9 +113,15 @@ kotlin {
             // Maintained MP4 remuxer with bounded in-memory output; no plaintext temp video.
             implementation("androidx.media3:media3-muxer:1.10.1")
             implementation("androidx.media3:media3-container:1.10.1")
+            implementation("androidx.media3:media3-exoplayer:1.10.1")
+            implementation("androidx.media3:media3-exoplayer-hls:1.10.1")
+            implementation("androidx.media3:media3-ui:1.10.1")
+            implementation("androidx.media3:media3-transformer:1.10.1")
+            implementation("androidx.media3:media3-effect:1.10.1")
             implementation("androidx.camera:camera-camera2:1.5.3")
             implementation("androidx.camera:camera-lifecycle:1.5.3")
             implementation("androidx.camera:camera-view:1.5.3")
+            implementation("androidx.camera:camera-video:1.5.3")
             implementation(libs.androidx.core.splashscreen)
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -242,8 +248,11 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
             // Robolectric resolves Android SDK jars separately from Gradle's repositories.
-            // Use Maven Central's canonical endpoint for those runtime downloads too.
-            it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+            // Match the CI mirror used for Gradle dependencies; local builds keep Central.
+            val runtimeRepository = if (providers.environmentVariable("SRISU_CI_MAVEN_MIRROR").orNull == "true")
+                "https://maven-central.storage-download.googleapis.com/maven2/"
+            else "https://repo.maven.apache.org/maven2"
+            it.systemProperty("robolectric.dependency.repo.url", runtimeRepository)
             it.testLogging.exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
     }

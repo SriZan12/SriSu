@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,7 +47,7 @@ import com.srisu.srisu.components.SriSuButtonSize
 import com.srisu.srisu.components.DraftEditor
 import com.srisu.srisu.components.rememberDraftEditor
 import com.srisu.srisu.features.couplechat.presentation.rememberNativeChatMedia
-import com.srisu.srisu.features.moments.data.MomentCrop
+import com.srisu.srisu.features.moments.data.*
 import com.srisu.srisu.theme.*
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -57,19 +58,26 @@ import srisu.composeapp.generated.resources.*
     vm: MomentComposerViewModel=koinViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val native=rememberNativeChatMedia()
+    val videoPicker=rememberMomentVideoPicker()
     val scope=rememberCoroutineScope()
     var picking by remember { mutableStateOf(false) }
+    var pickerEpoch by remember { mutableIntStateOf(0) }
     LaunchedEffect(couple) { vm.open(couple) }
-    DisposableEffect(native) { onDispose { native.close() } }
+    DisposableEffect(native) { onDispose { native.close();videoPicker.close() } }
     LaunchedEffect(state.publishedId,state.discarded) { state.publishedId?.let(onPublished); if(state.discarded) onBack() }
     MomentComposerContent(state,vm::image,vm::caption,vm::audience,vm::remove,vm::reorder,vm::share,vm::restore,vm::discard,onBack,
-        picking=picking,onCrop=vm::crop,onPick={source->
+        picking=picking,onCrop=vm::crop,playback=vm::playback,onCancelUpload={pickerEpoch++;videoPicker.cancel();picking=false;if(state.busy) vm.cancelUpload()},onPick={source->
             if(!picking) {
                 picking=true
                 val stamp=vm.pickerStamp()
-                if(source=="photo") native.pickPhotos(vm.remainingPhotoSlots()) { batch ->
-                    scope.launch { picking=false; vm.pickedPhotos(batch,stamp) }
-                } else native.pick(source) { raw,bytes -> scope.launch { picking=false; vm.picked(raw,bytes,stamp) } }
+                val ownEpoch=++pickerEpoch
+                if(source=="video" || source=="record-video") {
+                    val receive: (MomentVideoSelection)->Unit = {result -> scope.launch {if(ownEpoch==pickerEpoch) {picking=false;vm.pickedVideo(result,stamp)} else result.video?.let(::removeMomentVideoFile)}}
+                    if(source=="record-video") videoPicker.record(receive) else videoPicker.pick(receive)
+                }
+                else if(source=="photo") native.pickPhotos(vm.remainingPhotoSlots()) { batch ->
+                    scope.launch { if(ownEpoch==pickerEpoch) {picking=false; vm.pickedPhotos(batch,stamp)} }
+                } else native.pick(source) { raw,bytes -> scope.launch { if(ownEpoch==pickerEpoch) {picking=false; vm.picked(raw,bytes,stamp)} } }
             }
         })
 }
@@ -83,6 +91,8 @@ import srisu.composeapp.generated.resources.*
     onDiscard: () -> Unit, onBack: () -> Unit, onPick: (String) -> Unit,
     picking: Boolean = false, initialCaptionEditing: Boolean = false,
     onCrop: (String, MomentCrop?) -> Unit = { _, _ -> },
+    playback: suspend (String)->MomentResult<MomentPlayback> = {com.srisu.srisu.core.data.remote.NetworkAPIResult.Error("Video unavailable")},
+    onCancelUpload: ()->Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
     val space = MaterialTheme.spacing
@@ -92,6 +102,7 @@ import srisu.composeapp.generated.resources.*
     var editing by rememberSaveable { mutableStateOf(initialCaptionEditing) }
     var focusedCaption by rememberSaveable { mutableStateOf(false) }
     var cropping by rememberSaveable { mutableStateOf<String?>(null) }
+    var cameraMenu by remember { mutableStateOf(false) }
     val captionEditor = rememberDraftEditor(state.record?.caption.orEmpty())
     val portraitScroll = rememberScrollState()
     val detailsScroll = rememberScrollState()
@@ -124,6 +135,7 @@ import srisu.composeapp.generated.resources.*
                     IconButton(onClick = back) { Icon(Icons.Outlined.Close, stringResource(Res.string.moment_close)) }
                     Text(stringResource(if (compactEditor) Res.string.moment_caption_label else Res.string.moment_new),
                         Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                    if(state.busy || picking) TextButton(onClick=onCancelUpload) {Text(if(picking) "Cancel" else "Pause")}
                     if (editing) TextButton(onClick = done, modifier = Modifier.testTag("moment-caption-done")) { Text(stringResource(Res.string.moment_caption_done)) }
                 }
                 if (state.loading || picking) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -134,7 +146,7 @@ import srisu.composeapp.generated.resources.*
                 } else {
                     val media: @Composable (Modifier, Dp?) -> Unit = { modifier, height ->
                         if (state.photos.isEmpty()) {
-                            MomentEmptyPreview(enabled, picking, { onPick("photo") }, { onPick("camera") }, modifier, height)
+                            MomentEmptyPreview(enabled, picking, { onPick("photo") }, { done(); cameraMenu = true }, {onPick("video")}, modifier, height)
                         } else {
                             val index = selected.coerceIn(state.photos.indices)
                             val photo = state.photos[index]
@@ -145,7 +157,7 @@ import srisu.composeapp.generated.resources.*
                                 onEarlier = { onReorder(photo.id, -1); selected = (index - 1).coerceAtLeast(0) },
                                 onLater = { onReorder(photo.id, 1); selected = (index + 1).coerceAtMost(state.photos.lastIndex) },
                                 onRemove = { onRemove(photo.id); selected = 0 },
-                                onAdd = { onPick("photo") }, onCamera = { onPick("camera") })
+                                onAdd = { onPick("photo") }, onCamera = { done(); cameraMenu = true },onVideo = {onPick("video")},playback=playback)
                         }
                     }
                     val details: @Composable () -> Unit = {
@@ -178,6 +190,16 @@ import srisu.composeapp.generated.resources.*
             }
         }
     }
+    if (cameraMenu && enabled) AlertDialog(onDismissRequest = { cameraMenu = false },
+        title = { Text("Camera") },
+        text = { Column {
+            TextButton(onClick = { cameraMenu = false; onPick("camera") }, modifier = Modifier.fillMaxWidth().heightIn(min = space.touchTarget)) {
+                Icon(Icons.Outlined.PhotoCamera, null); Spacer(Modifier.width(space.small)); Text("Take photo", Modifier.weight(1f), textAlign = TextAlign.Start)
+            }
+            TextButton(onClick = { cameraMenu = false; onPick("record-video") }, modifier = Modifier.fillMaxWidth().heightIn(min = space.touchTarget).testTag("moment-record-video")) {
+                Icon(Icons.Outlined.Videocam, null); Spacer(Modifier.width(space.small)); Text("Record video · up to 60s", Modifier.weight(1f), textAlign = TextAlign.Start)
+            }
+        } }, confirmButton = {}, dismissButton = { TextButton(onClick = { cameraMenu = false }) { Text("Cancel") } })
     if (leave) AlertDialog(onDismissRequest = { leave = false }, title = { Text(stringResource(Res.string.moment_leave_title)) },
         text = { Text(stringResource(if (state.busy) Res.string.moment_leave_busy else Res.string.moment_leave_body)) },
         confirmButton = { TextButton(onClick = { leave = false; if (!state.busy) onBack() }) {
@@ -188,7 +210,7 @@ import srisu.composeapp.generated.resources.*
 
 /** The same composer is shown before selection; picking starts only from an explicit photo action. */
 @Composable private fun MomentEmptyPreview(
-    enabled: Boolean, picking: Boolean, onLibrary: () -> Unit, onCamera: () -> Unit,
+    enabled: Boolean, picking: Boolean, onLibrary: () -> Unit, onCamera: () -> Unit, onVideo: () -> Unit,
     modifier: Modifier, previewHeight: Dp?,
 ) {
     val space = MaterialTheme.spacing
@@ -203,14 +225,15 @@ import srisu.composeapp.generated.resources.*
             Column(Modifier.padding(space.medium), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(space.small)) {
                 Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(space.extraLarge), tint = colors.onSurfaceVariant)
-                Text(stringResource(if (picking) Res.string.moment_opening else Res.string.moment_photo_add),
+                Text(stringResource(if (picking) Res.string.moment_opening else Res.string.moment_media_add),
                     style = MaterialTheme.typography.titleSmall, color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
             }
         }
         Row(Modifier.fillMaxWidth().heightIn(min = space.touchTarget), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(Res.string.moment_photo_limit), Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-            IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, stringResource(Res.string.moment_shutter)) }
+            IconButton(onClick=onVideo,enabled=enabled) {Icon(Icons.Outlined.VideoLibrary,"Add video")}
+            IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, "Open camera") }
         }
     }
 }
@@ -218,7 +241,8 @@ import srisu.composeapp.generated.resources.*
 @Composable private fun MomentComposerMedia(
     photos: List<LocalMomentPhoto>, selected: Int, image: suspend (String) -> ByteArray?, enabled: Boolean,
     modifier: Modifier, previewHeight: Dp?, onSelect: (Int) -> Unit, onEarlier: () -> Unit, onLater: () -> Unit,
-    onRemove: () -> Unit, onAdd: () -> Unit, onCamera: () -> Unit,
+    onRemove: () -> Unit, onAdd: () -> Unit, onCamera: () -> Unit, onVideo: () -> Unit,
+    playback: suspend (String)->MomentResult<MomentPlayback>,
     crop: MomentCrop?, onCrop: (MomentCrop?) -> Unit, onAdjust: () -> Unit,
 ) {
     val space = MaterialTheme.spacing
@@ -230,7 +254,10 @@ import srisu.composeapp.generated.resources.*
         val previewModifier = if (previewHeight == null) Modifier.weight(1f) else Modifier.height(previewHeight)
         Box(previewModifier.fillMaxWidth().onSizeChanged { previewSize = it }.clip(MaterialTheme.shapes.medium).background(colors.mediaBackground)) {
             val description = stringResource(Res.string.moment_photo_selected, selected + 1, photos.size)
-            MomentFramedPhoto(pixels, crop ?: MomentCrop.Full, description, Modifier.fillMaxSize().testTag("moment-photo-preview"))
+            if(photo.video!=null || photo.remote?.video!=null) MomentVideoPreview(photo,playback,enabled,Modifier.fillMaxSize()) {
+                MomentFramedPhoto(pixels, MomentCrop.Full, description, Modifier.fillMaxSize())
+            }
+            else MomentFramedPhoto(pixels, crop ?: MomentCrop.Full, description, Modifier.fillMaxSize().testTag("moment-photo-preview"))
             Row(Modifier.fillMaxWidth().padding(space.tiny), verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = MaterialTheme.shapes.pill, color = colors.mediaBackground.copy(alpha = MomentTokens.pillAlpha)) {
                     Text(stringResource(Res.string.moment_photo_position, selected + 1, photos.size),
@@ -245,7 +272,7 @@ import srisu.composeapp.generated.resources.*
                 MomentChromeButton(Icons.Outlined.DeleteOutline, stringResource(Res.string.moment_photo_remove), onRemove, enabled = enabled)
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        if(photo.video==null && photo.remote?.video==null) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(space.small), verticalAlignment = Alignment.CenterVertically) {
             FilterChip(selected = crop == null, onClick = { onCrop(null) }, enabled = enabled,
                 label = { Text(stringResource(Res.string.moment_crop_full)) },
@@ -274,12 +301,52 @@ import srisu.composeapp.generated.resources.*
                         .padding(MomentTokens.stripBorder).clip(MaterialTheme.shapes.small)) {
                         if (p.bytes != null) MomentImage(p.bytes, description, Modifier.fillMaxSize())
                         else GuardedMomentImage(p.remote?.image, image, description, Modifier.fillMaxSize())
+                        if(p.video!=null || p.remote?.video!=null) Icon(Icons.Outlined.PlayArrow,"Video",Modifier.size(space.large).align(Alignment.Center),tint=colors.onMedia)
                     }
                 }
             }
             if (photos.size < MAX_PHOTOS) {
+                IconButton(onClick=onVideo,enabled=enabled) {Icon(Icons.Outlined.VideoLibrary,"Add video")}
                 IconButton(onClick = onAdd, enabled = enabled) { Icon(Icons.Outlined.AddPhotoAlternate, stringResource(Res.string.moment_photo_add)) }
-                IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, stringResource(Res.string.moment_photo_camera)) }
+                IconButton(onClick = onCamera, enabled = enabled) { Icon(Icons.Outlined.PhotoCamera, "Open camera") }
+            }
+        }
+    }
+}
+
+
+@Composable private fun MomentVideoPreview(photo:LocalMomentPhoto,playback:suspend (String)->MomentResult<MomentPlayback>,enabled:Boolean,modifier:Modifier,poster:@Composable ()->Unit) {
+    var playing by remember(photo.id) {mutableStateOf(false)}
+    var started by remember(photo.id) {mutableStateOf(false)}
+    var muted by remember {mutableStateOf(true)}
+    var foreground by remember {mutableStateOf(true)}
+    var retry by remember(photo.id) {mutableIntStateOf(0)}
+    var event by remember(photo.id,retry) {mutableStateOf(MomentPlaybackEvent("buffering"))}
+    MomentLifecycle {foreground=it}
+    val source by produceState<MomentPlayback?>(null,photo.id,retry,photo.remote?.video?.state) {
+        value=photo.video?.let {MomentPlayback(it.path,durationMs=it.durationMs)}
+            ?: photo.remote?.video?.takeIf {it.state=="ready"}?.let {(playback(it.id) as? com.srisu.srisu.core.data.remote.NetworkAPIResult.Success)?.response}
+    }
+    val colors=MaterialTheme.colorScheme
+    val space=MaterialTheme.spacing
+    Box(modifier.semantics {stateDescription=if(event.firstFrame) "Video ready" else if(event.state=="failed") "Video unavailable" else "Video loading"}) {
+        if(started) source?.let {key(photo.id,retry) {MomentVideoPlayer(it,playing && foreground && enabled,muted,Modifier.fillMaxSize(),embedded=true) {next ->
+            event=next;if(next.state in listOf("ended","paused","failed"))playing=false
+        }}}
+        if(!event.firstFrame) poster()
+        if(source==null || event.state=="failed") Column(Modifier.align(Alignment.Center).padding(space.medium),horizontalAlignment=Alignment.CenterHorizontally) {
+            Text(if(photo.remote?.video?.state in listOf("queued","processing")) "Preparing video" else "Video preview unavailable",color=colors.onMedia)
+            TextButton(onClick={retry++}) {Text("Retry",color=colors.onMedia)}
+        } else {
+            if(event.state=="buffering" && playing) CircularProgressIndicator(Modifier.align(Alignment.Center),color=colors.onMedia)
+            Box(Modifier.align(Alignment.Center)) {
+                MomentChromeButton(if(playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                    if(playing) "Pause video" else "Play video", {started=true;playing=!playing}, enabled=enabled)
+            }
+            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(space.small),verticalAlignment=Alignment.CenterVertically) {
+                val seconds=((photo.video?.durationMs ?: photo.remote?.video?.durationMs ?: 0)/1000).toInt()
+                Text("${seconds/60}:${(seconds%60).toString().padStart(2,'0')} · Video",Modifier.weight(1f),color=colors.onMedia,style=MaterialTheme.typography.labelMedium)
+                IconButton(onClick={muted=!muted}) {Icon(if(muted) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,if(muted) "Turn sound on" else "Mute video",tint=colors.onMedia)}
             }
         }
     }
