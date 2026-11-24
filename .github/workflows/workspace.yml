@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+# Google-hosted Central mirror avoids shared-runner HTTP 429 responses.
+env:
+  SRISU_CI_MAVEN_MIRROR: "true"
+
 concurrency:
   group: frontend-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

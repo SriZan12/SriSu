@@ -10,6 +10,10 @@ pluginManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        // Hosted CI may share a Maven Central rate limit. Keep local resolution unchanged.
+        if (providers.environmentVariable("SRISU_CI_MAVEN_MIRROR").orNull == "true") {
+            maven("https://maven-central.storage-download.googleapis.com/maven2/")
+        }
         mavenCentral()
         gradlePluginPortal()
     }
@@ -23,6 +27,10 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.android")
                 includeGroupAndSubgroups("com.google")
             }
+        }
+        // Hosted CI may share a Maven Central rate limit. Keep local resolution unchanged.
+        if (providers.environmentVariable("SRISU_CI_MAVEN_MIRROR").orNull == "true") {
+            maven("https://maven-central.storage-download.googleapis.com/maven2/")
         }
         mavenCentral()
     }

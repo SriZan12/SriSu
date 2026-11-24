@@ -781,3 +781,10 @@ backend contracts without importing those edits.
 
 GitHub PR descriptions record the final commits, paired integration result and
 CI links. No merge or production deployment is part of this QA/PR request.
+
+CI initially failed twice on Maven Central HTTP 429 responses: first Robolectric's
+runtime JAR, then Gradle plugin transitive dependencies. CI now opts into the
+[Google-hosted Maven Central mirror](https://docs.cloud.google.com/docs/buildpacks/java#google_cloud_hosted_maven_central_mirror)
+for Gradle and [Robolectric runtime resolution](https://robolectric.org/configuring/).
+The normal local repository selection, dependency versions and test coverage are
+unchanged. Both failing artifact URLs returned 200 from the mirror before use.
