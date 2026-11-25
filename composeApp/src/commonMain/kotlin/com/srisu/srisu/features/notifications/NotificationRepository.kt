@@ -96,10 +96,20 @@ class NotificationRepository(private val api: NotificationApi, private val sessi
         mutable.update { it.copy(busy=false,preferences=value,
             error=if(value != null) null else "Couldn’t load notification settings. Try again.") }
     }
-    fun reload() { lifetime.scope.launch { writes.withLock { loadLocked() } } }
-    fun save(push: Boolean?=null, chat: Boolean?=null, activity: Boolean?=null, mute: String="unchanged", category: Pair<String, Boolean>?=null) {
+    fun reload() {
+        val stamp=sessions.stamp()
+        if(stamp.accountId == null) return
         lifetime.scope.launch { writes.withLock {
-            val stamp=sessions.stamp()
+            sessions.ensureCurrent(stamp)
+            loadLocked()
+        } }
+    }
+    fun save(push: Boolean?=null, chat: Boolean?=null, activity: Boolean?=null, mute: String="unchanged", category: Pair<String, Boolean>?=null) {
+        // Bind the user's gesture before dispatch/queueing, not after acquiring the lock.
+        val stamp=sessions.stamp()
+        if(stamp.accountId == null) return
+        lifetime.scope.launch { writes.withLock {
+            sessions.ensureCurrent(stamp)
             val old=mutable.value.preferences ?: return@withLock
             if (category != null && (NOTIFICATION_CATALOGUE !in old.capabilities || notificationCategories.none { it.key == category.first })) return@withLock
             mutable.update { it.copy(busy=true,error=null) }

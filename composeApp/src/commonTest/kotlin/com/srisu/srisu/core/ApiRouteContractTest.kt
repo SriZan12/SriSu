@@ -123,6 +123,9 @@ class ApiRouteContractTest {
             check("notification-preferences") {notifications.preferences()}
             check("notification-preferences-save") {notifications.save(com.srisu.srisu.features.notifications.PreferenceWrite(1,true,true,true))}
             check("notification-resolve") {notifications.resolve(room)}
+            val settings = com.srisu.srisu.features.settings.SettingsRepository(client,environment)
+            check("settings-context") {ResultHandler(settings.load())}
+            check("settings-disconnect") {ResultHandler(settings.disconnect(com.srisu.srisu.features.settings.samplePartner))}
             val sparks = com.srisu.srisu.features.sparks.data.SparkRepository(client, environment)
             check("home-daily-question") { ResultHandler(sparks.daily(1, "Asia/Kathmandu")) }
             val statuses = com.srisu.srisu.features.coupleprofile.data.CoupleStatusRepository(client, environment)

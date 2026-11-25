@@ -53,26 +53,27 @@ class NotificationSettingsTest {
             }
             compose.waitUntil(10000) { ShadowLooper.idleMainLooper();repository.state.value.preferences != null }
             if (matrixChat) {
-                compose.onNodeWithContentDescription("Chat messages").performScrollTo().assertIsOn()
-                compose.onNodeWithText("Mute 1 hour").performScrollTo().assertIsDisplayed()
+                description("Chat messages").assertIsOn()
+                text("Mute 1 hour").assertIsDisplayed()
                 compose.onNodeWithText("Chat push notifications are not available yet.").assertDoesNotExist()
-                compose.onNodeWithContentDescription("Plan invitations & changes").performScrollTo().assertIsOn()
-                compose.onNodeWithContentDescription("Partner’s status updates").performScrollTo().assertIsOn()
-                compose.onNodeWithContentDescription("Challenge progress").performScrollTo().assertIsOn()
+                description("Plan invitations & changes").assertIsOn()
+                description("Partner’s status updates").assertIsOn()
+                description("Challenge progress").assertIsOn()
                 capture("categories-dark-large")
             } else {
                 compose.onNodeWithContentDescription("Chat messages").assertDoesNotExist()
-                compose.onNodeWithText("Chat push notifications are not available yet.").performScrollTo().assertIsDisplayed()
+                text("Chat push notifications are not available yet.").assertIsDisplayed()
             }
-            compose.onNodeWithText("Open system settings").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithContentDescription("Push notifications").performScrollTo().performClick()
+            text("Open system settings").assertIsDisplayed()
+            description("Push notifications").performClick()
             compose.waitUntil(10000) { ShadowLooper.idleMainLooper();repository.state.value.error != null }
             compose.onNodeWithContentDescription("Push notifications").assertIsOn()
-            compose.onNodeWithText("Your change wasn’t saved. Reload and try again.").performScrollTo().assertIsDisplayed()
+            text("Your change wasn’t saved. Reload and try again.").assertIsDisplayed()
             compose.onNodeWithText("Reload settings").performClick()
             compose.waitUntil(10000) { ShadowLooper.idleMainLooper();!repository.state.value.busy && repository.state.value.error == null }
-            compose.onNodeWithContentDescription("Share crash diagnostics").performScrollTo().assertIsOff()
-            compose.onNodeWithContentDescription("Go back").performScrollTo()
+            description("Share crash diagnostics").assertIsOff()
+            compose.onNodeWithContentDescription("Go back").assertIsDisplayed()
+            compose.onNodeWithTag("settings-detail-list").performScrollToIndex(0)
             compose.runOnIdle {
                 val view=compose.activity.window.decorView
                 val bitmap=Bitmap.createBitmap(view.width,view.height,Bitmap.Config.ARGB_8888)
@@ -88,6 +89,14 @@ class NotificationSettingsTest {
     }
     @Test fun deniedPermissionAndFailedSaveKeepConfirmedSettings()=render(false,false)
     @Test @Config(qualifiers="w320dp-h640dp-xhdpi") fun darkLargeTextSettingsRemainReachable()=render(true,true,matrixChat=true)
+    private fun description(label:String):SemanticsNodeInteraction {
+        compose.onNodeWithTag("settings-detail-list").performScrollToNode(hasContentDescription(label))
+        return compose.onNodeWithContentDescription(label)
+    }
+    private fun text(label:String):SemanticsNodeInteraction {
+        compose.onNodeWithTag("settings-detail-list").performScrollToNode(hasText(label))
+        return compose.onNodeWithText(label)
+    }
     private fun capture(name: String) = compose.runOnIdle {
         val view=compose.activity.window.decorView
         val bitmap=Bitmap.createBitmap(view.width,view.height,Bitmap.Config.ARGB_8888)

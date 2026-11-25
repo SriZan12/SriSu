@@ -13,6 +13,29 @@ import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotificationRepositoryTest {
+    @Test fun queuedToggleCannotApplyToAnotherAccount() = runTest {
+        val dispatcher=StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        val sessions=session();val lifetime=ApplicationLifetime();var writes=0
+        val environment=ApiEnvironment("https://fixture.invalid/")
+        val client=HttpClientFactory.create(sessions,environment,MockEngine(MockEngineConfig().apply {
+            this.dispatcher=dispatcher
+            addHandler {request ->
+                if(request.method==HttpMethod.Put) writes++
+                respond("""{"data":{"contract":"notifications-1","push":true,"chat":true,"activity":true,"revision":1}}""",headers=headersOf(HttpHeaders.ContentType,"application/json"))
+            }
+        }))
+        val repo=NotificationRepository(NotificationApi(client,environment),sessions,lifetime)
+        try {
+            repo.reload();advanceUntilIdle()
+            repo.save(push=false)
+            val key=com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
+            sessions.saveSession(requireNotNull(session(2).getSession(key)),key)
+            advanceUntilIdle()
+            assertEquals(0,writes,"A toggle queued on the previous account must never be sent as the new account")
+            assertNull(repo.state.value.preferences)
+        } finally {repo.close();lifetime.close();client.close();Dispatchers.resetMain()}
+    }
     @Test fun failedSaveKeepsConfirmedValueAndReloadRecovers() = runTest {
         val dispatcher=StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
