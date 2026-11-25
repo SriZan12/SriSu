@@ -1,0 +1,4 @@
+<!-- Google Material Icons (outlined), Apache-2.0. Source blob c4ad8b3b1daad12679ea1bdcab4de7d42a1fb9e1. Geometry preserved. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF000000" android:pathData="M15 8v8H5V8h10m1-2H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4V7c0-.55-.45-1-1-1z" />
+</vector>

@@ -38,129 +38,65 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 actual fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?,
-    isMultiple: Boolean
+    isMultiple: Boolean,
+    onError: () -> Unit,
 ): GalleryManager {
 
     val viewController = rememberUIViewController()
 
+    val latestResult = androidx.compose.runtime.rememberUpdatedState(onResult)
+    val latestError = androidx.compose.runtime.rememberUpdatedState(onError)
     val multiPickerDelegate = remember {
-        MultiPickerDelegate { uris ->
-            onResult(uris)
-        }
+        MultiPickerDelegate({ latestResult.value(it) }, { latestError.value() })
     }
 
-    val singlePickerDelegate = remember {
-        PickerDelegate { uris ->
-            onResult(uris)
-        }
-    }
-
-    return remember {
+    return remember(viewController, mediaType, isMultiple) {
         GalleryManager(onLaunch = {
 
-            if (isMultiple) {
-                val config = PHPickerConfiguration().apply {
-                    selectionLimit = 5
-                    filter = when (mediaType) {
-                        MediaType.IMAGE_ONLY -> PHPickerFilter.imagesFilter()
-                        MediaType.VIDEO_ONLY -> PHPickerFilter.videosFilter()
-                        MediaType.IMAGE_AND_VIDEO,
-                        MediaType.MIME_TYPE,
-                        null -> null
-
-                        MediaType.NOTHING -> PHPickerFilter.imagesFilter()
-                    }
+            val config = PHPickerConfiguration().apply {
+                selectionLimit = if (isMultiple) 5 else 1
+                filter = when (mediaType) {
+                    MediaType.VIDEO_ONLY -> PHPickerFilter.videosFilter()
+                    MediaType.IMAGE_AND_VIDEO -> null
+                    else -> PHPickerFilter.imagesFilter()
                 }
-
-                val picker = PHPickerViewController(config).apply {
-                    delegate = multiPickerDelegate
-                }
-
-                viewController.presentViewController(
-                    picker,
-                    animated = true,
-                    completion = {
-                        onResult(emptyList())
-                    }
-                )
-
-            } else {
-                val picker = UIImagePickerController().apply {
-                    delegate = singlePickerDelegate
-                    sourceType =
-                        UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
-
-                    mediaTypes = when (mediaType) {
-                        MediaType.IMAGE_ONLY -> listOf("public.image")
-                        MediaType.VIDEO_ONLY -> listOf("public.movie")
-                        MediaType.IMAGE_AND_VIDEO,
-                        MediaType.MIME_TYPE,
-                        null -> listOf("public.image", "public.movie")
-
-                        MediaType.NOTHING -> listOf("public.image")
-                    }
-                }
-
-                viewController.presentViewController(
-                    picker,
-                    animated = true,
-                    completion = {
-                        onResult(emptyList())
-                    }
-                )
             }
+            val picker = PHPickerViewController(config).apply { delegate = multiPickerDelegate }
+            var presenter = viewController
+            while (presenter.presentedViewController != null) presenter = presenter.presentedViewController!!
+            presenter.presentViewController(picker, animated = true, completion = null)
         })
     }
 }
 
 
 class MultiPickerDelegate(
-    private val onResult: (List<String>) -> Unit
+    private val onResult: (List<String>) -> Unit,
+    private val onError: () -> Unit = {},
 ) : NSObject(), PHPickerViewControllerDelegateProtocol {
-
-    override fun picker(
-        picker: PHPickerViewController,
-        didFinishPicking: List<*>
-    ) {
-
-        val didFinishPickingPHPickerResult = didFinishPicking.filterIsInstance<PHPickerResult>()
+    override fun picker(picker: PHPickerViewController, didFinishPicking: List<*>) {
+        val results = didFinishPicking.filterIsInstance<PHPickerResult>()
         picker.dismissViewControllerAnimated(true, completion = null)
-
-
-        if (didFinishPicking.isEmpty()) {
-            onResult(emptyList())
-            return
-        }
-
-        val uris = mutableListOf<String>()
+        if (results.isEmpty()) { onResult(emptyList()); return }
+        val paths = arrayOfNulls<String>(results.size)
+        val lock = NSLock()
         val group = dispatch_group_create()
-
-        didFinishPickingPHPickerResult.forEach { result ->
+        results.forEachIndexed { index, result ->
             val provider = result.itemProvider
-
-            if (provider.hasItemConformingToTypeIdentifier(typeIdentifier = "public.image")) {
+            if (provider.hasItemConformingToTypeIdentifier("public.image")) {
                 dispatch_group_enter(group)
-
-                provider.loadFileRepresentationForTypeIdentifier(typeIdentifier = "public.image") { url, _ ->
-                    url?.let {
-                        val copiedPath = FileManager().copyToAppCache(url = it)
-                        copiedPath?.let { safePath ->
-                            uris.add(safePath)
-                        }
-                    }
+                provider.loadFileRepresentationForTypeIdentifier("public.image") { url, _ ->
+                    val path = url?.let { FileManager().copyToAppCache(it) }
+                    lock.lock()
+                    try { paths[index] = path } finally { lock.unlock() }
                     dispatch_group_leave(group)
                 }
-
             }
         }
-
         dispatch_group_notify(group, dispatch_get_main_queue()) {
-            picker.dismissViewControllerAnimated(flag = true, completion = null)
-            onResult(uris)
+            if (paths.any { it == null }) onError() else onResult(paths.filterNotNull())
         }
     }
-
-
 }
 
 
@@ -205,6 +141,9 @@ fun rememberUIViewController(): UIViewController {
 
 
 actual class FileManager {
+    @OptIn(ExperimentalForeignApi::class)
+    actual suspend fun createProfilePhotoFromPath(path: String): MediaFile? = prepareProfilePhoto(path)
+
 
     @OptIn(ExperimentalForeignApi::class)
     actual suspend fun createMediaFileFromPath(
@@ -300,17 +239,16 @@ actual class FileManager {
             fileManager.URLsForDirectory(NSCachesDirectory, NSUserDomainMask)
                 .firstOrNull() as? NSURL ?: return null
 
-        val destination =
-            cacheDir.URLByAppendingPathComponent(url.lastPathComponent ?: return null)
+        // Picker providers can return the same filename for different selections.
+        val destination = cacheDir.URLByAppendingPathComponent(
+            "picked-${NSUUID().UUIDString}.${url.pathExtension?.takeIf { it.isNotBlank() } ?: "image"}")
 
         try {
             destination?.let {
-                fileManager.removeItemAtURL(destination, null) // overwrite safety
-                fileManager.copyItemAtURL(url, destination, null)
-                return destination.absoluteString
+                if (fileManager.copyItemAtURL(url, destination, null)) return destination.absoluteString
             }
         } catch (e: Exception) {
-            AppLogger.log("File copy failed: ${e.message}")
+            AppLogger.log("Selected photo could not be copied.")
             return null
         }
 
@@ -324,4 +262,3 @@ actual class FileManager {
 //    file.writeBytes(bytes)
 //    return file
 //}
-

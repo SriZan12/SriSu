@@ -2,103 +2,63 @@ package com.srisu.srisu.features.home.profile.presentation.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.srisu.srisu.baseframework.BaseUIState
-import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
-import com.srisu.srisu.features.auth.data.remote.response.User
-import com.srisu.srisu.core.logger.AppLogger
-import com.srisu.srisu.core.session.SessionUtils
-import com.srisu.srisu.utils.ConnectivityObserver
+import com.srisu.srisu.core.data.remote.ApiError
+import com.srisu.srisu.core.data.remote.NetworkAPIResult
+import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
+import com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
-class ProfileViewModel(
-    private val connectivityObserver: ConnectivityObserver,
-    private val profileRepository: ProfileRepository
-) : ViewModel() {
+class ProfileViewModel(private val repository: ConnectionRepository) : ViewModel() {
+    private val state = MutableStateFlow(ProfileUIState())
+    val profileUIState = state.asStateFlow()
+    private var selection: Pair<Long, String?>? = null
+    private var job: Job? = null
 
-    private val _profileUIState: MutableStateFlow<com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState> =
-        MutableStateFlow(_root_ide_package_.com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState())
-
-    val profileUIState = _profileUIState.asStateFlow()
-
-    private fun <T> showSuccessMessage(data: T? = null, message: String) {
-        this._profileUIState.value =
-            this._profileUIState.value.copy(
-                baseUIState = BaseUIState.Success(
-                    data = data,
-                    message = message
-                )
-            )
+    fun loadProfile(userId: Long, accessToken: String?, refresh: Boolean = false) {
+        val next = userId to accessToken
+        if (selection == next && !refresh) return
+        selection = next
+        retry()
     }
 
-    private fun showErrorMessage(errorType: String?, message: String?) {
-        this._profileUIState.value =
-            this._profileUIState.value.copy(
-                baseUIState = BaseUIState.Error(
-                    errorType = errorType,
-                    message = message
-                )
-            )
-    }
-
-    private fun showLoading() {
-        this._profileUIState.value =
-            this._profileUIState.value.copy(baseUIState = BaseUIState.Loading)
-    }
-
-    fun idleScreen() {
-        this._profileUIState.value = this._profileUIState.value.copy(baseUIState = BaseUIState.Idle)
-    }
-
-    private fun showNoInternetConnection(isOffline: Boolean) {
-        this._profileUIState.value =
-            this._profileUIState.value.copy(baseUIState = BaseUIState.NoInternetConnection(isOffline = isOffline))
-    }
-
-    private fun isInternetAvailable(): Boolean {
-        return connectivityObserver.isConnected.value
-    }
-
-
-    fun setUserProfileData(userProfileData: String?) {
-        userProfileData?.let {
-            val profileData = Json.decodeFromString<User?>(
-                userProfileData
-            )
-
-            AppLogger.log("USER PROFILE DATA: $userProfileData")
-            _profileUIState.value = _profileUIState.value.copy(userProfileData = profileData)
-        }
-    }
-
-    private fun updateIsRequestSent(isRequestSent: Boolean) {
-        _profileUIState.value =
-            _profileUIState.value.copy(isRequestSentSuccessfully = isRequestSent)
-    }
-
-    fun sendSingleConnectionRequest() {
-
-        showLoading()
-        viewModelScope.launch {
-            val myPhoneNumber = SessionUtils().getPhoneNumber()
-            val receiverNumber = profileUIState.value.userProfileData?.phoneNumber
-
-            profileRepository.sendSingleConnectionRequest(
-                senderNumber = myPhoneNumber,
-                receiverNumber = receiverNumber
-            ).onSuccess { response, message ->
-                showSuccessMessage(data = response, message ?: "Request sent successfully")
-                updateIsRequestSent(isRequestSent = true)
-            }.onError { error, errorType ->
-                showErrorMessage(
-                    errorType = errorType.name,
-                    message = error
-                )
+    fun retry() {
+        val (id, token) = selection ?: return
+        job?.cancel()
+        // Never retain another person's details, or private data after a revoked read.
+        state.value = ProfileUIState(isLoading = id > 0)
+        if (id <= 0) return
+        job = viewModelScope.launch {
+            try {
+                when (val result = repository.getPartnerProfile(id, token).result) {
+                    is NetworkAPIResult.Success -> {
+                        ensureActive()
+                        val profile = result.response?.takeIf { it.user.id == id }
+                        state.value = if (profile == null) ProfileUIState(isLoading = false)
+                        else ProfileUIState(
+                            userProfileData = profile.user.copy(
+                                bio = profile.user.bio.takeIf { profile.detailsVisible },
+                                userInterests = profile.user.userInterests.takeIf { profile.detailsVisible },
+                                userPhotos = null, city = null, country = null,
+                            ),
+                            isLoading = false, detailsVisible = profile.detailsVisible,
+                            connectionState = profile.connectionState, requestId = profile.requestId,
+                        )
+                    }
+                    is NetworkAPIResult.Error -> {
+                        ensureActive()
+                        state.value = ProfileUIState(isLoading = false, error = result.failure)
+                    }
+                }
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (_: Exception) {
+                state.value = ProfileUIState(isLoading = false, error = ApiError(
+                    NetworkAPIResult.ErrorType.NETWORK, "network", "Couldn’t load this profile. Try again.", retryable = true))
             }
         }
     }
-
-
 }

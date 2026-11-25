@@ -1,5 +1,6 @@
 package com.srisu.srisu.features.home.connection.presentation.coupleconnection.screen
 
+import com.srisu.srisu.theme.spacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,7 @@ fun LoveRequestSentListScreen(
 ) {
     Box(
         modifier = Modifier.fillMaxSize()
-            .background(color = MaterialTheme.colorScheme.surfaceContainerHighest)
+            .background(color = MaterialTheme.colorScheme.background)
     ) {
         PagedConnectionContent(
             items = sentLoveRequestList,
@@ -61,13 +62,13 @@ private fun LoveRequestSentListContent(
         state = list,
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
+            start = MaterialTheme.spacing.medium,
+            end = MaterialTheme.spacing.medium,
+            top = MaterialTheme.spacing.medium,
             bottom = 80.dp
         ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
 
         items(

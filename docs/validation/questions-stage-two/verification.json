@@ -1,0 +1,24 @@
+{
+  "testDebugUnitTest": {
+    "tests": 535,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "iosSimulatorArm64Test": {
+    "tests": 64,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "opt_in_live_tests_not_exercised": 2
+  },
+  "verified_date": "2026-11-13",
+  "android_installed_component_tests": 5,
+  "android_installed_live_app_tests": 1,
+  "figma_export_available": false,
+  "backend_changed": false,
+  "native_ios_final_keyboard_recheck": "passed: large-text Questions, Chat; standard Plan focus, dismissal and draft restoration",
+  "native_ios_touch_gesture_check": "blocked by Device Hub noWindowsAvailable tool error",
+  "physical_device_and_frame_timing_verified": false,
+  "remote_ci_checked": false
+}

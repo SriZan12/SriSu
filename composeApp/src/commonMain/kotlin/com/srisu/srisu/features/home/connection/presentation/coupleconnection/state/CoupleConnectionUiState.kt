@@ -12,5 +12,16 @@ data class CoupleConnectionUiState(
     val baseUIState: BaseUIState = BaseUIState.Idle,
     var loveRequests: Flow<PagingData<CoupleConnectionRequestResponse.Result>>? = null,
     val handledRequestIds: Set<Long> = emptySet(),
-    val rejectedIds: Set<Long> = emptySet()
+    val rejectedIds: Set<Long> = emptySet(),
+    /** Emitted only after the acceptance response has been confirmed by the server. */
+    val acceptedConnection: ConfirmedCoupleConnection? = null,
+)
+
+data class ConfirmedCoupleConnection(
+    val requestId: Long,
+    val partnerName: String,
+    val partnerPhotoUrl: String? = null,
+    val connectedAt: String? = null,
+    val roomId: String? = null,
+    val coupleId: Long? = null,
 )

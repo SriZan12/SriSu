@@ -1,12 +1,14 @@
 package com.srisu.srisu.features.home.profile.presentation.state
 
 import androidx.compose.runtime.Stable
-import com.srisu.srisu.baseframework.BaseUIState
 import com.srisu.srisu.features.auth.data.remote.response.User
 
 @Stable
 data class ProfileUIState(
     val userProfileData: User? = null,
-    val isRequestSentSuccessfully: Boolean = false,
-    val baseUIState: BaseUIState = BaseUIState.Idle
+    val isLoading: Boolean = true,
+    val error: com.srisu.srisu.core.data.remote.ApiError? = null,
+    val detailsVisible: Boolean = false,
+    val connectionState: String = "unavailable",
+    val requestId: Long? = null,
 )

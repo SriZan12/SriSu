@@ -17,7 +17,7 @@ actual val kVaultPlatformModule = module {
             fileName = SESSION_FILE
         )
     }
-    single<SessionStorage> { AndroidSessionStorage(get()) }
+    single<SessionStorage>(org.koin.core.qualifier.named("platformSessionStorage")) { AndroidSessionStorage(get()) }
 }
 
 private fun createKVaultSafely(context: Context, fileName: String): KVault {
@@ -58,6 +58,6 @@ private fun clearCorruptedStorage(context: Context, fileName: String) {
     } catch (e: Exception) {
         // If clearing fails, log but don't crash
         // You can add your logging here
-        println("Failed to clear corrupted storage: ${e.message}")
+        com.srisu.srisu.core.logger.AppLogger.error("Secure storage cleanup failed", "SessionStorage")
     }
 }

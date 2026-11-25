@@ -5,7 +5,7 @@ import com.srisu.srisu.core.session.SessionStorage
 
 class AndroidSessionStorage(private val kVault: KVault) : SessionStorage {
     override fun saveSession(credentials: String, sessionKey: String) {
-        kVault.set(key = sessionKey, stringValue = credentials)
+        check(kVault.set(key = sessionKey, stringValue = credentials)) { "Secure session storage failed" }
     }
 
     override fun getSession(sessionKey: String): String? {

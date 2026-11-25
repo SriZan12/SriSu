@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-24",
+  "backend_postgres": {
+    "tests": 286,
+    "failures": 0,
+    "skipped": 0
+  },
+  "backend_isolated_sqlite": {
+    "tests": 286,
+    "failures": 0,
+    "skipped": 22
+  },
+  "native_live_flows": [
+    "PlanLiveFlowTest",
+    "ChallengeLiveFlowTest",
+    "SparkRecoveryLiveTest"
+  ],
+  "moments_live_http": "Both creators, multi-photo uploads, replay, privacy, reactions, edits, appreciation and replies passed.",
+  "testDebugUnitTest": {
+    "tests": 358,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "iosSimulatorArm64Test": {
+    "tests": 273,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "environment_guarded_noops": 4,
+    "regular_tests_executed": 269
+  },
+  "final_builds": {
+    "android_compile": "passed",
+    "ios_shared_compile": "passed",
+    "signed_xcode_simulator": "passed",
+    "installed_both_iphone_17": true
+  },
+  "native_rechecks": {
+    "plan_invitation_entry": "passed",
+    "appreciation_reply_caret": "passed",
+    "plan_title_place_caret": "passed",
+    "encrypted_chat_photo": "passed",
+    "microphone_denial": "passed"
+  },
+  "remaining_issue": "Intermittent Matrix secure-room verification timeout; retry recovered; cause not isolated.",
+  "manual_gaps": [
+    "voice recording and playback",
+    "video playback",
+    "background reminder arrival in this pass",
+    "Android device interaction"
+  ],
+  "new_srisu_crash_reports": 0,
+  "cleanup": {
+    "synthetic_api_accounts_deactivated": 3,
+    "django_sessions_revoked": 9,
+    "synthetic_matrix_mapping_revoked": true,
+    "temporary_credential_files_removed": true
+  }
+}

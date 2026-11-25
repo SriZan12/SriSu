@@ -53,7 +53,8 @@ data class MediaFile(
 expect fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?,
-    isMultiple: Boolean
+    isMultiple: Boolean,
+    onError: () -> Unit = {},
 ): GalleryManager
 
 
@@ -64,6 +65,7 @@ expect class GalleryManager(
 }
 
 expect class FileManager() {
+    suspend fun createProfilePhotoFromPath(path: String): MediaFile?
     suspend fun createMediaFileFromPath(path: String?, id: Int?, removed: Boolean?): MediaFile?
 }
 

@@ -25,9 +25,11 @@ actual class GalleryManager actual constructor(private val onLaunch: () -> Unit)
 actual fun rememberGalleryManager(
     onResult: (List<String?>?) -> Unit,
     mediaType: MediaType?,
-    isMultiple: Boolean
+    isMultiple: Boolean,
+    onError: () -> Unit,
 ): GalleryManager {
 
+    val latestError = androidx.compose.runtime.rememberUpdatedState(onError)
     if (!isMultiple) {
         val pickMedia =
             rememberLauncherForActivityResult(
@@ -55,7 +57,7 @@ actual fun rememberGalleryManager(
                             ActivityResultContracts.PickVisualMedia.ImageOnly
                     }
                 )
-                pickMedia.launch(request)
+                try { pickMedia.launch(request) } catch (_: android.content.ActivityNotFoundException) { latestError.value() } catch (_: SecurityException) { latestError.value() }
             })
         }
 
@@ -90,7 +92,7 @@ actual fun rememberGalleryManager(
                             ActivityResultContracts.PickVisualMedia.ImageOnly
                     },
                 )
-                pickMultipleMedia.launch(request)
+                try { pickMultipleMedia.launch(request) } catch (_: android.content.ActivityNotFoundException) { latestError.value() } catch (_: SecurityException) { latestError.value() }
             })
         }
     }
@@ -98,6 +100,8 @@ actual fun rememberGalleryManager(
 
 
 actual class FileManager {
+    actual suspend fun createProfilePhotoFromPath(path: String): MediaFile? = prepareProfilePhoto(path)
+
 
     private val context = AppContext.get()
 

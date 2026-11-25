@@ -1,0 +1,47 @@
+{
+  "testDebugUnitTest": {
+    "tests": 501,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "iosSimulatorArm64Test": {
+    "tests": 68,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "iosLiveFlowCaveat": "Selected suite reports 68: 66 regular tests plus two opt-in tests returning early without environment. HomeLiveFlowTest was separately executed against isolated live Django/PostgreSQL/Synapse and passed; PlanLiveFlowTest remains opt-in/unexecuted.",
+  "backendPostgres": {
+    "tests": 358,
+    "failures": 0,
+    "skipped": 0
+  },
+  "backendSqlite": {
+    "tests": 358,
+    "failures": 0,
+    "skipped": 30
+  },
+  "migrationConsistency": "No changes detected",
+  "themeAudit": "Passed; 96 documented colors, paired M3 contrast, raw token guards",
+  "crossRepositoryVerify": "Passed with explicit consolidated backend override",
+  "nativeFinalBuild": "Passed after final large-text and card contrast corrections",
+  "productionDeployment": false,
+  "iosInstalledApp": "Signed Debug Xcode build/install passed on SriSu Couple Chat Evaluation, iOS 26.5. Real mock-OTP login, Home/chat return, draft conflict, keyboard, Plan form scroll and largest Dynamic Type cold-launch layout checked.",
+  "liveHomeIntegration": {
+    "tests": 1,
+    "failures": 0,
+    "evidence": "live-integration.json",
+    "accounts": 3,
+    "matrixClients": 2,
+    "environment": "isolated loopback; no production services"
+  },
+  "swiftBuildFix": "SriSuNotifications InstallationRequest now explicitly supplies capabilities: []; Kotlin-only compilation did not cover this Swift call.",
+  "androidInstalledInstrumentation": {
+    "device": "SriSuHomeQA, Pixel 4a AVD, Android 15 / API 35 ARM64",
+    "tests": 4,
+    "failures": 0,
+    "skipped": 0,
+    "scope": "Installed debug APK/ComponentActivity: native Home rendering, independent actions, status-sheet Back, 200% text scrolling, unpaired and failed states. Synthetic UI state; no live Android account/keyboard journey."
+  }
+}

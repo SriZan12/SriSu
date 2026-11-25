@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-11",
+  "scope": "Home visual refinement only; no backend changes",
+  "android_full_suite": {
+    "tests": 502,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "final_android_home_suite": {
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_ios_home_suite": {
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "ios_simulator": "SriSu Couple Chat Evaluation, iOS 26.5",
+  "android_runtime": "Robolectric API 35 native graphics; no fresh installed-device run",
+  "source_baseline_frontend": "8cb5e117f7f4a78712ae679d626fd337b5bb4bca",
+  "backend_unchanged": "3e276ad6a38b1afdd955d760be4519628bd1b3f7",
+  "captures": {
+    "android-large-bottom.png": [
+      640,
+      1400
+    ],
+    "android-message-1.0-430-top.png": [
+      860,
+      1864
+    ],
+    "android-quiet-1.0-390-top.png": [
+      780,
+      1688
+    ],
+    "android-quiet-2.0-320-top.png": [
+      640,
+      1400
+    ],
+    "android-spark-1.0-320-top.png": [
+      640,
+      1400
+    ],
+    "android-spark-1.0-390-top.png": [
+      780,
+      1688
+    ],
+    "android-spark-bottom.png": [
+      780,
+      1688
+    ],
+    "android-unpaired-1.0-390-top.png": [
+      780,
+      1688
+    ],
+    "ios-message-430-1.0.png": [
+      860,
+      1864
+    ],
+    "ios-quiet-320-2.0.png": [
+      640,
+      1400
+    ],
+    "ios-quiet-390-1.0.png": [
+      780,
+      1688
+    ],
+    "ios-spark-320-1.0.png": [
+      640,
+      1400
+    ],
+    "ios-spark-390-1.0.png": [
+      780,
+      1688
+    ],
+    "ios-unpaired-390-1.0.png": [
+      780,
+      1688
+    ]
+  }
+}

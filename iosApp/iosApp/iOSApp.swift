@@ -3,14 +3,30 @@ import ComposeApp
 
 @main
 struct iOSApp: App {
+    @UIApplicationDelegateAdaptor(SriSuNotifications.self) var notifications
     
     init(){
+        NativePlanRuntime.shared.install(value: IosPlanDevice())
+        MomentVideoPickerRuntime.shared.install { IosMomentVideoPicker() }
+        MomentVideoPlayerRuntime.shared.install { source, callback in IosMomentVideo(source:source,callback:{ event in _ = callback(event) }) }
+        NativeChatMediaRuntime.shared.installFactory { IosChatMedia() }
+        NativeChatVideoRuntime.shared.install { native in (native as! IosChatMedia).videoViewController() }
         Platform_iosKt.debugBuild()
     }
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView().onOpenURL { url in
+                #if DEBUG
+                if url.scheme == "srisu", url.host == "diagnostics-test",
+                   UserDefaults.standard.bool(forKey: "srisu.diagnostics") {
+                    if url.path == "/fatal" { fatalError("SriSu controlled test crash") }
+                    if url.path == "/nonfatal" { CrashReporter.shared.report(code:.testNonfatal) }
+                    return
+                }
+                #endif
+                PlatformEntry.shared.openUrl(url: url.absoluteString)
+            }
         }
     }
 }

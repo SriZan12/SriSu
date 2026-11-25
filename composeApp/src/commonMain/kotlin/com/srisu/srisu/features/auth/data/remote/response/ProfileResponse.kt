@@ -7,12 +7,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ProfileResponse(
     @SerialName("user")
-    val user: User? = null
+    val user: User? = null,
+    val progress: ProfileProgress? = null
 ) {
     @Serializable
     data class User(
         @SerialName("id")
         val id: Long? = null,
+        @SerialName("share_partner_details")
+        val sharePartnerDetails: Boolean? = null,
         @SerialName("bio")
         val bio: String? = null,
         @SerialName("city")
@@ -45,3 +48,22 @@ data class ProfileResponse(
         val zodiacSign: String? = null
     )
 }
+
+@Serializable
+data class ProfileProgress(
+    @SerialName("phone_verified") val phoneVerified: Boolean,
+    @SerialName("profile_complete") val profileComplete: Boolean,
+    @SerialName("next_step") val nextStep: String,
+    @SerialName("photo_skipped") val photoSkipped: Boolean,
+    @SerialName("couple_id") val coupleId: Long? = null,
+    val membership: String,
+)
+
+@Serializable
+data class OtpChallenge(
+    @SerialName("challenge_id") val challengeId: String,
+    @SerialName("expires_at") val expiresAt: String,
+    @SerialName("resend_at") val resendAt: String,
+    @SerialName("server_time") val serverTime: String,
+    @SerialName("retry_after_seconds") val retryAfterSeconds: Long,
+)

@@ -26,6 +26,8 @@ data class ProfileUpdateDTO(
     val country: String? = null,
     @SerialName("city")
     val city: String? = null,
+    @SerialName("share_partner_details")
+    val sharePartnerDetails: Boolean? = null,
     @SerialName("bio")
     val bio: String? = null,
     @SerialName("user_interests")

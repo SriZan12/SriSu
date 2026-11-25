@@ -1,295 +1,153 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import com.srisu.srisu.core.identity.partnerDisplayName
+
+import com.srisu.srisu.components.NavigationBackButton
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import com.srisu.srisu.baseframework.BaseUIState
-import com.srisu.srisu.components.ErrorDialog
-import com.srisu.srisu.components.LoadingScrim
-import com.srisu.srisu.components.OfflineBottomSheetCompo
-import com.srisu.srisu.components.ReadMoreText
-import com.srisu.srisu.components.RequestSentDialog
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
+import com.srisu.srisu.components.SriSuButton
+import com.srisu.srisu.components.SriSuButtonVariant
 import com.srisu.srisu.features.auth.data.remote.response.User
-import com.srisu.srisu.utils.DateTimeUtils
-import com.srisu.srisu.utils.ZodiacUtils
-import com.srisu.srisu.utils.isInternetAvailable
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState
+import com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel
+import com.srisu.srisu.theme.PartnerLinkTokens
+import com.srisu.srisu.theme.SriSuPartnerLinkTypography
+import com.srisu.srisu.theme.pill
+import com.srisu.srisu.theme.spacing
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import srisu.composeapp.generated.resources.Res
-import srisu.composeapp.generated.resources.image_placeholder
-import srisu.composeapp.generated.resources.leo
-import kotlin.random.Random
+import srisu.composeapp.generated.resources.*
 
 @Composable
 fun ProfileScreen(
-    profileViewModel: com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel = koinViewModel<com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel>()
+    profileViewModel: ProfileViewModel = koinViewModel(), onBack: () -> Unit,
+    actionBusy: Boolean = false, canConnect: Boolean = true, actionError: String? = null,
+    onAction: (User, String) -> Unit = { _, _ -> }, onRetryAction: () -> Unit = {},
 ) {
-
-    val profileUIState by profileViewModel.profileUIState.collectAsStateWithLifecycle()
-
-
-    _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.HandleUiStates(
-        profileViewModel = profileViewModel,
-        profileUIStates = profileUIState
-    )
-
-    _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.ProfilePictureContent(
-        profileUIState = profileUIState,
-    )
-
-}
-@Composable
-private fun HandleUiStates(
-    profileViewModel: com.srisu.srisu.features.home.profile.presentation.vm.ProfileViewModel,
-    profileUIStates: com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState
-) {
-
-    val isConnected = isInternetAvailable()
-    var showBottomSheet by remember { mutableStateOf(!isConnected) }
-
-    LaunchedEffect(isConnected) {
-        showBottomSheet = !isConnected
-    }
-
-    when (val baseUIState = profileUIStates.baseUIState) {
-        is BaseUIState.Error -> {
-            ErrorDialog(
-                title = baseUIState.errorType,
-                errorMessage = baseUIState.message,
-                show = true,
-                onDismiss = {
-                    profileViewModel.idleScreen()
-                },
-            )
-        }
-
-        is BaseUIState.Loading -> {
-            LoadingScrim(
-                onDismissRequest = {
-                    profileViewModel.idleScreen()
-                }
-            )
-        }
-
-        is BaseUIState.Success<*> -> {
-            RequestSentDialog(
-                successMessage = baseUIState.message,
-                onDismiss = {
-                    profileViewModel.idleScreen()
-                },
-            )
-        }
-
-        is BaseUIState.NoInternetConnection -> {
-            showBottomSheet = baseUIState.isOffline
-        }
-
-        is BaseUIState.Idle -> {
-            Unit
-        }
-    }
-
-    if (showBottomSheet) {
-        OfflineBottomSheetCompo(
-            show = showBottomSheet,
-            onDismiss = {
-                showBottomSheet = false
-                profileViewModel.idleScreen()
-            }
-        )
-    }
+    val state by profileViewModel.profileUIState.collectAsStateWithLifecycle()
+    PartnerProfileContent(state, onBack, profileViewModel::retry, actionBusy, canConnect,
+        actionError, onAction, onRetryAction)
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun ProfilePictureContent(
-    profileUIState: com.srisu.srisu.features.home.profile.presentation.state.ProfileUIState,
+internal fun PartnerProfileContent(
+    state: ProfileUIState, onBack: () -> Unit, onRetry: () -> Unit = {},
+    actionBusy: Boolean = false, canConnect: Boolean = true, actionError: String? = null,
+    onAction: (User, String) -> Unit = { _, _ -> }, onRetryAction: () -> Unit = {},
 ) {
-
-    val userProfileData = profileUIState.userProfileData
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .verticalScroll(rememberScrollState())
-            .navigationBarsPadding()
-    ) {
-        _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.ProfilePictureCompo(
-            profileUrl = userProfileData?.profilePhoto
-        )
-
-        _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.UserInfo(
-            name = userProfileData?.fullName,
-            age = DateTimeUtils.calculateAge(userProfileData?.dob),
-            zodiacSign = userProfileData?.zodiacSign,
-            city = userProfileData?.city,
-            country = userProfileData?.country
-        )
-
-        //Interest
-        val interests = userProfileData?.userInterests
-        _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.InterestCompo(
-            interests = interests
-        )
-
-        _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.AboutCompo(
-            bio = userProfileData?.bio
-        )
-
-        // Gallery
-        Text(
-            "Gallery",
-            fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.GallerySection(
-            photos = userProfileData?.userPhotos
-        )
-
-    }
-}
-
-@Preview
-@Composable
-fun ProfilePictureCompo(
-    profileUrl: String? = null,
-) {
-    Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
-        if (profileUrl == null) {
-            Image(
-                painter = painterResource(Res.drawable.image_placeholder),
-                contentDescription = "profile placeholder",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(500.dp)
-            )
-        } else {
-
-            AsyncImage(
-                model = profileUrl,
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop, // fills and crops extra
-                alignment = Alignment.TopCenter,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(500.dp)
-            )
-
-        }
-    }
-}
-
-@Composable
-fun UserInfo(
-    name: String?,
-    age: Int?,
-    zodiacSign: String?,
-    city: String?,
-    country: String?
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = name ?: "",
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Text("(${age})", style = MaterialTheme.typography.titleMedium)
-
-        val zodiacSignImage = ZodiacUtils.getZodiacSignImage(zodiacSign?.trim() ?: "")
-        Image(
-            painter = painterResource(resource = zodiacSignImage ?: Res.drawable.leo),
-            contentDescription = "zodiac sign",
-            modifier = Modifier.size(32.dp)
-        )
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(start = 16.dp)
-    ) {
-        Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = Color.Black)
-        Text(
-            "${city ?: "Some City"}, ${country ?: "Some Country"} ",
-            style = MaterialTheme.typography.titleSmall
-        )
-    }
-}
-
-@Composable
-fun InterestCompo(interests: List<User.UserInterest?>?) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)
-    ) {
-        if (!interests.isNullOrEmpty()) {
-
-            Text(
-                "Interest",
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(start = 16.dp)
-            )
-
-            LazyRow(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
-            ) {
-                items(interests) { interest ->
-                    interest?.let {
-                        if (!interest.name.isNullOrEmpty()) {
-                            _root_ide_package_.com.srisu.srisu.features.home.profile.presentation.screen.InterestChip(
-                                label = interest.name
-                            )
+    MaterialTheme(typography = SriSuPartnerLinkTypography()) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text(stringResource(Res.string.partner_preview_title), style = MaterialTheme.typography.titleMedium) },
+                    navigationIcon = { NavigationBackButton(onBack) },
+                )
+            },
+        ) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding), contentAlignment = Alignment.TopCenter) {
+                LazyColumn(
+                    Modifier.widthIn(max = PartnerLinkTokens.contentMaxWidth).fillMaxSize(),
+                    contentPadding = PaddingValues(MaterialTheme.spacing.gutter),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large),
+                ) {
+                    val user = state.userProfileData
+                    when {
+                        state.isLoading -> item {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
+                                CircularProgressIndicator(Modifier.size(MaterialTheme.spacing.chromeIcon))
+                                Text(stringResource(Res.string.partner_preview_loading), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        user == null -> item {
+                            val kind = state.error?.kind
+                            val unavailable = kind == null || kind == com.srisu.srisu.core.data.remote.NetworkAPIResult.ErrorType.NOT_FOUND ||
+                                kind == com.srisu.srisu.core.data.remote.NetworkAPIResult.ErrorType.FORBIDDEN
+                            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
+                                Text(stringResource(if (unavailable) Res.string.partner_preview_unavailable else Res.string.partner_profile_load_error),
+                                    style = MaterialTheme.typography.titleLarge)
+                                Text(if (unavailable) stringResource(Res.string.partner_preview_unavailable_body)
+                                    else state.error?.message.orEmpty(), style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (!unavailable && kind != com.srisu.srisu.core.data.remote.NetworkAPIResult.ErrorType.UNAUTHORIZED)
+                                    SriSuButton(stringResource(Res.string.partner_preview_retry), onRetry, variant = SriSuButtonVariant.Outline)
+                                SriSuButton(stringResource(Res.string.partner_preview_back), onBack, variant = SriSuButtonVariant.Outline)
+                            }
+                        }
+                        else -> {
+                            item(key = "identity") { ProfileIdentity(user) }
+                            item(key = "connection") {
+                                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+                                    val label = when (state.connectionState) {
+                                        "available" -> Res.string.partner_profile_connect
+                                        "outgoing" -> Res.string.partner_profile_request_sent
+                                        "incoming" -> Res.string.partner_profile_view_invitation
+                                        "connected" -> Res.string.partner_profile_connected
+                                        else -> null
+                                    }
+                                    label?.let {
+                                        SriSuButton(stringResource(if (actionBusy) Res.string.partner_profile_working else it),
+                                            onClick = { onAction(user, state.connectionState) }, modifier = Modifier.fillMaxWidth(),
+                                            enabled = !actionBusy && (state.connectionState != "available" || canConnect))
+                                    }
+                                    if (state.connectionState == "available") Text(stringResource(Res.string.partner_profile_connect_hint),
+                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (state.connectionState == "unavailable") Text(stringResource(Res.string.partner_profile_connection_unavailable),
+                                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    actionError?.let { message ->
+                                        Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                                        TextButton(onClick = onRetryAction, enabled = !actionBusy) { Text(stringResource(Res.string.partner_profile_check_invitation)) }
+                                    }
+                                }
+                            }
+                            val bio = user.bio?.trim()?.takeIf { it.isNotEmpty() && state.detailsVisible }
+                            val interests = if (state.detailsVisible) user.userInterests.orEmpty().filterNotNull().filter { it.removed != true }
+                                .mapNotNull { it.name?.trim()?.takeIf(String::isNotEmpty) }.distinct() else emptyList()
+                            if (bio != null) item(key = "about") {
+                                ProfileSection(stringResource(Res.string.partner_preview_about)) {
+                                    Text(bio, style = MaterialTheme.typography.bodyLarge)
+                                }
+                            }
+                            if (interests.isNotEmpty()) item(key = "interests") {
+                                ProfileSection(stringResource(Res.string.partner_preview_interests)) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+                                        interests.forEach { interest ->
+                                            Surface(shape = MaterialTheme.shapes.pill, color = MaterialTheme.colorScheme.surfaceContainer) {
+                                                Text(interest, style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.compact, vertical = MaterialTheme.spacing.small))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (!state.detailsVisible || (bio == null && interests.isEmpty())) item(key = "details_notice") {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                Text(stringResource(if (state.detailsVisible) Res.string.partner_profile_no_details else Res.string.partner_profile_private_details),
+                                    modifier = Modifier.padding(top = MaterialTheme.spacing.medium),
+                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                 }
@@ -299,91 +157,69 @@ fun InterestCompo(interests: List<User.UserInterest?>?) {
 }
 
 @Composable
-private fun InterestChip(label: String, backgroundColor: Color = Color.LightGray) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier
-            .padding(end = 8.dp),
-    ) {
-        Text(
-            text = label,
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                .basicMarquee(iterations = 10),
-            style = MaterialTheme.typography.labelMedium
-        )
-    }
-}
+private fun ProfileIdentity(user: User) {
+    val realName = user.fullName?.trim()?.takeIf(String::isNotEmpty)
+        ?: user.username?.trim()?.takeIf(String::isNotEmpty)
+        ?: stringResource(Res.string.partner_preview_person)
+    val name = partnerDisplayName(user.id, realName)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stacked = maxWidth < PartnerLinkTokens.previewStackWidth || LocalDensity.current.fontScale > 1.3f
+        val photo: @Composable () -> Unit = {
+            ProfilePhoto(user.profilePhoto, stringResource(Res.string.partner_preview_named_photo, name),
+                Modifier.size(PartnerLinkTokens.previewAvatar).clip(CircleShape))
+        }
+        val identity: @Composable () -> Unit = {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)) {
+                Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                if (name != realName) Text(realName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                user.username?.trim()?.takeIf { it.isNotEmpty() && it != name }?.let {
+                    Text("@${it.removePrefix("@")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
-fun getRandomPastelColor(): Color {
-    val base = 200 // to ensure soft colors (pastel-ish)
-    val red = base + Random.nextInt(0, 56)
-    val green = base + Random.nextInt(0, 56)
-    val blue = base + Random.nextInt(0, 56)
-    return Color(red, green, blue)
-}
-
-@Composable
-private fun AboutCompo(
-    bio: String?
-) {
-    // About Section
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    ) {
-        Text(
-            "About",
-            fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        ReadMoreText(
-            modifier = Modifier,
-            text = bio ?: "No bio",
-            style = MaterialTheme.typography.bodyMedium,
-            expandableTextStyle = MaterialTheme.typography.titleMedium
-        )
-
-    }
-}
-
-@Composable
-fun GallerySection(
-    photos: List<User.UserPhoto?>?
-) {
-
-    photos?.let {
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            modifier = Modifier,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(items = photos) { photoItem ->
-                AsyncImage(
-                    modifier = Modifier
-                        .size(200.dp)
-                        .aspectRatio(1f)
-                        .clip(shape = RoundedCornerShape(8.dp)),
-                    model = photoItem,
-                    contentDescription = "user_photos",
-                    contentScale = ContentScale.Crop
-                )
             }
         }
-
-        /* Text(
-             "See all",
-             color = Color(0xFFFFA500),
-             textAlign = TextAlign.Center,
-             modifier = Modifier
-                 .fillMaxWidth()
-                 .padding(8.dp)
-         )*/
+        if (stacked) Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) { photo(); identity() }
+        else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
+            photo()
+            Box(Modifier.weight(1f)) { identity() }
+        }
     }
 }
 
+@Composable
+private fun ProfileSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+        content()
+    }
+}
+
+@Composable
+private fun ProfilePhoto(url: String?, description: String, modifier: Modifier, portrait: Boolean = true) {
+    var retry by remember(url) { mutableIntStateOf(0) }
+    Surface(modifier, color = MaterialTheme.colorScheme.surfaceContainer) {
+        if (url.isNullOrBlank()) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(if (portrait) Icons.Default.Person else Icons.Default.Photo,
+                    stringResource(Res.string.partner_preview_no_photo), Modifier.size(MaterialTheme.spacing.extraLarge),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else key(url, retry) {
+            SubcomposeAsyncImage(model = url, contentDescription = description,
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                loading = {
+                    Box(contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(MaterialTheme.spacing.icon))
+                    }
+                },
+                error = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Icon(Icons.Default.Photo, stringResource(Res.string.partner_preview_photo_error), Modifier.size(MaterialTheme.spacing.icon))
+                        TextButton(onClick = { retry++ }) { Text(stringResource(Res.string.partner_preview_retry), style = MaterialTheme.typography.labelMedium) }
+                    }
+                },
+                success = { SubcomposeAsyncImageContent() },
+            )
+        }
+    }
+}

@@ -1,7 +1,17 @@
 package com.srisu.srisu.features.home.connection.data.remote.mappers
 
 import com.srisu.srisu.features.auth.data.remote.response.User
+import com.srisu.srisu.features.chat.data.remote.response.FindYourPartnerResponse
 import com.srisu.srisu.features.home.connection.data.remote.response.CoupleConnectionRequestResponse
+
+/** Match the backend's minimal, pre-link PartnerDiscoverySerializer projection. */
+fun FindYourPartnerResponse.toUser(): User = User(
+    id = id?.toLong(),
+    fullName = fullName,
+    username = username,
+    phoneNumber = phoneNumber,
+    profilePhoto = profilePhoto,
+)
 
 fun CoupleConnectionRequestResponse.Result.Receiver.toUser(): User {
     return User(

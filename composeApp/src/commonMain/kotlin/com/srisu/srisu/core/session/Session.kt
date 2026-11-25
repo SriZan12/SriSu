@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class Session(
+    val refreshRequestId: String? = null,
     @SerialName("access")
     val access: String? = null,
     @SerialName("refresh")
@@ -62,6 +63,8 @@ data class Session(
     val userInterests: List<UserInterest?>? = null,
     @SerialName("user_photos")
     val userPhotos: List<UserPhoto?>? = null,
+    @SerialName("share_partner_details")
+    val sharePartnerDetails: Boolean? = null,
     @SerialName("bio")
     val bio: String? = null,
 )
@@ -72,6 +75,7 @@ fun User.toSession(access: String?, refresh: String?,id: Long?): Session {
         refresh = refresh,
         dob = this.dob,
         bio = this.bio,
+        sharePartnerDetails = this.sharePartnerDetails,
         fullName = this.fullName,
         gender = this.gender,
         id = id,
@@ -103,6 +107,7 @@ fun setUserWholeCredentials(
         id = userInfo?.id,
         dob = userInfo?.dob,
         bio = userInfo?.bio,
+        sharePartnerDetails = userInfo?.sharePartnerDetails,
         fullName = userInfo?.fullName,
         gender = userInfo?.gender,
         isPhoneVerified = userInfo?.isPhoneVerified,

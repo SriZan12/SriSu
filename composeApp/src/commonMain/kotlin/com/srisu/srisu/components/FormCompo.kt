@@ -1,5 +1,8 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
+import androidx.compose.ui.graphics.Shape
+import com.srisu.srisu.theme.field
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +12,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +41,7 @@ fun FormFieldCompo(
     imeAction: ImeAction = ImeAction.None,
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         Text(
             text = label,
             style = labelStyle,
@@ -57,14 +59,14 @@ fun FormFieldCompo(
                 .height(textFieldHeight)
                 .background(
                     color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.field
                 )
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.field
                 )
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = MaterialTheme.spacing.compact),
             keyboardOptions = KeyboardOptions(
                 keyboardType = keyboardType,
                 imeAction = imeAction
@@ -102,7 +104,7 @@ fun TextAreaCompo(
     maxLines: Int = 10,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
     borderColor: Color = MaterialTheme.colorScheme.outline,
-    cornerRadius: Dp = 12.dp,
+    shape: Shape = MaterialTheme.shapes.field,
     padding: Dp = 12.dp,
     imeAction: ImeAction = ImeAction.None,
     keyboardType: KeyboardType = KeyboardType.Text
@@ -110,7 +112,7 @@ fun TextAreaCompo(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
             text = label,
@@ -128,12 +130,12 @@ fun TextAreaCompo(
                 .fillMaxWidth()
                 .background(
                     color = backgroundColor,
-                    shape = RoundedCornerShape(cornerRadius)
+                    shape = shape
                 )
                 .border(
                     width = 1.dp,
                     color = borderColor,
-                    shape = RoundedCornerShape(cornerRadius)
+                    shape = shape
                 )
                 .padding(padding),
             keyboardOptions = KeyboardOptions(

@@ -1,0 +1,2426 @@
+diff --git a/composeApp/build.gradle.kts b/composeApp/build.gradle.kts
+index 18d2b52..23b9631 100644
+--- a/composeApp/build.gradle.kts
++++ b/composeApp/build.gradle.kts
+@@ -173,6 +173,12 @@ kotlin {
+             implementation("androidx.compose.ui:ui-test-junit4:1.9.0")
+         }
+ 
++        iosTest.dependencies {
++            // Test-only: renders chat states on the iOS simulator for screenshot evidence.
++            // Matches the Compose UI version resolved transitively for iOS (1.10.2), not the plugin's 1.8.2.
++            implementation("org.jetbrains.compose.ui:ui-test:1.10.2")
++        }
++
+         iosMain.dependencies {
+             implementation(libs.kotlin.test)
+             implementation(libs.ktor.client.darwin)
+diff --git a/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/features/chat/SecureChatRenderTest.kt b/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/features/chat/SecureChatRenderTest.kt
+new file mode 100644
+index 0000000..3ffbc5d
+--- /dev/null
++++ b/composeApp/src/androidUnitTest/kotlin/com/srisu/srisu/features/chat/SecureChatRenderTest.kt
+@@ -0,0 +1,99 @@
++package com.srisu.srisu.features.chat
++
++import android.graphics.Bitmap
++import androidx.compose.runtime.CompositionLocalProvider
++import androidx.compose.ui.platform.LocalDensity
++import androidx.compose.ui.test.isRoot
++import androidx.compose.ui.test.performScrollToIndex
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.compose.ui.unit.Density
++import androidx.lifecycle.ViewModelStore
++import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
++import com.srisu.srisu.features.chat.matrix.MatrixChatRoomState
++import com.srisu.srisu.features.chat.matrix.presentation.SecureChatScreen
++import com.srisu.srisu.features.chat.matrix.presentation.SecureChatViewModel
++import com.srisu.srisu.theme.SriSuTheme
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++import org.robolectric.annotation.Config
++import org.robolectric.annotation.GraphicsMode
++import java.io.File
++import java.util.TimeZone
++
++/**
++ * Deterministic screenshot renders of the secure chat screen. Images are written to
++ * build/reports/chat-ui-revist and are review evidence, not golden-image assertions.
++ */
++@RunWith(RobolectricTestRunner::class)
++@Config(sdk = [35], qualifiers = "w390dp-h844dp-xhdpi")
++@GraphicsMode(GraphicsMode.Mode.NATIVE)
++class SecureChatRenderTest {
++    @get:Rule val compose = createAndroidComposeRule<androidx.activity.ComponentActivity>()
++
++    private fun render(
++        name: String,
++        state: MatrixChatRoomState,
++        dark: Boolean = false,
++        fontScale: Float = 1f,
++        draft: String = "",
++        qualifiers: String? = null,
++        partner: ChatPartnerIdentity? = ChatFixtures.partner,
++        interact: () -> Unit = {},
++    ) {
++        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Kathmandu"))
++        qualifiers?.let(RuntimeEnvironment::setQualifiers)
++        val repository = ChatFixtureRepository(state)
++        val store = ViewModelStore()
++        val vm = SecureChatViewModel(repository, FixedPartnerSource(partner))
++        store.put("chat", vm)
++        vm.openRoom(state.roomId)
++        if (draft.isNotEmpty()) vm.updateMessageInput(draft)
++        try {
++            compose.setContent {
++                CompositionLocalProvider(androidx.compose.ui.platform.LocalInspectionMode provides true) {
++                    org.jetbrains.compose.resources.PreviewContextConfigurationEffect()
++                }
++                val density = LocalDensity.current
++                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
++                    SriSuTheme(darkTheme = dark) { SecureChatScreen(viewModel = vm, onBack = {}) }
++                }
++            }
++            compose.waitForIdle()
++            interact()
++            compose.waitForIdle()
++            val output = File("build/reports/chat-ui-revist/$name.png").apply { parentFile?.mkdirs() }
++            check(compose.onAllNodes(isRoot()).fetchSemanticsNodes().isNotEmpty())
++            compose.runOnIdle {
++                val view = compose.activity.window.decorView
++                val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
++                view.draw(android.graphics.Canvas(bitmap))
++                output.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
++                bitmap.recycle()
++            }
++        } finally {
++            compose.runOnIdle { store.clear() }
++        }
++    }
++
++    @Test fun empty() = render("01-empty", ChatFixtures.empty())
++    @Test fun conversation() = render("02-conversation", ChatFixtures.conversation())
++    @Test fun longAndGrouped() = render("03-long-grouped", ChatFixtures.longAndGrouped())
++    @Test fun deliveryStates() = render("10-pending-failed-unavailable", ChatFixtures.deliveryStates())
++    @Test fun multilineDraft() = render("09-multiline-draft", ChatFixtures.conversation(), draft = ChatFixtures.MULTILINE_DRAFT)
++    @Test fun offline() = render("11-offline", ChatFixtures.offline())
++    @Test fun loading() = render("11-loading", ChatFixtures.loading())
++    @Test fun error() = render("11-error", ChatFixtures.error())
++    @Test fun unavailableRoom() = render("11-room-unavailable", ChatFixtures.unavailableRoom())
++    @Test fun smallScreen() = render("12-small-screen", ChatFixtures.longAndGrouped(), qualifiers = "w320dp-h568dp-xhdpi")
++    @Test fun largeText() = render("12-large-text", ChatFixtures.conversation(), fontScale = 1.6f)
++    @Test fun dark() = render("13-dark", ChatFixtures.conversation(), dark = true)
++    @Test fun noPartnerIdentity() = render("02-conversation-no-partner-identity", ChatFixtures.conversation(), partner = null)
++    @Test fun scrolledHistory() = render("11-scrolled-history-jump", ChatFixtures.longHistory()) {
++        compose.onNode(androidx.compose.ui.test.hasScrollToIndexAction()).performScrollToIndex(25)
++    }
++    @Test fun darkEmpty() = render("13-dark-empty", ChatFixtures.empty(), dark = true)
++    @Test fun darkDeliveryStates() = render("13-dark-delivery-states", ChatFixtures.deliveryStates(), dark = true)
++}
+diff --git a/composeApp/src/commonMain/composeResources/drawable/chat_offline.xml b/composeApp/src/commonMain/composeResources/drawable/chat_offline.xml
+new file mode 100644
+index 0000000..d852303
+--- /dev/null
++++ b/composeApp/src/commonMain/composeResources/drawable/chat_offline.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Material Icons (Apache License 2.0), https://github.com/google/material-design-icons -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:fillColor="#FF000000"
++        android:pathData="M24,15c0,-2.64 -2.05,-4.78 -4.65,-4.96C18.67,6.59 15.64,4 12,4c-1.33,0 -2.57,0.36 -3.65,0.97l1.49,1.49C10.51,6.17 11.23,6 12,6c3.04,0 5.5,2.46 5.5,5.5v0.5H19c1.66,0 3,1.34 3,3 0,0.99 -0.48,1.85 -1.21,2.4l1.41,1.41c1.09,-0.92 1.8,-2.27 1.8,-3.81zM4.41,3.86L3,5.27l2.77,2.77h-0.42C2.34,8.36 0,10.91 0,14c0,3.31 2.69,6 6,6h11.73l2,2 1.41,-1.41L4.41,3.86zM6,18c-2.21,0 -4,-1.79 -4,-4s1.79,-4 4,-4h1.73l8,8H6z" />
++</vector>
+diff --git a/composeApp/src/commonMain/composeResources/drawable/chat_status_failed.xml b/composeApp/src/commonMain/composeResources/drawable/chat_status_failed.xml
+new file mode 100644
+index 0000000..0258ff7
+--- /dev/null
++++ b/composeApp/src/commonMain/composeResources/drawable/chat_status_failed.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Material Icons (Apache License 2.0), https://github.com/google/material-design-icons -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:fillColor="#FF000000"
++        android:pathData="M11,15h2v2h-2zM11,7h2v6h-2zM11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z" />
++</vector>
+diff --git a/composeApp/src/commonMain/composeResources/drawable/chat_status_pending.xml b/composeApp/src/commonMain/composeResources/drawable/chat_status_pending.xml
+new file mode 100644
+index 0000000..b57be5c
+--- /dev/null
++++ b/composeApp/src/commonMain/composeResources/drawable/chat_status_pending.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Material Icons (Apache License 2.0), https://github.com/google/material-design-icons -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:fillColor="#FF000000"
++        android:pathData="M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8zM12.5,7H11v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z" />
++</vector>
+diff --git a/composeApp/src/commonMain/composeResources/values/matrix_chat_strings.xml b/composeApp/src/commonMain/composeResources/values/matrix_chat_strings.xml
+index 73341cc..2525fd0 100644
+--- a/composeApp/src/commonMain/composeResources/values/matrix_chat_strings.xml
++++ b/composeApp/src/commonMain/composeResources/values/matrix_chat_strings.xml
+@@ -6,11 +6,28 @@
+     <string name="chat_secure_not_available">This encrypted conversation is not available right now.</string>
+     <string name="chat_secure_error">Secure messaging could not be loaded.</string>
+     <string name="chat_secure_retry">Retry</string>
+-    <string name="chat_secure_empty">Your encrypted conversation starts here.</string>
+     <string name="chat_secure_message_hint">Message your partner</string>
+     <string name="chat_secure_send">Send</string>
+     <string name="chat_secure_sending">Sending…</string>
+-    <string name="chat_secure_failed">Not sent</string>
+     <string name="chat_secure_content_unavailable">Encrypted message unavailable</string>
++    <string name="chat_secure_encrypted">End-to-end encrypted</string>
++    <string name="chat_secure_empty_title">Your first message.</string>
++    <string name="chat_secure_empty_body">Only you two are in here. Start with anything.</string>
++    <string name="chat_secure_starter_smile">What made you smile today?</string>
++    <string name="chat_secure_starter_dinner">Dinner this week?</string>
++    <string name="chat_secure_starter_song">Send me a song you love</string>
++    <string name="chat_secure_starters_label">Conversation starters. Tapping one adds it to your message.</string>
++    <string name="chat_secure_today">Today</string>
++    <string name="chat_secure_yesterday">Yesterday</string>
++    <string name="chat_secure_status_sending">Sending</string>
++    <string name="chat_secure_status_sent">Sent</string>
++    <string name="chat_secure_status_failed">Not sent</string>
++    <string name="chat_secure_tap_to_retry">Not sent · Tap to retry</string>
++    <string name="chat_secure_jump_latest">Jump to latest messages</string>
++    <string name="chat_secure_new_messages">%1$d new</string>
++    <string name="chat_secure_error_title">Couldn’t open your chat</string>
++    <string name="chat_secure_unavailable_title">Chat unavailable</string>
++    <string name="chat_secure_message_partner">Message %1$s</string>
++    <string name="chat_secure_received_at">%1$s, %2$s</string>
+     <string name="partner_open_conversation">Open conversation</string>
+ </resources>
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/MainModule.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/MainModule.kt
+index 18e2e46..a7494b3 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/MainModule.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/MainModule.kt
+@@ -39,7 +39,7 @@ val mainModule = module {
+     }
+ 
+     viewModel {
+-        SecureChatViewModel(repository = get())
++        SecureChatViewModel(repository = get(), partners = get())
+     }
+ 
+     viewModel { MatrixChatEntryViewModel(resolver = get(), sessions = get()) }
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/NetworkModule.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/NetworkModule.kt
+index a8bfcbe..cdf244c 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/NetworkModule.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/di/NetworkModule.kt
+@@ -8,6 +8,8 @@ import com.srisu.srisu.core.data.remote.HttpClientFactory
+ import com.srisu.srisu.features.auth.domain.repository.AuthRepository
+ import com.srisu.srisu.features.home.connection.domain.repository.ConnectionRepository
+ import com.srisu.srisu.features.home.profile.domain.repository.ProfileRepository
++import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
++import com.srisu.srisu.features.chat.matrix.ConnectionChatPartnerSource
+ import com.srisu.srisu.features.chat.matrix.ConnectionCurrentCoupleRoomResolver
+ import com.srisu.srisu.features.chat.matrix.CurrentCoupleRoomResolver
+ import com.srisu.srisu.features.chat.matrix.MatrixChatRepository
+@@ -43,6 +45,7 @@ val sharedNetworkModule = module {
+     single { ConnectionRepository(connectionApiService = get()) }
+ 
+     single<CurrentCoupleRoomResolver> { ConnectionCurrentCoupleRoomResolver(get()) }
++    single<ChatPartnerSource> { ConnectionChatPartnerSource(get()) }
+ 
+     single<MatrixSessionRemote> { MatrixSessionApiService(httpClient = get(), environment = get()) }
+     // Eager so logout/account-switch privacy cleanup runs after process restart
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryScreen.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryScreen.kt
+index f886c15..af80707 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryScreen.kt
+@@ -14,12 +14,17 @@ import androidx.compose.runtime.getValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.text.style.TextAlign
+-import com.srisu.srisu.components.SriSuButton
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Lock
++import com.srisu.srisu.features.chat.matrix.presentation.ChatStatusState
++import org.jetbrains.compose.resources.painterResource
+ import com.srisu.srisu.theme.spacing
+ import org.jetbrains.compose.resources.stringResource
+ import srisu.composeapp.generated.resources.Res
+ import srisu.composeapp.generated.resources.chat_secure_loading
+-import srisu.composeapp.generated.resources.chat_secure_retry
++import srisu.composeapp.generated.resources.chat_offline
++import srisu.composeapp.generated.resources.chat_secure_error_title
++import srisu.composeapp.generated.resources.chat_secure_unavailable_title
+ 
+ @Composable
+ fun MatrixChatEntryScreen(
+@@ -44,20 +49,18 @@ fun MatrixChatEntryScreen(
+                     CircularProgressIndicator()
+                     Text(stringResource(Res.string.chat_secure_loading), textAlign = TextAlign.Center)
+                 }
+-                is MatrixChatEntryState.Unavailable -> {
+-                    Text(current.message, textAlign = TextAlign.Center)
+-                    SriSuButton(
+-                        label = stringResource(Res.string.chat_secure_retry),
+-                        onClick = { viewModel.resolve(force = true) },
+-                    )
+-                }
+-                is MatrixChatEntryState.Error -> {
+-                    Text(current.message, textAlign = TextAlign.Center)
+-                    SriSuButton(
+-                        label = stringResource(Res.string.chat_secure_retry),
+-                        onClick = { viewModel.resolve(force = true) },
+-                    )
+-                }
++                is MatrixChatEntryState.Unavailable -> ChatStatusState(
++                    title = stringResource(Res.string.chat_secure_unavailable_title),
++                    message = current.message,
++                    vector = Icons.Filled.Lock,
++                    action = { viewModel.resolve(force = true) },
++                )
++                is MatrixChatEntryState.Error -> ChatStatusState(
++                    title = stringResource(Res.string.chat_secure_error_title),
++                    message = current.message,
++                    icon = painterResource(Res.drawable.chat_offline),
++                    action = { viewModel.resolve(force = true) },
++                )
+             }
+         }
+     }
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryViewModel.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryViewModel.kt
+index a8bf0d4..a8c24d6 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryViewModel.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatEntryViewModel.kt
+@@ -43,6 +43,33 @@ class ConnectionCurrentCoupleRoomResolver(
+         }
+ }
+ 
++/** Display-only partner identity for the conversation header; never used for authorization. */
++data class ChatPartnerIdentity(val name: String, val photoUrl: String?)
++
++interface ChatPartnerSource {
++    /** Returns the current partner only when the active relationship owns [roomId]. */
++    suspend fun partnerFor(roomId: String): ChatPartnerIdentity?
++}
++
++class ConnectionChatPartnerSource(
++    private val repository: ConnectionRepository,
++) : ChatPartnerSource {
++    override suspend fun partnerFor(roomId: String): ChatPartnerIdentity? {
++        val requested = normalizeDjangoRoomIdOrNull(roomId) ?: return null
++        val connection = (repository.sendHaveCoupleConnectionRequested().result as? NetworkAPIResult.Success)
++            ?.response?.connection
++            ?.takeIf { it.connectionStatus == ACCEPTED }
++            ?: return null
++        if (connection.chatRoomId?.let(::normalizeDjangoRoomIdOrNull) != requested) return null
++        val partner = connection.partner ?: return null
++        val name = listOfNotNull(partner.fullName, partner.firstName, partner.username)
++            .map(String::trim)
++            .firstOrNull(String::isNotEmpty)
++            ?: return null
++        return ChatPartnerIdentity(name = name, photoUrl = partner.profilePhoto?.takeIf(String::isNotBlank))
++    }
++}
++
+ class MatrixChatEntryViewModel(
+     private val resolver: CurrentCoupleRoomResolver,
+     private val sessions: SessionCoordinator,
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatModels.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatModels.kt
+index 9a51e3d..9a79570 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatModels.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/MatrixChatModels.kt
+@@ -21,7 +21,12 @@ data class MatrixChatMessage(
+     val retryTransactionId: String? = null,
+     /** Encrypted event exists but its content could not be safely rendered. */
+     val unavailable: Boolean = false,
+-)
++    /** Matrix client transaction ID for this device's own sends; survives the outbox-to-timeline handoff. */
++    val transactionId: String? = null,
++) {
++    /** List identity that stays stable while a local send is acknowledged by the server. */
++    val stableKey: String get() = transactionId?.let { "txn:$it" } ?: id
++}
+ 
+ sealed interface MatrixChatAvailability {
+     data object Loading : MatrixChatAvailability
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/TrixnityMatrixChatRepository.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/TrixnityMatrixChatRepository.kt
+index bd63ffe..028dbd0 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/TrixnityMatrixChatRepository.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/TrixnityMatrixChatRepository.kt
+@@ -639,7 +639,9 @@ class TrixnityMatrixChatRepository(
+                     it.toMessage(active.ownMatrixId, active.partnerMatrixId)
+                 } else emptyList()
+                 val pendingMessages = if (ready) pending.mapNotNull { it.toMessage(active.ownMatrixId) }
+-                    .filter { candidate -> timelineMessages.none { it.id == candidate.id } }
++                    .filter { candidate ->
++                        timelineMessages.none { it.id == candidate.id || it.stableKey == candidate.stableKey }
++                    }
+                 else emptyList()
+                 RoomObservation(
+                     secure = secure,
+@@ -649,6 +651,7 @@ class TrixnityMatrixChatRepository(
+                         roomId = active.djangoRoomId,
+                         messages = (timelineMessages + pendingMessages)
+                             .distinctBy(MatrixChatMessage::id)
++                            .distinctBy(MatrixChatMessage::stableKey)
+                             .sortedBy(MatrixChatMessage::timestampMillis),
+                         availability = when {
+                             !secure -> MatrixChatAvailability.Unavailable(
+@@ -1246,6 +1249,7 @@ class TrixnityMatrixChatRepository(
+             timestampMillis = event.originTimestamp,
+             delivery = MatrixMessageDelivery.SENT,
+             unavailable = body == null,
++            transactionId = event.unsigned?.transactionId?.takeIf { sender == ownMatrixId },
+         )
+     }
+ 
+@@ -1263,6 +1267,7 @@ class TrixnityMatrixChatRepository(
+                 else -> MatrixMessageDelivery.SENT
+             },
+             retryTransactionId = transactionId.takeIf { sendError != null },
++            transactionId = transactionId,
+         )
+     }
+ 
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatChrome.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatChrome.kt
+new file mode 100644
+index 0000000..9a34ff7
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatChrome.kt
+@@ -0,0 +1,499 @@
++package com.srisu.srisu.features.chat.matrix.presentation
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.heightIn
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.widthIn
++import androidx.compose.foundation.rememberScrollState
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.text.BasicTextField
++import androidx.compose.foundation.text.KeyboardOptions
++import androidx.compose.foundation.verticalScroll
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.automirrored.filled.Send
++import androidx.compose.material.icons.filled.KeyboardArrowDown
++import androidx.compose.material.icons.filled.Lock
++import androidx.compose.material3.Badge
++import androidx.compose.material3.BadgedBox
++import androidx.compose.material3.CircularProgressIndicator
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.FilledIconButton
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.IconButtonDefaults
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.material3.TopAppBar
++import androidx.compose.material3.TopAppBarDefaults
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.SolidColor
++import androidx.compose.ui.graphics.painter.Painter
++import androidx.compose.ui.graphics.vector.ImageVector
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.platform.LocalDensity
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.heading
++import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.text.input.KeyboardCapitalization
++import androidx.compose.ui.text.style.TextAlign
++import androidx.compose.ui.text.style.TextOverflow
++import coil3.compose.AsyncImage
++import com.srisu.srisu.components.SriSuButton
++import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
++import com.srisu.srisu.theme.ChatTokens
++import com.srisu.srisu.theme.caret
++import com.srisu.srisu.theme.pill
++import com.srisu.srisu.theme.spacing
++import org.jetbrains.compose.resources.painterResource
++import org.jetbrains.compose.resources.stringResource
++import srisu.composeapp.generated.resources.Res
++import srisu.composeapp.generated.resources.chat_secure_back
++import srisu.composeapp.generated.resources.chat_secure_empty_body
++import srisu.composeapp.generated.resources.chat_secure_empty_title
++import srisu.composeapp.generated.resources.chat_secure_encrypted
++import srisu.composeapp.generated.resources.chat_secure_jump_latest
++import srisu.composeapp.generated.resources.chat_secure_loading
++import srisu.composeapp.generated.resources.chat_secure_message_hint
++import srisu.composeapp.generated.resources.chat_secure_message_partner
++import srisu.composeapp.generated.resources.chat_secure_new_messages
++import srisu.composeapp.generated.resources.chat_secure_retry
++import srisu.composeapp.generated.resources.chat_secure_send
++import srisu.composeapp.generated.resources.chat_secure_sending
++import srisu.composeapp.generated.resources.chat_secure_starter_dinner
++import srisu.composeapp.generated.resources.chat_secure_starter_smile
++import srisu.composeapp.generated.resources.chat_secure_starter_song
++import srisu.composeapp.generated.resources.chat_secure_starters_label
++import srisu.composeapp.generated.resources.chat_secure_title
++import srisu.composeapp.generated.resources.chat_offline
++import srisu.composeapp.generated.resources.partner_link_back
++
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++internal fun ChatHeader(partner: ChatPartnerIdentity?, onBack: () -> Unit) {
++    // Start-aligned rather than Figma's centred title: long names and 160–200% text keep the
++    // back target and identity from colliding.
++    TopAppBar(
++        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
++        navigationIcon = {
++            IconButton(onClick = onBack) {
++                Icon(
++                    painterResource(Res.drawable.partner_link_back),
++                    contentDescription = stringResource(Res.string.chat_secure_back),
++                    modifier = Modifier.size(MaterialTheme.spacing.chromeIcon),
++                )
++            }
++        },
++        title = {
++            Row(
++                verticalAlignment = Alignment.CenterVertically,
++                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
++            ) {
++                if (partner != null) PartnerAvatar(partner, ChatTokens.headerAvatar, MaterialTheme.typography.labelMedium)
++                Column(Modifier.weight(1f, fill = false)) {
++                    Text(
++                        partner?.name ?: stringResource(Res.string.chat_secure_title),
++                        style = MaterialTheme.typography.titleMedium,
++                        maxLines = 1,
++                        overflow = TextOverflow.Ellipsis,
++                        modifier = Modifier.semantics { heading() },
++                    )
++                    Row(
++                        verticalAlignment = Alignment.CenterVertically,
++                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
++                    ) {
++                        Icon(
++                            Icons.Filled.Lock,
++                            contentDescription = null,
++                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
++                            modifier = Modifier.size(ChatTokens.metaIcon - MaterialTheme.spacing.hairline * 2),
++                        )
++                        Text(
++                            stringResource(Res.string.chat_secure_encrypted),
++                            style = MaterialTheme.typography.bodySmall,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                            maxLines = 1,
++                            overflow = TextOverflow.Ellipsis,
++                        )
++                    }
++                }
++            }
++        },
++    )
++}
++
++/** Partner photo with an initials fallback that stays visible until (or unless) the photo loads. */
++@Composable
++internal fun PartnerAvatar(partner: ChatPartnerIdentity, size: androidx.compose.ui.unit.Dp, initialsStyle: TextStyle) {
++    Box(
++        Modifier
++            .size(size)
++            .clip(CircleShape)
++            .background(MaterialTheme.colorScheme.secondaryContainer),
++        contentAlignment = Alignment.Center,
++    ) {
++        // Initials are decorative inside a fixed circle, so they follow the avatar size, not font scale.
++        val initialsSize = with(LocalDensity.current) { (size * 0.38f).toSp() }
++        Text(
++            partner.name.split(' ').filter(String::isNotBlank).take(2).joinToString("") { it.take(1).uppercase() },
++            style = initialsStyle.copy(fontSize = initialsSize, lineHeight = initialsSize),
++            maxLines = 1,
++            color = MaterialTheme.colorScheme.onSecondaryContainer,
++        )
++        partner.photoUrl?.let { url ->
++            AsyncImage(
++                model = url,
++                // Decorative: the partner's name is always shown beside or below the avatar.
++                contentDescription = null,
++                contentScale = ContentScale.Crop,
++                modifier = Modifier.fillMaxSize(),
++            )
++        }
++    }
++}
++
++@Composable
++internal fun ChatEmptyState(
++    partner: ChatPartnerIdentity?,
++    starterEnabled: Boolean,
++    onStarter: (String) -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    val starters = listOf(
++        stringResource(Res.string.chat_secure_starter_smile),
++        stringResource(Res.string.chat_secure_starter_dinner),
++        stringResource(Res.string.chat_secure_starter_song),
++    )
++    Column(
++        modifier
++            .verticalScroll(rememberScrollState())
++            .padding(horizontal = MaterialTheme.spacing.gutter, vertical = MaterialTheme.spacing.large),
++        verticalArrangement = Arrangement.Center,
++    ) {
++        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
++            if (partner != null) {
++                PartnerAvatar(partner, ChatTokens.emptyAvatar, MaterialTheme.typography.headlineSmall)
++                Spacer(Modifier.height(MaterialTheme.spacing.medium))
++            }
++            Text(
++                stringResource(Res.string.chat_secure_empty_title),
++                style = MaterialTheme.typography.headlineSmall,
++                textAlign = TextAlign.Center,
++                modifier = Modifier.semantics { heading() },
++            )
++            Spacer(Modifier.height(MaterialTheme.spacing.small))
++            Text(
++                stringResource(Res.string.chat_secure_empty_body),
++                style = MaterialTheme.typography.bodyMedium,
++                color = MaterialTheme.colorScheme.onSurfaceVariant,
++                textAlign = TextAlign.Center,
++            )
++        }
++        Spacer(Modifier.height(MaterialTheme.spacing.extraLarge))
++        val startersLabel = stringResource(Res.string.chat_secure_starters_label)
++        Column(
++            Modifier.fillMaxWidth().semantics { contentDescription = startersLabel },
++            horizontalAlignment = Alignment.End,
++            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
++        ) {
++            starters.forEach { starter ->
++                Surface(
++                    onClick = { onStarter(starter) },
++                    enabled = starterEnabled,
++                    shape = MaterialTheme.shapes.pill,
++                    color = MaterialTheme.colorScheme.surfaceContainer,
++                    modifier = Modifier.heightIn(min = MaterialTheme.spacing.touchTarget - MaterialTheme.spacing.small),
++                ) {
++                    Text(
++                        starter,
++                        style = MaterialTheme.typography.bodyMedium,
++                        color = MaterialTheme.colorScheme.onSurface,
++                        modifier = Modifier.padding(
++                            horizontal = ChatTokens.bubbleHorizontalPadding,
++                            vertical = MaterialTheme.spacing.small,
++                        ),
++                    )
++                }
++            }
++        }
++    }
++}
++
++/** Placeholder bubbles keep the conversation's shape while the secure room opens. */
++@Composable
++internal fun ChatLoadingState(modifier: Modifier = Modifier) {
++    val placeholder = MaterialTheme.colorScheme.surfaceContainer
++    Column(
++        modifier.padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.medium),
++        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact, Alignment.Bottom),
++    ) {
++        listOf(0.55f to false, 0.4f to false, 0.62f to true, 0.3f to true, 0.5f to false).forEach { (fraction, mine) ->
++            Box(Modifier.fillMaxWidth(), contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart) {
++                Box(
++                    Modifier
++                        .fillMaxWidth(fraction)
++                        .height(ChatTokens.composerMinHeight - MaterialTheme.spacing.small)
++                        .clip(ChatTokens.roundedShape)
++                        .background(placeholder),
++                )
++            }
++        }
++        Row(
++            Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
++            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small, Alignment.CenterHorizontally),
++            verticalAlignment = Alignment.CenterVertically,
++        ) {
++            CircularProgressIndicator(
++                modifier = Modifier.size(ChatTokens.metaIcon),
++                strokeWidth = MaterialTheme.spacing.hairline * 2,
++                color = MaterialTheme.colorScheme.onSurfaceVariant,
++            )
++            Text(
++                stringResource(Res.string.chat_secure_loading),
++                style = MaterialTheme.typography.bodySmall,
++                color = MaterialTheme.colorScheme.onSurfaceVariant,
++            )
++        }
++    }
++}
++
++@Composable
++internal fun ChatStatusState(
++    title: String,
++    message: String,
++    icon: Painter? = null,
++    vector: ImageVector? = null,
++    action: (() -> Unit)? = null,
++    modifier: Modifier = Modifier,
++) {
++    Box(modifier.padding(MaterialTheme.spacing.gutter), contentAlignment = Alignment.Center) {
++        Column(
++            Modifier.widthIn(max = ChatTokens.bubbleMaxWidth),
++            horizontalAlignment = Alignment.CenterHorizontally,
++        ) {
++            Box(
++                Modifier
++                    .size(ChatTokens.statusIconContainer)
++                    .clip(CircleShape)
++                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
++                contentAlignment = Alignment.Center,
++            ) {
++                val tint = MaterialTheme.colorScheme.onSurfaceVariant
++                when {
++                    icon != null -> Icon(icon, null, tint = tint)
++                    vector != null -> Icon(vector, null, tint = tint)
++                }
++            }
++            Spacer(Modifier.height(MaterialTheme.spacing.medium))
++            Text(
++                title,
++                style = MaterialTheme.typography.titleMedium,
++                textAlign = TextAlign.Center,
++                modifier = Modifier.semantics { heading() },
++            )
++            Spacer(Modifier.height(MaterialTheme.spacing.tiny))
++            Text(
++                message,
++                style = MaterialTheme.typography.bodyMedium,
++                color = MaterialTheme.colorScheme.onSurfaceVariant,
++                textAlign = TextAlign.Center,
++            )
++            if (action != null) {
++                Spacer(Modifier.height(MaterialTheme.spacing.large))
++                SriSuButton(stringResource(Res.string.chat_secure_retry), action)
++            }
++        }
++    }
++}
++
++@Composable
++internal fun ChatOfflineBanner(message: String, onRetry: () -> Unit) {
++    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
++        Row(
++            Modifier.padding(start = MaterialTheme.spacing.medium, end = MaterialTheme.spacing.small),
++            verticalAlignment = Alignment.CenterVertically,
++            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
++        ) {
++            Icon(
++                painterResource(Res.drawable.chat_offline),
++                contentDescription = null,
++                tint = MaterialTheme.colorScheme.onSecondaryContainer,
++                modifier = Modifier.size(MaterialTheme.spacing.icon),
++            )
++            Text(
++                message,
++                style = MaterialTheme.typography.bodySmall,
++                color = MaterialTheme.colorScheme.onSecondaryContainer,
++                modifier = Modifier.weight(1f).padding(vertical = MaterialTheme.spacing.compact),
++            )
++            TextButton(onClick = onRetry) { Text(stringResource(Res.string.chat_secure_retry)) }
++        }
++    }
++}
++
++@Composable
++internal fun ChatDayHeader(label: String) {
++    Box(
++        Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.large, bottom = MaterialTheme.spacing.tiny),
++        contentAlignment = Alignment.Center,
++    ) {
++        Text(
++            label,
++            style = MaterialTheme.typography.bodySmall,
++            color = MaterialTheme.colorScheme.onSurfaceVariant,
++            modifier = Modifier.semantics { heading() },
++        )
++    }
++}
++
++@Composable
++internal fun JumpToLatestButton(newCount: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
++    BadgedBox(
++        modifier = modifier,
++        badge = {
++            if (newCount > 0) Badge(
++                containerColor = MaterialTheme.colorScheme.primary,
++                contentColor = MaterialTheme.colorScheme.onPrimary,
++            ) { Text(stringResource(Res.string.chat_secure_new_messages, newCount)) }
++        },
++    ) {
++        Surface(
++            onClick = onClick,
++            shape = CircleShape,
++            color = MaterialTheme.colorScheme.surfaceContainerLowest,
++            shadowElevation = MaterialTheme.spacing.tiny / 2,
++            modifier = Modifier
++                .size(ChatTokens.jumpButton)
++                .border(MaterialTheme.spacing.hairline, MaterialTheme.colorScheme.outlineVariant, CircleShape),
++        ) {
++            Box(contentAlignment = Alignment.Center) {
++                Icon(
++                    Icons.Filled.KeyboardArrowDown,
++                    contentDescription = stringResource(Res.string.chat_secure_jump_latest),
++                    tint = MaterialTheme.colorScheme.onSurface,
++                )
++            }
++        }
++    }
++}
++
++@Composable
++internal fun ChatComposer(
++    value: String,
++    onValueChange: (String) -> Unit,
++    onSend: () -> Unit,
++    partnerName: String?,
++    editable: Boolean,
++    canSend: Boolean,
++    sending: Boolean,
++    helper: String?,
++    modifier: Modifier = Modifier,
++) {
++    Column(
++        modifier
++            .fillMaxWidth()
++            .background(MaterialTheme.colorScheme.surface)
++            .padding(
++                start = MaterialTheme.spacing.compact,
++                end = MaterialTheme.spacing.compact,
++                top = MaterialTheme.spacing.small,
++                bottom = MaterialTheme.spacing.small,
++            ),
++    ) {
++        helper?.let {
++            Text(
++                it,
++                style = MaterialTheme.typography.bodySmall,
++                color = MaterialTheme.colorScheme.error,
++                modifier = Modifier.padding(
++                    start = MaterialTheme.spacing.medium,
++                    end = MaterialTheme.spacing.medium,
++                    bottom = MaterialTheme.spacing.tiny,
++                ),
++            )
++        }
++        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
++            val placeholder = partnerName?.let { stringResource(Res.string.chat_secure_message_partner, it) }
++                ?: stringResource(Res.string.chat_secure_message_hint)
++            val textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
++            BasicTextField(
++                value = value,
++                onValueChange = onValueChange,
++                enabled = editable,
++                textStyle = textStyle,
++                cursorBrush = SolidColor(MaterialTheme.colorScheme.caret),
++                maxLines = ChatTokens.composerMaxLines,
++                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
++                modifier = Modifier
++                    .weight(1f)
++                    .heightIn(min = ChatTokens.composerMinHeight)
++                    .semantics { contentDescription = placeholder },
++                decorationBox = { field ->
++                    Box(
++                        Modifier
++                            .clip(ChatTokens.roundedShape)
++                            .background(MaterialTheme.colorScheme.surfaceContainer)
++                            .border(MaterialTheme.spacing.hairline, MaterialTheme.colorScheme.outlineVariant, ChatTokens.roundedShape)
++                            .heightIn(min = ChatTokens.composerMinHeight)
++                            .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.compact),
++                        contentAlignment = Alignment.CenterStart,
++                    ) {
++                        if (value.isEmpty()) Text(
++                            placeholder,
++                            style = textStyle,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                            maxLines = 1,
++                            overflow = TextOverflow.Ellipsis,
++                        )
++                        field()
++                    }
++                },
++            )
++            Box(Modifier.height(ChatTokens.composerMinHeight), contentAlignment = Alignment.Center) {
++                FilledIconButton(
++                    onClick = onSend,
++                    enabled = canSend && !sending,
++                    modifier = Modifier.size(ChatTokens.sendButton),
++                    colors = IconButtonDefaults.filledIconButtonColors(
++                        containerColor = MaterialTheme.colorScheme.primary,
++                        contentColor = MaterialTheme.colorScheme.onPrimary,
++                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
++                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
++                    ),
++                ) {
++                    if (sending) {
++                        val sendingLabel = stringResource(Res.string.chat_secure_sending)
++                        CircularProgressIndicator(
++                            modifier = Modifier
++                                .size(MaterialTheme.spacing.icon)
++                                .semantics { contentDescription = sendingLabel },
++                            strokeWidth = MaterialTheme.spacing.hairline * 2,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                        )
++                    } else {
++                        Icon(
++                            Icons.AutoMirrored.Filled.Send,
++                            contentDescription = stringResource(Res.string.chat_secure_send),
++                            modifier = Modifier.size(MaterialTheme.spacing.icon).padding(start = MaterialTheme.spacing.hairline),
++                        )
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatMessageBubble.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatMessageBubble.kt
+new file mode 100644
+index 0000000..a25a251
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatMessageBubble.kt
+@@ -0,0 +1,251 @@
++package com.srisu.srisu.features.chat.matrix.presentation
++
++import androidx.compose.foundation.border
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.heightIn
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.widthIn
++import androidx.compose.foundation.layout.wrapContentHeight
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Done
++import androidx.compose.material.icons.filled.Lock
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.layout.Layout
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.semantics.clearAndSetSemantics
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.text.TextLayoutResult
++import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.text.font.FontStyle
++import androidx.compose.ui.text.style.ResolvedTextDirection
++import androidx.compose.ui.text.style.TextAlign
++import androidx.compose.ui.unit.Constraints
++import androidx.compose.ui.unit.Dp
++import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
++import com.srisu.srisu.theme.ChatTokens
++import com.srisu.srisu.theme.spacing
++import org.jetbrains.compose.resources.painterResource
++import org.jetbrains.compose.resources.stringResource
++import srisu.composeapp.generated.resources.Res
++import srisu.composeapp.generated.resources.chat_secure_content_unavailable
++import srisu.composeapp.generated.resources.chat_secure_received_at
++import srisu.composeapp.generated.resources.chat_secure_status_failed
++import srisu.composeapp.generated.resources.chat_secure_status_sending
++import srisu.composeapp.generated.resources.chat_secure_status_sent
++import srisu.composeapp.generated.resources.chat_secure_tap_to_retry
++import srisu.composeapp.generated.resources.chat_status_failed
++import srisu.composeapp.generated.resources.chat_status_pending
++
++private class BubbleColors(val container: Color, val content: Color, val meta: Color)
++
++@Composable
++private fun bubbleColors(mine: Boolean, unavailable: Boolean): BubbleColors {
++    val scheme = MaterialTheme.colorScheme
++    return when {
++        unavailable -> BubbleColors(scheme.surface, scheme.onSurfaceVariant, scheme.onSurfaceVariant)
++        // Figma's thread uses the foreground ink for your messages and a warm surface for theirs.
++        mine -> BubbleColors(scheme.primary, scheme.onPrimary, scheme.onPrimary.copy(alpha = 0.82f))
++        else -> BubbleColors(scheme.surfaceContainerHigh, scheme.onSurface, scheme.onSurfaceVariant)
++    }
++}
++
++@Composable
++internal fun ChatMessageRow(
++    item: ChatTimelineItem.Message,
++    maxBubbleWidth: Dp,
++    onRetry: (String) -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    val message = item.message
++    val retry = message.retryTransactionId?.takeIf { message.delivery == MatrixMessageDelivery.FAILED }
++    Column(
++        modifier
++            .fillMaxWidth()
++            .padding(top = if (item.joinsPrevious) ChatTokens.groupedGap else ChatTokens.groupGap),
++        horizontalAlignment = if (message.mine) Alignment.End else Alignment.Start,
++    ) {
++        ChatBubble(item, Modifier.widthIn(max = maxBubbleWidth))
++        if (retry != null) {
++            Text(
++                stringResource(Res.string.chat_secure_tap_to_retry),
++                style = MaterialTheme.typography.bodySmall,
++                color = MaterialTheme.colorScheme.error,
++                modifier = Modifier
++                    .heightIn(min = MaterialTheme.spacing.touchTarget)
++                    .clickable(role = Role.Button) { onRetry(retry) }
++                    .padding(horizontal = MaterialTheme.spacing.tiny)
++                    .wrapContentHeight(),
++            )
++        }
++    }
++}
++
++@Composable
++private fun ChatBubble(item: ChatTimelineItem.Message, modifier: Modifier) {
++    val message = item.message
++    val colors = bubbleColors(message.mine, message.unavailable)
++    val shape = remember(message.mine, item.joinsPrevious, item.joinsNext) {
++        ChatTokens.bubbleShape(message.mine, item.joinsPrevious, item.joinsNext)
++    }
++    val time = remember(item.time) { formatChatTime(item.time) }
++    val statusLabel = when (message.delivery) {
++        MatrixMessageDelivery.SENDING -> stringResource(Res.string.chat_secure_status_sending)
++        MatrixMessageDelivery.FAILED -> stringResource(Res.string.chat_secure_status_failed)
++        MatrixMessageDelivery.SENT -> if (message.mine) stringResource(Res.string.chat_secure_status_sent) else null
++    }
++    val body = if (message.unavailable) stringResource(Res.string.chat_secure_content_unavailable) else message.body
++    val description = listOfNotNull(body, stringResource(Res.string.chat_secure_received_at, time, statusLabel ?: ""))
++        .joinToString(". ").trimEnd(',', ' ')
++    Surface(
++        modifier = modifier
++            .then(
++                if (message.unavailable) Modifier.border(
++                    width = MaterialTheme.spacing.hairline,
++                    color = MaterialTheme.colorScheme.outlineVariant,
++                    shape = shape,
++                ) else Modifier,
++            )
++            .clearAndSetSemantics { contentDescription = description },
++        shape = shape,
++        color = colors.container,
++    ) {
++        Box(
++            Modifier.padding(
++                horizontal = ChatTokens.bubbleHorizontalPadding,
++                vertical = ChatTokens.bubbleVerticalPadding,
++            ),
++        ) {
++            val textStyle = MaterialTheme.typography.bodyLarge.let {
++                if (message.unavailable) it.copy(fontStyle = FontStyle.Italic) else it
++            }
++            if (message.unavailable) {
++                Row(
++                    verticalAlignment = Alignment.CenterVertically,
++                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
++                ) {
++                    Icon(
++                        Icons.Filled.Lock,
++                        contentDescription = null,
++                        tint = colors.meta,
++                        modifier = Modifier.size(ChatTokens.metaIcon),
++                    )
++                    TextWithMeta(body, textStyle, colors.content) {
++                        if (item.showMeta) MessageMeta(time, message.mine, message.delivery, colors.meta)
++                    }
++                }
++            } else {
++                TextWithMeta(body, textStyle, colors.content) {
++                    if (item.showMeta) MessageMeta(time, message.mine, message.delivery, colors.meta)
++                }
++            }
++        }
++    }
++}
++
++/**
++ * Places [meta] on the last text line when it fits (WhatsApp/Telegram-style), otherwise on its own
++ * line at the end. Avoids a reserved blank line under every short message.
++ */
++@Composable
++private fun TextWithMeta(
++    text: String,
++    style: TextStyle,
++    color: Color,
++    meta: @Composable () -> Unit,
++) {
++    val layoutRef = remember { arrayOfNulls<TextLayoutResult>(1) }
++    val gap = ChatTokens.metaGap
++    Layout(
++        content = {
++            Text(text, style = style, color = color, onTextLayout = { layoutRef[0] = it })
++            Box { meta() }
++        },
++    ) { measurables, constraints ->
++        val loose = constraints.copy(minWidth = 0, minHeight = 0)
++        val textPlaceable = measurables[0].measure(loose)
++        val metaPlaceable = measurables[1].measure(loose)
++        val gapPx = gap.roundToPx()
++        val layout = layoutRef[0]
++        if (metaPlaceable.width == 0) {
++            return@Layout layout(textPlaceable.width, textPlaceable.height) { textPlaceable.place(0, 0) }
++        }
++        val lastLineRight = layout?.let {
++            val last = it.lineCount - 1
++            // RTL last lines end on the left; place meta below for those to avoid overlap.
++            if (it.getParagraphDirection(it.getLineStart(last)) == ResolvedTextDirection.Rtl) null
++            else it.getLineRight(last).toInt()
++        }
++        val inlineWidth = lastLineRight?.let { it + gapPx + metaPlaceable.width }
++        if (inlineWidth != null && inlineWidth <= constraints.maxWidth) {
++            val width = maxOf(textPlaceable.width, inlineWidth).coerceAtLeast(constraints.minWidth)
++            val height = maxOf(textPlaceable.height, metaPlaceable.height)
++            layout(width, height) {
++                textPlaceable.place(0, 0)
++                metaPlaceable.place(width - metaPlaceable.width, height - metaPlaceable.height)
++            }
++        } else {
++            val width = maxOf(textPlaceable.width, metaPlaceable.width)
++                .coerceIn(constraints.minWidth, if (constraints.hasBoundedWidth) constraints.maxWidth else Constraints.Infinity)
++            val height = textPlaceable.height + metaPlaceable.height
++            layout(width, height) {
++                textPlaceable.place(0, 0)
++                metaPlaceable.place(width - metaPlaceable.width, textPlaceable.height)
++            }
++        }
++    }
++}
++
++@Composable
++private fun MessageMeta(time: String, mine: Boolean, delivery: MatrixMessageDelivery, color: Color) {
++    Row(
++        Modifier.padding(top = MaterialTheme.spacing.tiny),
++        verticalAlignment = Alignment.CenterVertically,
++        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny),
++    ) {
++        Text(
++            time,
++            style = MaterialTheme.typography.bodySmall.copy(
++                fontSize = ChatTokens.metaTextSize,
++                lineHeight = ChatTokens.metaLineHeight,
++                letterSpacing = MaterialTheme.typography.bodySmall.letterSpacing,
++            ),
++            color = color,
++            textAlign = TextAlign.End,
++            maxLines = 1,
++        )
++        if (mine) when (delivery) {
++            MatrixMessageDelivery.SENDING -> Icon(
++                painterResource(Res.drawable.chat_status_pending),
++                contentDescription = null,
++                tint = color,
++                modifier = Modifier.size(ChatTokens.metaIcon),
++            )
++            MatrixMessageDelivery.SENT -> Icon(
++                Icons.Filled.Done,
++                contentDescription = null,
++                tint = color,
++                modifier = Modifier.size(ChatTokens.metaIcon),
++            )
++            MatrixMessageDelivery.FAILED -> Icon(
++                painterResource(Res.drawable.chat_status_failed),
++                contentDescription = null,
++                tint = color,
++                modifier = Modifier.size(ChatTokens.metaIcon),
++            )
++        }
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatTimeline.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatTimeline.kt
+new file mode 100644
+index 0000000..e1f164c
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/ChatTimeline.kt
+@@ -0,0 +1,92 @@
++package com.srisu.srisu.features.chat.matrix.presentation
++
++import com.srisu.srisu.features.chat.matrix.MatrixChatMessage
++import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
++import kotlinx.datetime.LocalDate
++import kotlinx.datetime.LocalDateTime
++import kotlinx.datetime.TimeZone
++import kotlinx.datetime.toLocalDateTime
++import kotlin.time.Instant
++
++/** Consecutive messages from one sender within this window share a visual group. */
++internal const val CHAT_GROUP_WINDOW_MILLIS = 5 * 60_000L
++
++internal sealed interface ChatTimelineItem {
++    val key: String
++
++    data class DayHeader(val date: LocalDate) : ChatTimelineItem {
++        override val key: String get() = "day:$date"
++    }
++
++    data class Message(
++        val message: MatrixChatMessage,
++        val time: LocalDateTime,
++        /** Visually joins the message above (same sender, same day, within the group window). */
++        val joinsPrevious: Boolean,
++        /** Visually joins the message below. */
++        val joinsNext: Boolean,
++    ) : ChatTimelineItem {
++        override val key: String get() = message.stableKey
++
++        /** Time and status sit on the last bubble of a group, and on any bubble needing attention. */
++        val showMeta: Boolean
++            get() = !joinsNext || message.delivery != MatrixMessageDelivery.SENT
++    }
++}
++
++/**
++ * Builds the rendered timeline in chronological order. Keys are unique: a duplicated stable key
++ * (possible only during an outbox/timeline race) keeps the first occurrence.
++ */
++internal fun buildChatTimeline(messages: List<MatrixChatMessage>, timeZone: TimeZone): List<ChatTimelineItem> {
++    val unique = messages.distinctBy(MatrixChatMessage::stableKey)
++    val times = unique.map { Instant.fromEpochMilliseconds(it.timestampMillis).toLocalDateTime(timeZone) }
++    fun joins(a: Int, b: Int): Boolean {
++        if (a !in unique.indices || b !in unique.indices) return false
++        val first = unique[a]
++        val second = unique[b]
++        return first.mine == second.mine &&
++            times[a].date == times[b].date &&
++            second.timestampMillis - first.timestampMillis in 0..CHAT_GROUP_WINDOW_MILLIS &&
++            first.delivery != MatrixMessageDelivery.FAILED
++    }
++    val items = ArrayList<ChatTimelineItem>(unique.size + 4)
++    unique.forEachIndexed { index, message ->
++        if (index == 0 || times[index - 1].date != times[index].date) {
++            items += ChatTimelineItem.DayHeader(times[index].date)
++        }
++        items += ChatTimelineItem.Message(
++            message = message,
++            time = times[index],
++            joinsPrevious = joins(index - 1, index),
++            joinsNext = joins(index, index + 1),
++        )
++    }
++    return items
++}
++
++/** "8:02 AM" — a fixed 12-hour format; platform 24-hour preference is not yet read. */
++internal fun formatChatTime(time: LocalDateTime): String {
++    val hour12 = (time.hour % 12).let { if (it == 0) 12 else it }
++    val minute = time.minute.toString().padStart(2, '0')
++    val period = if (time.hour < 12) "AM" else "PM"
++    return "$hour12:$minute $period"
++}
++
++internal enum class ChatDayLabel { TODAY, YESTERDAY, DATE }
++
++internal fun chatDayLabel(date: LocalDate, today: LocalDate): ChatDayLabel = when {
++    date == today -> ChatDayLabel.TODAY
++    date.toEpochDays() == today.toEpochDays() - 1 -> ChatDayLabel.YESTERDAY
++    else -> ChatDayLabel.DATE
++}
++
++private val shortWeekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
++private val shortMonths = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
++
++/** "Fri, 16 Oct" this year, otherwise "16 Oct 2025". English, matching the app's current strings. */
++internal fun formatChatDate(date: LocalDate, today: LocalDate): String {
++    val month = shortMonths[date.month.ordinal]
++    return if (date.year == today.year) "${shortWeekdays[date.dayOfWeek.ordinal]}, ${date.day} $month"
++    else "${date.day} $month ${date.year}"
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatScreen.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatScreen.kt
+index db38afc..b4ef556 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatScreen.kt
+@@ -1,298 +1,198 @@
+ package com.srisu.srisu.features.chat.matrix.presentation
+ 
+-import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.animation.AnimatedVisibility
++import androidx.compose.animation.fadeIn
++import androidx.compose.animation.fadeOut
++import androidx.compose.animation.scaleIn
++import androidx.compose.animation.scaleOut
+ import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.BoxWithConstraints
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.PaddingValues
+-import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.consumeWindowInsets
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.imePadding
+-import androidx.compose.foundation.layout.navigationBarsPadding
+ import androidx.compose.foundation.layout.padding
+-import androidx.compose.foundation.layout.widthIn
+ import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.LazyListState
+ import androidx.compose.foundation.lazy.items
+ import androidx.compose.foundation.lazy.rememberLazyListState
+-import androidx.compose.foundation.text.KeyboardActions
+-import androidx.compose.foundation.text.KeyboardOptions
+ import androidx.compose.material.icons.Icons
+-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+-import androidx.compose.material3.CircularProgressIndicator
+-import androidx.compose.material3.ExperimentalMaterial3Api
+-import androidx.compose.material3.Icon
+-import androidx.compose.material3.IconButton
++import androidx.compose.material.icons.filled.Lock
+ import androidx.compose.material3.MaterialTheme
+-import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.Scaffold
+-import androidx.compose.material3.Surface
+-import androidx.compose.material3.Text
+-import androidx.compose.material3.TextButton
+-import androidx.compose.material3.TopAppBar
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.collectAsState
++import androidx.compose.runtime.derivedStateOf
+ import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberCoroutineScope
++import androidx.compose.runtime.saveable.rememberSaveable
+ import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+-import androidx.compose.ui.text.input.ImeAction
+-import androidx.compose.ui.text.style.TextAlign
+-import androidx.compose.ui.unit.dp
+-import com.srisu.srisu.components.SriSuButton
++import androidx.compose.ui.platform.LocalDensity
+ import com.srisu.srisu.features.chat.matrix.MatrixChatAvailability
+ import com.srisu.srisu.features.chat.matrix.MatrixChatMessage
+-import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
++import com.srisu.srisu.theme.ChatTokens
+ import com.srisu.srisu.theme.spacing
++import kotlinx.coroutines.launch
++import kotlinx.datetime.TimeZone
++import kotlinx.datetime.toLocalDateTime
++import org.jetbrains.compose.resources.painterResource
+ import org.jetbrains.compose.resources.stringResource
+ import srisu.composeapp.generated.resources.Res
+-import srisu.composeapp.generated.resources.chat_secure_back
+-import srisu.composeapp.generated.resources.chat_secure_content_unavailable
+-import srisu.composeapp.generated.resources.chat_secure_empty
++import srisu.composeapp.generated.resources.chat_offline
+ import srisu.composeapp.generated.resources.chat_secure_error
+-import srisu.composeapp.generated.resources.chat_secure_failed
+-import srisu.composeapp.generated.resources.chat_secure_loading
+-import srisu.composeapp.generated.resources.chat_secure_message_hint
++import srisu.composeapp.generated.resources.chat_secure_error_title
+ import srisu.composeapp.generated.resources.chat_secure_not_available
+-import srisu.composeapp.generated.resources.chat_secure_retry
+-import srisu.composeapp.generated.resources.chat_secure_send
+-import srisu.composeapp.generated.resources.chat_secure_sending
+-import srisu.composeapp.generated.resources.chat_secure_title
++import srisu.composeapp.generated.resources.chat_secure_today
++import srisu.composeapp.generated.resources.chat_secure_unavailable_title
++import srisu.composeapp.generated.resources.chat_secure_yesterday
++import kotlin.time.Clock
+ 
+-@OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit) {
+     val state by viewModel.state.collectAsState()
+     val input by viewModel.messageInput.collectAsState()
+     val validationError by viewModel.composerValidationError.collectAsState()
++    val partner by viewModel.partner.collectAsState()
++    val availability = state?.availability ?: MatrixChatAvailability.Loading
+     Scaffold(
+-        topBar = {
+-            TopAppBar(
+-                title = { Text(stringResource(Res.string.chat_secure_title)) },
+-                navigationIcon = {
+-                    IconButton(onClick = onBack) {
+-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.chat_secure_back))
+-                    }
+-                },
+-            )
+-        },
++        topBar = { ChatHeader(partner, onBack) },
++        containerColor = MaterialTheme.colorScheme.surface,
+     ) { padding ->
+-        when (val availability = state?.availability ?: MatrixChatAvailability.Loading) {
+-            MatrixChatAvailability.Loading -> LoadingState(Modifier.fillMaxSize().padding(padding))
+-            is MatrixChatAvailability.Error -> Status(
+-                modifier = Modifier.fillMaxSize().padding(padding),
+-                message = availability.message.ifBlank { stringResource(Res.string.chat_secure_error) },
+-                action = if (availability.retryable) {
+-                    { SriSuButton(stringResource(Res.string.chat_secure_retry), viewModel::retry) }
+-                } else null,
+-            )
+-            is MatrixChatAvailability.Offline -> Conversation(
+-                modifier = Modifier.fillMaxSize().padding(padding),
+-                messages = state?.messages.orEmpty(),
+-                input = input,
+-                sending = false,
+-                error = validationError,
+-                composerEnabled = false,
+-                offlineMessage = availability.message,
+-                onInput = viewModel::updateMessageInput,
+-                onSend = viewModel::sendMessage,
+-                onRetry = viewModel::retryMessage,
+-                onReconnect = viewModel::retry,
+-            )
+-            is MatrixChatAvailability.Unavailable -> Status(
+-                modifier = Modifier.fillMaxSize().padding(padding),
+-                message = availability.message.ifBlank { stringResource(Res.string.chat_secure_not_available) },
+-            )
+-            is MatrixChatAvailability.Ready -> Conversation(
+-                modifier = Modifier.fillMaxSize().padding(padding),
+-                messages = state?.messages.orEmpty(),
+-                input = input,
+-                sending = state?.sending == true,
+-                error = validationError ?: state?.composerError,
+-                composerEnabled = true,
+-                offlineMessage = null,
+-                onInput = viewModel::updateMessageInput,
+-                onSend = viewModel::sendMessage,
+-                onRetry = viewModel::retryMessage,
+-                onReconnect = viewModel::retry,
+-            )
++        Column(
++            Modifier
++                .fillMaxSize()
++                .padding(padding)
++                .consumeWindowInsets(padding)
++                .imePadding(),
++        ) {
++            when (availability) {
++                is MatrixChatAvailability.Error -> ChatStatusState(
++                    title = stringResource(Res.string.chat_secure_error_title),
++                    message = availability.message.ifBlank { stringResource(Res.string.chat_secure_error) },
++                    icon = painterResource(Res.drawable.chat_offline),
++                    action = if (availability.retryable) viewModel::retry else null,
++                    modifier = Modifier.fillMaxSize(),
++                )
++                is MatrixChatAvailability.Unavailable -> ChatStatusState(
++                    title = stringResource(Res.string.chat_secure_unavailable_title),
++                    message = availability.message.ifBlank { stringResource(Res.string.chat_secure_not_available) },
++                    vector = Icons.Filled.Lock,
++                    modifier = Modifier.fillMaxSize(),
++                )
++                MatrixChatAvailability.Loading, is MatrixChatAvailability.Offline, is MatrixChatAvailability.Ready -> {
++                    val loading = availability == MatrixChatAvailability.Loading
++                    val ready = availability is MatrixChatAvailability.Ready
++                    (availability as? MatrixChatAvailability.Offline)?.let {
++                        ChatOfflineBanner(it.message, viewModel::retry)
++                    }
++                    Box(Modifier.weight(1f).fillMaxWidth()) {
++                        when {
++                            loading -> ChatLoadingState(Modifier.fillMaxSize())
++                            state?.messages.isNullOrEmpty() -> ChatEmptyState(
++                                partner = partner,
++                                starterEnabled = true,
++                                onStarter = viewModel::updateMessageInput,
++                                modifier = Modifier.fillMaxSize(),
++                            )
++                            else -> ChatTimelineList(state?.messages.orEmpty(), viewModel::retryMessage)
++                        }
++                    }
++                    // The draft stays editable while offline or loading; only sending is gated.
++                    ChatComposer(
++                        value = input,
++                        onValueChange = viewModel::updateMessageInput,
++                        onSend = viewModel::sendMessage,
++                        partnerName = partner?.name?.substringBefore(' '),
++                        editable = true,
++                        canSend = ready && input.isNotBlank(),
++                        sending = ready && state?.sending == true,
++                        helper = validationError ?: state?.composerError.takeIf { ready },
++                    )
++                }
++            }
+         }
+     }
+ }
+ 
+ @Composable
+-private fun Conversation(
+-    modifier: Modifier,
+-    messages: List<MatrixChatMessage>,
+-    input: String,
+-    sending: Boolean,
+-    error: String?,
+-    composerEnabled: Boolean,
+-    offlineMessage: String?,
+-    onInput: (String) -> Unit,
+-    onSend: () -> Unit,
+-    onRetry: (String) -> Unit,
+-    onReconnect: () -> Unit,
+-) {
++private fun ChatTimelineList(messages: List<MatrixChatMessage>, onRetry: (String) -> Unit) {
++    val timeZone = remember { TimeZone.currentSystemDefault() }
++    // Newest first, rendered bottom-up: the conversation anchors to the composer like other messengers.
++    val items = remember(messages, timeZone) { buildChatTimeline(messages, timeZone).asReversed() }
++    val today = remember(messages, timeZone) { Clock.System.now().toLocalDateTime(timeZone).date }
+     val listState = rememberLazyListState()
+-    var previousLastMessageId by remember { mutableStateOf<String?>(null) }
+-    val latest = messages.lastOrNull()
+-    LaunchedEffect(latest?.id) {
+-        if (latest == null) {
+-            previousLastMessageId = null
+-            return@LaunchedEffect
+-        }
+-        val initialLoad = previousLastMessageId == null
+-        val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+-        val wasNearLatest = lastVisibleIndex != null && lastVisibleIndex >= messages.lastIndex - 1
+-        if (initialLoad) listState.scrollToItem(messages.lastIndex)
+-        else if (wasNearLatest || latest.mine) listState.animateScrollToItem(messages.lastIndex)
+-        previousLastMessageId = latest.id
+-    }
+-    Column(modifier) {
+-        if (messages.isEmpty()) {
+-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+-                Text(
+-                    stringResource(Res.string.chat_secure_empty),
+-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+-                    textAlign = TextAlign.Center,
+-                )
+-            }
++    val scope = rememberCoroutineScope()
++    val threshold = with(LocalDensity.current) { MaterialTheme.spacing.huge.roundToPx() }
++    val atLatest by remember { derivedStateOf { listState.isNearLatest(threshold) } }
++    var unseen by rememberSaveable { mutableIntStateOf(0) }
++    var lastLatestKey by rememberSaveable { mutableStateOf<String?>(null) }
++
++    val latest = items.firstOrNull { it is ChatTimelineItem.Message } as? ChatTimelineItem.Message
++    // Read during composition, before the new item is laid out: was the reader following the conversation?
++    val wasAtLatest = atLatest
++    LaunchedEffect(latest?.key) {
++        val key = latest?.key ?: return@LaunchedEffect
++        val previous = lastLatestKey
++        lastLatestKey = key
++        if (previous == null || previous == key) return@LaunchedEffect
++        if (latest.message.mine || wasAtLatest) {
++            unseen = 0
++            listState.animateScrollToItem(0)
+         } else {
+-            LazyColumn(
+-                modifier = Modifier.weight(1f).fillMaxWidth(),
+-                state = listState,
+-                contentPadding = PaddingValues(MaterialTheme.spacing.medium),
+-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+-            ) {
+-                items(messages, key = MatrixChatMessage::id) { message -> MessageBubble(message, onRetry) }
+-            }
+-        }
+-        offlineMessage?.let { message ->
+-            Surface(
+-                modifier = Modifier.fillMaxWidth(),
+-                color = MaterialTheme.colorScheme.secondaryContainer,
+-            ) {
+-                Row(
+-                    modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium),
+-                    verticalAlignment = Alignment.CenterVertically,
+-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+-                ) {
+-                    Text(
+-                        message,
+-                        modifier = Modifier.weight(1f),
+-                        style = MaterialTheme.typography.bodySmall,
+-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+-                    )
+-                    TextButton(onClick = onReconnect) {
+-                        Text(stringResource(Res.string.chat_secure_retry))
+-                    }
+-                }
+-            }
+-        }
+-        error?.let {
+-            Text(
+-                it,
+-                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.gutter),
+-                color = MaterialTheme.colorScheme.error,
+-                style = MaterialTheme.typography.bodySmall,
+-            )
+-        }
+-        Row(
+-            modifier = Modifier
+-                .fillMaxWidth()
+-                .navigationBarsPadding()
+-                .imePadding()
+-                .padding(MaterialTheme.spacing.medium),
+-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+-            verticalAlignment = Alignment.CenterVertically,
+-        ) {
+-            OutlinedTextField(
+-                value = input,
+-                onValueChange = onInput,
+-                modifier = Modifier.weight(1f),
+-                placeholder = { Text(stringResource(Res.string.chat_secure_message_hint)) },
+-                enabled = composerEnabled && !sending,
+-                maxLines = 5,
+-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+-                keyboardActions = KeyboardActions(onSend = { if (input.isNotBlank() && !sending) onSend() }),
+-            )
+-            SriSuButton(
+-                label = stringResource(if (sending) Res.string.chat_secure_sending else Res.string.chat_secure_send),
+-                onClick = onSend,
+-                enabled = composerEnabled && input.isNotBlank() && !sending,
+-            )
++            unseen += items.asSequence()
++                .takeWhile { it.key != previous }
++                .count { it is ChatTimelineItem.Message && !it.message.mine }
+         }
+     }
+-}
++    LaunchedEffect(atLatest) { if (atLatest) unseen = 0 }
+ 
+-@Composable
+-private fun MessageBubble(message: MatrixChatMessage, onRetry: (String) -> Unit) {
+-    Row(
+-        modifier = Modifier.fillMaxWidth(),
+-        horizontalArrangement = if (message.mine) Arrangement.End else Arrangement.Start,
+-    ) {
+-        Surface(
+-            modifier = Modifier.widthIn(max = 320.dp),
+-            shape = MaterialTheme.shapes.large,
+-            color = if (message.mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
++    BoxWithConstraints(Modifier.fillMaxSize()) {
++        val contentWidth = maxWidth - MaterialTheme.spacing.medium * 2
++        val maxBubbleWidth = minOf(contentWidth * ChatTokens.bubbleMaxWidthFraction, ChatTokens.bubbleMaxWidth)
++        LazyColumn(
++            state = listState,
++            reverseLayout = true,
++            modifier = Modifier.fillMaxSize(),
++            contentPadding = PaddingValues(
++                start = MaterialTheme.spacing.medium,
++                end = MaterialTheme.spacing.medium,
++                top = MaterialTheme.spacing.small,
++                bottom = MaterialTheme.spacing.compact,
++            ),
+         ) {
+-            Column(Modifier.padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small)) {
+-                Text(
+-                    if (message.unavailable) stringResource(Res.string.chat_secure_content_unavailable) else message.body,
+-                    style = MaterialTheme.typography.bodyLarge,
+-                    color = if (message.unavailable) MaterialTheme.colorScheme.onSurfaceVariant
+-                    else MaterialTheme.colorScheme.onSurface,
+-                )
+-                when (message.delivery) {
+-                    MatrixMessageDelivery.SENDING -> Text(
+-                        stringResource(Res.string.chat_secure_sending),
+-                        style = MaterialTheme.typography.labelSmall,
+-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
++            items(items, key = ChatTimelineItem::key, contentType = { it::class }) { item ->
++                when (item) {
++                    is ChatTimelineItem.DayHeader -> ChatDayHeader(
++                        when (chatDayLabel(item.date, today)) {
++                            ChatDayLabel.TODAY -> stringResource(Res.string.chat_secure_today)
++                            ChatDayLabel.YESTERDAY -> stringResource(Res.string.chat_secure_yesterday)
++                            ChatDayLabel.DATE -> remember(item.date, today) { formatChatDate(item.date, today) }
++                        },
+                     )
+-                    MatrixMessageDelivery.FAILED -> Row(verticalAlignment = Alignment.CenterVertically) {
+-                        Text(
+-                            stringResource(Res.string.chat_secure_failed),
+-                            style = MaterialTheme.typography.labelSmall,
+-                            color = MaterialTheme.colorScheme.error,
+-                        )
+-                        message.retryTransactionId?.let { transactionId ->
+-                            TextButton(onClick = { onRetry(transactionId) }) {
+-                                Text(stringResource(Res.string.chat_secure_retry))
+-                            }
+-                        }
+-                    }
+-                    MatrixMessageDelivery.SENT -> Unit
++                    is ChatTimelineItem.Message -> ChatMessageRow(item, maxBubbleWidth, onRetry)
+                 }
+             }
+         }
+-    }
+-}
+-
+-@Composable
+-private fun LoadingState(modifier: Modifier) {
+-    Box(modifier.padding(MaterialTheme.spacing.gutter), contentAlignment = Alignment.Center) {
+-        Column(
+-            horizontalAlignment = Alignment.CenterHorizontally,
+-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
++        AnimatedVisibility(
++            visible = !atLatest,
++            enter = fadeIn() + scaleIn(),
++            exit = fadeOut() + scaleOut(),
++            modifier = Modifier
++                .align(Alignment.BottomEnd)
++                .padding(end = MaterialTheme.spacing.medium, bottom = MaterialTheme.spacing.medium),
+         ) {
+-            CircularProgressIndicator()
+-            Text(stringResource(Res.string.chat_secure_loading), textAlign = TextAlign.Center)
++            JumpToLatestButton(unseen, onClick = { scope.launch { listState.animateScrollToItem(0) } })
+         }
+     }
+ }
+ 
+-@Composable
+-private fun Status(modifier: Modifier, message: String, action: (@Composable () -> Unit)? = null) {
+-    Box(modifier.padding(MaterialTheme.spacing.gutter), contentAlignment = Alignment.Center) {
+-        Column(
+-            horizontalAlignment = Alignment.CenterHorizontally,
+-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+-        ) {
+-            Text(message, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+-            action?.invoke()
+-        }
+-    }
+-}
++private fun LazyListState.isNearLatest(thresholdPx: Int): Boolean =
++    firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset <= thresholdPx
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatViewModel.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatViewModel.kt
+index 802cad9..bbb549f 100644
+--- a/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatViewModel.kt
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/features/chat/matrix/presentation/SecureChatViewModel.kt
+@@ -2,19 +2,28 @@ package com.srisu.srisu.features.chat.matrix.presentation
+ 
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
++import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
++import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
+ import com.srisu.srisu.features.chat.matrix.MatrixChatRepository
+ import com.srisu.srisu.features.chat.matrix.MatrixChatRoomState
+ import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
+ import com.srisu.srisu.features.chat.matrix.MATRIX_TEXT_MAX_PLAINTEXT_BYTES
++import kotlinx.coroutines.CancellationException
+ import kotlinx.coroutines.Job
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.launch
+ 
+-class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewModel() {
++class SecureChatViewModel(
++    private val repository: MatrixChatRepository,
++    private val partners: ChatPartnerSource? = null,
++) : ViewModel() {
+     private val _state = MutableStateFlow<MatrixChatRoomState?>(null)
+     val state: StateFlow<MatrixChatRoomState?> = _state.asStateFlow()
++    private val _partner = MutableStateFlow<ChatPartnerIdentity?>(null)
++    /** Header identity; null while unknown, in which case the screen shows a neutral title. */
++    val partner: StateFlow<ChatPartnerIdentity?> = _partner.asStateFlow()
+     private val _messageInput = MutableStateFlow("")
+     val messageInput: StateFlow<String> = _messageInput.asStateFlow()
+     private val _composerValidationError = MutableStateFlow<String?>(null)
+@@ -22,6 +31,7 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
+     private var roomId: String? = null
+     private var observer: Job? = null
+     private var sendJob: Job? = null
++    private var partnerJob: Job? = null
+     private var roomOperation: Long = 0
+ 
+     fun openRoom(value: String) {
+@@ -34,6 +44,8 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
+         _messageInput.value = ""
+         _composerValidationError.value = null
+         _state.value = null
++        partnerJob?.cancel()
++        _partner.value = null
+         roomId = value
+         observer = viewModelScope.launch {
+             repository.observeRoom(value).collect {
+@@ -41,6 +53,22 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
+             }
+         }
+         repository.openRoom(value)
++        loadPartner(value, operation)
++    }
++
++    private fun loadPartner(room: String, operation: Long) {
++        val source = partners ?: return
++        partnerJob = viewModelScope.launch {
++            val identity = try {
++                source.partnerFor(room)
++            } catch (cancelled: CancellationException) {
++                throw cancelled
++            } catch (_: Exception) {
++                // The header falls back to a neutral title; chat availability is unaffected.
++                null
++            }
++            if (roomId == room && roomOperation == operation) _partner.value = identity
++        }
+     }
+ 
+     fun updateMessageInput(value: String) {
+@@ -99,6 +127,9 @@ class SecureChatViewModel(private val repository: MatrixChatRepository) : ViewMo
+         sendJob = null
+         observer?.cancel()
+         observer = null
++        partnerJob?.cancel()
++        partnerJob = null
++        _partner.value = null
+         roomId?.let(repository::closeRoom)
+         roomId = null
+         _messageInput.value = ""
+diff --git a/composeApp/src/commonMain/kotlin/com/srisu/srisu/theme/ChatTokens.kt b/composeApp/src/commonMain/kotlin/com/srisu/srisu/theme/ChatTokens.kt
+new file mode 100644
+index 0000000..e072369
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/srisu/srisu/theme/ChatTokens.kt
+@@ -0,0 +1,48 @@
++package com.srisu.srisu.theme
++
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++
++/**
++ * Couple Chat geometry, scoped to the conversation so global shape and type tokens stay unchanged.
++ * Bubble radii follow the Figma thread (`184:274`): soft 20 dp corners, tightened to 6 dp where
++ * consecutive messages from the same sender join.
++ */
++object ChatTokens {
++    val bubbleRadius = 20.dp
++    val bubbleJoinedRadius = 6.dp
++    val bubbleHorizontalPadding = 14.dp
++    val bubbleVerticalPadding = 9.dp
++    val bubbleMaxWidth = 440.dp
++    const val bubbleMaxWidthFraction = 0.8f
++    val groupedGap = 2.dp
++    val groupGap = 12.dp
++    val metaGap = 6.dp
++    val metaIcon = 14.dp
++    val metaTextSize = 11.sp
++    val metaLineHeight = 14.sp
++    val headerAvatar = 32.dp
++    val emptyAvatar = 72.dp
++    val composerMinHeight = 48.dp
++    val sendButton = 44.dp
++    val jumpButton = 40.dp
++    val statusIconContainer = 56.dp
++    val skeletonLine = 14.dp
++    const val composerMaxLines = 6
++
++    fun bubbleShape(mine: Boolean, joinsPrevious: Boolean, joinsNext: Boolean): RoundedCornerShape {
++        val full = bubbleRadius
++        val joined = bubbleJoinedRadius
++        val top = if (joinsPrevious) joined else full
++        val bottom = if (joinsNext) joined else full
++        return if (mine) {
++            RoundedCornerShape(topStart = full, topEnd = top, bottomEnd = bottom, bottomStart = full)
++        } else {
++            RoundedCornerShape(topStart = top, topEnd = full, bottomEnd = full, bottomStart = bottom)
++        }
++    }
++
++    /** Placeholders and the composer field share the bubble radius so tall drafts keep soft corners. */
++    val roundedShape = RoundedCornerShape(bubbleRadius)
++}
+diff --git a/composeApp/src/commonTest/kotlin/com/srisu/srisu/features/chat/ChatFixtures.kt b/composeApp/src/commonTest/kotlin/com/srisu/srisu/features/chat/ChatFixtures.kt
+new file mode 100644
+index 0000000..6aad611
+--- /dev/null
++++ b/composeApp/src/commonTest/kotlin/com/srisu/srisu/features/chat/ChatFixtures.kt
+@@ -0,0 +1,154 @@
++package com.srisu.srisu.features.chat
++
++import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
++import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
++import com.srisu.srisu.features.chat.matrix.MatrixChatAvailability
++import com.srisu.srisu.features.chat.matrix.MatrixChatMessage
++import com.srisu.srisu.features.chat.matrix.MatrixChatRepository
++import com.srisu.srisu.features.chat.matrix.MatrixChatRoomState
++import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++
++/** Synthetic, non-sensitive conversation content used only by tests and render captures. */
++object ChatFixtures {
++    const val ROOM_ID = "6f0c2a8e-2f8b-4a55-9a51-3c7a1f1d2b10"
++    private const val ME = "@me:example.test"
++    private const val PARTNER = "@partner:example.test"
++
++    /** 2026-10-16 08:02 in Asia/Kathmandu (UTC+05:45). */
++    private const val YESTERDAY_MORNING = 1_792_117_020_000L
++    private const val MINUTE = 60_000L
++    private const val DAY = 24 * 60 * MINUTE
++
++    const val MULTILINE_DRAFT = "Can we keep Saturday free?\nI'd love a slow morning, then the lake walk.\nMaybe dinner at the place we found?"
++
++    private fun message(
++        id: String,
++        body: String,
++        mine: Boolean,
++        minutes: Long,
++        delivery: MatrixMessageDelivery = MatrixMessageDelivery.SENT,
++        unavailable: Boolean = false,
++        retry: String? = null,
++    ) = MatrixChatMessage(
++        id = id,
++        body = body,
++        senderMatrixId = if (mine) ME else PARTNER,
++        mine = mine,
++        timestampMillis = YESTERDAY_MORNING + minutes * MINUTE,
++        delivery = delivery,
++        retryTransactionId = retry,
++        unavailable = unavailable,
++    )
++
++    private fun ready(messages: List<MatrixChatMessage>) = MatrixChatRoomState(
++        roomId = ROOM_ID,
++        messages = messages,
++        availability = MatrixChatAvailability.Ready(),
++    )
++
++    /** Synthetic partner; no photo URL so renders never fetch remote media. */
++    val partner = ChatPartnerIdentity(name = "Aatithi Rai", photoUrl = null)
++
++    fun empty() = ready(emptyList())
++
++    /** Thirty alternating exchanges for scroll, jump-to-latest and pagination-stability checks. */
++    fun longHistory() = ready(
++        (0 until 30).map { index ->
++            message(
++                id = "h$index",
++                body = if (index % 3 == 0) "Message $index — a slightly longer line so wrapping is exercised." else "Message $index",
++                mine = index % 4 >= 2,
++                minutes = index * 7L,
++            )
++        },
++    )
++
++    fun conversationMessages() = listOf(
++        message("e1", "Morning! Did you sleep okay?", mine = false, minutes = 0),
++        message("e2", "I had the strangest dream about our trip 😄", mine = false, minutes = 1),
++        message("e3", "Morning ☀️ Finally slept well.", mine = true, minutes = 4),
++        message("e4", "Tell me about the dream at lunch?", mine = true, minutes = 4),
++        message("e5", "Deal. Same café as last week?", mine = false, minutes = 6),
++        message("e6", "Yes 💛", mine = true, minutes = DAY / MINUTE + 30),
++        message("e7", "I'm leaving work a little early today, so I can pick up the flowers on the way.", mine = false, minutes = DAY / MINUTE + 32),
++    )
++
++    fun conversation() = ready(conversationMessages())
++
++    fun longAndGrouped() = ready(
++        listOf(
++            message("l1", "Okay, planning brain is on.", mine = false, minutes = 0),
++            message(
++                "l2",
++                "For the weekend I was thinking we leave early on Saturday, stop for breakfast near the river, " +
++                    "and then take the long way up to the viewpoint so we're there before it gets crowded. " +
++                    "If it rains we can just stay in and finally finish that puzzle.",
++                mine = false,
++                minutes = 1,
++            ),
++            message("l3", "Yes yes yes", mine = true, minutes = 3),
++            message("l4", "Saved the route here: https://example.com/weekend-route-with-a-very-long-path/and-more", mine = true, minutes = 3),
++            message("l5", "Unbelievablysupercalifragilisticexpialidociouslyexcited", mine = true, minutes = 3),
++            message("l6", "माया गर्छु 💛", mine = false, minutes = 9),
++            message("l7", "👍", mine = true, minutes = 10),
++        ),
++    )
++
++    fun deliveryStates() = ready(
++        listOf(
++            message("d1", "Did you get the tickets?", mine = false, minutes = 0),
++            message("d2", "", mine = false, minutes = 1, unavailable = true),
++            message("d3", "Yes! Sending the screenshot details now.", mine = true, minutes = 5),
++            message("d4", "Row F, seats 11 and 12.", mine = true, minutes = 6, delivery = MatrixMessageDelivery.SENDING),
++            message("txn:t1", "Doors open at 7.", mine = true, minutes = 6, delivery = MatrixMessageDelivery.FAILED, retry = "t1"),
++        ),
++    )
++
++    fun offline() = conversation().copy(
++        availability = MatrixChatAvailability.Offline("Secure chat is offline. Sending is paused until a fresh sync completes."),
++    )
++
++    fun loading() = MatrixChatRoomState(roomId = ROOM_ID, availability = MatrixChatAvailability.Loading, syncing = true)
++
++    fun error() = MatrixChatRoomState(
++        roomId = ROOM_ID,
++        availability = MatrixChatAvailability.Error("Secure chat is not synchronized. Retry to reconnect.", retryable = true),
++    )
++
++    fun unavailableRoom() = MatrixChatRoomState(
++        roomId = ROOM_ID,
++        availability = MatrixChatAvailability.Unavailable("This conversation is no longer a private encrypted couple room."),
++    )
++}
++
++class FixedPartnerSource(private val identity: ChatPartnerIdentity?) : ChatPartnerSource {
++    val requests = mutableListOf<String>()
++    override suspend fun partnerFor(roomId: String): ChatPartnerIdentity? {
++        requests += roomId
++        return identity
++    }
++}
++
++/** In-memory repository that serves a fixed room state and records interactions. */
++class ChatFixtureRepository(initial: MatrixChatRoomState) : MatrixChatRepository {
++    val state = MutableStateFlow(initial)
++    val sent = mutableListOf<String>()
++    val retried = mutableListOf<String>()
++    var sendResult: Result<String> = Result.success("event")
++
++    override fun observeRoom(roomId: String): Flow<MatrixChatRoomState> = state
++    override fun openRoom(roomId: String) = Unit
++    override fun closeRoom(roomId: String) = Unit
++    override suspend fun sendText(roomId: String, text: String): Result<String> {
++        sent += text
++        return sendResult
++    }
++    override suspend fun retryMessage(roomId: String, transactionId: String): Result<Unit> {
++        retried += transactionId
++        return Result.success(Unit)
++    }
++    override fun retryRoom(roomId: String) = Unit
++    override fun close() = Unit
++}
+diff --git a/composeApp/src/commonTest/kotlin/com/srisu/srisu/features/chat/ChatTimelineTest.kt b/composeApp/src/commonTest/kotlin/com/srisu/srisu/features/chat/ChatTimelineTest.kt
+new file mode 100644
+index 0000000..884783d
+--- /dev/null
++++ b/composeApp/src/commonTest/kotlin/com/srisu/srisu/features/chat/ChatTimelineTest.kt
+@@ -0,0 +1,178 @@
++package com.srisu.srisu.features.chat
++
++import androidx.lifecycle.viewModelScope
++import com.srisu.srisu.features.chat.matrix.ChatPartnerIdentity
++import com.srisu.srisu.features.chat.matrix.ChatPartnerSource
++import com.srisu.srisu.features.chat.matrix.MatrixChatMessage
++import com.srisu.srisu.features.chat.matrix.MatrixMessageDelivery
++import com.srisu.srisu.features.chat.matrix.presentation.ChatDayLabel
++import com.srisu.srisu.features.chat.matrix.presentation.ChatTimelineItem
++import com.srisu.srisu.features.chat.matrix.presentation.SecureChatViewModel
++import com.srisu.srisu.features.chat.matrix.presentation.buildChatTimeline
++import com.srisu.srisu.features.chat.matrix.presentation.chatDayLabel
++import com.srisu.srisu.features.chat.matrix.presentation.formatChatDate
++import com.srisu.srisu.features.chat.matrix.presentation.formatChatTime
++import kotlinx.coroutines.CompletableDeferred
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.cancel
++import kotlinx.coroutines.ExperimentalCoroutinesApi
++import kotlinx.coroutines.test.StandardTestDispatcher
++import kotlinx.coroutines.test.advanceUntilIdle
++import kotlinx.coroutines.test.resetMain
++import kotlinx.coroutines.test.runTest
++import kotlinx.coroutines.test.setMain
++import kotlinx.datetime.LocalDate
++import kotlinx.datetime.LocalDateTime
++import kotlinx.datetime.TimeZone
++import kotlin.test.AfterTest
++import kotlin.test.BeforeTest
++import kotlin.test.Test
++import kotlin.test.assertEquals
++import kotlin.test.assertFalse
++import kotlin.test.assertNull
++import kotlin.test.assertTrue
++
++@OptIn(ExperimentalCoroutinesApi::class)
++class ChatTimelineTest {
++    private val zone = TimeZone.of("Asia/Kathmandu")
++    private val dispatcher = StandardTestDispatcher()
++
++    @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
++    @AfterTest fun tearDown() = Dispatchers.resetMain()
++
++    private fun messages(items: List<ChatTimelineItem>) = items.filterIsInstance<ChatTimelineItem.Message>()
++
++    @Test
++    fun groupsSameSenderWithinWindowAndSplitsOnSenderChange() {
++        val timeline = messages(buildChatTimeline(ChatFixtures.conversationMessages(), zone))
++        // e1,e2 partner (joined); e3,e4 mine (joined); e5 partner alone.
++        assertEquals(listOf(false, true, false, true, false), timeline.take(5).map { it.joinsPrevious })
++        assertEquals(listOf(true, false, true, false, false), timeline.take(5).map { it.joinsNext })
++        assertEquals(listOf(false, true, false, true, true), timeline.take(5).map { it.showMeta })
++    }
++
++    @Test
++    fun insertsOneDayHeaderPerLocalDate() {
++        val items = buildChatTimeline(ChatFixtures.conversationMessages(), zone)
++        val headers = items.filterIsInstance<ChatTimelineItem.DayHeader>().map { it.date }
++        assertEquals(listOf(LocalDate(2026, 10, 16), LocalDate(2026, 10, 17)), headers)
++        // A day boundary never joins bubbles, even for the same sender.
++        val firstToday = messages(items).first { it.message.id == "e6" }
++        assertFalse(firstToday.joinsPrevious)
++    }
++
++    @Test
++    fun failedAndPendingMessagesAlwaysShowStatusAndFailedBreaksGroup() {
++        val timeline = messages(buildChatTimeline(ChatFixtures.deliveryStates().messages, zone))
++        val pending = timeline.single { it.message.delivery == MatrixMessageDelivery.SENDING }
++        val failed = timeline.single { it.message.delivery == MatrixMessageDelivery.FAILED }
++        assertTrue(pending.showMeta)
++        assertTrue(failed.showMeta)
++        assertFalse(failed.joinsNext)
++    }
++
++    @Test
++    fun keysStayStableAcrossOutboxAcknowledgementAndAreUnique() {
++        val pending = MatrixChatMessage(
++            id = "txn:abc", body = "hi", senderMatrixId = "@me:example.test", mine = true,
++            timestampMillis = 1_000, delivery = MatrixMessageDelivery.SENDING, transactionId = "abc",
++        )
++        val acknowledged = pending.copy(id = "\$event", delivery = MatrixMessageDelivery.SENT)
++        assertEquals(pending.stableKey, acknowledged.stableKey)
++
++        // During an outbox/timeline race the same transaction can appear twice; keys must stay unique.
++        val items = buildChatTimeline(listOf(acknowledged, pending), zone)
++        val keys = items.map { it.key }
++        assertEquals(keys.size, keys.toSet().size)
++        assertEquals(1, messages(items).size)
++    }
++
++    @Test
++    fun partnerMessagesWithoutTransactionKeepEventIdentity() {
++        val partner = ChatFixtures.conversationMessages().first()
++        assertNull(partner.transactionId)
++        assertEquals(partner.id, partner.stableKey)
++    }
++
++    @Test
++    fun formatsTimesAndDays() {
++        assertEquals("12:05 AM", formatChatTime(LocalDateTime(2026, 10, 17, 0, 5)))
++        assertEquals("8:02 AM", formatChatTime(LocalDateTime(2026, 10, 17, 8, 2)))
++        assertEquals("12:30 PM", formatChatTime(LocalDateTime(2026, 10, 17, 12, 30)))
++        assertEquals("11:59 PM", formatChatTime(LocalDateTime(2026, 10, 17, 23, 59)))
++        val today = LocalDate(2026, 10, 17)
++        assertEquals(ChatDayLabel.TODAY, chatDayLabel(today, today))
++        assertEquals(ChatDayLabel.YESTERDAY, chatDayLabel(LocalDate(2026, 10, 16), today))
++        assertEquals(ChatDayLabel.DATE, chatDayLabel(LocalDate(2026, 10, 14), today))
++        assertEquals("Wed, 14 Oct", formatChatDate(LocalDate(2026, 10, 14), today))
++        assertEquals("31 Dec 2025", formatChatDate(LocalDate(2025, 12, 31), today))
++    }
++
++    @Test
++    fun partnerIdentityIsLoadedForTheOpenRoomAndClearedOnClose() = runTest(dispatcher) {
++        val partners = FixedPartnerSource(ChatFixtures.partner)
++        val viewModel = SecureChatViewModel(ChatFixtureRepository(ChatFixtures.conversation()), partners)
++        viewModel.openRoom(ChatFixtures.ROOM_ID)
++        advanceUntilIdle()
++        assertEquals(ChatFixtures.partner, viewModel.partner.value)
++        assertEquals(listOf(ChatFixtures.ROOM_ID), partners.requests)
++
++        viewModel.closeRoom()
++        assertNull(viewModel.partner.value)
++        viewModel.viewModelScope.cancel()
++    }
++
++    @Test
++    fun latePartnerLookupForPreviousRoomIsIgnored() = runTest(dispatcher) {
++        val gate = CompletableDeferred<ChatPartnerIdentity?>()
++        val partners = object : ChatPartnerSource {
++            override suspend fun partnerFor(roomId: String): ChatPartnerIdentity? =
++                if (roomId == "room-a") gate.await() else null
++        }
++        val viewModel = SecureChatViewModel(ChatFixtureRepository(ChatFixtures.conversation()), partners)
++        viewModel.openRoom("room-a")
++        advanceUntilIdle()
++        viewModel.openRoom("room-b")
++        gate.complete(ChatFixtures.partner)
++        advanceUntilIdle()
++        assertNull(viewModel.partner.value)
++        viewModel.closeRoom()
++        viewModel.viewModelScope.cancel()
++    }
++
++    @Test
++    fun partnerLookupFailureLeavesChatUsable() = runTest(dispatcher) {
++        val partners = object : ChatPartnerSource {
++            override suspend fun partnerFor(roomId: String): ChatPartnerIdentity? = error("synthetic failure")
++        }
++        val repository = ChatFixtureRepository(ChatFixtures.conversation())
++        val viewModel = SecureChatViewModel(repository, partners)
++        viewModel.openRoom(ChatFixtures.ROOM_ID)
++        advanceUntilIdle()
++        assertNull(viewModel.partner.value)
++        assertEquals(ChatFixtures.conversation(), viewModel.state.value)
++
++        viewModel.updateMessageInput("still works")
++        viewModel.sendMessage()
++        advanceUntilIdle()
++        assertEquals(listOf("still works"), repository.sent)
++        assertEquals("", viewModel.messageInput.value)
++        viewModel.closeRoom()
++        viewModel.viewModelScope.cancel()
++    }
++
++    @Test
++    fun failedSendPreservesDraft() = runTest(dispatcher) {
++        val repository = ChatFixtureRepository(ChatFixtures.conversation()).apply {
++            sendResult = Result.failure(IllegalStateException("synthetic"))
++        }
++        val viewModel = SecureChatViewModel(repository)
++        viewModel.openRoom(ChatFixtures.ROOM_ID)
++        viewModel.updateMessageInput("keep me")
++        viewModel.sendMessage()
++        advanceUntilIdle()
++        assertEquals("keep me", viewModel.messageInput.value)
++        viewModel.closeRoom()
++        viewModel.viewModelScope.cancel()
++    }
++}
+diff --git a/composeApp/src/iosTest/kotlin/com/srisu/srisu/features/chat/SecureChatIosRenderTest.kt b/composeApp/src/iosTest/kotlin/com/srisu/srisu/features/chat/SecureChatIosRenderTest.kt
+new file mode 100644
+index 0000000..57bd700
+--- /dev/null
++++ b/composeApp/src/iosTest/kotlin/com/srisu/srisu/features/chat/SecureChatIosRenderTest.kt
+@@ -0,0 +1,84 @@
++package com.srisu.srisu.features.chat
++
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.size
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.asSkiaBitmap
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.test.ExperimentalTestApi
++import androidx.compose.ui.test.captureToImage
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.compose.ui.test.runSkikoComposeUiTest
++import androidx.compose.ui.geometry.Size
++import androidx.compose.ui.unit.Density
++import androidx.compose.ui.unit.dp
++import androidx.lifecycle.viewModelScope
++import com.srisu.srisu.features.chat.matrix.MatrixChatRoomState
++import com.srisu.srisu.features.chat.matrix.presentation.SecureChatScreen
++import com.srisu.srisu.features.chat.matrix.presentation.SecureChatViewModel
++import com.srisu.srisu.theme.SriSuTheme
++import kotlinx.cinterop.BetaInteropApi
++import kotlinx.cinterop.ExperimentalForeignApi
++import kotlinx.cinterop.addressOf
++import kotlinx.cinterop.usePinned
++import kotlinx.coroutines.cancel
++import org.jetbrains.skia.EncodedImageFormat
++import org.jetbrains.skia.Image
++import platform.Foundation.NSData
++import platform.Foundation.NSFileManager
++import platform.Foundation.NSTemporaryDirectory
++import platform.Foundation.create
++import platform.Foundation.writeToFile
++import kotlin.test.Test
++
++/**
++ * Renders the secure chat screen inside the iOS simulator test host (Skia/Compose iOS runtime).
++ * Output: <simulator tmp>/chat-ui-revist/ios-*.png; the path is printed for collection.
++ * This is a Compose UI test render, not a launched app with a live backend.
++ */
++@OptIn(ExperimentalTestApi::class)
++class SecureChatIosRenderTest {
++    private companion object {
++        const val SCALE = 2f
++        const val WIDTH_PX = 390 * SCALE
++        const val HEIGHT_PX = 844 * SCALE
++    }
++
++    private fun render(name: String, state: MatrixChatRoomState, dark: Boolean = false, fontScale: Float = 1f, draft: String = "") =
++        runSkikoComposeUiTest(size = Size(WIDTH_PX, HEIGHT_PX), density = Density(SCALE, fontScale)) {
++            val viewModel = SecureChatViewModel(ChatFixtureRepository(state), FixedPartnerSource(ChatFixtures.partner))
++            viewModel.openRoom(state.roomId)
++            if (draft.isNotEmpty()) viewModel.updateMessageInput(draft)
++            setContent {
++                Box(Modifier.size(390.dp, 844.dp).testTag("screen")) {
++                    SriSuTheme(darkTheme = dark) { SecureChatScreen(viewModel = viewModel, onBack = {}) }
++                }
++            }
++            waitForIdle()
++            val bitmap = onNodeWithTag("screen").captureToImage().asSkiaBitmap()
++            val png = Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes
++            writePng(name, png)
++            viewModel.closeRoom()
++            viewModel.viewModelScope.cancel()
++        }
++
++    @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
++    private fun writePng(name: String, bytes: ByteArray) {
++        val directory = NSTemporaryDirectory() + "chat-ui-revist"
++        NSFileManager.defaultManager.createDirectoryAtPath(directory, true, null, null)
++        val path = "$directory/ios-$name.png"
++        bytes.usePinned { pinned ->
++            NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong()).writeToFile(path, true)
++        }
++        println("CHAT_RENDER $path")
++    }
++
++    @Test fun empty() = render("01-empty", ChatFixtures.empty())
++    @Test fun conversation() = render("02-conversation", ChatFixtures.conversation())
++    @Test fun longAndGrouped() = render("03-long-grouped", ChatFixtures.longAndGrouped())
++    @Test fun multilineDraft() = render("09-multiline-draft", ChatFixtures.conversation(), draft = ChatFixtures.MULTILINE_DRAFT)
++    @Test fun deliveryStates() = render("10-pending-failed-unavailable", ChatFixtures.deliveryStates())
++    @Test fun offline() = render("11-offline", ChatFixtures.offline())
++    @Test fun largeText() = render("12-large-text", ChatFixtures.conversation(), fontScale = 1.6f)
++    @Test fun dark() = render("13-dark", ChatFixtures.conversation(), dark = true)
++}
+diff --git a/docs/flows/couple-chat-ui-revisit.md b/docs/flows/couple-chat-ui-revisit.md
+new file mode 100644
+index 0000000..ffc482c
+--- /dev/null
++++ b/docs/flows/couple-chat-ui-revisit.md
+@@ -0,0 +1,124 @@
++# Couple Chat UI revisit — 2026-10-17
++
++## Scope and baseline
++
++Frontend: SriZan12/SriSu, branch `codex/couple-chat-rebuild` (the user chose to work on
++the current branch), starting HEAD `33a5a892bf529408a0be0c41e6417923ca48b4ce`. The checkout
++had untracked `docs/architecture/notifications-crashlytics-plan.md`, `iosApp/Pods/` and
++`test__auth_flow_and_partner_linking_testing_.patch`; they were left untouched. Nothing was
++committed, pushed, stashed or reset. Figma was viewed read-only and not modified.
++
++`origin/dev-core-architecture` is 9 commits ahead and 6 behind this branch. It still contains
++the legacy `couplechat` client (voice, media, reactions), which the Matrix cutover on this
++branch deliberately removed. The user chose to redesign the **Matrix text chat** only;
++nothing from the legacy branch was merged or cherry-picked.
++
++Backend (`../SriSu-backend`, branch `codex/couple-chat-rebuild`) was read only, to confirm
++the partner fields used by the header: `have-couple-connection-requested/` returns
++`connection.partner` through `CoupleConnectionPartnerSerializer`
++(`id`, `full_name`, `username`, `profile_photo`) and `connection.chat_room_id`.
++
++### What the Matrix client actually supports (and therefore what the UI shows)
++
++| Capability | Supported | UI treatment |
++| --- | --- | --- |
++| Encrypted text, timeline of newest 100 events | Yes | Redesigned |
++| Pending / sent-to-server / failed + retry | Yes (`MatrixMessageDelivery`) | Clock / single check / alert icon; "Not sent · Tap to retry" |
++| Delivered / read receipts | Not exposed | Not shown (no double ticks) |
++| Undecryptable event | Yes (`unavailable`) | Outlined, italic, lock icon |
++| Offline (sending paused), loading, error, room unavailable | Yes | Redesigned, consistent status component |
++| Partner name/photo | Django connection API | Header + empty state, initials fallback |
++| Presence, typing, "Active now" | No | Not shown; header subtitle states E2EE instead |
++| Replies, reactions, edit, delete, message actions | No (deferred in `couple-chat.md`) | Absent |
++| Voice, photo/video, viewers, attachments | No | Absent — no inert `+`, camera or mic controls |
++| Older-history pagination | No (newest 100 only) | No history loader; jump-to-latest only |
++
++## Critique of the baseline (rendered, Android Robolectric)
++
++Evidence: `artifacts/chat-ui-revist/before/android/*.png`.
++
++1. **Sender is indistinguishable.** Both sides used the same warm fill
++   (`primaryContainer` and `surfaceVariant` are both `#EFE9E6`). Users rely on alignment
++   alone, which fails at a glance and for short messages. → Outgoing uses the Figma thread's
++   ink (`primary`/`onPrimary`); incoming keeps the warm surface (`surfaceContainerHigh`).
++   *Component:* `ChatMessageBubble`.
++2. **No time information at all.** There were no timestamps or day boundaries, so a
++   conversation spanning days read as one block. → Day headers (Today / Yesterday /
++   "Fri, 16 Oct") and a time on the last bubble of each group, placed inline at the end of
++   the last text line when it fits. *Components:* `ChatTimeline`, `TextWithMeta`.
++3. **Delivery state was textual and clumsy.** "Sending…" used the letter-spaced eyebrow
++   style; "Not sent  Retry" was crammed inside the bubble and inflated it; sent had no
++   signal. → Compact status icons for your messages only (clock, single check meaning
++   "reached the server", alert), and a separate full-width 48 dp "Not sent · Tap to retry"
++   target under the failed bubble. No delivered/read claim. *Component:* `MessageMeta`.
++4. **No grouping rhythm.** Uniform 8 dp gaps and uniform pill corners made every message a
++   separate island. → 2 dp inside a group and 12 dp between groups (same sender, same day,
++   ≤ 5 min, not after a failure), with 6 dp joined corners on the sender side.
++   *Components:* `buildChatTimeline`, `ChatTokens.bubbleShape`.
++5. **Anonymous header.** "Conversation" with no partner identity. → Partner avatar
++   (photo, initials fallback) + name, and an honest "End-to-end encrypted" line.
++   *Components:* `ChatHeader`, `ConnectionChatPartnerSource`.
++6. **Composer friction.** An outlined rectangle plus a wide text "Send" button; the field
++   was disabled during each send (which can dismiss the keyboard) and while offline (which
++   blocked drafting); the IME action sent the message, so Enter could not insert a newline.
++   → Rounded field matching the Figma composer, 44 dp icon send button with in-flight
++   progress, the draft stays editable in every chat state, Enter inserts a newline, and
++   only *sending* is gated on `Ready`. *Component:* `ChatComposer`.
++7. **Unfinished-looking states.** Plain centred text for empty/loading/error; the offline
++   strip sat between list and composer. → Figma-derived empty state with starters, skeleton
++   bubbles while opening, a shared icon/title/body/action status layout, and an offline
++   banner under the header. *Component:* `ChatChrome`.
++8. **Scrolling did not behave like a messenger.** Messages were top-anchored and there was
++   no way back to the latest after reading history. → Bottom-anchored `reverseLayout` list,
++   auto-follow only when already at the latest or when you sent, a jump-to-latest button
++   with a local "N new" count, and stable keys across outbox acknowledgement.
++
++Kept as-is because they already worked: the ViewModel/repository contract and draft
++ownership, room-operation guards, theme roles and typography scale, bubble text size
++(`bodyLarge`), and the retry semantics.
++
++## References and what each informed
++
++| Source (actually inspected) | Decision it informed |
++| --- | --- |
++| Figma `184:142` No messages yet (read-only web view) | Empty state copy, partner avatar, right-aligned starter chips |
++| Figma `184:274` The thread | Ink outgoing / warm incoming bubbles, ~20 dp radii, soft day label, rounded composer with circular action |
++| Figma `184:218` First message sent | Status line under the newest outgoing message (adapted to an inline icon) |
++| [Jetchat `Conversation.kt`](https://github.com/android/compose-samples/blob/main/Jetchat/app/src/main/java/com/example/compose/jetchat/conversation/Conversation.kt) (official Compose sample) | `reverseLayout`, first/last-in-group flags, tighter spacing inside groups, jump-to-bottom threshold |
++| [WhatsApp read-receipt help](https://faq.whatsapp.com/665923838265756) (page truncated; meanings from the widely documented convention) | Clock = pending, single check = reached server; double ticks omitted because SriSu cannot report them |
++| [Viber delivery-icon redesign notes](https://www.viber.com/?p=21995) via search summary | Same icon semantics; confirms status icons, not words |
++| [MUI X chat message grouping docs](https://mui.com/x/react-chat/display/message-appearance/) | 5-minute grouping window; one timestamp per group |
++| [CometChat chat design practices](https://www.cometchat.com/blog/chat-app-design-best-practices) | Distinct sender colours; unobtrusive meta |
++
++Limits: Figma was inspected through the public read-only web canvas (no connector, no Dev
++Mode values, so radii and spacing are visual estimates). No Figma Community or Dribbble
++files were opened; WhatsApp/Viber were studied through help/press pages, not the apps.
++
++## Intentional deviations from Figma
++
++- Header is start-aligned, not centred: at 160 % text the centred title collided with the
++  back button.
++- No `+`, camera, mic, overflow menu, Spark cards or "Active now": unsupported, and
++  `couple-chat.md` forbids inert controls.
++- No avatar beside each bubble: in a two-person room side + colour identify the sender, and
++  the header carries identity. Figma's thread also omits per-message avatars for text.
++- Fonts follow the app default (`useSerifHeadings = false`), so the empty-state title is
++  Satoshi rather than Figma's Instrument Serif preview.
++- Starter chips fill the draft; they never auto-send.
++
++## Behaviour changes
++
++- `MatrixChatMessage.transactionId` / `stableKey`: own messages keep `txn:<id>` from outbox
++  to timeline (via `unsigned.transaction_id`), so the list item is not replaced when the
++  server acknowledges it. Outbox entries whose transaction already appears in the timeline
++  are dropped, which also removes a brief duplicate during that race.
++- `SecureChatViewModel.partner`: display-only identity from `ChatPartnerSource`; returned
++  only when the active accepted connection's `chat_room_id` equals the open room; cleared
++  on room switch/close; failures leave the header neutral and chat usable.
++- Composer stays editable during Loading/Offline/sending; send remains gated on `Ready`.
++- Timestamps use a fixed English 12-hour format and the device time zone.
++
++## Verification
++
++See `artifacts/chat-ui-revist/screenshot-index.md` for captures and the final task report
++for command outcomes.
+diff --git a/docs/flows/couple-chat.md b/docs/flows/couple-chat.md
+index eeed5ab..7b4102d 100644
+--- a/docs/flows/couple-chat.md
++++ b/docs/flows/couple-chat.md
+@@ -88,17 +88,21 @@ permissions, encryption behavior, or proof that every prototype state exists.
+ 
+ ## Feature scope and truthful status
+ 
++The 2026-10-17 presentation refinement (header identity, grouping, timestamps, status
++icons, composer and state views) is recorded in
++[couple-chat-ui-revisit.md](couple-chat-ui-revisit.md).
++
+ The first releasable slice is intentionally narrow: private encrypted text,
+ timeline synchronization, durable retry/catch-up for sends already accepted into
+ Trixnity's outbox, truthful offline/error state, current-relationship
+-authorization, and logout/account-switch isolation. The composer is disabled
++authorization, and logout/account-switch isolation. Sending is disabled
+ without a current secure room observation and `SyncState.RUNNING`; this slice does
+ not promise creation of new messages while offline.
+ 
+ | Figma/product area | Matrix-era ownership | Status for the first release |
+ | --- | --- | --- |
+ | Empty conversation and text thread | Trixnity timeline backed by the mapped encrypted Matrix room | Implemented and compile/unit verified; live two-device Synapse verification remains |
+-| Send/retry/offline recovery | One Matrix transaction ID and Trixnity's gated durable outbox; never a parallel Django message operation | Implemented for retry/catch-up of already queued sends; composer is disabled while offline, and live restart verification remains |
++| Send/retry/offline recovery | One Matrix transaction ID and Trixnity's gated durable outbox; never a parallel Django message operation | Implemented for retry/catch-up of already queued sends; sending is disabled while offline (the draft stays editable), and live restart verification remains |
+ | Delivery/read state | Matrix receipt semantics exposed only when tested across both clients | Required only if the UI can report it truthfully; otherwise hide it |
+ | Reply, edit, reaction and deletion | Standard Matrix relations/redactions plus SriSu product policy and current-membership gating | Deferred until each action is implemented and tested; controls stay absent |
+ | Photo/video and viewer | Trixnity/Matrix encrypted media with bounded cache and current-room access | Unimplemented and disabled |

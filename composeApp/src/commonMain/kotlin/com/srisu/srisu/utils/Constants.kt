@@ -5,7 +5,6 @@ object Constants {
     object Auth {
         const val OTP_LENGTH = 6
         const val TOTAL_PROGRESS = 7
-        const val COUNTRY_JSON_FILE_NAME = "Countries.json"
         const val SESSION_FILE = "Session_File"
         const val SESSION_KEY = "Session_Key"
 
@@ -36,25 +35,4 @@ object Constants {
         const val REJECTED = "REJECTED"
     }
 
-    object ChatConstants {
-
-        const val FETCH_MESSAGES = "fetch_messages"
-        const val SEND_MESSAGE = "send_message"
-        const val EDIT_MESSAGE = "edit_message"
-        const val DELETE_MESSAGE = "delete_message"
-        const val TYPING = "typing"
-        const val MESSAGE_READ = "message_read"
-        const val MESSAGE_DELIVERED = "message_delivered"
-        const val REACT_TO_MESSAGE = "react_to_message"
-        const val DELETE_FOR_ME = "DELETE_FOR_ME"
-        const val DELETE_FOR_EVERYONE = "DELETE_FOR_EVERYONE"
-
-        const val GET_CHAT_ROOMS =  "get_chat_rooms"
-
-        const val TEXT = "TEXT"
-        const val IMAGE = "IMAGE"
-        const val VIDEO = "VIDEO"
-        const val AUDIO = "AUDIO"
-
-    }
 }

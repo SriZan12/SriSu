@@ -1,14 +1,16 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.spacing
+import androidx.compose.material3.MaterialTheme
+import com.srisu.srisu.theme.field
+import com.srisu.srisu.theme.pill
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
@@ -18,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -56,20 +57,11 @@ fun OtpVerificationScreen(
                 .padding(innerPadding)
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = MaterialTheme.spacing.extraLarge),
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Go back",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
+            NavigationBackButton(onBackClick)
 
             Spacer(modifier = Modifier.height(48.dp))
 
@@ -110,7 +102,7 @@ fun OtpVerificationScreen(
 private fun MessageIconBox() {
     Surface(
         modifier = Modifier.size(112.dp),
-        shape = RoundedCornerShape(32.dp),
+        shape = MaterialTheme.shapes.field,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -148,7 +140,7 @@ private fun OtpHeader(
             text = "Check your messages",
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = FontFamily.Serif,
+
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
@@ -215,7 +207,7 @@ private fun OtpDigitBox(
         modifier = modifier
             .aspectRatio(0.82f)
             .heightIn(min = 64.dp, max = 84.dp),
-        shape = RoundedCornerShape(22.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(
             width = if (isFocused) 2.dp else 1.dp,
@@ -261,8 +253,8 @@ private fun VerifyBottomButton(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 32.dp)
-            .padding(bottom = 28.dp),
+            .padding(horizontal = MaterialTheme.spacing.extraLarge)
+            .padding(bottom = MaterialTheme.spacing.section),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Button(
@@ -271,7 +263,7 @@ private fun VerifyBottomButton(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(68.dp),
-            shape = RoundedCornerShape(34.dp),
+            shape = MaterialTheme.shapes.pill,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,

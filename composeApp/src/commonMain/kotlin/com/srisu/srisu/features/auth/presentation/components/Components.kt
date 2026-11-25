@@ -1,5 +1,11 @@
 package com.srisu.srisu.features.auth.presentation.components
 
+import com.srisu.srisu.components.NavigationBackButton
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import com.srisu.srisu.theme.spacing
+import com.srisu.srisu.theme.pill
+import com.srisu.srisu.theme.transparent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,10 +21,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,7 +63,7 @@ fun ProgressIndicator(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(10.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(MaterialTheme.shapes.small),
             trackColor = MaterialTheme.colorScheme.onSurface,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -74,7 +78,7 @@ fun ProgressIndicator(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(totalSteps) { index ->
@@ -84,7 +88,7 @@ fun ProgressIndicator(
                 modifier = Modifier
                     .weight(1f)
                     .height(6.dp)
-                    .clip(RoundedCornerShape(50))
+                    .clip(MaterialTheme.shapes.pill)
                     .background(
                         if (isSelected) {
                             MaterialTheme.colorScheme.primary
@@ -113,26 +117,19 @@ fun CommonProfileContainerCompo(
 
     Scaffold(
         modifier = modifier
+            .imePadding()
             .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                localFocusManager?.clearFocus()
+            .pointerInput(localFocusManager) {
+                detectTapGestures(onTap = { localFocusManager?.clearFocus() })
             },
         topBar = {
             TopAppBar(
                 title = {},
                 modifier = Modifier.fillMaxWidth(),
-                colors = TopAppBarDefaults.topAppBarColors(Color.Transparent),
+                colors = TopAppBarDefaults.topAppBarColors(MaterialTheme.colorScheme.transparent),
                 navigationIcon = {
                     if (showNavBackIcon) {
-                        IconButton(onClick = onNavBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Navigate back",
-                            )
-                        }
+                        NavigationBackButton(onNavBack)
 
                     }
                 }
@@ -158,13 +155,13 @@ fun CommonProfileContainerCompo(
                 .padding(innerPadding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = MaterialTheme.spacing.extraLarge),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
         ) {
 
             ProgressIndicator(
-                totalSteps = 6,
+                totalSteps = CustomProfileSetupScreen.registrationOrder.size,
                 currentStep = currentStep,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -185,7 +182,7 @@ fun ScreenTopIcon(
 ) {
     Surface(
         modifier = Modifier.size(85.dp),
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = color
     ) {
         Box(contentAlignment = Alignment.Center) {

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SriSu proposed 0.1 shared chat contract definitions",
+  "$comment": "Design only. References are local. No claim of deployed v2 behavior.",
+  "$defs": {
+    "OpaqueId": {"type": "string", "minLength": 1, "maxLength": 128},
+    "Counter": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+    "SendCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["client_operation_id", "room_id", "membership_epoch", "text", "media_ids", "reply_to_id"],
+      "properties": {
+        "client_operation_id": {"type": "string", "format": "uuid"},
+        "room_id": {"$ref": "#/$defs/OpaqueId"},
+        "membership_epoch": {"$ref": "#/$defs/Counter"},
+        "text": {"type": ["string", "null"], "maxLength": 4000},
+        "media_ids": {"type": "array", "items": {"$ref": "#/$defs/OpaqueId"}, "maxItems": 10, "uniqueItems": true},
+        "reply_to_id": {"anyOf": [{"$ref": "#/$defs/OpaqueId"}, {"type": "null"}]}
+      },
+      "anyOf": [
+        {"properties": {"text": {"type": "string", "minLength": 1}}},
+        {"properties": {"media_ids": {"minItems": 1}}}
+      ],
+      "$comment": "Service additionally rejects whitespace-only text, checks URL/path room identity, media ownership, original membership epoch and payload fingerprint. Limits are proposed, not new current-client restrictions."
+    },
+    "Message": {
+      "type": "object",
+      "required": ["id", "room_id", "sender_id", "client_operation_id", "sequence", "revision", "text", "media_ids", "reply_to_id", "deleted", "created_at"],
+      "properties": {
+        "id": {"$ref": "#/$defs/OpaqueId"},
+        "room_id": {"$ref": "#/$defs/OpaqueId"},
+        "sender_id": {"$ref": "#/$defs/OpaqueId"},
+        "client_operation_id": {"type": ["string", "null"], "format": "uuid", "description": "Null only for legacy messages without a trusted operation identity."},
+        "sequence": {"$ref": "#/$defs/Counter"},
+        "revision": {"$ref": "#/$defs/Counter"},
+        "text": {"type": ["string", "null"], "description": "Preserve valid legacy content; new send limits do not truncate historical messages."},
+        "media_ids": {"type": "array", "items": {"$ref": "#/$defs/OpaqueId"}, "uniqueItems": true},
+        "reply_to_id": {"anyOf": [{"$ref": "#/$defs/OpaqueId"}, {"type": "null"}]},
+        "deleted": {"type": "boolean"},
+        "created_at": {"type": "string", "format": "date-time"}
+      },
+      "allOf": [{"if": {"properties": {"deleted": {"const": true}}}, "then": {"properties": {"text": {"type": "null"}, "media_ids": {"maxItems": 0}}}}]
+    },
+    "SendResult": {
+      "type": "object",
+      "required": ["message", "change_sequence"],
+      "properties": {
+        "message": {"$ref": "#/$defs/Message"},
+        "change_sequence": {"$ref": "#/$defs/Counter"}
+      }
+    },
+    "MessageChange": {
+      "type": "object",
+      "required": ["event_id", "room_id", "membership_epoch", "change_sequence", "kind", "message"],
+      "properties": {
+        "event_id": {"type": "string", "format": "uuid"},
+        "room_id": {"$ref": "#/$defs/OpaqueId"},
+        "membership_epoch": {"$ref": "#/$defs/Counter"},
+        "change_sequence": {"$ref": "#/$defs/Counter"},
+        "kind": {"enum": ["message.upsert", "message.tombstone"]},
+        "message": {"$ref": "#/$defs/Message"}
+      },
+      "$comment": "This C1 subset excludes later C2 receipt/reaction/per-user deletion change variants. Extend schema before enabling them; room IDs and tombstone flag must match the kind at the service boundary."
+    },
+    "History": {
+      "type": "object",
+      "required": ["room_id", "membership_epoch", "items", "snapshot_checkpoint", "next_cursor", "has_more"],
+      "properties": {
+        "room_id": {"$ref": "#/$defs/OpaqueId"},
+        "membership_epoch": {"$ref": "#/$defs/Counter"},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/Message"}, "maxItems": 50},
+        "snapshot_checkpoint": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "next_cursor": {"type": ["string", "null"], "maxLength": 4096},
+        "has_more": {"type": "boolean"}
+      }
+    },
+    "Changes": {
+      "type": "object",
+      "required": ["room_id", "membership_epoch", "items", "next_cursor", "has_more"],
+      "properties": {
+        "room_id": {"$ref": "#/$defs/OpaqueId"},
+        "membership_epoch": {"$ref": "#/$defs/Counter"},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/MessageChange"}, "maxItems": 100},
+        "next_cursor": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "has_more": {"type": "boolean"}
+      },
+      "$comment": "next_cursor represents the last scanned server position through a fixed high-water mark, including filtered records; it must not leak hidden payloads."
+    },
+    "ErrorEnvelope": {
+      "type": "object",
+      "required": ["error", "request_id", "server_time"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message", "fields", "retryable"],
+          "properties": {
+            "code": {"type": "string", "minLength": 1},
+            "message": {"type": "string"},
+            "fields": {"type": "object", "additionalProperties": {"type": "string"}},
+            "retryable": {"type": "boolean"},
+            "retry_after_seconds": {"type": "integer", "minimum": 0},
+            "current_revision": {"$ref": "#/$defs/Counter"}
+          }
+        },
+        "request_id": {"type": "string", "minLength": 1},
+        "server_time": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

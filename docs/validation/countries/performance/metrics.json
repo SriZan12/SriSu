@@ -1,0 +1,65 @@
+{
+  "device": "SriSuNavigationQA / Android 15 API 35 / 1080x2340 at 440 dpi / emulator-5554",
+  "renderer": "Android Emulator OpenGL ES Translator (Apple M4)",
+  "build": "release, non-debuggable, existing minifyEnabled=false, local debug signing and test-host manifest via init script",
+  "method": "ActivityScenario + UIAutomator, real frame clock, isolated phases, synthetic offline data",
+  "frames": {
+    "first-open": {
+      "rendered": 75,
+      "janky": 4,
+      "jankyPercent": 5.33,
+      "p50Ms": 17,
+      "p95Ms": 20,
+      "p99Ms": 85
+    },
+    "scroll": {
+      "rendered": 1120,
+      "janky": 15,
+      "jankyPercent": 1.34,
+      "p50Ms": 17,
+      "p95Ms": 17,
+      "p99Ms": 19
+    },
+    "search": {
+      "rendered": 9,
+      "janky": 1,
+      "jankyPercent": 11.11,
+      "p50Ms": 19,
+      "p95Ms": 27,
+      "p99Ms": 27
+    },
+    "warm-open-1": {
+      "rendered": 75,
+      "janky": 3,
+      "jankyPercent": 4.0,
+      "p50Ms": 17,
+      "p95Ms": 18,
+      "p99Ms": 48
+    },
+    "warm-open-2": {
+      "rendered": 25,
+      "janky": 5,
+      "jankyPercent": 20.0,
+      "p50Ms": 19,
+      "p95Ms": 53,
+      "p99Ms": 57
+    },
+    "warm-open-3": {
+      "rendered": 65,
+      "janky": 10,
+      "jankyPercent": 15.38,
+      "p50Ms": 17,
+      "p95Ms": 32,
+      "p99Ms": 38
+    }
+  },
+  "timings": {
+    "firstOpenToTestIdleMs": 2320.960626,
+    "warmOpenToTestIdleMs": [
+      1500.2925,
+      645.663708,
+      1488.375792
+    ],
+    "thousandFiltersMs": 15.024875
+  }
+}

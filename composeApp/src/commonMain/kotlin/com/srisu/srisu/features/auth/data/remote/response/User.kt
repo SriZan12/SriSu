@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class User(
+    @SerialName("share_partner_details")
+    val sharePartnerDetails: Boolean? = null,
     @SerialName("bio")
     val bio: String? = null,
     @SerialName("city")
