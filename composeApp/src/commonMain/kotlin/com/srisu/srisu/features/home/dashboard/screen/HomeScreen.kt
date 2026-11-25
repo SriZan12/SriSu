@@ -71,12 +71,13 @@ fun HomeScreen(actions: HomeActions, modifier: Modifier = Modifier, viewModel: H
     MomentLifecycle(viewModel::visible)
     com.srisu.srisu.features.couplechat.presentation.ProtectConversation()
     HomeContent(state.copy(notificationUnreadCount=unread), viewModel::image, {viewModel.refresh();partnerNames.refresh()}, actions, modifier,
-        HomeInteractions(viewModel::setStatus, viewModel::suggest, viewModel::ideaAction, viewModel::acceptPlan, viewModel::retryAction, viewModel::reminder))
+        HomeInteractions(viewModel::setStatus, viewModel::suggest, viewModel::ideaAction, viewModel::acceptPlan, viewModel::retryAction, viewModel::reminder),
+        onRefresh = {viewModel.refreshFromUser();partnerNames.refresh()})
 }
 
 @Composable
 fun HomeContent(state: HomeUiState, load: HomeImageLoader, onRetry: () -> Unit, actions: HomeActions,
-    modifier: Modifier = Modifier, interactions: HomeInteractions = HomeInteractions()) {
+    modifier: Modifier = Modifier, interactions: HomeInteractions = HomeInteractions(), onRefresh: () -> Unit = onRetry) {
     // Resolve only presentation identities; message text and shared activity content stay original.
     val couple = state.couple?.let { couple ->
         couple.copy(
@@ -91,5 +92,5 @@ fun HomeContent(state: HomeUiState, load: HomeImageLoader, onRetry: () -> Unit, 
             },
         )
     }
-    HomeCoupleSpace(state.copy(couple = couple), load, onRetry, actions, interactions, modifier)
+    HomeCoupleSpace(state.copy(couple = couple), load, onRetry, actions, interactions, modifier, onRefresh)
 }

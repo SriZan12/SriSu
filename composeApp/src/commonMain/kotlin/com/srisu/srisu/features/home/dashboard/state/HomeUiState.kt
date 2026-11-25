@@ -26,6 +26,7 @@ data class HomeUiState(
     val daypart: HomeDaypart = HomeDaypart.MORNING,
     val name: String = "",
     val couple: HomeCoupleUi? = null,
+    /** Progress for an explicit pull/accessibility refresh, never automatic reads. */
     val refreshing: Boolean = false,
     val stale: Boolean = false,
     val busy: Boolean = false,
@@ -160,7 +161,7 @@ fun HomeData.toUiState(now: Instant, zone: TimeZone): HomeUiState {
         else -> HomeStatus.LOADING
     }
     return HomeUiState(status = status, daypart = daypart(local.hour), name = home?.user?.name ?: name,
-        couple = home?.let { coupleUi(it, local.date, zone) }, refreshing = momentsLoading && home != null,
+        couple = home?.let { coupleUi(it, local.date, zone) },
         stale = momentsFailed && home != null, busy = busy, notice = notice, pendingAction = pendingAction, blockedActions = blockedActions,
         invitation = invitation, invitationsLoading = invitationsLoading, invitationsFailed = invitationsFailed)
 }

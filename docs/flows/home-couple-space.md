@@ -122,9 +122,13 @@ Pulling down at the top of Home calls the existing refresh pipeline. The header
 has no refresh button. The gesture works on paired, unpaired and recoverable
 failure states; normal scrolling takes precedence until the list reaches the top.
 An accessibility action also exposes Refresh Home without a visible control.
-Initial loading uses the matching header skeleton. While current Home reads are
-in flight, duplicate refresh gestures are ignored and a compact indicator appears
-below the safe area. Loaded content and list position remain in place; no progress
+Initial loading uses the matching header skeleton. Only a deliberate pull or the
+accessibility refresh action shows the compact indicator below the safe area.
+Screen entry, polling, repository updates and retries refresh silently. A pull
+during an automatic request adopts its progress without duplicating the request;
+further pulls are ignored until it completes. Leaving Home clears the indicator,
+so returning does not restore an earlier pull's feedback.
+Loaded content and list position remain in place; no progress
 row is inserted into the list. Progress covers Questions, Plans, Challenges, profile,
 status and shared-idea reads, rather than ending when Moments returns first.
 Individual requests remain deduplicated. Existing stale/error messages and retry

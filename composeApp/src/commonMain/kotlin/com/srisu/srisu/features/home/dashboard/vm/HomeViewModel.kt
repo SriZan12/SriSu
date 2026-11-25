@@ -49,9 +49,10 @@ class HomeViewModel(
     private val stamp = sessions.stamp()
     private val data = MutableStateFlow(HomeData(name = sessions.currentSession()?.fullName.orEmpty()))
     private val activeReads = MutableStateFlow(emptySet<Long>())
+    private val manualRefreshing = MutableStateFlow(false)
     private var nextRead = 0L
-    val state: StateFlow<HomeUiState> = combine(data, reminders?.state ?: MutableStateFlow(ReminderState()), activeReads) { d, r, reads ->
-        d.toUiState(clock.now(), zone()).copy(reminders = r, refreshing = d.moments != null && reads.isNotEmpty())
+    val state: StateFlow<HomeUiState> = combine(data, reminders?.state ?: MutableStateFlow(ReminderState()), manualRefreshing) { d, r, manual ->
+        d.toUiState(clock.now(), zone()).copy(reminders = r, refreshing = manual)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), data.value.toUiState(clock.now(), zone()))
     private val jobs = mutableMapOf<String, Job>()
@@ -73,6 +74,7 @@ class HomeViewModel(
         viewModelScope.launch { plans.changes.drop(1).collect { if (visible) loadSections() } }
         sparks?.let { source -> viewModelScope.launch { source.changes.drop(1).collect { if (visible) loadSections() } } }
         viewModelScope.launch { sessions.state.collect { if (it != stamp) {
+            manualRefreshing.value = false
             generation++; jobs.values.toList().forEach(Job::cancel); expiry?.cancel(); statusExpiry?.cancel(); poll?.cancel(); closeChat()
             data.value = HomeData(momentsLoading = false, momentsFailed = true)
         } } }
@@ -80,10 +82,18 @@ class HomeViewModel(
 
     fun visible(value: Boolean) {
         visible = value; poll?.cancel()
-        if (!value) { closeChat(); return }
+        if (!value) { manualRefreshing.value = false; closeChat(); return }
         refresh()
         poll = viewModelScope.launch { while (isActive) { delay(30_000); refresh() } }
     }
+    /** Only the pull gesture/accessibility action opts into the refresh indicator. */
+    fun refreshFromUser() {
+        if (sessions.stamp() != stamp || manualRefreshing.value) return
+        manualRefreshing.value = true
+        refresh()
+        if (activeReads.value.isEmpty()) manualRefreshing.value = false
+    }
+    /** Entry, polling, section retries and repository updates refresh without a pull indicator. */
     fun refresh() {
         launchRead("moments", onFailure = { data.update { it.copy(momentsLoading = false, momentsFailed = true, momentsFresh = false) } }) {
             data.update { it.copy(momentsLoading = true) }
@@ -247,6 +257,7 @@ class HomeViewModel(
         data.update { it.copy(pendingAction = pending.isNotEmpty(), blockedActions = pending.keys) }
     }
     private fun revoke() {
+        manualRefreshing.value = false
         generation++; jobs.values.toList().forEach(Job::cancel)
         storePending(null)
         expiry?.cancel(); statusExpiry?.cancel(); closeChat()
@@ -256,14 +267,21 @@ class HomeViewModel(
         if (sessions.stamp() != stamp || jobs[key]?.isActive == true) return
         val expected = generation
         val read = nextRead++
+        // Register before dispatch: dependent sections must join before their parent
+        // finishes, and a manual pull may adopt an automatic request already in flight.
+        activeReads.update { it + read }
         jobs[key] = viewModelScope.launch {
-            activeReads.update { it + read }
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) { if (sessions.stamp() == stamp && (expected == generation || key == "moments")) {
                 if ((failure as? PlanFailure)?.status in listOf(401, 403, 404)) revoke() else onFailure()
             } }
-            finally { activeReads.update { it - read } }
+        }.also { job ->
+            // Completion also runs if the job is cancelled before its body starts.
+            job.invokeOnCompletion {
+                activeReads.update { it - read }
+                if (activeReads.value.isEmpty()) manualRefreshing.value = false
+            }
         }
     }
     /** safeRequest guards the session; this extra check also protects fake/delayed sources. */

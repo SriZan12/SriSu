@@ -56,7 +56,7 @@ import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun HomeCoupleSpace(state: HomeUiState, load: HomeImageLoader, retry: () -> Unit,
-    actions: HomeActions, interactions: HomeInteractions, modifier: Modifier) {
+    actions: HomeActions, interactions: HomeInteractions, modifier: Modifier, onRefresh: () -> Unit) {
     MaterialTheme(colorScheme = H.colors, typography = H.type(sriSuTypography())) {
         var statusPicker by rememberSaveable { mutableStateOf(false) }
         var ideaPicker by rememberSaveable { mutableStateOf(false) }
@@ -73,7 +73,7 @@ import kotlin.time.Instant
                 val compact = maxWidth < 360.dp
                 val pullState = rememberPullToRefreshState()
                 val canRefresh = state.status != HomeStatus.LOADING && !state.refreshing
-                val refresh = { if (canRefresh) retry() }
+                val refresh = { if (canRefresh) onRefresh() }
                 Box(Modifier.widthIn(max = 560.dp).fillMaxSize().statusBarsPadding()
                     .testTag("home-pull-refresh")
                     .pullToRefresh(isRefreshing = state.refreshing, state = pullState,
