@@ -3,10 +3,6 @@ package com.srisu.srisu.features.settings
 import com.srisu.srisu.theme.selectedSurface
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -26,9 +22,6 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.input.ImeAction
-import com.srisu.srisu.core.identity.nicknameLength
-import com.srisu.srisu.core.identity.nicknameValidation
 import com.srisu.srisu.core.identity.partnerDisplayName
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -57,70 +50,66 @@ internal fun SettingsContent(state: SettingsState, onBack: () -> Unit, onOpen: (
     var expanded by rememberSaveable(state.partner?.connectionId) { mutableStateOf(true) }
     var disconnect by remember { mutableStateOf<SettingsPartner?>(null) }
     var signOut by rememberSaveable { mutableStateOf(false) }
-    var nicknameOpen by rememberSaveable(state.partner?.connectionId) { mutableStateOf(false) }
-    var nicknameDraft by rememberSaveable(state.partner?.connectionId) { mutableStateOf("") }
-    var savedAtOpen by remember { mutableLongStateOf(state.nicknameSaved) }
     val locked = state.busy || state.nicknameSaving
-    LaunchedEffect(state.nicknameSaved) {
-        if (nicknameOpen && state.nicknameSaved > savedAtOpen) nicknameOpen = false
-    }
     LaunchedEffect(state.partner) {
         if (disconnect != null && disconnect != state.partner) disconnect = null
     }
-    SettingsPage("Settings", onBack, listTag="settings-list") {
-        item { SettingsSection("YOU") }
-        item { SettingsRow("Account", Icons.Outlined.Person, onClick={onOpen(ProfileNav.SettingsDetail("account"))}) }
-        item { SettingsRow("Notifications", Icons.Outlined.Notifications, onClick={onOpen(ProfileNav.NotificationSettings)}) }
-        item { SettingsRow("Language", Icons.Outlined.Language, onClick={onOpen(ProfileNav.SettingsDetail("language"))}) }
-        item { SettingsSection("TOGETHER", spaced=true) }
-        item {
-            Surface(color=MaterialTheme.colorScheme.selectedSurface, contentColor=MaterialTheme.colorScheme.onSurface, shape=MaterialTheme.shapes.medium) {
-                Column {
-                    val partner = state.partner
-                    SettingsRow("Partner", Icons.Outlined.PeopleOutline,
-                        subtitle=when {
-                            state.loading -> "Checking your connection…"
-                            !state.loaded -> "Connection unavailable"
-                            partner == null -> "Not connected yet"
-                            else -> "Partner profile, shared notifications"
-                        }, filled=false, enabled=!state.loading && state.loaded && !locked,
-                        action=if (state.loaded && partner == null) "Connect" else null,
-                        expanded=if (partner != null) expanded else null,
-                        onClick={if(partner == null) onOpen(ChatNav.PartnerFlow) else expanded = !expanded})
-                    if(partner != null && expanded) Column(
-                        Modifier.padding(start=T.gap, end=T.gap, bottom=T.gap), verticalArrangement=Arrangement.spacedBy(T.gap)) {
-                        SettingsRow(partnerDisplayName(partner.userId, partner.nickname ?: partner.name, partner.coupleId), Icons.Outlined.Person,
-                            subtitle=partner.connectedDays?.let { if(it == 1) "Connected · 1 day" else "Connected · $it days" } ?: "Connected",
-                            avatar=partner.photo, person=true, enabled=state.loaded && !state.loading && !locked,
-                            onClick={onOpen(ChatNav.PartnerPreview(partner.userId))})
-                        SettingsRow("Nickname", Icons.Outlined.Edit,
-                            subtitle=if(partner.nicknameRevision == null) "Available after the server update" else partner.nickname ?: "A name just for you",
-                            enabled=state.loaded && !state.loading && !locked && partner.nicknameRevision != null,
-                            onClick={nicknameDraft=partner.nickname.orEmpty();savedAtOpen=state.nicknameSaved;nicknameOpen=true})
-                        SettingsRow("Shared notifications", Icons.Outlined.Notifications, enabled=state.loaded && !state.loading && !locked,
-                            onClick={onOpen(ProfileNav.SharedNotifications)})
-                        SettingsRow(if(state.busy) "Disconnecting…" else "Disconnect partner", Icons.Outlined.LinkOff,
-                            enabled=state.loaded && !state.loading && !locked, onClick={disconnect=partner})
+    PartnerNicknameEditorHost(state, onNickname, onRetry) { openNickname ->
+        SettingsPage("Settings", onBack, listTag="settings-list") {
+            item { SettingsSection("YOU") }
+            item { SettingsRow("Account", Icons.Outlined.Person, onClick={onOpen(ProfileNav.SettingsDetail("account"))}) }
+            item { SettingsRow("Notifications", Icons.Outlined.Notifications, onClick={onOpen(ProfileNav.NotificationSettings)}) }
+            item { SettingsRow("Language", Icons.Outlined.Language, onClick={onOpen(ProfileNav.SettingsDetail("language"))}) }
+            item { SettingsSection("TOGETHER", spaced=true) }
+            item {
+                Surface(color=MaterialTheme.colorScheme.selectedSurface, contentColor=MaterialTheme.colorScheme.onSurface, shape=MaterialTheme.shapes.medium) {
+                    Column {
+                        val partner = state.partner
+                        SettingsRow("Partner", Icons.Outlined.PeopleOutline,
+                            subtitle=when {
+                                state.loading -> "Checking your connection…"
+                                !state.loaded -> "Connection unavailable"
+                                partner == null -> "Not connected yet"
+                                else -> "Partner profile, shared notifications"
+                            }, filled=false, enabled=!state.loading && state.loaded && !locked,
+                            action=if (state.loaded && partner == null) "Connect" else null,
+                            expanded=if (partner != null) expanded else null,
+                            onClick={if(partner == null) onOpen(ChatNav.PartnerFlow) else expanded = !expanded})
+                        if(partner != null && expanded) Column(
+                            Modifier.padding(start=T.gap, end=T.gap, bottom=T.gap), verticalArrangement=Arrangement.spacedBy(T.gap)) {
+                            SettingsRow(partnerDisplayName(partner.userId, partner.nickname ?: partner.name, partner.coupleId), Icons.Outlined.Person,
+                                subtitle=partner.connectedDays?.let { if(it == 1) "Connected · 1 day" else "Connected · $it days" } ?: "Connected",
+                                avatar=partner.photo, person=true, enabled=state.loaded && !state.loading && !locked,
+                                onClick={onOpen(ChatNav.PartnerPreview(partner.userId))})
+                            SettingsRow("Nickname", Icons.Outlined.Edit,
+                                subtitle=if(partner.nicknameRevision == null) "Available after the server update" else partner.nickname ?: "Add a nickname for your partner",
+                                enabled=state.loaded && !state.loading && !locked && partner.nicknameRevision != null,
+                                onClick=openNickname)
+                            SettingsRow("Shared notifications", Icons.Outlined.Notifications, enabled=state.loaded && !state.loading && !locked,
+                                onClick={onOpen(ProfileNav.SharedNotifications)})
+                            SettingsRow(if(state.busy) "Disconnecting…" else "Disconnect partner", Icons.Outlined.LinkOff,
+                                enabled=state.loaded && !state.loading && !locked, onClick={disconnect=partner})
+                        }
                     }
                 }
             }
-        }
-        if(state.error != null) item {
-            SettingsNotice(state.error, true)
-            TextButton(onClick=onRetry, enabled=!locked && !state.loading) { Text("Retry connection") }
-        }
-        if(state.notice != null) item {SettingsNotice(state.notice)}
-        item { SettingsRow("Shared preferences", Icons.Outlined.Tune, "Plans, reminders, moments",
-            onClick={onOpen(ProfileNav.SettingsDetail("shared"))}) }
-        item { SettingsSection("APP", spaced=true) }
-        item { SettingsRow("Downloads", Icons.Outlined.FileDownload, onClick={onOpen(ProfileNav.SettingsDetail("downloads"))}) }
-        item { SettingsRow("Appearance", Icons.Outlined.Contrast, onClick={onOpen(ProfileNav.SettingsDetail("appearance"))}) }
-        item { SettingsRow("Accessibility", Icons.Outlined.AccessibilityNew, onClick={onOpen(ProfileNav.SettingsDetail("accessibility"))}) }
-        item { SettingsRow("Support", Icons.Outlined.HelpOutline, onClick={onOpen(ProfileNav.SettingsDetail("support"))}) }
-        item { SettingsRow("Privacy & Security", Icons.Outlined.VerifiedUser, onClick={onOpen(ProfileNav.SettingsDetail("privacy"))}) }
-        item {
-            TextButton(onClick={signOut=true}, modifier=Modifier.fillMaxWidth().padding(top=T.gap), enabled=!locked) {
-                Text("Sign out", color=MaterialTheme.colorScheme.error)
+            if(state.error != null) item {
+                SettingsNotice(state.error, true)
+                TextButton(onClick=onRetry, enabled=!locked && !state.loading) { Text("Retry connection") }
+            }
+            if(state.notice != null) item {SettingsNotice(state.notice)}
+            item { SettingsRow("Shared preferences", Icons.Outlined.Tune, "Plans, reminders, moments",
+                onClick={onOpen(ProfileNav.SettingsDetail("shared"))}) }
+            item { SettingsSection("APP", spaced=true) }
+            item { SettingsRow("Downloads", Icons.Outlined.FileDownload, onClick={onOpen(ProfileNav.SettingsDetail("downloads"))}) }
+            item { SettingsRow("Appearance", Icons.Outlined.Contrast, onClick={onOpen(ProfileNav.SettingsDetail("appearance"))}) }
+            item { SettingsRow("Accessibility", Icons.Outlined.AccessibilityNew, onClick={onOpen(ProfileNav.SettingsDetail("accessibility"))}) }
+            item { SettingsRow("Support", Icons.Outlined.HelpOutline, onClick={onOpen(ProfileNav.SettingsDetail("support"))}) }
+            item { SettingsRow("Privacy & Security", Icons.Outlined.VerifiedUser, onClick={onOpen(ProfileNav.SettingsDetail("privacy"))}) }
+            item {
+                TextButton(onClick={signOut=true}, modifier=Modifier.fillMaxWidth().padding(top=T.gap), enabled=!locked) {
+                    Text("Sign out", color=MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
@@ -135,32 +124,7 @@ internal fun SettingsContent(state: SettingsState, onBack: () -> Unit, onOpen: (
         text={Text("You’ll need to verify your phone number to sign in again. Your account and shared content stay saved.")},
         confirmButton={TextButton(onClick={signOut=false;onSignOut()}) {Text("Sign out")}},
         dismissButton={TextButton(onClick={signOut=false}) {Text("Cancel")}})
-    if(nicknameOpen && state.partner != null) {
-        val partner=state.partner
-        val validation=nicknameValidation(nicknameDraft)
-        val canSave=state.loaded && !state.loading && !locked && validation == null &&
-            nicknameDraft.trim() != partner.nickname.orEmpty() && partner.nicknameRevision != null
-        AlertDialog(onDismissRequest={if(!state.nicknameSaving) nicknameOpen=false},
-            title={Text("Nickname for ${partner.name}")},
-            text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(T.gap)) {
-                Text("Only you see this nickname. It syncs to your devices and appears across your shared space.",
-                    style=MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(value=nicknameDraft,onValueChange={nicknameDraft=it},singleLine=true,
-                    enabled=!state.nicknameSaving, label={Text("Nickname")},
-                    modifier=Modifier.fillMaxWidth().testTag("partner-nickname"),
-                    isError=validation != null, supportingText={Text(validation ?: "${nicknameLength(nicknameDraft.trim())}/40")},
-                    keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),
-                    keyboardActions=KeyboardActions(onDone={if(canSave) onNickname(partner,nicknameDraft)}))
-                state.nicknameError?.let {SettingsNotice(it,true)}
-                if(!state.loaded) TextButton(onClick=onRetry,enabled=!state.loading && !locked) {Text("Retry connection")}
-                if(!partner.nickname.isNullOrBlank()) TextButton(onClick={nicknameDraft="";onNickname(partner,"")},
-                    enabled=state.loaded && !state.loading && !locked) {Text("Remove nickname")}
-            }},
-            confirmButton={TextButton(onClick={onNickname(partner,nicknameDraft)},enabled=canSave) {
-                Text(if(state.nicknameSaving) "Saving…" else "Save")
-            }},
-            dismissButton={TextButton(onClick={nicknameOpen=false},enabled=!state.nicknameSaving) {Text("Cancel")}})
-    }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

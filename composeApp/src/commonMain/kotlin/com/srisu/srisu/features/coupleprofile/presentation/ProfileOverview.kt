@@ -98,12 +98,13 @@ import srisu.composeapp.generated.resources.*
     }
 }
 
-@Composable internal fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, accentMotion: ProfileAccentMotion, preview: Boolean = false, onPlans: (() -> Unit)? = null) {
+@Composable internal fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, accentMotion: ProfileAccentMotion, preview: Boolean = false, onPlans: (() -> Unit)? = null, nicknameContent: (@Composable (Long) -> Unit)? = null) {
     val profile = state.profile ?: return
     val editable = profile.canEdit && !preview
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)) {
         Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
             if (profile.canEdit || profile.members != null || profile.cover != null) ProfileHero(state, vm, editable)
+            if (editable) nicknameContent?.invoke(profile.id)
             if (!profile.canEdit && profile.publishedSections.isEmpty()) SectionCard {
                 Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(Res.string.cp_private_title), style = MaterialTheme.typography.titleMedium)

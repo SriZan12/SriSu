@@ -29,7 +29,8 @@ import kotlinx.serialization.*
     @SerialName("expected_revision") val revision: Long)
 @Serializable private data class NicknameWrite(@SerialName("connection_id") val connectionId: Long,
     @SerialName("expected_revision") val revision: Long,
-    @SerialName("expected_nickname_revision") val nicknameRevision: Long, val nickname: String)
+    @SerialName("expected_nickname_revision") val nicknameRevision: Long, val nickname: String,
+    @SerialName("notify_partner") val notifyPartner: Boolean)
 interface SettingsSource {
     suspend fun load(): NetworkAPIResult<SettingsContext?>
     suspend fun disconnect(partner: SettingsPartner): NetworkAPIResult<SettingsContext?>
@@ -48,7 +49,8 @@ class SettingsRepository(private val client: HttpClient, environment: ApiEnviron
         return client.safeRequest<SettingsContext> {
             url(root + "partner-nickname/"); method = HttpMethod.Put
             contentType(ContentType.Application.Json)
-            setBody(NicknameWrite(partner.connectionId, partner.revision, revision, nickname))
+            // Both entry points disclose the partner alert. Older clients omit this explicit opt-in.
+            setBody(NicknameWrite(partner.connectionId, partner.revision, revision, nickname, notifyPartner = true))
         }.result
     }
 }

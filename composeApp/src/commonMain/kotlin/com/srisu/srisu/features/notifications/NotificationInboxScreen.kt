@@ -181,6 +181,7 @@ private data class InboxAppearance(val label:String,val icon:ImageVector,val col
         "status" -> InboxAppearance("Partner status",Icons.Outlined.SentimentSatisfied,c.spark)
         "idea" -> InboxAppearance("Date ideas",Icons.Outlined.Add,c.spark)
         "sharing" -> InboxAppearance("Sharing",Icons.Outlined.Shield,c.secondary)
+        "nickname" -> InboxAppearance("Partner nickname",Icons.Outlined.Edit,c.secondary)
         else -> InboxAppearance("Partner requests",Icons.Outlined.PersonAdd,c.spark)
     }
 }

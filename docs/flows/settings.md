@@ -35,7 +35,10 @@ Research:
 ## Entry points and behavior
 
 25 November addition: [personal partner nicknames](partner-nicknames.md) adds a
-private, server-synced nickname editor inside the connected Partner group.
+server-synced personal nickname editor inside the connected Partner group and
+below the identity header in Our profile. Both use the same editor and revisioned
+save flow. Setting/changing the nickname privately notifies the partner with the
+chosen value; the editor states this before saving. Removing it sends no alert.
 
 Profile's gear -> `ProfileNav.Settings`. Inbox gear continues to Notifications.
 You: Account -> personal profile editor / visibility; Notifications -> existing

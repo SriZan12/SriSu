@@ -280,6 +280,21 @@
       "migration": null,
       "status": "local implementation; Android native, iOS simulator UI, PostgreSQL and live loopback contract verified; support/legal URLs pending",
       "validation": "docs/flows/settings-validation/README.md"
+    },
+    "partner_nicknames": {
+      "frontend_branch": "codex/couple-profile-nickname-alerts",
+      "backend_branch": "codex/couple-profile-nickname-alerts",
+      "integration_branch": "dev-core-architecture",
+      "flow": "docs/flows/partner-nicknames.md",
+      "contract": "settings-1:PUT /api/social/settings/partner-nickname/ + notification-inbox-1:nickname.changed",
+      "entry_points": [
+        "Settings \u2192 Together \u2192 Partner \u2192 Nickname",
+        "Our profile \u2192 Partner nickname"
+      ],
+      "privacy": "Personal display preference; updated editors disclose and send notify_partner:true to privately show chosen value to partner. Older clients default false. No public identity change.",
+      "migration": "None for profile editor/alerts; existing social.0025_private_partner_nickname remains required",
+      "frontend_base": "07b8ce9f38d951a0c4de91321a1dc5e8580bf611",
+      "backend_base": "561a894fa5a94f4c532bab914fb9e6a71f881841"
     }
   }
 }

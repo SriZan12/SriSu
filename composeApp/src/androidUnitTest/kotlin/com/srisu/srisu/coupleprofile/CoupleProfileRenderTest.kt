@@ -13,6 +13,8 @@ import com.srisu.srisu.core.data.remote.*
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.features.coupleprofile.data.*
 import com.srisu.srisu.features.coupleprofile.presentation.*
+import com.srisu.srisu.features.settings.SettingsPartner
+import com.srisu.srisu.features.settings.SettingsState
 import com.srisu.srisu.features.home.profile.data.InterestCatalogueRepository
 import com.srisu.srisu.features.home.profile.data.remote.api.ProfileApiService
 import com.srisu.srisu.theme.SriSuTheme
@@ -42,7 +44,9 @@ import coil3.request.ErrorResult
 class CoupleProfileRenderTest {
     @get:Rule val compose=createAndroidComposeRule<androidx.activity.ComponentActivity>()
     @OptIn(org.jetbrains.compose.resources.ExperimentalResourceApi::class, coil3.annotation.DelicateCoilApi::class)
-    private fun render(page: ProfilePage, name: String, dark: Boolean=false, largeText: Boolean=false, visitor: Boolean=false, populated: Boolean=false, mineOnly: Boolean=false, published: Boolean=false, longNames: Boolean=false, media: Boolean=false, failedSave: Boolean=false, scrollReturn: Boolean=false, lowerProfile: Boolean=false, brokenMedia: Boolean=false, refreshing: Boolean=false, saving: Boolean=false, discardCheck: Boolean=false, menuCheck: Boolean=false) {
+    private fun render(page: ProfilePage, name: String, dark: Boolean=false, largeText: Boolean=false, visitor: Boolean=false, populated: Boolean=false, mineOnly: Boolean=false, published: Boolean=false, longNames: Boolean=false, media: Boolean=false, failedSave: Boolean=false, scrollReturn: Boolean=false, lowerProfile: Boolean=false, brokenMedia: Boolean=false, refreshing: Boolean=false, saving: Boolean=false, discardCheck: Boolean=false, menuCheck: Boolean=false, nicknameCheck: Boolean=false) {
+        val nicknameState=androidx.compose.runtime.mutableStateOf(SettingsState(loading=false,loaded=true,
+            partner=SettingsPartner(2,"Sam",coupleId=1,connectionId=3,revision=2,nicknameRevision=1)))
         val imageResult = AtomicReference<String?>(null)
         val existingLoader = SingletonImageLoader.get(compose.activity)
         val renderLoader = ImageLoader.Builder(compose.activity).eventListenerFactory {
@@ -105,8 +109,16 @@ class CoupleProfileRenderTest {
                     org.jetbrains.compose.resources.PreviewContextConfigurationEffect()
                 }
                 val density=LocalDensity.current
-                CompositionLocalProvider(LocalDensity provides Density(density.density,if(largeText)1.6f else 1f)) {
-                    SriSuTheme(darkTheme=dark) { CoupleProfileScreen(1,onBack={},vm=vm) }
+                CompositionLocalProvider(
+                    LocalDensity provides Density(density.density,if(largeText)1.6f else 1f),
+                    androidx.compose.ui.platform.LocalCursorBlinkEnabled provides false,
+                ) {
+                    SriSuTheme(darkTheme=dark) { CoupleProfileScreen(1,onBack={},vm=vm,nicknameContent={id ->
+                        if(nicknameCheck) CoupleProfileNicknameContent(id,nicknameState.value,onSave={expected,value ->
+                            nicknameState.value=nicknameState.value.copy(partner=expected.copy(nickname=value.takeIf {it.isNotBlank()},
+                                nicknameRevision=expected.nicknameRevision!!+1),nicknameSaved=nicknameState.value.nicknameSaved+1)
+                        },onRetry={})
+                    }) }
                 }
             }
             // Drain the paused Robolectric main looper while the mocked repository completes.
@@ -136,6 +148,13 @@ class CoupleProfileRenderTest {
                 compose.onAllNodesWithContentDescription("View profile").assertCountEquals(0)
                 compose.onAllNodesWithText("Your interests").assertCountEquals(0)
                 compose.onAllNodesWithText("Save").assertCountEquals(0)
+            }
+            if(nicknameCheck) {
+                if(visitor || published || page != ProfilePage.PROFILE) {
+                    compose.onNodeWithTag("couple-profile-nickname").assertDoesNotExist()
+                } else {
+                    compose.onNodeWithTag("couple-profile-nickname").performScrollTo().assertIsDisplayed()
+                }
             }
             if (failedSave) {
                 compose.onNodeWithText("Song name").performTextInput("A song worth keeping")
@@ -216,6 +235,10 @@ class CoupleProfileRenderTest {
     }
     @Test @Config(qualifiers="w640dp-h320dp-land-xhdpi") fun shortWindowMenuAndPreviewReturn()=render(ProfilePage.PROFILE,"android-menu-short-return",populated=true,largeText=true,menuCheck=true)
     @Test fun ownerDayOne()=render(ProfilePage.PROFILE,"android-owner-day-one")
+    @Test fun ownerNicknameEntry()=render(ProfilePage.PROFILE,"android-owner-nickname-entry",dark=true,populated=true,nicknameCheck=true)
+    @Test fun previewExcludesNicknameEntry()=render(ProfilePage.PREVIEW,"android-preview-no-nickname",populated=true,nicknameCheck=true)
+    @Test fun visitorExcludesNicknameEntry()=render(ProfilePage.PROFILE,"android-visitor-no-nickname",visitor=true,nicknameCheck=true)
+    @Test fun answerSheetExcludesNicknameEntry()=render(ProfilePage.ANSWER,"android-answer-no-nickname",populated=true,nicknameCheck=true)
     @Test fun visitorPrivate()=render(ProfilePage.PROFILE,"android-visitor-private",visitor=true)
     @Test fun storyEditor()=render(ProfilePage.STORY_EDIT,"android-story-editor")
     @Test fun songEditor()=render(ProfilePage.SONG,"android-song-editor")

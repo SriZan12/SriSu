@@ -19,6 +19,23 @@ class NotificationPreviewReaderTest {
     private val headers = headersOf(HttpHeaders.ContentType, "application/json")
     private val chat = """{"data":{"event_kind":"matrix.message","title":"Synthetic partner","body":"Open your chat to read the message.","room_id":"${ChatFixtures.ROOM_ID}","matrix_event_id":"${'$'}synthetic-event"}}"""
 
+    @Test fun nicknamePreviewPreservesTheChosenNameWithoutChatDecryption() = runTest {
+        val sessions=session()
+        val client=HttpClientFactory.create(sessions,environment,MockEngine {
+            respond("""{"data":{"event_kind":"nickname.changed","title":"Sam gave you a nickname","body":"You’re now “Moon 🌙” to them.","actor_id":2,"actor_name":"Sam","actor_real_name":"Sam"}}""",headers=headers)
+        })
+        val matrix=object:MatrixChatRepository by ChatFixtureRepository(ChatFixtures.empty()) {
+            override suspend fun notificationPreview(roomId:String,eventId:String):String = error("Nickname notifications do not use Matrix")
+        }
+        try {
+            val result=assertIs<PreviewResult.Ready>(NotificationPreviewReader(NotificationApi(client,environment),sessions,matrix).load(delivery))
+            assertEquals("nickname.changed",result.value.eventKind)
+            assertEquals("Sam gave you a nickname",result.value.title)
+            assertEquals("You’re now “Moon 🌙” to them.",result.value.body)
+            assertEquals(2L,result.value.actorId);assertTrue(result.complete)
+        } finally {client.close()}
+    }
+
     @Test fun videoMomentCopyComesFromTheAuthorizedApiWithoutChatDecryption() = runTest {
         val sessions=session()
         val client=HttpClientFactory.create(sessions,environment,MockEngine {

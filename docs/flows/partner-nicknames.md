@@ -8,11 +8,14 @@ preserved. The frontend and backend changes are published together against
 
 ## Behavior
 
-Settings → Together → Partner → Nickname opens the compact editor. Each partner
-sets their own private name for the other person. Save, edit and Remove nickname
-use server persistence, independent of the other partner's preference. The editor
-states this explicitly. The accepted default is personal rather than a public
-profile rename. Canonical names remain visible in identity/profile details;
+Settings → Together → Partner → Nickname and Our profile → Partner nickname
+(below the names/date, before the statistics) open the same compact editor. Each
+partner sets their own display name for the other person. Save, edit and Remove
+nickname use server persistence, independent of the other partner's preference.
+The editor explains that setting/changing a nickname sends the chosen value to
+the partner in a private notification, as explicitly requested by the user on
+25 November. This is a personal display preference rather than a public profile
+rename. Canonical names remain visible in identity/profile details;
 search, account editing and pre-link identity are unchanged.
 
 Nickname display covers Home, Chat (header, composer, typing and reply labels),
@@ -39,9 +42,10 @@ before the first successful load in a new process, canonical names are used.
 This is not a new real-time synchronization channel or a persisted offline alias
 cache. On a second device, foregrounding or refreshing fetches the saved value.
 
-The backend stores the setter's private nickname on their current membership,
-separate from legacy shared nickname metadata. The other partner, unrelated users,
-discovery serializers and public profile projections cannot read it. Unlinking
+The backend stores the setter's nickname on their current membership, separate
+from legacy shared nickname metadata. Settings remains setter-only; the newly
+authorized notification reveals the current chosen value to the other partner.
+Unrelated users, discovery serializers and public profile projections cannot read it. Unlinking
 clears both private labels; a later connection starts without inherited nicknames.
 This is authorized server-held metadata, not end-to-end encrypted content.
 
@@ -58,6 +62,36 @@ payloads and privacy/redaction preferences remain unchanged. Already displayed O
 alerts do not rename retroactively. Android's existing protected-preview reader
 uses the personalized server title. The existing iOS generic notification path
 does not gain a private-preview extension as part of this work.
+
+## Couple-profile editing and partner alerts
+
+Follow-up branch: `codex/couple-profile-nickname-alerts` in both original checkouts,
+based on frontend `07b8ce9f38d951a0c4de91321a1dc5e8580bf611` and backend
+`561a894fa5a94f4c532bab914fb9e6a71f881841`. The profile entry is owner-only and is
+omitted from visitor/public-preview/answer screens. Settings context must match
+the displayed couple. Loading/failure is localized to the nickname row; a failed
+load offers retry, never a misleading unlinked state. The existing Settings
+ViewModel owns validation, revisions, saving, reconciliation and display-name
+updates; both surfaces share `PartnerNicknameEditorHost`.
+
+`nickname.changed` is emitted transactionally for a nonempty changed nickname.
+Same-value retries, clearing, invalid writes and rolled-back saves emit nothing.
+The existing Requests notification preference applies. The protected preview and
+inbox show the chosen nickname; generic push fallback contains neither name nor
+nickname. Tapping opens the current couple profile. The event stores membership
+and revision metadata, not a nickname snapshot: changed/removed nicknames and
+ended/replaced relationships invalidate old inbox rows, previews and destinations.
+Already displayed OS alerts cannot be retracted. Existing nicknames are not
+backfilled into notifications.
+
+This follow-up adds no migration. It adds optional `notify_partner` to the save
+request, defaulting to false to preserve the old editor’s privacy promise. Both
+updated editors send true after displaying the disclosure. Deploy the backend
+before the updated client: the old backend rejects unknown request fields. Older
+clients can still save nicknames without alerts and parse the couple destination,
+but their inbox allow-list omits this new event. Native iOS remote
+push delivery retains the existing backend capability limitation; in-app inbox
+support is shared across Android and iOS.
 
 ## Contract and deployment
 
