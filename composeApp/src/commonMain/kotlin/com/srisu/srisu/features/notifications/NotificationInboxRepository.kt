@@ -6,7 +6,9 @@ import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.core.session.SessionCoordinator
 import io.ktor.client.HttpClient
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.SerialName
@@ -16,7 +18,10 @@ const val INBOX_CONTRACT = "notification-inbox-1"
 
 @Serializable data class InboxItem(val id: String, val kind: String, val category: String,
     val title: String, val body: String, @SerialName("created_at") val createdAt: String,
-    @SerialName("read_at") val readAt: String? = null, val available: Boolean = false)
+    @SerialName("read_at") val readAt: String? = null, val available: Boolean = false,
+    @SerialName("actor_name") val actorName: String? = null, val avatar: Boolean = false,
+    val thumbnail: Boolean = false, val segments: List<InboxSegment> = emptyList())
+@Serializable data class InboxSegment(val text: String, val bold: Boolean = false)
 @Serializable data class InboxPage(val contract: String, val items: List<InboxItem>,
     @SerialName("unread_count") val unreadCount: Int,
     @SerialName("next_cursor") val nextCursor: String? = null,
@@ -33,6 +38,7 @@ interface NotificationInboxSource {
     suspend fun page(cursor: String? = null, unread: Boolean = false): NetworkAPIResult<InboxPage?>
     suspend fun readAll(through: String): NetworkAPIResult<InboxSummary?>
     suspend fun open(id: String): NetworkAPIResult<InboxOpen?>
+    suspend fun image(id: String, slot: String): ByteArray? = null
 }
 
 class NotificationInboxRepository(private val client: HttpClient, environment: ApiEnvironment,
@@ -82,6 +88,31 @@ class NotificationInboxRepository(private val client: HttpClient, environment: A
         sessions.ensureCurrent(stamp)
         (result as? NetworkAPIResult.Success)?.response?.takeIf { it.contract == INBOX_CONTRACT }?.let { acceptCount(it.unreadCount) }
         return result
+    }
+
+    override suspend fun image(id: String, slot: String): ByteArray? {
+        if (!validNotificationId(id) || slot !in setOf("avatar", "thumbnail")) return null
+        val stamp = sessions.stamp()
+        return try {
+            withTimeout(10_000) {
+                // Fixed first-party path: no remote URL or bearer token enters Coil.
+                client.prepareGet(root + "$id/media/$slot/").execute { response ->
+                    if (response.status != HttpStatusCode.OK) return@execute null
+                    val channel = response.bodyAsChannel()
+                    val buffer = ByteArray(256 * 1024 + 1)
+                    var total = 0
+                    while (total < buffer.size) {
+                        val count = channel.readAvailable(buffer, total, buffer.size - total)
+                        if (count < 0) break
+                        total += count
+                    }
+                    sessions.ensureCurrent(stamp)
+                    if (total > 256 * 1024) null else buffer.copyOf(total)
+                }
+            }
+        } catch (_: TimeoutCancellationException) { null }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { null }
     }
 
     private fun acceptCount(value: Int) { revision++; count.value = value.coerceAtLeast(0) }

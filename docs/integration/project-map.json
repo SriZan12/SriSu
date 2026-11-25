@@ -256,9 +256,17 @@
       "validation": "docs/validation/notifications/inbox-20261124.md",
       "backend_guide": "../SriSu-backend/docs/notification-inbox.md",
       "figma_page": "1:3",
-      "figma_note": "Live discovery unavailable: Starter-plan tool quota; intentionally derived SriSu layout; no specific notification node verified.",
+      "figma_note": "Document pages readable; frame metadata hit Starter-plan quota. Supplied Notifications export is the visual authority.",
       "status": "Published on matching feature branches; Windows API/migration and Realme Home/list/read/feature navigation verified; Apple skipped",
-      "backend_commit": "9e2f5b817369119d0004bbafe7f014eed953c6ee"
+      "backend_commit": "9e2f5b817369119d0004bbafe7f014eed953c6ee",
+      "ui_reference": "User attachment: Section (Spark).png, 2026-11-25",
+      "ui_validation": "docs/validation/notifications/reference-ui-20261125.md",
+      "ui_qa": "docs/validation/notifications/reference-qa-20261125.md",
+      "ui_working_branch": "codex/video-moments",
+      "ui_publication_branch": "codex/notifications-ui",
+      "ui_integration_branch": "dev-core-architecture",
+      "ui_frontend_base": "6c85951a6c065af33c3ea24eecabf89887cfbc67",
+      "ui_backend_base": "136f61808a8a8f3e9aa1060fc17cd223c8488088"
     }
   }
 }

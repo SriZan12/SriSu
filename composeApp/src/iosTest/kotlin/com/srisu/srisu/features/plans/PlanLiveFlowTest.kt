@@ -112,8 +112,9 @@ class PlanLiveFlowTest {
             assertEquals(404,(sources[2].get(current.id) as NetworkAPIResult.Error).failure.status)
             val one=device(0);val two=device(1)
             current=sources[0].get(current.id).planValue()
-            val eventId=withTimeout(60_000) {sendPlanCard(one,current)}
-            assertEquals(eventId,sendPlanCard(one,current))
+            val notificationKey=MatrixSessionApiService(http[0],environment).reserveCard("plan",current.id.toString()).planValue().key
+            val eventId=withTimeout(60_000) {sendPlanCard(one,current,notificationKey)}
+            assertEquals(eventId,sendPlanCard(one,current,notificationKey))
             current=sources[0].card(current.id,eventId).planValue()
             val raw=two.api.room.getEvent(RoomId(requireNotNull(current.matrixRoomId)),EventId(eventId)).getOrThrow()
             assertTrue(raw is de.connect2x.trixnity.core.model.events.ClientEvent.RoomEvent.MessageEvent<*>)

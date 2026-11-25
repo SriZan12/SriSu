@@ -30,6 +30,43 @@ compiled; backend suite passed with 35 PostgreSQL-only skips; the real video
 upload → publish → correctly labeled partner inbox test passed. No live FCM/APNs
 push was sent. Local logs: `build/reports/notifications/moment-media/`.
 
+## Reference Notifications layout — 25 November 2026
+
+The user-supplied `Section (Spark).png` now defines the inbox appearance: centred
+header with Mark read, Today / This week / Earlier, edge-to-edge lavender unread
+rows, orange unread dots, partner avatars with activity badges, inline emphasis
+and small Moment thumbnails. The external orange board/callouts and phone frame
+are annotations, not application chrome. Refresh is available by pull gesture
+and a quiet footer; All/Unread and Settings remain in that footer. The existing
+shared Back component is retained. At small widths or enlarged text, Mark read
+moves to a second header line; row heights grow with content.
+At larger text sizes, thumbnails sit below the text and avatars align with the
+first line, preserving message width instead of squeezing it between two images.
+
+The existing `notification-inbox-1` response gains optional `actor_name`, `avatar`,
+`thumbnail` and plain-text `segments` fields. Original title/body remain compatible.
+Two guarded media slots return JPEGs no larger than 160×160; only visible rows
+load them, at most three requests concurrently. Bytes are bounded to 256 KiB per
+request and 32 entries per active screen, never cached on disk, and cleared on
+refresh/background/session changes. Media access rechecks event ownership,
+current membership and resource availability. No original media/storage URL is
+exposed. A missing or failed photo leaves a stable avatar/thumbnail fallback.
+
+Deploy the matching backend before the UI to get avatars, images and inline
+emphasis. No new migration, push payload, event kind or preference is introduced.
+An older backend still renders its original title/body and generic badges.
+Reminder, mutual-interest, anniversary/milestone and Challenge proof examples in
+the image are not existing inbox events/media; they are not fabricated here.
+Spark copy only says “Answer to see theirs” while that recipient still needs to
+answer. Photo/video notification wording and typed destinations remain intact.
+
+See [source measurements and verification](../validation/notifications/reference-ui-20261125.md).
+The [follow-up logic, functional and UI QA](../validation/notifications/reference-qa-20261125.md)
+covers authorization loss during actions, stale taps after filtering, expired read
+boundaries, new arrivals during Mark read, native scrolling and real HTTP media.
+Denied open/read actions now clear private screen data, expired read boundaries
+request a refresh, and Unread view fetches arrivals outside its read snapshot.
+
 ## Home notification centre — November 2026
 
 Home's bell now opens **Notifications**, a 30-day account activity list with an
