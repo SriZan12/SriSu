@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.moments.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -244,7 +246,7 @@ import kotlin.time.Instant
             GuardedMomentImage(if(moment?.canEdit==true) null else moment?.creator?.photoUrl,avatar,null,
                 Modifier.size(MomentTokens.headerAvatar).clip(CircleShape),avatar=true)
             Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(space.small)) {
-                Text(if(moment?.canEdit==true) stringResource(Res.string.moment_yours) else moment?.creator?.name?.ifBlank { null } ?: stringResource(Res.string.moment_fallback_name),
+                Text(if(moment?.canEdit==true) stringResource(Res.string.moment_yours) else partnerDisplayName(moment?.creator?.id, moment?.creator?.name?.ifBlank { null } ?: stringResource(Res.string.moment_fallback_name), moment?.couple),
                     style=MaterialTheme.typography.titleMedium,color=colors.onMedia,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f,fill=false))
                 if(moment!=null) minutesBetween(moment.publishedAt,moment.serverTime)?.let {
                     Text(ageLabel(it),style=MaterialTheme.typography.bodyLarge,color=colors.onMedia.copy(alpha=MomentTokens.mutedAlpha),maxLines=1)
@@ -275,7 +277,7 @@ import kotlin.time.Instant
 
 @Composable internal fun MomentReplyBar(moment: Moment,fresh: Boolean,canReact: Boolean,onReply: ()->Unit,onReact: ()->Unit,modifier: Modifier=Modifier) {
     val colors=MaterialTheme.colorScheme
-    val name=moment.creator.name.ifBlank { stringResource(Res.string.moment_fallback_name) }
+    val name=partnerDisplayName(moment.creator.id, moment.creator.name.ifBlank { stringResource(Res.string.moment_fallback_name) }, moment.couple)
     Row(modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
         Surface(onClick=onReply,enabled=fresh,modifier=Modifier.weight(1f).semantics { role=Role.Button },shape=MaterialTheme.shapes.pill,
             color=colors.mediaBackground.copy(alpha=MomentTokens.trackAlpha),border=BorderStroke(MomentTokens.outline,colors.onMedia.copy(alpha=MomentTokens.mutedAlpha))) {

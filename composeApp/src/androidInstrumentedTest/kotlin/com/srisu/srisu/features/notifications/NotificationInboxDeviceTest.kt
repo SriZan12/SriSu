@@ -58,6 +58,7 @@ class NotificationInboxDeviceTest {
         target.outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         bitmap.recycle()
     }
+    @Test fun darkStandard()=verify(dark=true)
     @Test fun standardAndLongList()=verify()
     @Test fun largeTextDark()=verify(1.8f,true)
 }

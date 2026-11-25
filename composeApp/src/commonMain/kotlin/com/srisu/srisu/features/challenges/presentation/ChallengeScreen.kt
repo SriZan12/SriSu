@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.challenges.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
 import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -104,7 +108,7 @@ import org.koin.compose.viewmodel.koinViewModel
                                 Text("You already have a Challenge together.", style = MaterialTheme.typography.bodyMedium)
                                 SriSuButton("Open your Challenge", { onOpen(state.home.current.id) }, Modifier.fillMaxWidth(), enabled = !state.busy)
                             } else {
-                                SriSuButton("Invite ${state.partner?.name ?: "your partner"}", onInvite, Modifier.fillMaxWidth(), enabled = state.canAct)
+                                SriSuButton("Invite ${state.partner?.let { partnerDisplayName(it.id, it.name, state.home?.couple) } ?: "your partner"}", onInvite, Modifier.fillMaxWidth(), enabled = state.canAct)
                                 Text("An invitation, not a commitment. Your partner chooses whether to join.", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                             }
                         } else {
@@ -153,8 +157,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 state.home.current?.let { current -> item("current") { ChallengeSummaryCard(current, state.home.members, { onOpen(current.id) }) } }
                 item("tabs") {
                     Row(horizontalArrangement = Arrangement.spacedBy(space.small)) {
-                        FilterChip(!state.historyTab, { onBrowse(false) }, { Text("Discover") })
-                        FilterChip(state.historyTab, { onBrowse(true) }, { Text("Our history") })
+                        FilterChip(!state.historyTab, { onBrowse(false) }, { Text("Discover") }, colors = sriSuFilterChipColors())
+                        FilterChip(state.historyTab, { onBrowse(true) }, { Text("Our history") }, colors = sriSuFilterChipColors())
                     }
                 }
                 if (state.historyTab) {
@@ -167,11 +171,11 @@ import org.koin.compose.viewmodel.koinViewModel
                 } else {
                     item("collections") {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(space.small)) {
-                            state.home.collections.forEach { group -> FilterChip(state.collection == group.id, { onCollection(group.id) }, { Text(group.name) }) }
+                            state.home.collections.forEach { group -> FilterChip(state.collection == group.id, { onCollection(group.id) }, { Text(group.name) }, colors = sriSuFilterChipColors()) }
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(space.small)) {
-                            FilterChip(state.apart, { onFilter(!state.apart, state.quick) }, { Text("Works apart") })
-                            FilterChip(state.quick, { onFilter(state.apart, !state.quick) }, { Text("15 minutes or less") })
+                            FilterChip(state.apart, { onFilter(!state.apart, state.quick) }, { Text("Works apart") }, colors = sriSuFilterChipColors())
+                            FilterChip(state.quick, { onFilter(state.apart, !state.quick) }, { Text("15 minutes or less") }, colors = sriSuFilterChipColors())
                         }
                     }
                     if (state.activities.isEmpty()) item("empty-filter") { Text("No activities with these filters. Try another collection or clear a filter.", style = MaterialTheme.typography.bodyMedium) }
@@ -239,7 +243,7 @@ internal fun challengeStatus(session: ChallengeSession) = when (session.state) {
     }
 }
 @Composable private fun MemberAvatar(member: ChallengeMember) {
-    PartnerAvatar(ChatPartnerIdentity(member.name.ifBlank { "Your partner" }, member.photo),
+    PartnerAvatar(ChatPartnerIdentity(partnerDisplayName(member.id, member.name.ifBlank { "Your partner" }), member.photo, member.id),
         MaterialTheme.spacing.extraLarge, MaterialTheme.typography.labelMedium)
 }
 @Composable private fun ChallengeProgress(state: ChallengeState) {
@@ -255,7 +259,7 @@ internal fun challengeStatus(session: ChallengeSession) = when (session.state) {
                 }
             }
             if (!completed) Text(when (session.state) {
-                "invited" -> if (session.creator == state.account) "A little invitation, sent" else "${state.partner?.name ?: "Your partner"} invited you"
+                "invited" -> if (session.creator == state.account) "A little invitation, sent" else "${state.partner?.let { partnerDisplayName(it.id, it.name, state.home?.couple) } ?: "Your partner"} invited you"
                 "paused" -> "Room to take your time"; "declined" -> "Maybe another activity"; "cancelled" -> "This Challenge has ended"; else -> "Your shared progress"
             }, style = MaterialTheme.typography.titleLarge)
             state.home?.members?.forEach { member ->
@@ -269,7 +273,7 @@ internal fun challengeStatus(session: ChallengeSession) = when (session.state) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
                     MemberAvatar(member)
                     Column(Modifier.weight(1f)) {
-                        Text(if (member.id == state.account) "You" else member.name, style = MaterialTheme.typography.titleMedium)
+                        Text(if (member.id == state.account) "You" else partnerDisplayName(member.id, member.name, state.home?.couple), style = MaterialTheme.typography.titleMedium)
                         Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (member.id in session.confirmedBy) Icon(Icons.Outlined.CheckCircle, "Confirmed done", tint = MaterialTheme.colorScheme.success)

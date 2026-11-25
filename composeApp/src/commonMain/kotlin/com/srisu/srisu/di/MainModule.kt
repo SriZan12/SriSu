@@ -10,7 +10,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val mainModule = module {
-    viewModel { com.srisu.srisu.features.settings.SettingsViewModel(get(), get(), get<com.srisu.srisu.navigation.CoupleAccessCoordinator>()::retry) }
+    viewModel { com.srisu.srisu.features.settings.SettingsViewModel(get(), get(), get(), get<com.srisu.srisu.navigation.CoupleAccessCoordinator>()::retry) }
     viewModel { com.srisu.srisu.features.notifications.NotificationInboxViewModel(get(), get()) }
     viewModel { com.srisu.srisu.features.plans.presentation.PlanViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { com.srisu.srisu.features.plans.presentation.HomePlansViewModel(get(), get()) }

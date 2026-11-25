@@ -1,6 +1,8 @@
 @file:OptIn(kotlinx.coroutines.FlowPreview::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 package com.srisu.srisu.features.chat.matrix.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.CalendarMonth
 import com.srisu.srisu.theme.planner
@@ -88,9 +90,11 @@ fun SecureChatScreen(viewModel: SecureChatViewModel, onBack: () -> Unit,
     val state by viewModel.state.collectAsState()
     val momentReply by viewModel.momentReply.collectAsState()
     com.srisu.srisu.features.moments.presentation.MomentLifecycle(viewModel::destinationVisible)
-    val ui by viewModel.uiState.collectAsState()
+    val rawUi by viewModel.uiState.collectAsState()
     val validationError by viewModel.composerValidationError.collectAsState()
-    val partner by viewModel.partner.collectAsState()
+    val rawPartner by viewModel.partner.collectAsState()
+    val partner = rawPartner?.let { it.copy(name = partnerDisplayName(it.userId, it.name)) }
+    val ui = rawUi.copy(partnerName = partner?.name ?: rawUi.partnerName)
     val availability = state?.availability ?: MatrixChatAvailability.Loading
     val ready = availability is MatrixChatAvailability.Ready
     var appearance by rememberSaveable { mutableStateOf(false) }

@@ -97,7 +97,7 @@ class NotificationInboxViewModel(private val source: NotificationInboxSource,
                     items=it.items.map { row -> if(row.id!=item.id) row else if(response.available)
                         row.copy(readAt=Clock.System.now().toString(),available=true)
                         else row.copy(readAt=Clock.System.now().toString(),available=false,title="Update unavailable",body="",
-                            actorName=null,avatar=false,thumbnail=false,segments=emptyList()) }
+                            actorName=null,actorId=null,actorRealName=null,avatar=false,thumbnail=false,segments=emptyList()) }
                         .filter { row -> !it.unreadOnly || row.readAt==null },
                     navigation=route.takeIf { response.available },
                     notice=if(!response.available || route==null) "This update is no longer available." else null) }

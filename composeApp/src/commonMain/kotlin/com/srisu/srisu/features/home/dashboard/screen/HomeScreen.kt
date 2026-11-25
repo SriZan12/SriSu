@@ -26,6 +26,8 @@ import com.srisu.srisu.features.home.dashboard.components.*
 import com.srisu.srisu.features.home.dashboard.state.HomeCoupleUi
 import com.srisu.srisu.features.home.dashboard.state.HomeStatus
 import com.srisu.srisu.features.home.dashboard.state.HomeUiState
+import com.srisu.srisu.features.home.dashboard.state.HomeSection
+import com.srisu.srisu.core.identity.partnerDisplayName
 import com.srisu.srisu.features.home.dashboard.vm.HomeViewModel
 import com.srisu.srisu.features.moments.presentation.MomentLifecycle
 import com.srisu.srisu.features.notifications.NotificationRegistrationTools
@@ -65,14 +67,29 @@ fun HomeScreen(actions: HomeActions, modifier: Modifier = Modifier, viewModel: H
     val state by viewModel.state.collectAsStateWithLifecycle()
     val inbox: com.srisu.srisu.features.notifications.NotificationInboxSource = org.koin.compose.koinInject()
     val unread by inbox.unreadCount.collectAsStateWithLifecycle()
+    val partnerNames: com.srisu.srisu.core.identity.PartnerNames = org.koin.compose.koinInject()
     MomentLifecycle(viewModel::visible)
     com.srisu.srisu.features.couplechat.presentation.ProtectConversation()
-    HomeContent(state.copy(notificationUnreadCount=unread), viewModel::image, viewModel::refresh, actions, modifier,
+    HomeContent(state.copy(notificationUnreadCount=unread), viewModel::image, {viewModel.refresh();partnerNames.refresh()}, actions, modifier,
         HomeInteractions(viewModel::setStatus, viewModel::suggest, viewModel::ideaAction, viewModel::acceptPlan, viewModel::retryAction, viewModel::reminder))
 }
 
 @Composable
 fun HomeContent(state: HomeUiState, load: HomeImageLoader, onRetry: () -> Unit, actions: HomeActions,
     modifier: Modifier = Modifier, interactions: HomeInteractions = HomeInteractions()) {
-    HomeCoupleSpace(state, load, onRetry, actions, interactions, modifier)
+    // Resolve only presentation identities; message text and shared activity content stay original.
+    val couple = state.couple?.let { couple ->
+        couple.copy(
+            partner = couple.partner.copy(name = partnerDisplayName(couple.partner.id, couple.partner.name, couple.id)),
+            moments = couple.moments.map { moment -> moment.copy(person = moment.person.copy(
+                name = partnerDisplayName(moment.person.id, moment.person.name, couple.id))) },
+            challenge = when (val challenge = couple.challenge) {
+                is HomeSection.Ready -> HomeSection.Ready(challenge.value.copy(members = challenge.value.members.map { member ->
+                    member.copy(person = member.person.copy(name = partnerDisplayName(member.person.id, member.person.name, couple.id)))
+                }))
+                else -> challenge
+            },
+        )
+    }
+    HomeCoupleSpace(state.copy(couple = couple), load, onRetry, actions, interactions, modifier)
 }

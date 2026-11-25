@@ -16,3 +16,6 @@ import platform.UIKit.UIUserInterfaceStyle
         controller.setNeedsStatusBarAppearanceUpdate()
     }
 }
+
+// UIKit overlays inherit the controller's appearance set above.
+@Composable internal actual fun ApplyOverlayAppearance(dark: Boolean) = Unit

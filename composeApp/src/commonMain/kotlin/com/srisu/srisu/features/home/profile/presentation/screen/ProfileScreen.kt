@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
 import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -156,9 +158,10 @@ internal fun PartnerProfileContent(
 
 @Composable
 private fun ProfileIdentity(user: User) {
-    val name = user.fullName?.trim()?.takeIf(String::isNotEmpty)
+    val realName = user.fullName?.trim()?.takeIf(String::isNotEmpty)
         ?: user.username?.trim()?.takeIf(String::isNotEmpty)
         ?: stringResource(Res.string.partner_preview_person)
+    val name = partnerDisplayName(user.id, realName)
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val stacked = maxWidth < PartnerLinkTokens.previewStackWidth || LocalDensity.current.fontScale > 1.3f
         val photo: @Composable () -> Unit = {
@@ -168,6 +171,7 @@ private fun ProfileIdentity(user: User) {
         val identity: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)) {
                 Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                if (name != realName) Text(realName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 user.username?.trim()?.takeIf { it.isNotEmpty() && it != name }?.let {
                     Text("@${it.removePrefix("@")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

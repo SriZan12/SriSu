@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 
 @Composable internal actual fun ApplyPlatformAppearance(appearance: AppAppearance, dark: Boolean) {
@@ -16,6 +17,18 @@ import androidx.core.view.WindowCompat
         WindowCompat.getInsetsController(activity.window,view).apply {
             isAppearanceLightStatusBars=!dark
             isAppearanceLightNavigationBars=!dark
+        }
+    }
+}
+
+@Composable internal actual fun ApplyOverlayAppearance(dark: Boolean) {
+    val view = LocalView.current
+    val window = generateSequence(view as android.view.View?) { it.parent as? android.view.View }
+        .filterIsInstance<DialogWindowProvider>().firstOrNull()?.window ?: return
+    SideEffect {
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
         }
     }
 }

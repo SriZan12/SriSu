@@ -165,7 +165,7 @@ internal fun ConversationComposer(
                                 QuotePreview(
                                     it,
                                     state.accountId,
-                                    state.preferences.nickname.ifBlank { state.partnerName },
+                                    state.partnerName,
                                     onCancel = onCancelReply
                                 )
                             }
@@ -197,7 +197,7 @@ internal fun ConversationComposer(
                             decorationBox = { input ->
                                 Box {
                                     if (recording || editor.value.text.isEmpty()) Text(
-                                        if (recording) "Recording a voice message…" else if (state.mediaDraft == null) "Message ${state.preferences.nickname.ifBlank { state.partnerName }}" else "Add a caption…",
+                                        if (recording) "Recording a voice message…" else if (state.mediaDraft == null) "Message ${state.partnerName}" else "Add a caption…",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

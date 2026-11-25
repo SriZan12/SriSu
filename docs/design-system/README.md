@@ -185,3 +185,29 @@ existing couple artwork. It does not change Chat palettes or global theme roles.
 Values are measured estimates from the rendered Figma and approved Stage 1 study;
 Figma export quota prevents exact token/artwork parity. See `docs/flows/sparks.md`
 for the frame map, responsive behaviour and intentional scope adaptations.
+
+
+## Dark surfaces and selection (2026-11-25)
+
+Home/Questions no longer install a light-only scheme. `HomeSpace` resolves its
+palette from the active Material theme, so explicit Appearance choices and OS
+changes both propagate through the screen, sheets, skeleton and bottom navigation.
+The approved light palette and layout remain unchanged.
+Home overlays explicitly align their Android window icons with the effective app
+appearance, including a dark app on a light-mode phone.
+
+Derived dark tokens use warm charcoal: canvas `#141312`, rows `#211F1E`, question
+surface `#2E2A28`, text `#ECE9E6`, secondary text `#BDB7B2` and a restrained warm
+accent `#E2C6B0`. Topic/counter surfaces retain very subtle category tints. Existing
+illustrations keep their artwork colours independently of UI surfaces.
+
+`selectedSurface` / `onSelectedSurface` and `sriSuFilterChipColors` provide neutral
+dark selection for Settings Together, countries, Moment audience/crop, interests,
+Plans and Challenges. Unread notifications use `surfaceContainerLow` with their
+existing unread dot. Light treatment, semantic activity icons and saved Chat
+palettes are preserved. Global HCT role derivation is unchanged.
+
+This is an intentional requested dark-mode refinement, not a Figma dark export.
+A fresh read of design-system node `0:1` was blocked by the Figma tool quota.
+The surface hierarchy follows [Material colour roles](https://m3.material.io/styles/color/the-color-system/).
+See [native verification](../validation/dark-mode-2026-11-25/README.md).

@@ -44,7 +44,7 @@ class ConnectionCurrentCoupleRoomResolver(
 }
 
 /** Display-only partner identity for the conversation header; never used for authorization. */
-data class ChatPartnerIdentity(val name: String, val photoUrl: String?)
+data class ChatPartnerIdentity(val name: String, val photoUrl: String?, val userId: Long? = null)
 
 interface ChatPartnerSource {
     /** Returns the current partner only when the active relationship owns [roomId]. */
@@ -66,7 +66,7 @@ class ConnectionChatPartnerSource(
             .map(String::trim)
             .firstOrNull(String::isNotEmpty)
             ?: return null
-        return ChatPartnerIdentity(name = name, photoUrl = partner.profilePhoto?.takeIf(String::isNotBlank))
+        return ChatPartnerIdentity(name = name, photoUrl = partner.profilePhoto?.takeIf(String::isNotBlank), userId = partner.id)
     }
 }
 

@@ -1,12 +1,16 @@
 package com.srisu.srisu.features.settings
 
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.Density
 import com.srisu.srisu.theme.SriSuTheme
 import com.srisu.srisu.navigation.graph.*
+import com.srisu.srisu.core.identity.LocalPartnerNames
+import com.srisu.srisu.core.identity.PartnerNameSnapshot
 import kotlinx.cinterop.*
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
@@ -15,6 +19,64 @@ import kotlin.test.*
 
 @OptIn(ExperimentalTestApi::class)
 class SettingsIosTest {
+    @Test fun nicknameSaveAndRemoveAtSmallWidthAndLargeText()=runSkikoComposeUiTest(size=Size(640f,1400f),density=Density(2f,1.8f)) {
+        val partner=SettingsPartner(2,"Sam",coupleId=4,connectionId=3,revision=2,connectedDays=248,nicknameRevision=1)
+        val state=mutableStateOf(SettingsState(loading=false,loaded=true,partner=partner))
+        val writes=mutableListOf<Pair<SettingsPartner,String>>()
+        setContent {
+            val current=state.value.partner!!
+            CompositionLocalProvider(LocalPartnerNames provides PartnerNameSnapshot(1,4,2,3,current.nickname,current.nicknameRevision,current.name)) {
+                SriSuTheme(darkTheme=true) {Surface {SettingsContent(state.value,{}, {},onNickname={expected,value ->
+                    writes += expected to value
+                    state.value=state.value.copy(partner=expected.copy(nickname=value.trim().takeIf {it.isNotEmpty()},
+                        nicknameRevision=expected.nicknameRevision!!+1),nicknameSaved=state.value.nicknameSaved+1)
+                })}}
+            }
+        }
+        fun open() {
+            onNodeWithTag("settings-list").performScrollToNode(hasText("Nickname",substring=false))
+            onNodeWithText("Nickname",substring=false).performClick()
+            onNodeWithTag("partner-nickname").performScrollTo()
+        }
+        open()
+        onNodeWithText("Save",substring=false).assertIsNotEnabled()
+        onNodeWithTag("partner-nickname").performTextInput("Sunshine ☀️")
+        onNodeWithText("Save",substring=false).assertIsDisplayed().assertIsEnabled().performClick()
+        onNodeWithTag("partner-nickname").assertDoesNotExist()
+        assertEquals(listOf(partner to "Sunshine ☀️"),writes)
+        open()
+        onNodeWithTag("partner-nickname").assertTextContains("Sunshine ☀️")
+        onNodeWithText("Remove nickname").performScrollTo().assertIsDisplayed().performClick()
+        onNodeWithTag("partner-nickname").assertDoesNotExist()
+        assertEquals(2,writes.size)
+        assertEquals("",writes.last().second)
+        onNodeWithTag("settings-list").performScrollToNode(hasText("Sam",substring=false))
+        onNodeWithText("Sam",substring=false).assertIsDisplayed()
+        capture("nickname-cleared-small-dark",Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+    }
+    @Test fun nicknameValidationAndFailedSaveKeepTheDraft()=runSkikoComposeUiTest(size=Size(780f,1688f),density=Density(2f)) {
+        val partner=SettingsPartner(2,"Sam",coupleId=4,connectionId=3,revision=2,nicknameRevision=1)
+        val state=mutableStateOf(SettingsState(loading=false,loaded=true,partner=partner))
+        var writes=0
+        setContent {SriSuTheme(darkTheme=true) {Surface {SettingsContent(state.value,{}, {},onNickname={_,_ ->
+            writes++;state.value=state.value.copy(nicknameSaving=true)
+        })}}}
+        onNodeWithTag("settings-list").performScrollToNode(hasText("Nickname",substring=false))
+        onNodeWithText("Nickname",substring=false).performClick()
+        val field=onNodeWithTag("partner-nickname")
+        field.performScrollTo().performTextInput("x".repeat(41))
+        onNodeWithText("Save",substring=false).assertIsNotEnabled()
+        assertEquals(0,writes)
+        field.performTextReplacement("My sunshine")
+        onNodeWithText("Save",substring=false).performClick()
+        onNodeWithText("Saving…").assertIsNotEnabled()
+        field.assertIsNotEnabled()
+        runOnIdle {state.value=state.value.copy(nicknameSaving=false,nicknameError="Couldn’t save. Try again.")}
+        field.assertTextContains("My sunshine")
+        onNodeWithText("Couldn’t save. Try again.").performScrollTo().assertIsDisplayed()
+        onNodeWithText("Save",substring=false).assertIsEnabled()
+        assertEquals(1,writes)
+    }
     private fun render(name:String,width:Int=390,height:Int=844,scale:Float=1f,dark:Boolean=false,
         state:SettingsState=SettingsState(loading=false,loaded=true,partner=samplePartner)) = runSkikoComposeUiTest(
         size=Size(width*2f,height*2f),density=Density(2f,scale)) {
@@ -46,6 +108,7 @@ class SettingsIosTest {
         assertTrue(title.bottom <= content.top)
         capture("large-title",Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
     }
+    @Test fun darkConnected()=render("dark-connected",dark=true)
     @Test fun connected()=render("connected")
     @Test fun unconnected()=render("unconnected",state=SettingsState(loading=false,loaded=true))
     @Test fun small()=render("small",320,640)

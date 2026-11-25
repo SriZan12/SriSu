@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.home.dashboard.screen
 
+import com.srisu.srisu.core.identity.displayInitial
+
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -19,8 +26,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +40,7 @@ import com.srisu.srisu.features.home.dashboard.components.*
 import com.srisu.srisu.features.home.dashboard.state.*
 import com.srisu.srisu.features.plans.data.*
 import com.srisu.srisu.features.sparks.data.SparkDaily
+import com.srisu.srisu.features.settings.ApplyOverlayAppearance
 import com.srisu.srisu.theme.HomeSpace as H
 import com.srisu.srisu.theme.sriSuTypography
 import kotlinx.datetime.TimeZone
@@ -61,13 +71,22 @@ import kotlin.time.Instant
         Surface(modifier.fillMaxSize(), color = H.paper) {
             BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 val compact = maxWidth < 360.dp
-                LazyColumn(Modifier.widthIn(max = 560.dp).fillMaxSize().statusBarsPadding(),
+                val pullState = rememberPullToRefreshState()
+                val canRefresh = state.status != HomeStatus.LOADING && !state.refreshing
+                val refresh = { if (canRefresh) retry() }
+                Box(Modifier.widthIn(max = 560.dp).fillMaxSize().statusBarsPadding()
+                    .testTag("home-pull-refresh")
+                    .pullToRefresh(isRefreshing = state.refreshing, state = pullState,
+                        enabled = canRefresh, onRefresh = refresh)
+                    .semantics {
+                        customActions = if (canRefresh) listOf(CustomAccessibilityAction("Refresh Home") {
+                            refresh(); true
+                        }) else emptyList()
+                    }) {
+                LazyColumn(Modifier.fillMaxSize(),
                     state = rememberLazyListState(), contentPadding = PaddingValues(horizontal = if (compact) 17.dp else 22.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(22.dp)) {
                     item("heading") { if (state.status == HomeStatus.LOADING && c == null) HomeHeadingSkeleton() else SpaceHeading(state, actions) }
-                    if (state.refreshing) item("progress") {
-                        LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Refreshing Home" }, color = H.purple, trackColor = H.lilac)
-                    }
                     if (state.stale) item("stale") { RetryRow("Showing your last update. Home couldn’t refresh.", retry) }
                     if (state.notice != null) item("notice") {
                         Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
@@ -112,10 +131,20 @@ import kotlin.time.Instant
                         }
                     }
                 }
+                PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = state.refreshing,
+                    containerColor = H.warm, color = H.ink,
+                    modifier = Modifier.align(Alignment.TopCenter).semantics {
+                        if (state.refreshing) {
+                            contentDescription = "Refreshing Home"
+                            liveRegion = LiveRegionMode.Polite
+                        }
+                    })
+                }
             }
         }
         }
         if (requests) ModalBottomSheet(onDismissRequest = { requests = false }, containerColor = H.paper) {
+            ApplyOverlayAppearance(H.paper.luminance() < .5f)
             Column(Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("Requests for you", style = MaterialTheme.typography.titleLarge)
                 if (state.status != HomeStatus.READY || state.stale) RetryRow("Requests haven’t refreshed.", retry)
@@ -144,6 +173,7 @@ import kotlin.time.Instant
         }
         val reminderPlan = c?.featuredPlan?.takeIf { it.id == reminderId }
         if (reminderPlan != null) ModalBottomSheet(onDismissRequest = { reminderId = null }, containerColor = H.paper) {
+            ApplyOverlayAppearance(H.paper.luminance() < .5f)
             Column(Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Remind me", style = MaterialTheme.typography.titleLarge)
                 Text(reminderPlan.title, style = MaterialTheme.typography.titleMedium)
@@ -151,7 +181,7 @@ import kotlin.time.Instant
                 val selected = state.reminders.choices.firstOrNull { it.plan == reminderPlan.id }?.minutes
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(null to "Off", 15 to "15 min before", 60 to "1 hour before", 1440 to "1 day before").forEach { (minutes, title) ->
-                        FilterChip(selected == minutes, { interactions.reminder(reminderPlan, minutes) }, enabled = c.planFresh, label = { Text(title) })
+                        FilterChip(selected == minutes, { interactions.reminder(reminderPlan, minutes) }, enabled = c.planFresh, label = { Text(title) }, colors = sriSuFilterChipColors())
                     }
                 }
                 Text(state.reminders.error ?: when {
@@ -164,6 +194,7 @@ import kotlin.time.Instant
             }
         }
         if (statusPicker && c != null) ModalBottomSheet(onDismissRequest = { statusPicker = false }, containerColor = H.paper) {
+            ApplyOverlayAppearance(H.paper.luminance() < .5f)
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("How are you feeling?", style = MaterialTheme.typography.titleLarge)
                 Text("Only your partner can see this. Clears after 24 hours.", style = MaterialTheme.typography.bodyMedium, color = H.muted)
@@ -174,6 +205,7 @@ import kotlin.time.Instant
             }
         }
         if (ideaPicker && c != null) ModalBottomSheet(onDismissRequest = { ideaPicker = false }, containerColor = H.paper) {
+            ApplyOverlayAppearance(H.paper.luminance() < .5f)
             Column(Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Plans & ideas", style = MaterialTheme.typography.titleLarge)
                 SpaceButton("Open your agenda", { ideaPicker = false; actions.onPlan(null) }, icon = Icons.Outlined.CalendarToday, modifier = Modifier.fillMaxWidth())
@@ -192,8 +224,9 @@ import kotlin.time.Instant
 }
 
 @Composable private fun SpaceHeading(state: HomeUiState, actions: HomeActions) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f).clickable(role = Role.Button,
+    val largeText = LocalDensity.current.fontScale > 1.3f
+    val identity: @Composable (Modifier) -> Unit = { modifier ->
+        Column(modifier.clickable(role = Role.Button,
             onClickLabel = if (state.couple != null) "Open your couple profile" else "Explore SriSu",
             onClick = if (state.couple != null) actions.onCoupleProfile else actions.onExplore)) {
             Text(state.couple?.let { "You & ${it.partner.name.ifBlank { "your partner" }}" } ?: "Your space",
@@ -203,13 +236,24 @@ import kotlin.time.Instant
                 Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.padding(start = 5.dp).size(16.dp), tint = H.muted)
             }
         }
-        val count = state.notificationUnreadCount ?: 0
-        IconButton(onClick = actions.onNotifications,
-            modifier = Modifier.semantics { contentDescription = if(count > 0) "Notifications, $count unread" else "Notifications" }) {
-            BadgedBox(badge = { if(count > 0) Badge { Text(if(count > 99) "99+" else count.toString()) } }) {
-                Icon(Icons.Outlined.Notifications, null, Modifier.size(21.dp))
+    }
+    val controls: @Composable () -> Unit = {
+        Row {
+            val count = state.notificationUnreadCount ?: 0
+            IconButton(onClick = actions.onNotifications,
+                modifier = Modifier.semantics { contentDescription = if(count > 0) "Notifications, $count unread" else "Notifications" }) {
+                BadgedBox(badge = { if(count > 0) Badge { Text(if(count > 99) "99+" else count.toString()) } }) {
+                    Icon(Icons.Outlined.Notifications, null, Modifier.size(21.dp))
+                }
             }
         }
+    }
+    if (largeText) Column(Modifier.fillMaxWidth()) {
+        identity(Modifier.fillMaxWidth())
+        Box(Modifier.align(Alignment.End)) { controls() }
+    } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        identity(Modifier.weight(1f))
+        controls()
     }
 }
 
@@ -250,6 +294,7 @@ import kotlin.time.Instant
 }
 
 @Composable private fun DayConnector(c: HomeCoupleUi, actions: HomeActions, bridgeWidth: androidx.compose.ui.unit.Dp? = null) {
+    val connector = H.connector
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
         Canvas((if (bridgeWidth != null) Modifier.requiredWidth(bridgeWidth) else Modifier.fillMaxWidth()).height(56.dp)) {
             // A shallow arch between the portraits; the date rests at its crest.
@@ -257,7 +302,7 @@ import kotlin.time.Instant
                 moveTo(0f, size.height * .8f)
                 quadraticTo(size.width / 2, -size.height * .1f, size.width, size.height * .8f)
             }
-            drawPath(arc, H.connector, style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 5.dp.toPx()))))
+            drawPath(arc, connector, style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 5.dp.toPx()))))
         }
         // Keep the touch area generous without making the visible pill 48 dp tall.
         Box(Modifier.heightIn(min = 48.dp).clickable(role = Role.Button, onClick = actions.onCoupleProfile), contentAlignment = Alignment.Center) {
@@ -270,6 +315,8 @@ import kotlin.time.Instant
 }
 
 @Composable private fun PortraitStatus(person: HomePersonUi, own: Boolean, c: HomeCoupleUi, canAct: Boolean, onStatus: () -> Unit) {
+    val paper = H.paper
+    val line = H.line
     val text = c.statuses?.items?.firstOrNull { it.author == person.id }?.text?.takeIf(String::isNotBlank)
     Box(Modifier.heightIn(min = 48.dp).then(if (own) Modifier.clickable(enabled = canAct && c.statusesFresh, role = Role.Button, onClickLabel = "Set your private status", onClick = onStatus) else Modifier), contentAlignment = Alignment.Center) {
         Box(contentAlignment = Alignment.BottomCenter) {
@@ -282,9 +329,9 @@ import kotlin.time.Instant
             }
             if (text != null) Canvas(Modifier.offset(y = 6.dp).size(12.dp, 8.dp)) {
                 val tail = Path().apply { moveTo(0f, 0f); lineTo(size.width / 2, size.height); lineTo(size.width, 0f); close() }
-                drawPath(tail, H.paper)
-                drawLine(H.line, Offset(0f, 0f), Offset(size.width / 2, size.height), 1.dp.toPx())
-                drawLine(H.line, Offset(size.width / 2, size.height), Offset(size.width, 0f), 1.dp.toPx())
+                drawPath(tail, paper)
+                drawLine(line, Offset(0f, 0f), Offset(size.width / 2, size.height), 1.dp.toPx())
+                drawLine(line, Offset(size.width / 2, size.height), Offset(size.width, 0f), 1.dp.toPx())
             }
         }
     }
@@ -389,20 +436,20 @@ import kotlin.time.Instant
                 drawPath(path, color)
                 val eyeY = size.height * .63f
                 val center = x + width * .5f
-                drawCircle(H.purple, 1.5.dp.toPx(), Offset(center - width * .1f, eyeY))
-                drawCircle(H.purple, 1.5.dp.toPx(), Offset(center + width * .1f, eyeY))
-                drawArc(H.purple, 15f, 150f, false, Offset(center - width * .09f, eyeY + 2.dp.toPx()), Size(width * .18f, size.height * .08f), style = Stroke(1.5.dp.toPx()))
+                drawCircle(H.artInk, 1.5.dp.toPx(), Offset(center - width * .1f, eyeY))
+                drawCircle(H.artInk, 1.5.dp.toPx(), Offset(center + width * .1f, eyeY))
+                drawArc(H.artInk, 15f, 150f, false, Offset(center - width * .09f, eyeY + 2.dp.toPx()), Size(width * .18f, size.height * .08f), style = Stroke(1.5.dp.toPx()))
             }
             friend(0f, size.width * .62f, H.lavender)
             friend(size.width * .4f, size.width * .6f, H.peach)
             val corner = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
             val position = Offset(size.width * .57f, 0f)
             val bubble = Size(size.width * .4f, size.height * .27f)
-            drawRoundRect(H.paper, position, bubble, corner)
-            drawRoundRect(H.line, position, bubble, corner, style = Stroke(1.dp.toPx()))
+            drawRoundRect(H.artPaper, position, bubble, corner)
+            drawRoundRect(H.artLine, position, bubble, corner, style = Stroke(1.dp.toPx()))
             val tail = Path().apply { moveTo(size.width * .65f, bubble.height - 1.dp.toPx()); lineTo(size.width * .65f, bubble.height + 6.dp.toPx()); lineTo(size.width * .74f, bubble.height - 1.dp.toPx()); close() }
-            drawPath(tail, H.paper)
-            repeat(3) { drawCircle(H.purple, 1.6.dp.toPx(), Offset(size.width * (.67f + it * .09f), bubble.height / 2)) }
+            drawPath(tail, H.artPaper)
+            repeat(3) { drawCircle(H.artInk, 1.6.dp.toPx(), Offset(size.width * (.67f + it * .09f), bubble.height / 2)) }
         }
     }
 }
@@ -665,7 +712,7 @@ import kotlin.time.Instant
 @Composable private fun PersonAvatar(person: HomePersonUi, load: HomeImageLoader, size: androidx.compose.ui.unit.Dp) {
     if (person.photoUrl != null) HomeAvatar(person.photoUrl, load, size, person.name)
     else Box(Modifier.size(size).background(H.lilac, CircleShape), contentAlignment = Alignment.Center) {
-        Text(person.name.trim().take(1).uppercase(), style = MaterialTheme.typography.titleLarge, color = H.purple)
+        Text(displayInitial(person.name), style = MaterialTheme.typography.titleLarge, color = H.purple)
     }
 }
 @Composable private fun CoupleMini(c: HomeCoupleUi, load: HomeImageLoader) {

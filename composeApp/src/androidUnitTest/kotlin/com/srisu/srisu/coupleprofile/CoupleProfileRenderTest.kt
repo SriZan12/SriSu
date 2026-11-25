@@ -109,7 +109,8 @@ class CoupleProfileRenderTest {
                     SriSuTheme(darkTheme=dark) { CoupleProfileScreen(1,onBack={},vm=vm) }
                 }
             }
-            compose.waitUntil(10000){vm.state.value.profile!=null}
+            // Drain the paused Robolectric main looper while the mocked repository completes.
+            compose.waitUntil(10000){org.robolectric.shadows.ShadowLooper.idleMainLooper();vm.state.value.profile!=null}
             compose.runOnIdle { if(page==ProfilePage.ANSWER) vm.openAnswer("how_met") else if(page==ProfilePage.POSITION) { vm.open(ProfilePage.COVER); vm.chooseCover(CoverChoice(99,"https://example.test/api/social/fixture-photo")) } else if(page!=ProfilePage.PROFILE && page!=ProfilePage.PREVIEW) vm.open(page) }
             compose.waitUntil(10000){org.robolectric.shadows.ShadowLooper.idleMainLooper(); !vm.state.value.listLoading}
             if(media) compose.waitUntil(10000) { org.robolectric.shadows.ShadowLooper.idleMainLooper(); vm.state.value.images.isNotEmpty() }

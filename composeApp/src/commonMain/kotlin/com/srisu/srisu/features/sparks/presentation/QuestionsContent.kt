@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.sparks.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
 import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -123,7 +125,7 @@ internal fun questionMatches(decks: List<SparkDeck>, query: String): List<SparkQ
                                         session.state == "skipped" -> Note("Room for another question", "This question was skipped. Unrevealed answers have been removed.", Icons.Outlined.AutoAwesome)
                                         session.revealed -> Reveal(state, onRecovery, onKeys)
                                         session.submitted(state.account) -> {
-                                            val partner = home.members.firstOrNull { it.id != state.account }?.name ?: "your partner"
+                                            val partner = home.members.firstOrNull { it.id != state.account }?.let { partnerDisplayName(it.id, it.name, home.couple) } ?: "your partner"
                                             Note("Your answer is locked in", "Waiting for $partner. Both answers open when you’ve each answered. There’s no rush.", Icons.Outlined.Lock)
                                             state.answers[state.account]?.let { answer ->
                                                 home.members.firstOrNull { it.id == state.account }?.let { AnswerBubble(it, answer, true) }
@@ -323,7 +325,7 @@ internal fun questionMatches(decks: List<SparkDeck>, query: String): List<SparkQ
 @Composable private fun AnswerBubble(member: SparkMember, answer: String, own: Boolean) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (own) Alignment.End else Alignment.Start, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MemberAvatar(member, 24); Text(if (own) "You" else member.name, style = MaterialTheme.typography.labelLarge)
+            MemberAvatar(member, 24); Text(if (own) "You" else partnerDisplayName(member.id, member.name), style = MaterialTheme.typography.labelLarge)
         }
         Surface(Modifier.fillMaxWidth(.94f), color = if (own) Q.lilac else Q.warm,
             shape = if (own) QS.sent else QS.received) {
@@ -333,7 +335,7 @@ internal fun questionMatches(decks: List<SparkDeck>, query: String): List<SparkQ
 }
 
 @Composable private fun MemberAvatar(member: SparkMember, size: Int) {
-    PartnerAvatar(ChatPartnerIdentity(member.name, member.photo), size.dp, MaterialTheme.typography.bodySmall)
+    PartnerAvatar(ChatPartnerIdentity(partnerDisplayName(member.id, member.name), member.photo, member.id), size.dp, MaterialTheme.typography.bodySmall)
 }
 
 @Composable private fun KeyNotice(secure: Boolean, onRecovery: () -> Unit, onKeys: () -> Unit) {
@@ -383,7 +385,7 @@ internal fun questionMatches(decks: List<SparkDeck>, query: String): List<SparkQ
     }
 }
 
-private fun topicColor(id: String) = when (id) { "memories" -> Q.apricot; "playful" -> Q.pink; "future" -> Q.sky; else -> Q.lilac }
+@Composable private fun topicColor(id: String) = when (id) { "memories" -> Q.apricot; "playful" -> Q.pink; "future" -> Q.sky; else -> Q.lilac }
 private fun topicIcon(id: String) = when (id) { "memories" -> Icons.Outlined.PhotoCamera; "playful" -> Icons.Outlined.WbSunny; "future" -> Icons.Outlined.Nightlight; else -> Icons.Outlined.FavoriteBorder }
 private fun deckName(home: SparkHome, id: String) = home.decks.firstOrNull { it.id == id }?.name ?: id
 

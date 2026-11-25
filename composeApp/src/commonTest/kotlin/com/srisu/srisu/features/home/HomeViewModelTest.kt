@@ -10,6 +10,8 @@ import com.srisu.srisu.features.coupleprofile.data.*
 import com.srisu.srisu.features.home.dashboard.state.*
 import com.srisu.srisu.features.home.dashboard.vm.HomeViewModel
 import com.srisu.srisu.features.moments.*
+import com.srisu.srisu.features.moments.data.MomentHome
+import com.srisu.srisu.features.moments.data.MomentResult
 import com.srisu.srisu.features.plans.FakePlans
 import com.srisu.srisu.features.plans.data.*
 import com.srisu.srisu.features.sparks.FakeSparks
@@ -35,6 +37,45 @@ class HomeViewModelTest {
         override suspend fun act(id: String, revision: Long, requestId: String, action: String, values: JsonObject) = NetworkAPIResult.Success<DateIdea?>(idea)
     }
     private fun TestScope.collect(vm: HomeViewModel) = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.state.collect() }
+
+    @Test fun refreshDeduplicatesRequestsKeepsContentAndWaitsForSections() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        var momentsGate: CompletableDeferred<Unit>? = null
+        var challengeGate: CompletableDeferred<Unit>? = null
+        val moments = object : FakeMoments() {
+            override suspend fun home(): MomentResult<MomentHome> {
+                homeCalls++
+                momentsGate?.await()
+                return homeResult
+            }
+        }
+        val challenges = object : FakeChallenges() {
+            override suspend fun home(): NetworkAPIResult<com.srisu.srisu.features.challenges.data.ChallengeHome?> {
+                challengeGate?.await()
+                return super.home()
+            }
+        }
+        val vm = HomeViewModel(moments, challenges, FakePlans(), MomentFixtures.sessions()); collect(vm)
+        try {
+            vm.visible(true); runCurrent()
+            assertFalse(vm.state.value.refreshing)
+            val previous = assertNotNull(vm.state.value.couple)
+            val calls = moments.homeCalls
+            momentsGate = CompletableDeferred(); challengeGate = CompletableDeferred()
+            repeat(5) { vm.refresh() }; runCurrent()
+            assertEquals(calls + 1, moments.homeCalls)
+            assertTrue(vm.state.value.refreshing)
+            assertEquals(previous.id, vm.state.value.couple?.id)
+            momentsGate!!.complete(Unit); runCurrent()
+            assertTrue(vm.state.value.refreshing, "Keep feedback until dependent section requests finish")
+            assertEquals(HomeStatus.READY, vm.state.value.status)
+            challengeGate!!.complete(Unit); runCurrent()
+            assertFalse(vm.state.value.refreshing)
+        } finally {
+            momentsGate?.complete(Unit); challengeGate?.complete(Unit)
+            vm.visible(false); vm.viewModelScope.cancel(); backgroundScope.cancel(); runCurrent(); Dispatchers.resetMain()
+        }
+    }
 
     @Test fun uncertainIdeaRetrySurvivesRecreationAndReusesTheOriginalIntent() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -69,6 +110,7 @@ class HomeViewModelTest {
             vm.visible(true); runCurrent(); assertNull(vm.state.value.couple); assertEquals(0, dailyCalls)
             moments.homeResult = MomentFixtures.failed(); vm.refresh(); runCurrent()
             assertTrue(vm.state.value.stale); assertEquals(HomeStatus.READY, vm.state.value.status)
+            assertFalse(vm.state.value.refreshing)
         } finally { vm.visible(false); vm.viewModelScope.cancel(); backgroundScope.cancel(); runCurrent(); Dispatchers.resetMain() }
     }
 

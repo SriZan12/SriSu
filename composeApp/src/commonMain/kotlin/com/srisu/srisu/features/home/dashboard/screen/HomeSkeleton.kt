@@ -51,15 +51,28 @@ private val LocalHomeShimmer = staticCompositionLocalOf { RestingShimmer }
 }
 
 @Composable internal fun HomeHeadingSkeleton() {
-    Row(Modifier.fillMaxWidth().testTag("home-skeleton").clearAndSetSemantics {
+    val largeText = LocalDensity.current.fontScale > 1.3f
+    val heading = Modifier.fillMaxWidth().testTag("home-skeleton").clearAndSetSemantics {
         contentDescription = "Loading Home"
         progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
-    }, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        Column(Modifier.weight(1f).padding(vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    }
+    val identity: @Composable (Modifier) -> Unit = { modifier ->
+        Column(modifier.padding(vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Bone(Modifier.fillMaxWidth(.7f).height(24.dp * LocalDensity.current.fontScale))
             Bone(Modifier.width(110.dp).height(13.dp * LocalDensity.current.fontScale))
         }
-        Bone(Modifier.padding(top = 12.dp).size(24.dp), CircleShape)
+    }
+    val notification: @Composable () -> Unit = {
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Bone(Modifier.size(24.dp), CircleShape)
+        }
+    }
+    if (largeText) Column(heading) {
+        identity(Modifier.fillMaxWidth())
+        Box(Modifier.align(Alignment.End)) { notification() }
+    } else Row(heading) {
+        identity(Modifier.weight(1f))
+        notification()
     }
 }
 

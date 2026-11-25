@@ -52,6 +52,8 @@ object HomeRenderFixtures {
         "new" -> quiet.copy(couple = quiet.couple!!.copy(daysTogether = null, questionsDone = 0, plansDone = 0, statuses = CoupleStatuses(10, serverTime = "2026-11-09T00:00:00Z"), challenge = HomeSection.Empty, conversation = null))
         "failed" -> HomeUiState(HomeStatus.FAILED)
         "loading" -> HomeUiState()
+        "refreshing" -> sparkHome.copy(refreshing = true)
+        "refresh-failed" -> sparkHome.copy(stale = true)
         "sections-failed" -> sparkHome.copy(couple = couple.copy(question = HomeSection.Failed, plan = HomeSection.Failed, challenge = HomeSection.Failed, chatAvailability = MatrixChatAvailability.Error("Offline"), unread = null))
         "long-content" -> quiet.copy(couple = quiet.couple!!.copy(
             partner = partner.copy(name = longName), title = "Little adventures, every day together",
