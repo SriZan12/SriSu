@@ -90,6 +90,21 @@ class AndroidNotificationPreviewTest {
         assertTrue(prefs().all.keys.all { it.substringBefore(':') in setOf("seen", "current", "time", "expiry") })
     }
 
+    @Test fun chosenNicknameAppearsOnlyInAuthorizedPrivatePreviewAndKeepsItsDeliveryTap() {
+        val value=envelope().copy(kind="nickname.changed",title="A nickname for you",
+            body="Your partner chose a nickname for you. Open SriSu to see it.",audible=false)
+        assertNotNull(PreviewEnvelope.parse(value.data()))
+        AndroidNotificationPreviews.post(context,value,NotificationPreview("nickname.changed",
+            "Sam gave you a nickname","You’re now “Moon 🌙” to them."))
+        val notification=manager.activeNotifications.single().notification
+        assertEquals("You’re now “Moon 🌙” to them.",notification.extras.getString(Notification.EXTRA_BIG_TEXT))
+        assertEquals(Notification.VISIBILITY_PRIVATE,notification.visibility)
+        assertFalse(notification.publicVersion.extras.toString().contains("Moon"))
+        assertEquals(value.body,notification.publicVersion.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals(value.delivery,shadowOf(notification.contentIntent).savedIntent.getStringExtra("delivery_id"))
+        assertEquals("srisu_updates_quiet",notification.channelId)
+    }
+
     @Test fun momentMediaCopyIsDisplayedWithoutChangingSafePublicCopyOrTapDestination() {
         val value=envelope().copy(kind="moment.published",title="New moment",
             body="Your partner shared a new moment.",audible=false)

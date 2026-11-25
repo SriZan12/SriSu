@@ -38,7 +38,7 @@ import srisu.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onPlans: (() -> Unit)? = null) {
+fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onPlans: (() -> Unit)? = null, nicknameContent: @Composable (Long) -> Unit = {}) {
     val state by vm.state.collectAsState()
     com.srisu.srisu.features.notifications.ReportNotificationScreen(state.profile?.id?.let { id ->
         com.srisu.srisu.features.coupleprofile.navigation.CoupleSection.entries.firstOrNull { it.name == state.page.name }?.let { section ->
@@ -134,7 +134,8 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                 if (profile != null) when (state.page) {
                     ProfilePage.DISCOVER -> Unit
                     ProfilePage.PREVIEW -> ProfileOverview(state, vm, accentMotion, preview = true, onPlans = onPlans)
-                    ProfilePage.PROFILE, ProfilePage.ANSWER -> ProfileOverview(state, vm, accentMotion, onPlans = onPlans)
+                    ProfilePage.PROFILE, ProfilePage.ANSWER -> ProfileOverview(state, vm, accentMotion, onPlans = onPlans,
+                        nicknameContent = if (state.page == ProfilePage.PROFILE) nicknameContent else null)
                     ProfilePage.STORY -> StoryRead(state, vm)
                     ProfilePage.STORY_EDIT -> StoryEditor(state, vm)
                     ProfilePage.SONG -> SongEditor(state, vm)

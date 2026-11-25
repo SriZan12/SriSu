@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import com.srisu.srisu.core.identity.LocalPartnerNames
+import com.srisu.srisu.core.identity.PartnerNameSnapshot
 import androidx.lifecycle.viewModelScope
 import com.srisu.srisu.features.moments.MomentFixtures
 import com.srisu.srisu.core.data.remote.NetworkAPIResult
@@ -66,6 +69,24 @@ class NotificationInboxUiTest {
         compose.onNodeWithText("No longer available").assertIsDisplayed();capture("history")
     }
     @Test fun reference() { show(NotificationReferenceFixture.state); capture("reference") }
+
+    @Test @Config(qualifiers="w320dp-h640dp-xhdpi") fun nicknameAlertKeepsTheChosenNicknameLiteralAtLargeText() {
+        val names=mutableStateOf(PartnerNameSnapshot(accountId=1,coupleId=3,partnerId=2,
+            connectionId=4,nickname="Sunshine",canonicalName="Sam"))
+        compose.setContent {
+            val density=LocalDensity.current
+            CompositionLocalProvider(LocalPartnerNames provides names.value,
+                LocalDensity provides Density(density.density,1.6f)) {
+                SriSuTheme(darkTheme=true) {NotificationInboxContent(NicknameNotificationFixtures.state,
+                    onOpen={actions+=it.id},now=InboxFixtures.now,zone=kotlinx.datetime.TimeZone.UTC)}
+            }
+        }
+        compose.onNodeWithText("Sunshine gave you a nickname · You’re now “Sam” to them.").assertIsDisplayed()
+        compose.onNodeWithTag("notification:${NicknameNotificationFixtures.item.id}").performClick()
+        assertEquals(listOf(NicknameNotificationFixtures.item.id),actions)
+        compose.runOnIdle {names.value=names.value.copy(nickname=null)}
+        compose.onNodeWithText("Sam gave you a nickname · You’re now “Sam” to them.").assertIsDisplayed()
+    }
     @Test fun skeleton() { show(InboxState());compose.onNodeWithContentDescription("Loading notifications").assertIsDisplayed();capture("loading") }
     @Test @Config(qualifiers="w640dp-h320dp-xhdpi") fun landscape() {
         show(NotificationReferenceFixture.state)

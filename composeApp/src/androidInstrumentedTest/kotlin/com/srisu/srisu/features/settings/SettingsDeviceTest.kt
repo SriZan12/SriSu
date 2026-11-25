@@ -17,6 +17,7 @@ import com.srisu.srisu.navigation.graph.*
 import com.srisu.srisu.theme.SriSuTheme
 import com.srisu.srisu.core.identity.LocalPartnerNames
 import com.srisu.srisu.core.identity.PartnerNameSnapshot
+import com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileNicknameContent
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -24,7 +25,7 @@ import java.io.File
 
 class SettingsDeviceTest {
     @get:Rule val compose=createAndroidComposeRule<ComponentActivity>()
-    private fun nicknameEditor(scale:Float=1f,narrow:Boolean=false,keyboard:Boolean=false) {
+    private fun nicknameEditor(scale:Float=1f,narrow:Boolean=false,keyboard:Boolean=false,profile:Boolean=false) {
         val partner=SettingsPartner(2,"Sam",coupleId=4,connectionId=3,revision=2,connectedDays=248,nicknameRevision=1)
         val state=mutableStateOf(SettingsState(loading=false,loaded=true,partner=partner))
         val writes=mutableListOf<Pair<SettingsPartner,String>>()
@@ -36,17 +37,24 @@ class SettingsDeviceTest {
                 LocalPartnerNames provides PartnerNameSnapshot(1,4,2,3,current.nickname,current.nicknameRevision,current.name)) {
                 ApplyPlatformAppearance(AppAppearance.DARK,true)
                 Box(if(narrow) Modifier.widthIn(max=320.dp).heightIn(max=640.dp) else Modifier) {
-                    SriSuTheme(darkTheme=true) {SettingsContent(state.value,{}, {},onNickname={expected,value ->
+                    SriSuTheme(darkTheme=true) {
+                        val save: (SettingsPartner,String) -> Unit = {expected,value ->
                         writes += expected to value
                         state.value=state.value.copy(partner=expected.copy(nickname=value.trim().takeIf {it.isNotEmpty()},
                             nicknameRevision=expected.nicknameRevision!!+1),nicknameSaved=state.value.nicknameSaved+1)
-                    })}
+                        }
+                        if(profile) androidx.compose.material3.Surface {CoupleProfileNicknameContent(4,state.value,save,{})}
+                        else SettingsContent(state.value,{}, {},onNickname=save)
+                    }
                 }
             }
         }
         fun open() {
-            compose.onNodeWithTag("settings-list").performScrollToNode(hasText("Nickname",substring=false))
-            compose.onNodeWithText("Nickname",substring=false).performClick()
+            if(profile) compose.onNodeWithTag("couple-profile-nickname").performClick()
+            else {
+                compose.onNodeWithTag("settings-list").performScrollToNode(hasText("Nickname",substring=false))
+                compose.onNodeWithText("Nickname",substring=false).performClick()
+            }
             compose.onNodeWithTag("partner-nickname").performScrollTo()
         }
         open()
@@ -80,7 +88,7 @@ class SettingsDeviceTest {
             val instrumentation=InstrumentationRegistry.getInstrumentation()
             android.os.SystemClock.sleep(400) // Native dialog/IME animation is outside Compose's test clock.
             val bitmap=instrumentation.uiAutomation.takeScreenshot()
-            File(instrumentation.targetContext.filesDir,"settings-nickname-keyboard-dark.png").outputStream().use {
+            File(instrumentation.targetContext.filesDir,if(profile) "profile-nickname-keyboard-dark.png" else "settings-nickname-keyboard-dark.png").outputStream().use {
                 bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)
             };bitmap.recycle()
         }
@@ -94,8 +102,11 @@ class SettingsDeviceTest {
         assertEquals("",writes.last().second)
         assertEquals(2,writes.size)
         assertNull(state.value.partner!!.nickname)
-        compose.onNodeWithTag("settings-list").performScrollToNode(hasText("Sam",substring=false))
-        compose.onNodeWithText("Sam",substring=false).assertIsDisplayed()
+        if(profile) compose.onNodeWithText("Add a nickname for Sam").assertIsDisplayed()
+        else {
+            compose.onNodeWithTag("settings-list").performScrollToNode(hasText("Sam",substring=false))
+            compose.onNodeWithText("Sam",substring=false).assertIsDisplayed()
+        }
     }
     private fun verify(connected:Boolean=true,scale:Float=1f,dark:Boolean=false,narrow:Boolean=false) {
         val partner=SettingsPartner(2,"Sam",coupleId=4,connectionId=3,revision=2,connectedDays=248)
@@ -148,6 +159,7 @@ class SettingsDeviceTest {
     }
     @Test fun darkConnected()=verify(dark=true)
     @Test fun nicknameSaveAndRemoveWithNativeKeyboard()=nicknameEditor(keyboard=true)
+    @Test fun profileNicknameWithNativeKeyboard()=nicknameEditor(keyboard=true,profile=true)
     @Test fun nicknameAtSmallWidthAndLargeText()=nicknameEditor(scale=1.8f,narrow=true)
     @Test fun connected()=verify()
     @Test fun notConnected()=verify(false)

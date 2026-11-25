@@ -18,7 +18,7 @@ import com.srisu.srisu.features.coupleprofile.navigation.*
 const val NOTIFICATION_CATALOGUE = "notification-catalogue-2"
 data class NotificationCategory(val key: String, val label: String, val enabledByDefault: Boolean)
 val notificationCategories = listOf(
-    NotificationCategory("requests", "Partner requests & sharing", true),
+    NotificationCategory("requests", "Partner requests, nicknames & sharing", true),
     NotificationCategory("plans", "Plan invitations & changes", true),
     NotificationCategory("questions", "Questions & mutual reveals", true),
     NotificationCategory("challenges", "Challenge invitations & outcomes", true),

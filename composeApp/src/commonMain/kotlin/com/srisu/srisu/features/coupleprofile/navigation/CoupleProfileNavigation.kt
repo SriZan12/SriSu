@@ -16,6 +16,7 @@ import com.srisu.srisu.navigation.graph.ChatNav
 import com.srisu.srisu.navigation.graph.Route
 import com.srisu.srisu.navigation.graph.HomeNavigation
 import com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileScreen
+import com.srisu.srisu.features.coupleprofile.presentation.CoupleProfileNickname
 import kotlinx.serialization.Serializable
 import kotlin.reflect.typeOf
 
@@ -62,6 +63,7 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
             return@coupleProfileDestination
         }
         CoupleProfileScreen(route.coupleId, onBack = nav::back, initialPage = route.section.name, planId = route.planId,
+            nicknameContent = { CoupleProfileNickname(it) },
             onPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination()) },
             onOpenCouple = { nav.open(CoupleProfileDestination(it)) })
     }

@@ -1,5 +1,11 @@
 # Couple Profile implementation record
 
+25 November follow-up: [partner nickname editing](partner-nicknames.md) is now
+available below the identity/date area in the owner's overview. It reuses the
+Settings editor and save flow, is excluded from visitor/public preview, and
+notifies the partner with the chosen nickname on set/change. No new profile
+API field or migration is needed.
+
 Working baseline: frontend `dev-core-architecture` at 7c3f1ed; backend same-named
 branch at 9303cdd. Integration branches remain frontend dev-new-theme and backend
 dev. Backend draft social/models.py was explicitly taken over on 2026-10-01; an

@@ -1,5 +1,28 @@
 # Notifications and crash diagnostics V1
 
+## Partner nickname alerts — 25 November 2026
+
+Choosing or changing a partner nickname in the updated editor creates a `nickname.changed` update
+for that partner under **Partner requests, nicknames & sharing**. The authorized
+inbox/preview names the setter and includes the chosen nickname, for example
+“Sam gave you a nickname · You’re now ‘Moon 🌙’ to them.” Only the actor's typed
+name span follows the recipient's own display-name preference; the chosen
+nickname stays literal. The inbox uses the existing compact row with an Edit
+badge. A tap reauthorizes and opens the current Couple Profile destination.
+
+Unchanged saves and removal do not send an alert. Backend authorization hides
+superseded/cleared nickname notices and rejects their old delivery destinations;
+the client clears obsolete row copy when an open is no longer available. Existing
+request-category, activity, push and mute preferences still control delivery.
+The chosen nickname is fetched through protected preview/inbox APIs, never placed
+in generic public lock-screen payloads. Android's private preview displays it;
+iOS shows the detail in the shared in-app inbox; this change does not add native
+iOS remote-push delivery, which remains limited by the existing registration gate.
+The save request explicitly opts in with `notify_partner: true` after the editor
+discloses the alert. Omission/false preserves older clients' private-only promise.
+This adds one inbox kind without new navigation arguments. Deploy the paired
+backend before this client; the older server rejects the new save request field.
+
 ## Video Moment wording — 24 November 2026
 
 Authorized Moment previews and Home notification history now distinguish photo-only,

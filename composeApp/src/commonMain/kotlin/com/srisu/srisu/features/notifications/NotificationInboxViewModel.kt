@@ -154,6 +154,7 @@ class NotificationInboxViewModel(private val source: NotificationInboxSource,
 }
 
 internal val inboxKinds = setOf("invite.received","invite.accepted","sharing.proposed","sharing.approved",
+    "nickname.changed",
     "plan.created","plan.responded","plan.cancelled","spark.started","spark.submitted","spark.revealed",
     "challenge.invited","challenge.responded","challenge.progress","challenge.completed","challenge.cancelled",
     "moment.published","moment.hearted","moment.appreciated","moment.replied","status.changed","idea.created","idea.interested")

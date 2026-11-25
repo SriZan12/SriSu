@@ -4,6 +4,8 @@ import com.srisu.srisu.core.MemorySession
 import com.srisu.srisu.core.config.ApiEnvironment
 import com.srisu.srisu.core.data.remote.*
 import com.srisu.srisu.core.session.*
+import com.srisu.srisu.features.notifications.NotificationInboxRepository
+import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.utils.Constants.Auth.SESSION_KEY
 import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.*
@@ -26,12 +28,15 @@ class SettingsTransportIntegrationTest {
         val origin=fixture.getValue("base_url").jsonPrimitive.content
         require(java.net.URI(origin).host=="127.0.0.1")
         val environment=ApiEnvironment(origin,development=true)
+        val accountSessions=mutableMapOf<String,SessionCoordinator>()
+        val lifetime=ApplicationLifetime()
         fun account(id:String,token:String):Pair<io.ktor.client.HttpClient,SettingsRepository> {
             val sessions=SessionCoordinator(MemorySession()).apply {
                 saveSession(ApiJson.encodeToString(Session(id=fixture.getValue(id).jsonPrimitive.long,
                     access=fixture.getValue(token).jsonPrimitive.content)),SESSION_KEY)
             }
             val client=HttpClientFactory.create(sessions,environment,OkHttp.create())
+            accountSessions[id]=sessions
             return client to SettingsRepository(client,environment)
         }
         val mine=account("account_id","access");val partner=account("partner_id","partner_access")
@@ -48,16 +53,22 @@ class SettingsTransportIntegrationTest {
             assertEquals(selected.name,renamed.name)
             assertEquals("Sunshine 💛",mine.second.load().value().partner?.nickname)
             assertNull(partner.second.load().value().partner?.nickname)
+            val partnerInbox=NotificationInboxRepository(partner.first,environment,accountSessions.getValue("partner_id"),lifetime)
+            val alert=partnerInbox.page().value().items.single {it.kind=="nickname.changed"}
+            assertTrue(alert.body.contains("Sunshine 💛"))
+            assertEquals("couple",partnerInbox.open(alert.id).value().destination?.kind)
+            assertEquals(selected.coupleId,partnerInbox.open(alert.id).value().destination?.coupleId)
             assertEquals(404,assertIs<NetworkAPIResult.Error<SettingsContext?>>(stranger.second.saveNickname(selected,"No")).failure.status)
             assertEquals(409,assertIs<NetworkAPIResult.Error<SettingsContext?>>(mine.second.saveNickname(selected,"Stale")).failure.status)
             val cleared=assertNotNull(mine.second.saveNickname(renamed,"").value().partner)
             assertNull(cleared.nickname)
+            assertTrue(partnerInbox.page().value().items.none {it.kind=="nickname.changed"})
             assertEquals(selected.name,cleared.name)
             val denied=assertIs<NetworkAPIResult.Error<SettingsContext?>>(stranger.second.disconnect(selected))
             assertEquals(404,denied.failure.status)
             assertNull(mine.second.disconnect(selected).value().partner)
             assertNull(partner.second.load().value().partner)
             assertNull(mine.second.disconnect(selected).value().partner)
-        }}} finally {mine.first.close();partner.first.close();stranger.first.close()}
+        }}} finally {lifetime.close();mine.first.close();partner.first.close();stranger.first.close()}
     }
 }
