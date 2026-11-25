@@ -48,7 +48,11 @@ class HomeViewModel(
 ) : ViewModel() {
     private val stamp = sessions.stamp()
     private val data = MutableStateFlow(HomeData(name = sessions.currentSession()?.fullName.orEmpty()))
-    val state: StateFlow<HomeUiState> = combine(data, reminders?.state ?: MutableStateFlow(ReminderState())) { d, r -> d.toUiState(clock.now(), zone()).copy(reminders = r) }
+    private val activeReads = MutableStateFlow(emptySet<Long>())
+    private var nextRead = 0L
+    val state: StateFlow<HomeUiState> = combine(data, reminders?.state ?: MutableStateFlow(ReminderState()), activeReads) { d, r, reads ->
+        d.toUiState(clock.now(), zone()).copy(reminders = r, refreshing = d.moments != null && reads.isNotEmpty())
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), data.value.toUiState(clock.now(), zone()))
     private val jobs = mutableMapOf<String, Job>()
     private var expiry: Job? = null
@@ -251,12 +255,15 @@ class HomeViewModel(
     private fun launchRead(key: String, onFailure: () -> Unit, block: suspend () -> Unit) {
         if (sessions.stamp() != stamp || jobs[key]?.isActive == true) return
         val expected = generation
+        val read = nextRead++
         jobs[key] = viewModelScope.launch {
+            activeReads.update { it + read }
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) { if (sessions.stamp() == stamp && (expected == generation || key == "moments")) {
                 if ((failure as? PlanFailure)?.status in listOf(401, 403, 404)) revoke() else onFailure()
             } }
+            finally { activeReads.update { it - read } }
         }
     }
     /** safeRequest guards the session; this extra check also protects fake/delayed sources. */

@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.home.profile.presentation.screen
 
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -97,7 +99,7 @@ fun InterestScreen(
                                         selected = if (active) selected.filterNot { it in option.aliases } else selected + option.id
                                     }, modifier = Modifier.heightIn(min = 48.dp).testTag("interest:${option.id}"), shape = MaterialTheme.shapes.pill,
                                         label = { Text(option.label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 6.dp)) },
-                                        leadingIcon = if (active) ({ Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) }) else null)
+                                        leadingIcon = if (active) ({ Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) }) else null, colors = sriSuFilterChipColors())
                                 }
                             }
                         }

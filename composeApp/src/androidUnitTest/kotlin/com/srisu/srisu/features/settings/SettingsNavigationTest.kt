@@ -61,7 +61,7 @@ class SettingsNavigationTest {
         }
         val dependencies=module {
             single {sessions};single {access};single {prefs};single {notifications}
-            factory {SettingsViewModel(source,sessions,access::retry)}
+            factory {SettingsViewModel(source,sessions,connectionChanged=access::retry)}
         }
         lateinit var nav:androidx.navigation.NavHostController
         try {

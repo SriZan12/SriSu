@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.moments.presentation
 
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -189,7 +191,7 @@ private fun photoFrame(size: IntSize, aspect: Double): Rect {
                             ratios.forEach { (label, ratio) ->
                                 FilterChip(selected = kotlin.math.abs(crop.aspect(sourceAspect) - ratio) < .001,
                                     onClick = { update(MomentCrop.centered(sourceAspect, ratio)) }, enabled = bitmap != null,
-                                    label = { Text(label) }, modifier = Modifier.heightIn(min = space.touchTarget).testTag("moment-crop-ratio-$label"))
+                                    label = { Text(label) }, modifier = Modifier.heightIn(min = space.touchTarget).testTag("moment-crop-ratio-$label"), colors = sriSuFilterChipColors())
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {

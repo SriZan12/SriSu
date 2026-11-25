@@ -12,7 +12,8 @@ import androidx.compose.ui.unit.sp
  * Only inbox typography/density changes; global theme and chat remain intact. */
 internal object NotificationInboxStyle {
     val unread @Composable get() = MaterialTheme.colorScheme.let {
-        lerp(it.surface, it.tertiaryContainer, if(it.surface.luminance() > .5f) .42f else .38f)
+        if (it.surface.luminance() > .5f) lerp(it.surface, it.tertiaryContainer, .42f)
+        else it.surfaceContainerLow
     }
     val message: TextStyle @Composable get() = MaterialTheme.typography.bodyMedium.copy(
         fontSize=14.sp, lineHeight=20.sp, letterSpacing=(-.14).sp)

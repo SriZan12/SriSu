@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.moments.presentation
 
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
+import com.srisu.srisu.theme.selectedSurface
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -276,7 +280,7 @@ import srisu.composeapp.generated.resources.*
             horizontalArrangement = Arrangement.spacedBy(space.small), verticalAlignment = Alignment.CenterVertically) {
             FilterChip(selected = crop == null, onClick = { onCrop(null) }, enabled = enabled,
                 label = { Text(stringResource(Res.string.moment_crop_full)) },
-                modifier = Modifier.heightIn(min = space.touchTarget).testTag("moment-photo-full"))
+                modifier = Modifier.heightIn(min = space.touchTarget).testTag("moment-photo-full"), colors = sriSuFilterChipColors())
             TextButton(onClick = {
                 pixels.bitmap?.let { bitmap ->
                     if (previewSize.width > 0 && previewSize.height > 0) onCrop(MomentCrop.centered(
@@ -424,7 +428,7 @@ import srisu.composeapp.generated.resources.*
     val space = MaterialTheme.spacing
     val colors = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
-        .background(if (selected) colors.secondaryContainer else colors.surfaceContainerLow)
+        .background(if (selected) colors.selectedSurface else colors.surfaceContainerLow)
         .selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
         .padding(horizontal = space.compact, vertical = space.small), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(space.compact)) {

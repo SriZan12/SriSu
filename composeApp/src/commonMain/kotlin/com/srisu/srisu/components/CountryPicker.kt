@@ -1,5 +1,7 @@
 package com.srisu.srisu.components
 
+import com.srisu.srisu.theme.selectedSurface
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -145,7 +147,7 @@ internal fun CountryPickerContent(
                     val selected = country.code != null && country.code.equals(selectedCode, ignoreCase = true)
                     Row(Modifier.fillMaxWidth().testTag("country-${country.code}")
                         .selectable(selected = selected, role = Role.RadioButton, onClick = { onCountrySelected(country) })
-                        .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface)
+                        .background(if (selected) MaterialTheme.colorScheme.selectedSurface else MaterialTheme.colorScheme.surface)
                         .heightIn(min = 56.dp).padding(horizontal = MaterialTheme.spacing.large, vertical = MaterialTheme.spacing.compact),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
                         CountryFlag(country.code)

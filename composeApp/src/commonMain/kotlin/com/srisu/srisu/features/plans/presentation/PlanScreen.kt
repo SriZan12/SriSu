@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.plans.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
 import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -134,7 +138,7 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
                 } }
                 item("tabs") {FlowRow(horizontalArrangement=Arrangement.spacedBy(space.small)) {
                     listOf("upcoming" to "Upcoming","invitations" to if((state.home?.invitations ?: 0)>0) "Invitations (${state.home?.invitations})" else "Invitations","past" to "Past").forEach { (key,label) ->
-                        FilterChip(state.tab==key,{onBrowse(key)},enabled=!state.busy && state.pending==null,label={Text(label)})
+                        FilterChip(state.tab==key,{onBrowse(key)},enabled=!state.busy && state.pending==null,label={Text(label)}, colors = sriSuFilterChipColors())
                     }
                 } }
                 if(state.page.items.isEmpty() && !state.loading && state.error==null) item("empty") {PlanSurface {
@@ -149,10 +153,10 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
                 item("heading") {Column(verticalArrangement=Arrangement.spacedBy(space.medium)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(space.medium)) {
                         PlanDateTile(plan.startsAt)
-                        Column(Modifier.weight(1f)) {Text(plan.title,style=MaterialTheme.typography.headlineSmall);Text("Suggested by ${state.home?.members?.firstOrNull {it.id==plan.creator}?.name ?: "your partner"}",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)}
+                        Column(Modifier.weight(1f)) {Text(plan.title,style=MaterialTheme.typography.headlineSmall);Text("Suggested by ${state.home?.members?.firstOrNull {it.id==plan.creator}?.let {partnerDisplayName(it.id,it.name,state.home?.couple)} ?: "your partner"}",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)}
                     }
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(space.small)) {
-                        state.home?.members.orEmpty().forEach { member->PartnerAvatar(ChatPartnerIdentity(member.name,member.photo),size=space.extraLarge,initialsStyle=MaterialTheme.typography.labelMedium) }
+                        state.home?.members.orEmpty().forEach { member->PartnerAvatar(ChatPartnerIdentity(partnerDisplayName(member.id,member.name,state.home?.couple),member.photo,member.id),size=space.extraLarge,initialsStyle=MaterialTheme.typography.labelMedium) }
                         Text(planStatus(plan),style=MaterialTheme.typography.labelMedium,color=if(plan.response=="yes" && !plan.ended) colors.success else colors.onSurfaceVariant)
                     }
                 } }
@@ -169,7 +173,7 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
                     Text(plan.responseNote,style=MaterialTheme.typography.bodyLarge)
                 } }
                 plan.change?.let {change->item("change") {PlanSurface {
-                    Text("${state.home?.members?.firstOrNull {it.id==change.author}?.name ?: "Your partner"} suggested a change",style=MaterialTheme.typography.titleMedium)
+                    Text("${state.home?.members?.firstOrNull {it.id==change.author}?.let {partnerDisplayName(it.id,it.name,state.home?.couple)} ?: "Your partner"} suggested a change",style=MaterialTheme.typography.titleMedium)
                     Text(change.title,style=MaterialTheme.typography.bodyLarge)
                     Text(planTime(change.startsAt),style=MaterialTheme.typography.bodyMedium)
                     if(change.place.isNotBlank()) Text(change.place,style=MaterialTheme.typography.bodyMedium)
@@ -182,7 +186,7 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
                     if(plan.allows("withdraw_change",state.account)) TextButton(onClick={act("withdraw_change")},enabled=state.canAct) {Text("Withdraw my change")}
                     if(plan.allows("complete",state.account)) SriSuButton("We did this",{act("complete")},Modifier.fillMaxWidth(),enabled=state.canAct)
                     if(plan.state=="completed") {
-                        Text("Marked done by ${state.home?.members?.firstOrNull {it.id==plan.completedBy}?.name ?: "one of you"}",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)
+                        Text("Marked done by ${state.home?.members?.firstOrNull {it.id==plan.completedBy}?.let {partnerDisplayName(it.id,it.name,state.home?.couple)} ?: "one of you"}",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)
                         SriSuButton("Share a Moment",{onMoment(plan.couple)},Modifier.fillMaxWidth())
                         TextButton(onClick={act("undo_complete")},enabled=state.canAct) {Text("Undo completion")}
                     }
@@ -193,7 +197,7 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
                         Text("Reminders update when SriSu syncs. Delivery depends on this phone’s notification and battery settings.",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)
                         val selected=reminders.choices.firstOrNull {it.plan==plan.id}?.minutes
                         FlowRow(horizontalArrangement=Arrangement.spacedBy(space.small)) {
-                            listOf(null to "Off",15 to "15 min",60 to "1 hour",1440 to "1 day").forEach {(minutes,label)->FilterChip(selected==minutes,{onReminder(minutes)},enabled=state.fresh,label={Text(label)})}
+                            listOf(null to "Off",15 to "15 min",60 to "1 hour",1440 to "1 day").forEach {(minutes,label)->FilterChip(selected==minutes,{onReminder(minutes)},enabled=state.fresh,label={Text(label)}, colors = sriSuFilterChipColors())}
                         }
                         Text(when {reminders.permission=="denied"->"Notifications are disabled in this phone’s settings.";plan.id in reminders.scheduled->"Scheduled on this phone";selected!=null && plan.instant.toEpochMilliseconds()-selected*60_000L<=Clock.System.now().toEpochMilliseconds()->"The reminder time has passed.";selected!=null->"This phone hasn’t scheduled the reminder yet.";else->"Only you control your reminders."},style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)
                         reminders.error?.let {Text(it,style=MaterialTheme.typography.bodyMedium,color=colors.error)}
@@ -204,15 +208,15 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
                         plan.checklist.forEach {item->Surface(shape=MaterialTheme.shapes.medium,color=colors.surfaceContainer) {
                             Row(Modifier.fillMaxWidth().padding(space.small),verticalAlignment=Alignment.CenterVertically) {
                                 Checkbox(item.checked,{checked->onAction("set_item",buildJsonObject {put("item_id",item.id);put("checked",checked)})},enabled=state.canAct,modifier=Modifier.semantics {contentDescription="${item.text}, ${if(item.checked) "ready" else "not ready"}"})
-                                Column(Modifier.weight(1f)) {Text(item.text,style=MaterialTheme.typography.bodyLarge);Text(state.home?.members?.firstOrNull {it.id==item.assignedTo}?.name ?: "Either of you",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)}
+                                Column(Modifier.weight(1f)) {Text(item.text,style=MaterialTheme.typography.bodyLarge);Text(state.home?.members?.firstOrNull {it.id==item.assignedTo}?.let {partnerDisplayName(it.id,it.name,state.home?.couple)} ?: "Either of you",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)}
                                 IconButton(onClick={remove=item.id},enabled=state.canAct) {Icon(Icons.Outlined.Close,"Remove ${item.text}")}
                             }
                         } }
                         OutlinedTextField(itemText,{if(it.length<=120)itemText=it},label={Text("Add something to bring")},modifier=Modifier.fillMaxWidth(),enabled=state.canAct,
                             keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={finishTyping()}),maxLines=3)
                         FlowRow(horizontalArrangement=Arrangement.spacedBy(space.small)) {
-                            FilterChip(assigned==null,{assigned=null},label={Text("Either of us")})
-                            state.home?.members.orEmpty().forEach {m->FilterChip(assigned==m.id,{assigned=m.id},label={Text(m.name)})}
+                            FilterChip(assigned==null,{assigned=null},label={Text("Either of us")}, colors = sriSuFilterChipColors())
+                            state.home?.members.orEmpty().forEach {m->FilterChip(assigned==m.id,{assigned=m.id},label={Text(partnerDisplayName(m.id,m.name,state.home?.couple))}, colors = sriSuFilterChipColors())}
                         }
                         TextButton(onClick={finishTyping();onAction("add_item",buildJsonObject {put("text",itemText.trim());put("assigned_to",assigned)})},enabled=state.canAct && itemText.isNotBlank()) {Icon(Icons.Outlined.Add,null);Text("Add item")}
                     } }
@@ -308,7 +312,7 @@ internal fun planStatus(plan:Plan):String=when(plan.state) {
             (dateError ?: state.error)?.let {MomentError(it,onRetry)}
             if(state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             if(state.pending!=null) SriSuButton("Check and retry",onRetry,Modifier.fillMaxWidth(),enabled=!state.busy)
-            else SriSuButton(if(draft.planId==null) "Invite ${state.partner?.name ?: "your partner"}" else "Suggest these details",onSave,Modifier.fillMaxWidth(),enabled=state.canAct)
+            else SriSuButton(if(draft.planId==null) "Invite ${state.partner?.let {partnerDisplayName(it.id,it.name,state.home?.couple)} ?: "your partner"}" else "Suggest these details",onSave,Modifier.fillMaxWidth(),enabled=state.canAct)
             Text("Your draft stays on this phone until you send it. Both of you agree before a plan is confirmed.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick={discard=true},enabled=!state.busy && state.pending==null) {Text("Discard draft")}
             }

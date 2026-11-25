@@ -34,6 +34,9 @@ Research:
 
 ## Entry points and behavior
 
+25 November addition: [personal partner nicknames](partner-nicknames.md) adds a
+private, server-synced nickname editor inside the connected Partner group.
+
 Profile's gear -> `ProfileNav.Settings`. Inbox gear continues to Notifications.
 You: Account -> personal profile editor / visibility; Notifications -> existing
 server-backed preferences; Language -> accurate supported-language information.

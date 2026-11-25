@@ -20,8 +20,12 @@ const val INBOX_CONTRACT = "notification-inbox-1"
     val title: String, val body: String, @SerialName("created_at") val createdAt: String,
     @SerialName("read_at") val readAt: String? = null, val available: Boolean = false,
     @SerialName("actor_name") val actorName: String? = null, val avatar: Boolean = false,
-    val thumbnail: Boolean = false, val segments: List<InboxSegment> = emptyList())
-@Serializable data class InboxSegment(val text: String, val bold: Boolean = false)
+    val thumbnail: Boolean = false, val segments: List<InboxSegment> = emptyList(),
+    @SerialName("actor_id") val actorId: Long? = null,
+    @SerialName("actor_real_name") val actorRealName: String? = null)
+@Serializable data class InboxSegment(val text: String, val bold: Boolean = false,
+    @SerialName("user_id") val userId: Long? = null,
+    @SerialName("user_name") val userName: String? = null)
 @Serializable data class InboxPage(val contract: String, val items: List<InboxItem>,
     @SerialName("unread_count") val unreadCount: Int,
     @SerialName("next_cursor") val nextCursor: String? = null,

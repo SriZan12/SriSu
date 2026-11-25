@@ -3,6 +3,7 @@ package com.srisu.srisu.features.home
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.platform.testTag
@@ -33,7 +34,7 @@ class HomeIosRenderTest {
             fun capture(suffix:String="") {
                 val bitmap=onNodeWithTag("home-screen").captureToImage().asSkiaBitmap()
                 val png=Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes
-                writePng("$name-$width-$fontScale$suffix",png)
+                writePng("$name-$width-$fontScale${if(dark) "-dark" else ""}$suffix",png)
             }
             capture()
             if(name=="quiet" && fontScale==2f) {
@@ -57,6 +58,60 @@ class HomeIosRenderTest {
         bytes.usePinned {NSData.create(bytes=it.addressOf(0),length=bytes.size.toULong()).writeToFile(path,true)}
         println("HOME_RENDER $path")
     }
+    @Test fun darkHome()=render("spark",dark=true)
+    @Test fun darkRefreshing()=render("refreshing",dark=true)
+    @Test fun pullRefreshWorksAtSmallWidthAndLargeText() {
+        runSkikoComposeUiTest(size=Size(640f,1400f),density=Density(2f,2f)) {
+            val page=mutableStateOf("spark")
+            var calls=0
+            setContent {SriSuTheme(darkTheme=true) {Surface {
+                HomeRenderFixture(page.value,retry={calls++;page.value="refreshing"})
+            }}}
+            fun pull(expectedRefreshes:Int?=null) {
+                onNodeWithTag("home-pull-refresh").performTouchInput {
+                    swipeDown(startY=height*.15f,endY=height*.85f,durationMillis=650)
+                }
+                // onRefresh runs after Material's release-to-threshold animation completes.
+                waitForIdle()
+                if(expectedRefreshes != null) waitUntil(timeoutMillis=5_000) {calls>=expectedRefreshes}
+            }
+            onNodeWithTag("home-refresh").assertDoesNotExist()
+            pull(expectedRefreshes=1)
+            assertEquals(1,calls)
+            onNodeWithContentDescription("Refreshing Home").assertIsDisplayed()
+            onNodeWithText("You & Aatithi").assertIsDisplayed()
+            pull()
+            assertEquals(1,calls,"Do not start another refresh while the first is running")
+            runOnIdle {page.value="refresh-failed"}
+            onNodeWithContentDescription("Refreshing Home").assertDoesNotExist()
+            onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Showing your last update. Home couldn’t refresh."))
+            onNodeWithText("Showing your last update. Home couldn’t refresh.").assertIsDisplayed()
+            onNode(hasScrollToIndexAction()).performScrollToIndex(0)
+            pull(expectedRefreshes=2)
+            assertEquals(2,calls)
+        }
+    }
+    @Test fun pullRefreshWaitsUntilTheListIsBackAtTheTop()=runSkikoComposeUiTest(size=Size(780f,1688f),density=Density(2f)) {
+        var calls=0
+        setContent {SriSuTheme {Surface {HomeRenderFixture("spark",retry={calls++})}}}
+        onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Plans done"))
+        onNodeWithTag("home-pull-refresh").performTouchInput {
+            swipeDown(startY=height*.4f,endY=height*.6f,durationMillis=500)
+        }
+        waitForIdle()
+        assertEquals(0,calls)
+        onNode(hasScrollToIndexAction()).performScrollToIndex(0)
+        onNodeWithTag("home-pull-refresh").performTouchInput {
+            swipeDown(startY=height*.15f,endY=height*.85f,durationMillis=650)
+        }
+        waitForIdle()
+        waitUntil(timeoutMillis=5_000) {calls>=1}
+        assertEquals(1,calls)
+    }
+    @Test fun darkQuiet()=render("quiet",dark=true)
+    @Test fun darkLoading()=render("loading",dark=true)
+    @Test fun darkUnpaired()=render("unpaired",dark=true)
+    @Test fun darkSmallLarge()=render("quiet",dark=true,fontScale=2f,small=true,focus="Plans done")
     @Test fun spark()=render("spark")
     @Test fun message()=render("message")
     @Test fun quiet()=render("quiet")

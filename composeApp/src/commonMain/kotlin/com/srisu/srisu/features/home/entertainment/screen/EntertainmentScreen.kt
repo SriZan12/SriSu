@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.home.entertainment.screen
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -59,7 +61,7 @@ import kotlin.time.Clock
             Row(verticalAlignment=Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(if(state.name.isBlank()) greeting else "$greeting, ${state.name}",style=SriSuPartnerLinkTypography().headlineSmall)
-                    if(partner!=null) Text(if(days==null) "Your space with ${partner.name.ifBlank { "your partner" }}" else "Day ${days+1} with ${partner.name.ifBlank { "your partner" }}",
+                    if(partner!=null) Text(if(days==null) "Your space with ${partnerDisplayName(partner.id,partner.name.ifBlank { "your partner" },couple?.id)}" else "Day ${days+1} with ${partnerDisplayName(partner.id,partner.name.ifBlank { "your partner" },couple?.id)}",
                         style=MaterialTheme.typography.bodyMedium,color=colors.onSurfaceVariant,modifier=Modifier.padding(top=space.tiny))
                 }
                 IconButton(onClick=onRefresh,enabled=!state.loading) { Icon(Icons.Outlined.Refresh,"Refresh Home") }
@@ -85,7 +87,7 @@ import kotlin.time.Clock
                                     val ring=if(person.unseenCount>0 && state.fresh) colors.moments else colors.outlineVariant
                                     GuardedMomentImage(person.photoUrl,image,null,Modifier.fillMaxSize().border(2.dp,ring,CircleShape).padding(5.dp).clip(CircleShape),avatar=true)
                                 }
-                                Text(if(own) "Your Moment" else person.name.ifBlank { "Your partner" },style=MaterialTheme.typography.bodyMedium,
+                                Text(if(own) "Your Moment" else partnerDisplayName(person.id,person.name.ifBlank { "Your partner" },couple.id),style=MaterialTheme.typography.bodyMedium,
                                     modifier=Modifier.padding(top=space.small),maxLines=2,overflow=TextOverflow.Ellipsis)
                                 Text(if(!state.fresh) "Needs refresh" else if(person.activeCount==0) "Nothing shared yet" else if(own) "Shared" else if(person.unseenCount>0) "New" else "Seen",
                                     style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)

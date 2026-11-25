@@ -3,11 +3,13 @@ package com.srisu.srisu.features.sparks
 import android.graphics.Bitmap
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -17,6 +19,8 @@ import com.srisu.srisu.features.sparks.data.*
 import com.srisu.srisu.features.sparks.presentation.*
 import com.srisu.srisu.navigation.navhost.*
 import com.srisu.srisu.theme.SriSuTheme
+import com.srisu.srisu.features.settings.ApplyPlatformAppearance
+import com.srisu.srisu.features.settings.AppAppearance
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -36,12 +40,14 @@ class QuestionsDeviceTest {
     private var lastDraft = ""
     private var opened: String? = null
     private var connections = 0
-    private fun show(initial: SparkState=base, page: QuestionPage=QuestionPage.HOME, scale:Float=1f) {
+    private fun show(initial: SparkState=base, page: QuestionPage=QuestionPage.HOME, scale:Float=1f,dark:Boolean=false) {
+        compose.activityRule.scenario.onActivity { it.enableEdgeToEdge() }
         compose.setContent {
             var state by remember { mutableStateOf(initial) }
+            ApplyPlatformAppearance(if(dark) AppAppearance.DARK else AppAppearance.LIGHT,dark)
             val d = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(d.density,scale)) {
-                SriSuTheme(darkTheme=false) {
+                SriSuTheme(darkTheme=dark) {
                     val tab = page == QuestionPage.HOME && state.session == null
                     Scaffold(contentWindowInsets=WindowInsets(0,0,0,0),bottomBar={ if (tab) AppBottomBar({},BottomDestination.QUESTIONS,true) }) {padding ->
                         Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
@@ -58,9 +64,32 @@ class QuestionsDeviceTest {
     ).bufferedReader().use {it.readText().contains("mInputShown=true")}
     private fun capture(name:String) {
         compose.waitForIdle()
-        val bitmap=compose.onRoot().captureToImage().asAndroidBitmap()
+        val bitmap=instrumentation.uiAutomation.takeScreenshot()
         File(instrumentation.targetContext.filesDir,"questions-$name.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
         bitmap.recycle()
+    }
+    @Test fun darkQuestionsAndEditor() {
+        show(base.copy(session=session),dark=true)
+        val editor=compose.onNodeWithTag("question-answer")
+        editor.performScrollTo().performTouchInput {click()}
+        compose.waitUntil(10_000) {keyboardShown()}
+        editor.performTextInput("A little closer today.")
+        compose.onNodeWithTag("question-primary").assertIsDisplayed().assertIsEnabled()
+        val button=compose.onNodeWithTag("question-primary").fetchSemanticsNode().boundsInWindow
+        compose.runOnIdle {
+            val decor=compose.activity.window.decorView
+            val ime=decor.rootWindowInsets.getInsets(android.view.WindowInsets.Type.ime()).bottom
+            assertTrue("Dark answer keyboard is visible",ime>0)
+            assertTrue("Dark submit stays above keyboard",button.bottom<=decor.height-ime+1)
+        }
+        capture("dark-keyboard")
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        compose.waitUntil(10_000) {!keyboardShown()};capture("dark-answer")
+    }
+    @Test fun darkCatalogue() {
+        show(dark=true);capture("dark-home")
+        val pixels=compose.onRoot().captureToImage().toPixelMap()
+        assertTrue("Questions canvas follows dark appearance",pixels[1,pixels.height/2].luminance()<.05f)
     }
     @Test fun editorPreservesRapidMultilineTypingAndKeepsActionAboveNativeKeyboard() {
         show(base.copy(session=session))

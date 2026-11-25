@@ -35,7 +35,7 @@ class SparkIosRenderTest {
             }
             val bitmap=onNodeWithTag("moment-screen").captureToImage().asSkiaBitmap()
             val png=Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes
-            writePng(name,png)
+            writePng(name+if(dark) "-dark" else "",png)
         }
     }
     @OptIn(ExperimentalForeignApi::class,BetaInteropApi::class)
@@ -62,6 +62,8 @@ class SparkIosRenderTest {
     @Test fun waiting()=render("waiting")
     @Test fun reveal()=render("reveal")
     @Test fun missingKeys()=render("keys")
+    @Test fun darkAnswer()=render("answer",dark=true)
+    @Test fun darkSmallLarge()=render("catalogue-active-small-200",dark=true,fontScale=2f,small=true)
     @Test fun dark()=render("decks-dark",dark=true)
     @Test fun smallLargeText()=render("answer-small-large-text",fontScale=1.6f,small=true)
 }

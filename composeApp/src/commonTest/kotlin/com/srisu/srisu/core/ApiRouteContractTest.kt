@@ -126,6 +126,7 @@ class ApiRouteContractTest {
             val settings = com.srisu.srisu.features.settings.SettingsRepository(client,environment)
             check("settings-context") {ResultHandler(settings.load())}
             check("settings-disconnect") {ResultHandler(settings.disconnect(com.srisu.srisu.features.settings.samplePartner))}
+            check("settings-partner-nickname") {ResultHandler(settings.saveNickname(com.srisu.srisu.features.settings.samplePartner.copy(nicknameRevision=1),"Sunshine"))}
             val sparks = com.srisu.srisu.features.sparks.data.SparkRepository(client, environment)
             check("home-daily-question") { ResultHandler(sparks.daily(1, "Asia/Kathmandu")) }
             val statuses = com.srisu.srisu.features.coupleprofile.data.CoupleStatusRepository(client, environment)

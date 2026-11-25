@@ -10,6 +10,9 @@ import com.srisu.srisu.features.coupleprofile.navigation.*
     val title: String, val body: String,
     @SerialName("room_id") val roomId: String? = null,
     @SerialName("matrix_event_id") val matrixEventId: String? = null,
+    @SerialName("actor_id") val actorId: Long? = null,
+    @SerialName("actor_name") val actorName: String? = null,
+    @SerialName("actor_real_name") val actorRealName: String? = null,
 )
 
 const val NOTIFICATION_CATALOGUE = "notification-catalogue-2"

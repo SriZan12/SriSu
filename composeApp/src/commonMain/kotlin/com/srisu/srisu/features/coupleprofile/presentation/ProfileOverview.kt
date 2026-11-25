@@ -1,5 +1,10 @@
 package com.srisu.srisu.features.coupleprofile.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
+import com.srisu.srisu.theme.selectedSurface
+import com.srisu.srisu.theme.onSelectedSurface
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -49,7 +54,7 @@ import srisu.composeapp.generated.resources.*
 }
 
 @Composable internal fun ProfileAvatar(member: CoupleMember, images: Map<String, ByteArray>, modifier: Modifier) {
-    ProtectedImage(member.photoUrl?.let(images::get), stringResource(Res.string.cp_named_avatar, member.name),
+    ProtectedImage(member.photoUrl?.let(images::get), stringResource(Res.string.cp_named_avatar, partnerDisplayName(member.id, member.name)),
         modifier.clip(CircleShape).border(MaterialTheme.spacing.tiny, MaterialTheme.colorScheme.background, CircleShape), avatar = true)
 }
 
@@ -78,7 +83,7 @@ import srisu.composeapp.generated.resources.*
                     profile.members.forEach { ProfileAvatar(it, state.images, Modifier.size(MaterialTheme.spacing.huge)) }
                 }
             }
-            Text(profile.members.joinToString(" & ") { it.name }, Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small).semantics { heading() },
+            Text(profile.members.map { partnerDisplayName(it.id, it.name, profile.id) }.joinToString(" & "), Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small).semantics { heading() },
                 style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
         }
         if (editable) TextButton(onClick = { vm.open(ProfilePage.DATE) }) {
@@ -195,8 +200,8 @@ import srisu.composeapp.generated.resources.*
     FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         names.forEach { name ->
             Surface(shape = MaterialTheme.shapes.pill,
-                color = if (shared) MaterialTheme.colorScheme.secondaryContainer else CoupleProfileTokens.sectionSurface(MaterialTheme.colorScheme),
-                contentColor = if (shared) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface) {
+                color = if (shared) MaterialTheme.colorScheme.selectedSurface else CoupleProfileTokens.sectionSurface(MaterialTheme.colorScheme),
+                contentColor = if (shared) MaterialTheme.colorScheme.onSelectedSurface else MaterialTheme.colorScheme.onSurface) {
                 Text(name, Modifier.padding(horizontal = MaterialTheme.spacing.compact, vertical = MaterialTheme.spacing.small), style = MaterialTheme.typography.bodyMedium)
             }
         }
@@ -259,7 +264,7 @@ import srisu.composeapp.generated.resources.*
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.tiny)) {
                         Text(answer.answer, style = MaterialTheme.typography.bodyMedium)
                         profile.members?.firstOrNull { it.id == answer.authorId }?.let {
-                            Text(it.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(partnerDisplayName(it.id, it.name, profile.id), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     if (editable && answer.authorId == account) IconButton(onClick = { onEdit(prompt) }) {

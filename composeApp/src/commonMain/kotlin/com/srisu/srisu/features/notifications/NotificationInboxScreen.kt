@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.notifications
 
+import com.srisu.srisu.core.identity.displayInitial
+
+import com.srisu.srisu.core.identity.partnerDisplayName
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -185,6 +189,11 @@ private data class InboxAppearance(val label:String,val icon:ImageVector,val col
     loadImage:suspend (String,String)->ByteArray?,onClick:()->Unit) {
     val c=MaterialTheme.colorScheme
     val style=appearance(item.kind)
+    val actorName=partnerDisplayName(item.actorId,item.actorRealName ?: item.actorName.orEmpty())
+    // Only server-tagged person spans are aliases; captions, titles and other prose stay exact.
+    val segments=item.segments.take(8).map { segment ->
+        if(segment.userId == null) segment else segment.copy(text=partnerDisplayName(segment.userId,segment.userName ?: segment.text))
+    }
     val unread=item.readAt==null
     val largeText=LocalDensity.current.fontScale>1.3f
     val background=if(unread) NotificationInboxStyle.unread else c.surface
@@ -198,7 +207,7 @@ private data class InboxAppearance(val label:String,val icon:ImageVector,val col
                     value=if(item.available && item.avatar) loadImage(item.id,"avatar") else null
                 }
                 Box(Modifier.size(44.dp).clip(CircleShape).background(c.mediaBackground),contentAlignment=Alignment.Center) {
-                    if(!item.actorName.isNullOrBlank()) Text(item.actorName.take(1).uppercase(),style=MaterialTheme.typography.titleMedium,color=c.onMedia)
+                    if(actorName.isNotBlank()) Text(displayInitial(actorName),style=MaterialTheme.typography.titleMedium,color=c.onMedia)
                     else Box(Modifier.size(10.dp).background(c.reminder,CircleShape))
                     if(avatar!=null) MomentImage(avatar,null,Modifier.fillMaxSize())
                 }
@@ -208,8 +217,8 @@ private data class InboxAppearance(val label:String,val icon:ImageVector,val col
                 }
             }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                val message=remember(item) { buildAnnotatedString {
-                    if(item.segments.isNotEmpty()) item.segments.take(8).forEach { segment ->
+                val message=remember(item,segments) { buildAnnotatedString {
+                    if(segments.isNotEmpty()) segments.forEach { segment ->
                         withStyle(SpanStyle(fontWeight=if(segment.bold) FontWeight.Bold else FontWeight.Normal)) { append(segment.text.take(360)) }
                     } else {
                         withStyle(SpanStyle(fontWeight=FontWeight.Bold)) {append(item.title)}

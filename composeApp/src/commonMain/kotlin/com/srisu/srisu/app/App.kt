@@ -11,6 +11,9 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.srisu.srisu.core.session.SessionCoordinator
 import com.srisu.srisu.core.lifecycle.ApplicationLifetime
 import com.srisu.srisu.theme.SriSuTheme
+import com.srisu.srisu.core.identity.PartnerNames
+import com.srisu.srisu.core.identity.LocalPartnerNames
+import com.srisu.srisu.core.identity.PartnerNameSnapshot
 import org.koin.compose.koinInject
 
 @Composable
@@ -20,6 +23,8 @@ fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
         val sessions: SessionCoordinator = koinInject()
         val lifetime: ApplicationLifetime = koinInject()
         val planReminders: com.srisu.srisu.features.plans.data.PlanReminders = koinInject()
+        val partnerNames: PartnerNames = koinInject()
+        val nameSnapshot by partnerNames.state.collectAsState()
         val session by sessions.state.collectAsState()
         val owner = LocalLifecycleOwner.current
         DisposableEffect(owner, lifetime) {
@@ -43,7 +48,8 @@ fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
                 // The entire navigation/view-model store is owned by this account.
                 val accountOwner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
                 DisposableEffect(accountOwner) { onDispose { accountOwner.viewModelStore.clear() } }
-                CompositionLocalProvider(LocalViewModelStoreOwner provides accountOwner) {
+                CompositionLocalProvider(LocalViewModelStoreOwner provides accountOwner,
+                    LocalPartnerNames provides (nameSnapshot.takeIf { it.accountId == session.accountId } ?: PartnerNameSnapshot())) {
                     BaseNavigation(sessionStorage = sessions)
                 }
             }

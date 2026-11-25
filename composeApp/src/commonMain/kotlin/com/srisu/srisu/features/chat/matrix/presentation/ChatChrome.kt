@@ -1,5 +1,7 @@
 package com.srisu.srisu.features.chat.matrix.presentation
 
+import com.srisu.srisu.core.identity.displayInitial
+
 import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -150,7 +152,7 @@ internal fun PartnerAvatar(partner: ChatPartnerIdentity, size: androidx.compose.
         // Initials are decorative inside a fixed circle, so they follow the avatar size, not font scale.
         val initialsSize = with(LocalDensity.current) { (size * .65625f).toSp() }
         Text(
-            partner.name.split(' ').filter(String::isNotBlank).take(1).joinToString("") { it.take(1).uppercase() },
+            displayInitial(partner.name),
             style = initialsStyle.copy(fontSize = initialsSize, lineHeight = initialsSize),
             maxLines = 1,
             color = MaterialTheme.colorScheme.onSecondaryContainer,

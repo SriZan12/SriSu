@@ -1,5 +1,9 @@
 package com.srisu.srisu.features.coupleprofile.presentation
 
+import com.srisu.srisu.core.identity.partnerDisplayName
+
+import com.srisu.srisu.theme.sriSuFilterChipColors
+
 import com.srisu.srisu.components.NavigationBackButton
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -207,7 +211,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
         SectionCard { StoryAnswers(profile,vm.accountId,vm::openAnswer) }
         if(profile.canEdit) {
             SectionHeader(Res.string.cp_history)
-            state.history.forEach { change -> SectionCard { Text(profile.members.orEmpty().firstOrNull { it.id==change.actorId }?.name.orEmpty(),style=MaterialTheme.typography.titleSmall); Text(stringResource(Res.string.cp_history_updated, sectionLabel(change.section)),style=MaterialTheme.typography.bodySmall); Text(localPlanTime(change.createdAt),style=MaterialTheme.typography.bodySmall) } }
+            state.history.forEach { change -> SectionCard { Text(profile.members.orEmpty().firstOrNull { it.id==change.actorId }?.let { partnerDisplayName(it.id,it.name,profile.id) }.orEmpty(),style=MaterialTheme.typography.titleSmall); Text(stringResource(Res.string.cp_history_updated, sectionLabel(change.section)),style=MaterialTheme.typography.bodySmall); Text(localPlanTime(change.createdAt),style=MaterialTheme.typography.bodySmall) } }
             if(state.historyBefore!=null) TextButton(onClick={vm.history(true)},enabled=!state.listLoading) { Text(stringResource(Res.string.cp_more)) }
         }
     }
@@ -219,14 +223,14 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
         Column(Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.small), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.compact)) {
             Text(promptTitle(prompt), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             val choices = when (prompt) {
-                "how_met" -> listOf(Res.string.cp_at_party, Res.string.cp_through_friends, Res.string.cp_at_work, Res.string.cp_online).map { stringResource(it) }
-                "first_move" -> state.profile?.members.orEmpty().map { it.name } + stringResource(Res.string.cp_both)
+                "how_met" -> listOf(Res.string.cp_at_party, Res.string.cp_through_friends, Res.string.cp_at_work, Res.string.cp_online).map { stringResource(it).let { text -> text to text } }
+                "first_move" -> state.profile?.members.orEmpty().map { it.name to partnerDisplayName(it.id, it.name, state.profile?.id) } + stringResource(Res.string.cp_both).let { it to it }
                 else -> emptyList()
             }
             if (choices.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
-                choices.forEach { text -> FilterChip(selected = state.draft?.values?.get(prompt) == text,
-                    onClick = { vm.edit(prompt, text) }, label = { Text(text, style = MaterialTheme.typography.bodyMedium) },
-                    shape = MaterialTheme.shapes.pill, enabled = !state.saving) }
+                choices.forEach { (value, label) -> FilterChip(selected = state.draft?.values?.get(prompt) == value,
+                    onClick = { vm.edit(prompt, value) }, label = { Text(label, style = MaterialTheme.typography.bodyMedium) },
+                    shape = MaterialTheme.shapes.pill, enabled = !state.saving, colors = sriSuFilterChipColors()) }
             }
             state.profile?.story?.firstOrNull { it.prompt == prompt && it.authorId != vm.accountId }?.let {
                 SectionCard { Text(it.answer, style = MaterialTheme.typography.bodyMedium)
@@ -266,14 +270,14 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
     OutlinedTextField(query,{query=it},label={Text(stringResource(Res.string.cp_search))},leadingIcon={Icon(Icons.Default.Search,null)},shape=MaterialTheme.shapes.field,singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!state.saving)
     if(query.isNotBlank()) TextButton(onClick={vm.toggle("names",query.trim());query=""},enabled=!state.saving && query.isNotBlank() && selected.size<20 && unicodeLength(query.trim())<=100) { Icon(Icons.Default.Add,null);Text(stringResource(Res.string.cp_add)) }
     Text("${stringResource(Res.string.cp_selected)}: ${selected.size} / 20",style=MaterialTheme.typography.bodySmall)
-    FlowRow(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small), verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.tiny)) { selected.forEach { FilterChip(selected=true,onClick={vm.toggle("names",it)},label={Text(it,style=MaterialTheme.typography.bodyMedium)},shape=MaterialTheme.shapes.pill,enabled=!state.saving) } }
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small), verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.tiny)) { selected.forEach { FilterChip(selected=true,onClick={vm.toggle("names",it)},label={Text(it,style=MaterialTheme.typography.bodyMedium)},shape=MaterialTheme.shapes.pill,enabled=!state.saving, colors = sriSuFilterChipColors()) } }
     if (state.profile?.interests?.partner.orEmpty().any { it !in selected }) SectionHeader(Res.string.cp_partner_likes)
     state.profile?.interests?.partner.orEmpty().filter { it !in selected }.forEach { name -> Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(name,Modifier.weight(1f));TextButton(onClick={vm.toggle("names",name)},enabled=!state.saving && selected.size<20) { Text(stringResource(Res.string.cp_me_too)) } } }
     state.catalogue.forEach { (category, choices) ->
         val visible = choices.filter { it.contains(query,true) }
         if(visible.isNotEmpty()) {
             if(category.isNotBlank()) Text(category,style=MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small), verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.tiny)) { visible.forEach { name -> FilterChip(selected=name in selected,onClick={vm.toggle("names",name)},label={Text(name,style=MaterialTheme.typography.bodyMedium)},shape=MaterialTheme.shapes.pill,enabled=!state.saving && (name in selected || selected.size<20)) } }
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small), verticalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.tiny)) { visible.forEach { name -> FilterChip(selected=name in selected,onClick={vm.toggle("names",name)},label={Text(name,style=MaterialTheme.typography.bodyMedium)},shape=MaterialTheme.shapes.pill,enabled=!state.saving && (name in selected || selected.size<20), colors = sriSuFilterChipColors()) } }
         }
     }
 }
@@ -316,7 +320,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
         TextButton(onClick=vm::pickDifferentPhoto,enabled=!state.saving) { Text(stringResource(Res.string.cp_different_photo)) }
     } else {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) { state.profile?.members.orEmpty().forEach { member -> ProfileAvatar(member, state.images, Modifier.size(MaterialTheme.spacing.touchTarget)) } }
-        Text(state.profile?.members.orEmpty().joinToString(" & "){it.name},style=MaterialTheme.typography.headlineSmall,modifier=Modifier.fillMaxWidth(),textAlign=TextAlign.Center)
+        Text(state.profile?.members.orEmpty().map {partnerDisplayName(it.id,it.name,state.profile?.id)}.joinToString(" & "),style=MaterialTheme.typography.headlineSmall,modifier=Modifier.fillMaxWidth(),textAlign=TextAlign.Center)
         FlowRow(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) {
         SriSuButton(stringResource(Res.string.cp_camera),camera.launch,enabled=!state.saving && camera.available,variant=SriSuButtonVariant.Outline)
         SriSuButton(stringResource(Res.string.cp_library),gallery::launch,enabled=!state.saving,variant=SriSuButtonVariant.Outline)
@@ -356,7 +360,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
 @OptIn(ExperimentalLayoutApi::class)
 @Composable private fun PlansScreen(state: CoupleProfileState,vm: CoupleProfileViewModel) {
     SriSuButton(stringResource(Res.string.cp_new_plan),{vm.open(ProfilePage.NEW_PLAN)},variant=SriSuButtonVariant.Outline)
-    Row(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) { FilterChip(!state.past,{vm.plans(false)},label={Text(stringResource(Res.string.cp_upcoming))});FilterChip(state.past,{vm.plans(true)},label={Text(stringResource(Res.string.cp_past))}) }
+    Row(horizontalArrangement=Arrangement.spacedBy(MaterialTheme.spacing.small)) { FilterChip(!state.past,{vm.plans(false)},label={Text(stringResource(Res.string.cp_upcoming))}, colors = sriSuFilterChipColors());FilterChip(state.past,{vm.plans(true)},label={Text(stringResource(Res.string.cp_past))}, colors = sriSuFilterChipColors()) }
     if(state.listLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
     if(state.plans.isEmpty() && !state.listLoading) SectionCard { Icon(Icons.Default.CalendarMonth,null); Text(stringResource(Res.string.cp_empty),style=MaterialTheme.typography.bodyMedium) }
     state.plans.forEach { plan -> SectionCard {
