@@ -17,6 +17,9 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.ExperimentalUuidApi
 
 sealed interface ProfileNav : Route {
+    @Serializable data object Settings : ProfileNav
+    @Serializable data class SettingsDetail(val page: String) : ProfileNav
+    @Serializable data object SharedNotifications : ProfileNav
     @Serializable data object NotificationSettings : ProfileNav
     @Serializable data object EditProfile : ProfileNav
     @Serializable data object EditProfileDetails : ProfileNav
@@ -27,6 +30,17 @@ private const val RESULT = "interest.result.v2"
 
 @OptIn(ExperimentalUuidApi::class)
 fun NavGraphBuilder.profileGraph(controller: NavController) {
+    composable<ProfileNav.Settings> { entry ->
+        val nav = AppNavigator(controller, entry)
+        com.srisu.srisu.features.settings.SettingsScreen(nav::back, nav::open)
+    }
+    composable<ProfileNav.SettingsDetail> { entry ->
+        val nav = AppNavigator(controller, entry)
+        com.srisu.srisu.features.settings.SettingsDetailScreen(entry.toRoute<ProfileNav.SettingsDetail>().page, nav::back, nav::open)
+    }
+    composable<ProfileNav.SharedNotifications> { entry ->
+        com.srisu.srisu.features.notifications.NotificationSettings(sharedOnly=true, onBack={AppNavigator(controller,entry).back()})
+    }
     composable<ProfileNav.NotificationSettings> { entry ->
         com.srisu.srisu.features.notifications.NotificationSettings { AppNavigator(controller,entry).back() }
     }
@@ -90,7 +104,7 @@ private fun ProfileEditorDestination(controller: NavController, entry: androidx.
         }
         EditProfileScreen(editProfileViewModel = vm, onBack = onBack,
             onExplore = if(onBack==null) ({AppNavigator(controller,entry).open(HomeNavigation.Explore)}) else null,
-            onNotifications = if(onBack==null) ({AppNavigator(controller,entry).open(ProfileNav.NotificationSettings)}) else null,
+            onNotifications = if(onBack==null) ({AppNavigator(controller,entry).open(ProfileNav.Settings)}) else null,
             onSystemBack = AppNavigator(controller, entry)::back, onNavigateInterestScreen = { _, _ ->
             val navigator = AppNavigator(controller, entry)
             if (navigator.isCurrent()) {

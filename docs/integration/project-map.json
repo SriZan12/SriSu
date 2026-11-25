@@ -267,6 +267,19 @@
       "ui_integration_branch": "dev-core-architecture",
       "ui_frontend_base": "6c85951a6c065af33c3ea24eecabf89887cfbc67",
       "ui_backend_base": "136f61808a8a8f3e9aa1060fc17cd223c8488088"
+    },
+    "settings": {
+      "frontend_branch": "codex/settings-ui",
+      "backend_branch": "codex/settings-ui",
+      "integration_branch": "dev-core-architecture",
+      "flow": "docs/flows/settings.md",
+      "backend_guide": "../SriSu-backend/docs/settings.md",
+      "contract": "settings-1: GET /api/social/settings/; POST /api/social/settings/disconnect/",
+      "figma_node": null,
+      "visual_source": "User attachments Frame.png and Frame (1).png; Settings frame quota-limited",
+      "migration": null,
+      "status": "local implementation; Android native, iOS simulator UI, PostgreSQL and live loopback contract verified; support/legal URLs pending",
+      "validation": "docs/flows/settings-validation/README.md"
     }
   }
 }

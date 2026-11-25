@@ -65,6 +65,6 @@ class ProfileRenderTest {
         compose.mainClock.autoAdvance=true
         compose.onNodeWithText("Update Profile").performScrollTo()
         compose.onNodeWithText("Update Profile").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Notifications & diagnostics").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Settings").assertIsDisplayed()
     }
 }

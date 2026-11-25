@@ -30,7 +30,15 @@ fun App(darkTheme: Boolean = isSystemInDarkTheme()) {
             owner.lifecycle.addObserver(observer)
             onDispose { owner.lifecycle.removeObserver(observer); lifetime.setForeground(false) }
         }
-        SriSuTheme(darkTheme = darkTheme) {
+        val appearancePrefs: com.srisu.srisu.features.settings.AppearancePreferences = koinInject()
+        val appearance by appearancePrefs.appearance.collectAsState(com.srisu.srisu.features.settings.AppAppearance.SYSTEM)
+        val effectiveDark = when (appearance) {
+            com.srisu.srisu.features.settings.AppAppearance.SYSTEM -> darkTheme
+            com.srisu.srisu.features.settings.AppAppearance.LIGHT -> false
+            com.srisu.srisu.features.settings.AppAppearance.DARK -> true
+        }
+        com.srisu.srisu.features.settings.ApplyPlatformAppearance(appearance, effectiveDark)
+        SriSuTheme(darkTheme = effectiveDark) {
             key(session) {
                 // The entire navigation/view-model store is owned by this account.
                 val accountOwner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }

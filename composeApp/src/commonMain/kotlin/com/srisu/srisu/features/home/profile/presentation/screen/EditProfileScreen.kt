@@ -309,7 +309,7 @@ internal fun EditProfileForm(
             navigationIcon={onBack?.let {NavigationBackButton(it)}},
             actions={
                 onExplore?.let {IconButton(onClick=it) {Icon(Icons.Outlined.Explore,"Explore SriSu")}}
-                onNotifications?.let {IconButton(onClick=it) {Icon(Icons.Outlined.Settings,"Notifications & diagnostics")}}
+                onNotifications?.let {IconButton(onClick=it) {Icon(Icons.Outlined.Settings,"Settings")}}
             }, colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background))}
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),contentAlignment=Alignment.TopCenter) {
