@@ -48,7 +48,92 @@ rules supply derived values; dark appearance uses the approved neutral roles.
   and shared interests. Video, photo and text Moments use existing permission,
   expiry, viewer and private-appreciation paths.
 
-## Verification evidence
+## Expanded QA follow-up — 26 November 2026
+
+This pass extends the published frontend `199b4e0` / backend `33561c4` baseline.
+It covers Global/Faves and their connected public profile, public-Moment,
+appreciation and privacy paths, not every unrelated SriSu feature.
+
+Confirmed client repairs:
+
+- A 320dp / 1.8× text regression measured the second appreciation action at only
+  28.5dp wide. A wrapping action layout restores reachable controls without changing
+  the approved palette. Both native platforms now verify the two actions.
+- Filmstrip previews expose selected state and distinct numbered/captioned labels;
+  discovery preview click targets also have meaningful accessibility labels.
+- Cancel pending notes loads on dismissal, refresh, navigation and account changes.
+  Late replies cannot reopen a sheet; transient continuation failures keep the
+  existing rows and More notes action. Duplicate sends remain bounded.
+- Known access denial clears protected content and invalidates pending media loads.
+  Note-specific denial reauthorizes the parent Moment, so deleting one note does
+  not incorrectly expire a still-accessible Moment.
+
+Confirmed backend repairs:
+
+- Consistent/nonblocking privacy barriers prevent Go private versus publication
+  deadlocks; the existing 409 response requires reload/retry, and the tests verify
+  that retry actually withdraws the newly published Moment.
+- Legacy read-and-record requests use the existing Moment parent barrier.
+  Disconnect participant locks still exclude mutations but allow deferred
+  creator/notification foreign-key checks, avoiding publish/appreciation deadlocks.
+- Incoming follower projections now recheck both sides' current identity approval.
+  Opt-in accepts JSON `true`, not coercible strings/numbers. Private saves stay private.
+
+Final backend verification: **250 PostgreSQL tests passed**, no skips; maintained
+SQLite **549 total, 498 passed, 51 conditional skips**; migration consistency
+passed without adding a migration. Fresh live HTTP passed **74 requests** including
+synthetic HLS authorization/withdrawal. See [HTTP summary](http-expanded-summary.json)
+and backend `docs/public-following.md`. All 17 unrelated files retained their
+baseline hashes. Backend QA commit: `489d7489c78158b0d688b8f2d70bcaae5f27e087`.
+
+Final client regression: **783 tests, 775 passed and 8 opt-in transport skips**;
+Android app/test sources and iOS simulator sources compiled. The 13 note lifecycle
+regressions also passed in a focused 35-test viewer run. Paired API contracts,
+theme validation and all 251 country records/flags passed. See
+[unit summary](android-expanded-unit-summary.json). The live transport test runs
+separately because offline unit runs deliberately skip its fixture-dependent case.
+The final production Ktor/Django integration passed after all QA fixes, against a
+fresh disposable backend. The normal iOS framework was rebuilt and its exported
+header checked to confirm the injected QA controller is absent. Backend CI passed
+for `489d748`; final frontend CI and source revisions are recorded on PR #41.
+
+Native verification:
+
+- **Android 15 emulator: 5/5 instrumented tests passed.** Real IME, selected-Moment
+  navigation, library/back, manual refresh, 30-card scroll, 320dp dark large text,
+  empty notes, system Back dismissal, failed-send draft retention and retry.
+  System text was set to 1.8× and restored to 1.0×. The first new modal dismissal
+  test incorrectly invoked the Activity dispatcher instead of delivering Back to
+  the modal's dialog window; the corrected real system key test passes.
+- **iPhone 17 Pro / iOS 26.5 simulator: 4/4 UIKit tests passed**, including
+  multiword search, portrait/landscape keyboard, 320pt content at
+  accessibilityExtraExtraLarge, both appreciation actions, empty notes, retry and
+  successful send. See [native summary](ios-native-expanded-summary.json).
+- **Native AVPlayer with live disposable Django: passed.** A user from a different
+  couple played a synthetic public HLS video; first frame was 691ms and pause,
+  resume and completion passed for the 8-second video. See
+  [sanitized result](ios-public-video-result.json). This tests the production iOS
+  player driver, not all public-viewer controls or WAN streaming performance.
+
+[Android corrected actions](screenshots/android-small-dark-both-actions.png),
+[iOS corrected actions](screenshots/ios-compact-large-both-appreciation-actions.png),
+and [iOS empty notes](screenshots/ios-compact-large-empty-notes.png) are synthetic
+production-composable screenshots. The 320dp/pt constraint belongs to the test;
+modals use the native window width.
+
+Performance measurement is deliberately separate from functional success. The
+[Android debug scroll sample](android-debug-scroll-frames.json) captured 168 frames:
+p50 36.54ms, p95 57.09ms, maximum 67.20ms; 167 exceeded 16.67ms. This software-rendered
+emulator/debug run **does not demonstrate smooth 60fps scrolling** and is not a
+release-device benchmark. Bounded server queries and caches are checked separately;
+physical release-build, low-memory and WAN profiling remain open. No VoiceOver or
+TalkBack traversal was performed; semantic checks are not a substitute for that.
+Figma context and screenshot APIs remain quota-limited.
+
+## Earlier implementation verification
+
+The following records the initial feature verification. The expanded QA results
+above supersede its final test counts; they do not erase the earlier coverage.
 
 | Check | Actual result | Coverage limit |
 | --- | --- | --- |

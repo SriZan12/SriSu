@@ -94,4 +94,29 @@ class ExploreDeviceTest {
         compose.onNodeWithText("Find couples").performClick();capture("dark-discover")
         assertEquals("global",state.section)
     }
+
+    @Test fun gestureScrollCollectsDebugFrameTimings() {
+        show()
+        val timings=java.util.Collections.synchronizedList(mutableListOf<Long>())
+        val thread=android.os.HandlerThread("explore-frame-qa").apply {start()}
+        val listener=android.view.Window.OnFrameMetricsAvailableListener {_,metrics,_->
+            timings+=metrics.getMetric(android.view.FrameMetrics.TOTAL_DURATION)
+        }
+        compose.activityRule.scenario.onActivity {it.window.addOnFrameMetricsAvailableListener(listener,android.os.Handler(thread.looper))}
+        try {
+            repeat(4) {compose.onNodeWithTag("explore-list").performTouchInput {swipeUp(durationMillis=450)}}
+            repeat(4) {compose.onNodeWithTag("explore-list").performTouchInput {swipeDown(durationMillis=450)}}
+            compose.waitForIdle()
+        } finally {
+            compose.activityRule.scenario.onActivity {it.window.removeOnFrameMetricsAvailableListener(listener)}
+            thread.quitSafely();thread.join(3000)
+        }
+        val values=synchronized(timings) {timings.sorted()}
+        assertTrue("Real Android window frames must be sampled",values.isNotEmpty())
+        fun percentile(p:Double)=values[((values.size-1)*p).toInt()]/1_000_000.0
+        val report=org.json.JSONObject().put("scope","Android emulator debug build, synthetic local images; not a release benchmark")
+            .put("frames",values.size).put("p50_ms",percentile(.5)).put("p95_ms",percentile(.95))
+            .put("max_ms",values.last()/1_000_000.0).put("over_16_67_ms",values.count {it>16_670_000})
+        File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,"explore-scroll-frames.json").writeText(report.toString(2))
+    }
 }

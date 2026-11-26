@@ -97,10 +97,20 @@ class PublicMomentDeviceTest {
                 SriSuTheme(darkTheme=true) {Box(Modifier.width(320.dp).fillMaxHeight()) {
                     PublicMomentViewerContent(state,{},{},{},{},{},onNote={state=state.copy(note=it)},
                         onSendNote={sends++;state=if(sends==1) state.copy(busy=true) else state.copy(note="",noteSent=true,error=null)},
-                        onNotes={},onCloseNotes={},onProfile={},avatar={bytes})
+                        onNotes={state=state.copy(notes=emptyList())},onCloseNotes={state=state.copy(notes=null)},onProfile={},avatar={bytes})
                 }}
             }
         }
+        compose.onNodeWithText("Your appreciations").performScrollTo().assertIsDisplayed()
+            .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp).performTouchInput {click()}
+        compose.onNodeWithText("No notes yet. Send a little appreciation.").assertIsDisplayed()
+        // Deliver real system Back to the modal's dialog window. Calling the
+        // Activity dispatcher directly bypasses that window and exits the fixture.
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(
+            instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_BACK")
+        ).use {it.readBytes()}
+        compose.waitForIdle()
+        compose.onNodeWithText("No notes yet. Send a little appreciation.").assertDoesNotExist()
         compose.onNodeWithText("Send appreciation").performScrollTo().performTouchInput {click()}
         sendButton().assertIsNotEnabled()
         compose.onNode(hasSetTextAction()).performScrollTo().performTouchInput {click()}

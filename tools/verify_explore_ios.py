@@ -89,7 +89,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--device', required=True, help='Booted arm64 simulator UDID; never chooses a physical device')
     parser.add_argument('--framework', type=Path, default=ROOT / 'composeApp/build/bin/iosSimulatorArm64/debugFramework/ComposeApp.framework')
-    parser.add_argument('--test', action='append', help='Optional XCTest method name to run; defaults to all three native checks')
+    parser.add_argument('--test', action='append', help='Optional XCTest method name to run; defaults to all native checks')
     args = parser.parse_args()
     if not (args.framework / 'Headers/ComposeApp.h').is_file():
         parser.error('Link the QA-only arm64 ComposeApp debug framework first')

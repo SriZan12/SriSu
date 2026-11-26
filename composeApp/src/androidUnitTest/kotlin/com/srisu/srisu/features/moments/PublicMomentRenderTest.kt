@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.request.allowHardware
@@ -104,6 +105,15 @@ class PublicMomentRenderTest {
         readyPhoto();capture("small-dark-large-text")
         compose.onNodeWithText("Send appreciation").performScrollTo().assertIsDisplayed().performClick()
         compose.onNode(hasSetTextAction()).performScrollTo().assertIsDisplayed();capture("small-dark-note")
+    }
+    @Test fun smallLargeTextKeepsBothAppreciationActionsVisible() {
+        val state=mutableStateOf(PublicMomentUiFixture.state(textOnly=true));val actions=mutableListOf<String>()
+        show(state,{state.value=it},{actions+=it},dark=true,fontScale=1.8f,qualifiers="w320dp-h640dp-xhdpi")
+        compose.onNodeWithText("Your appreciations").performScrollTo().assertIsDisplayed()
+            .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp).performClick()
+        assertTrue(actions.contains("notes:false"));capture("small-dark-both-actions")
+        compose.onNodeWithText("Send appreciation").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNode(hasSetTextAction()).performScrollTo().assertIsDisplayed()
     }
     @Test fun landscapeAllowsMediaThenNavigationAndAppreciation() {
         val state=mutableStateOf(PublicMomentUiFixture.state())

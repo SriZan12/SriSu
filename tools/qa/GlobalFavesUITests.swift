@@ -107,8 +107,8 @@ final class GlobalFavesUITests: XCTestCase {
         let field = editor()
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
-        field.typeText("Maya")
-        wait("Search input retains typed value") { (field.value as? String)?.contains("Maya") == true }
+        field.typeText("Maya & Kiran")
+        wait("Search input retains the complete multiword value") { (field.value as? String)?.contains("Maya & Kiran") == true }
         capture("ios-search-keyboard")
         element("Clear search").tap()
         wait("Clear empties the search") { !(field.value as? String ?? "").contains("Maya") }
@@ -178,5 +178,18 @@ final class GlobalFavesUITests: XCTestCase {
         capture("ios-search-landscape-keyboard")
         element("Go back").tap()
         wait("Landscape Back dismisses keyboard") { !self.app.keyboards.firstMatch.exists }
+    }
+
+    func testCompactLargeTextShowsBothAppreciationActions() {
+        launch(["-qa-viewer", "-qa-dark", "-qa-compact", "-UIPreferredContentSizeCategoryName",
+            UIContentSizeCategory.accessibilityExtraExtraLarge.rawValue])
+        let notes=element("Your appreciations")
+        XCTAssertTrue(notes.waitForExistence(timeout: 30));reachable(notes)
+        XCTAssertGreaterThanOrEqual(notes.frame.width,44)
+        XCTAssertGreaterThanOrEqual(notes.frame.height,44)
+        capture("ios-compact-large-both-appreciation-actions")
+        notes.tap()
+        XCTAssertTrue(element("No notes yet. Send a little appreciation.").waitForExistence(timeout:10))
+        capture("ios-compact-large-empty-notes")
     }
 }

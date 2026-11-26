@@ -1,0 +1,8 @@
+{
+  "scope": "Android emulator debug build, synthetic local images; not a release benchmark",
+  "frames": 168,
+  "p50_ms": 36.541627,
+  "p95_ms": 57.094217,
+  "max_ms": 67.199753,
+  "over_16_67_ms": 167
+}

@@ -22,7 +22,7 @@ import com.srisu.srisu.features.moments.data.*
 import com.srisu.srisu.theme.*
 
 /** Public visitor chrome. Media, authorization, expiry and notes still use the shared Moment VM. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable internal fun PublicMomentViewerContent(state:MomentViewerState,onBack:()->Unit,onRetry:()->Unit,onMove:(Int)->Unit,
     onPresented:()->Unit,onVideoPresented:(Long)->Unit,onNote:(String)->Unit,onSendNote:()->Unit,onNotes:(Boolean)->Unit,onCloseNotes:()->Unit,
     onProfile:(Long)->Unit,avatar:suspend(String)->ByteArray?,actions:@Composable (Long)->Unit={}) {
@@ -96,7 +96,7 @@ import com.srisu.srisu.theme.*
                     if(failedImage || event.state=="failed") MomentError("This Moment couldn’t load. Please try again.",onRetry)
                     state.error?.let {MomentError(it,onRetry)}
                     if(state.noteSent) Text("Your appreciation was sent",style=MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement=Arrangement.spacedBy(space.small)) {
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(space.small),verticalArrangement=Arrangement.spacedBy(space.small)) {
                         TextButton(onClick={writing=true}) {Text("Send appreciation")}
                         TextButton(onClick={onNotes(false)}) {Text("Your appreciations")}
                     }

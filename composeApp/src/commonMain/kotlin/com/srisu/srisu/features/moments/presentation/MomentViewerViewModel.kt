@@ -35,13 +35,15 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
     private var work: Job?=null
     private var expiry: Job?=null
     private var publicAccess: Job?=null
+    private var notesWork: Job?=null
+    private var notesEpoch=0
     private var notePage=1
     private var active=false
     private var started=false
     private val viewed=mutableSetOf<Long>()
     private var viewRequest: Long?=null
     init { viewModelScope.launch { sessions.state.collect { if(it!=stamp) {
-        generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); expiry?.cancel(); mutable.value=MomentViewerState(loading=false,unavailable="unavailable")
+        generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); expiry?.cancel();cancelNoteLoad(); mutable.value=MomentViewerState(loading=false,unavailable="unavailable")
     } } } }
     fun open(momentId: Long?, coupleId: Long?, creatorId: Long?) {
         if(started) return
@@ -52,12 +54,13 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         if(active==value) return
         active=value
         if(value && started) refresh()
-        else if(!value) { generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,fresh=false,imageLoading=false,notes=null,notesLoading=false,busy=false) } }
+        else if(!value) { generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel();closeNotes(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,fresh=false,imageLoading=false,busy=false) } }
     }
     private fun current(own: Int): Boolean = generation==own && sessions.stamp()==stamp && active
     fun refresh() {
         if(!active || sessions.stamp()!=stamp) return
         work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); val own=++generation
+        closeNotes()
         work=viewModelScope.launch {
             mutable.update { it.copy(loading=true,busy=false,error=null,unavailable=null,fresh=false,bytes=null,playback=null,videoReady=false) }
             if(currentId==null && couple!=null) {
@@ -170,11 +173,15 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         }
     }
     private fun expired() {
-        generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,moment=null,notes=null,loading=false,imageLoading=false,fresh=false,unavailable="expired",busy=false) }
+        generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel();closeNotes(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,moment=null,loading=false,imageLoading=false,fresh=false,unavailable="expired",busy=false) }
         source.changed()
     }
     private fun failure(error: NetworkAPIResult.Error<*>?) {
         val status=error?.failure?.status
+        // A denied/failed current Moment invalidates every outstanding reader,
+        // including a photo started before an appreciation received a denial.
+        generation++;work?.cancel();sequenceWork?.cancel();publicAccess?.cancel();expiry?.cancel()
+        closeNotes()
         mutable.update { it.copy(loading=false,busy=false,imageLoading=false,bytes=null,playback=null,videoReady=false,moment=null,fresh=false,
             unavailable=when(status) { 410->"expired";401,403,404->"unavailable";else->null },
             error=if(status in listOf(401,403,404,410)) null else error?.failure?.message ?: "This Moment could not be loaded.") }
@@ -212,6 +219,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
     }
     private fun selectMoment(id: Long) {
         currentId=id
+        cancelNoteLoad()
         notePage=1
         // Drafts, replies and sent feedback belong to one Moment, including when
         // navigation crosses a sequence-page boundary.
@@ -274,20 +282,41 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
             } else mutable.update { it.copy(busy=false,error=(result as? NetworkAPIResult.Error)?.failure?.message) }
         }
     }
-    fun closeNotes() { mutable.update { it.copy(notes=null,noteReplyId=null,noteReplyDraft="") } }
+    private fun cancelNoteLoad() {
+        notesEpoch++;notesWork?.cancel();notesWork=null
+    }
+    fun closeNotes() {
+        cancelNoteLoad();notePage=1
+        mutable.update { it.copy(notes=null,notesLoading=false,notesNext=false,noteReplyId=null,noteReplyDraft="") }
+    }
+    private fun recheckNoteAccess(error: NetworkAPIResult.Error<*>?): Boolean {
+        return when(error?.failure?.status) {
+            401 -> { failure(error);true }
+            403,404,410 -> {
+                // A deleted note or an emptied continuation page can return 404
+                // while its Moment remains available. Close the private notes and
+                // reauthorize the parent instead of treating the note as the Moment.
+                refresh();true
+            }
+            else -> false
+        }
+    }
     fun loadNotes(more: Boolean=false) {
         val moment=state.value.moment ?: return
-        if(!state.value.fresh || state.value.notesLoading) return
+        if(!state.value.fresh || state.value.notesLoading || more && !state.value.notesNext) return
         val own=generation
         if(!more) notePage=1
-        mutable.update { it.copy(notes=if(more) it.notes else emptyList(),notesLoading=true,error=null) }
-        viewModelScope.launch {
-            val result=source.notes(moment.id,notePage)
+        val pageNumber=notePage
+        mutable.update { it.copy(notes=if(more) it.notes else emptyList(),notesNext=more && it.notesNext,notesLoading=true,error=null) }
+        notesWork=viewModelScope.launch {
+            val result=source.notes(moment.id,pageNumber)
+            currentCoroutineContext().ensureActive()
             if(!current(own)) return@launch
+            if(recheckNoteAccess(result as? NetworkAPIResult.Error)) return@launch
             val page=(result as? NetworkAPIResult.Success)?.response
             mutable.update { it.copy(notesLoading=false,notes=if(page!=null) ((if(more) it.notes.orEmpty() else emptyList())+page.results).distinctBy {it.id} else it.notes,
-                notesNext=page?.next!=null,error=(result as? NetworkAPIResult.Error)?.failure?.message) }
-            if(page?.next!=null) notePage++
+                notesNext=page?.let {it.next!=null} ?: it.notesNext,error=(result as? NetworkAPIResult.Error)?.failure?.message) }
+            if(page?.next!=null) notePage=pageNumber+1
         }
     }
     fun replyToNote(id: Long?, text: String="") { mutable.update {it.copy(noteReplyId=id,noteReplyDraft=text.take(1000))} }
@@ -297,13 +326,17 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         val text=state.value.noteReplyDraft.trim()
         if((!moment.canEdit && !moment.canReply) || !state.value.fresh || state.value.busy || text.isBlank()) return
         val own=generation
+        val ownNotes=notesEpoch
         mutable.update {it.copy(busy=true,error=null)}
         viewModelScope.launch {
             val result=source.noteReply(id,text)
             if(!current(own)) return@launch
             if(result is NetworkAPIResult.Success) {
-                mutable.update {it.copy(busy=false,noteReplyId=null,noteReplyDraft="")}; loadNotes()
-            } else mutable.update {it.copy(busy=false,error=(result as? NetworkAPIResult.Error)?.failure?.message)}
+                mutable.update {it.copy(busy=false,noteReplyId=null,noteReplyDraft="")}
+                if(ownNotes==notesEpoch && state.value.notes!=null) loadNotes()
+            } else if(!recheckNoteAccess(result as? NetworkAPIResult.Error)) {
+                mutable.update {it.copy(busy=false,error=(result as? NetworkAPIResult.Error)?.failure?.message)}
+            }
         }
     }
     suspend fun image(url: String) = source.image(url)
@@ -318,6 +351,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
             val result=source.note(moment.id,text)
             if(!current(own)) return@launch
             if(result is NetworkAPIResult.Success) mutable.update { it.copy(busy=false,note="",noteSent=true) }
+            else if(result is NetworkAPIResult.Error && result.failure.status in listOf(401,403,404,410)) failure(result)
             else mutable.update { it.copy(busy=false,error=(result as? NetworkAPIResult.Error)?.failure?.message) }
         }
     }

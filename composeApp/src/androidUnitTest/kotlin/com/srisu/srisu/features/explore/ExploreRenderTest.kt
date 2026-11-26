@@ -74,6 +74,24 @@ class ExploreRenderTest {
     @Test fun dark()=render("faves-dark",dark=true)
     @Test fun largeText()=render("global-small-large-text",fontScale=1.6f,small=true)
 
+    @Test fun filmstripAnnouncesDistinctMomentsAndCurrentSelection() {
+        render("faves")
+        compose.mainClock.autoAdvance=true
+        compose.onNodeWithTag("explore-filmstrip").performScrollTo()
+        val first="Moment 1 of 3 from Maya & Kiran: City day out"
+        val second="Moment 2 of 3 from Maya & Kiran: Worth the climb"
+        compose.onNodeWithContentDescription(first).assertIsSelected()
+        compose.onNodeWithContentDescription(second).assertIsNotSelected().performClick()
+        compose.onNodeWithContentDescription(second).assertIsSelected()
+        compose.onNodeWithContentDescription(first).assertIsNotSelected()
+    }
+
+    @Test fun discoveryPhotoPreviewsHaveAccessibleNames() {
+        render("global");compose.mainClock.autoAdvance=true
+        compose.onNodeWithContentDescription("Moment 1 of 3 from Maya & Kiran: City day out")
+            .performScrollTo().assertHasClickAction().assertIsDisplayed()
+    }
+
     @Test fun returningFromViewerRestartsTheGuardedImageLoad() {
         val calls=java.util.concurrent.atomic.AtomicInteger()
         val card=FakeExplore.card(10).copy(preview=FakeExplore.card(10).preview.copy(

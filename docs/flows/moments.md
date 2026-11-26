@@ -959,8 +959,10 @@ into `dev-core-architecture`, with unrelated Xcode/environment/media work exclud
 This follow-up uses `codex/global-faves-figma` in both original project folders,
 starting at frontend `e4acb680b137116c5b4e8dd6db09ecd7e49198a5` and backend
 `d3a7cc04a1ac61760a2d06b3ec8d765f1bb81c7d` on `dev-core-architecture`.
-These are baseline commits; the feature changes remain local and uncommitted.
-No push, PR or merge is authorized in this phase.
+These are baseline commits. The user subsequently authorized publication in
+[frontend PR #41](https://github.com/SriZan12/SriSu/pull/41) and
+[backend PR #50](https://github.com/SrizanKhadka/SriSu/pull/50), both targeting
+`dev-core-architecture`. They remain unmerged; merging is not authorized.
 
 ### Design source and preserved navigation
 
@@ -977,6 +979,15 @@ the existing typed Moment route with both couple and Moment IDs. “Their page�
 the existing visitor Couple Profile, and Back returns through the navigation stack.
 Public visitors use private appreciation notes; no action opens another couple’s
 private Matrix conversation. The approved partner chat and upload flows are retained.
+At large text sizes the two appreciation actions wrap instead of competing for
+one row. Filmstrip and discovery previews expose distinct numbered, captioned
+accessibility labels; the filmstrip also exposes its selected state.
+
+Appreciation-list requests are cancelled on dismissal, refresh, navigation and
+session changes. Late replies cannot reopen a closed sheet. A failed continuation
+retains its retry action and existing rows. Authorization failures recheck the
+parent Moment before allowing retained media or notes to remain visible; deleting
+one note is not treated as proof that its whole Moment has expired.
 
 ### Data, privacy and interaction
 

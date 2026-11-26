@@ -149,11 +149,15 @@ import org.koin.compose.viewmodel.koinViewModel
                             item("film-heading") {ExploreSection(if(state.section=="faves") "FROM YOUR FAVES" else "COUPLES TODAY",if(state.section=="faves") "Your Faves" else null,{onManage(true)})}
                             item("film") {
                                 ProtectedExploreContent(authorized) {
-                                    LazyRow(horizontalArrangement=Arrangement.spacedBy(space.small)) {
-                                        items(previews,key={it.second.id}) {(card,moment)->
+                                    LazyRow(modifier=Modifier.testTag("explore-filmstrip"),horizontalArrangement=Arrangement.spacedBy(space.small)) {
+                                        itemsIndexed(previews,key={_,item->item.second.id}) {index,(card,moment)->
                                             key(authorized,state.imageRevision) {Surface(onClick={if(authorized) selectedMoment=moment.id},enabled=authorized,shape=MaterialTheme.shapes.small,
+                                                modifier=Modifier.semantics {
+                                                    this.selected=moment.id==selected.second.id
+                                                    contentDescription=momentLabel(card.couple,moment,index,previews.size)
+                                                },
                                                 border=if(moment.id==selected.second.id) BorderStroke(2.dp,colors.onSurface) else null) {
-                                                ExplorePreview(moment,{url->if(authorized) loadImage(url) else null},Modifier.width(ExploreTokens.filmWidth).height(ExploreTokens.filmHeight),"Select Moment from ${card.couple.label}")
+                                                ExplorePreview(moment,{url->if(authorized) loadImage(url) else null},Modifier.width(ExploreTokens.filmWidth).height(ExploreTokens.filmHeight),null)
                                             }}
                                         }
                                     }
@@ -267,8 +271,9 @@ import org.koin.compose.viewmodel.koinViewModel
                 FaveControl(card.couple.id,card.isFaved,status,onFave,onRetry)
             }
             if(!compact) Row(horizontalArrangement=Arrangement.spacedBy(space.tiny)) {
-                card.visiblePreviews.forEach {moment->
+                card.visiblePreviews.forEachIndexed {index,moment->
                     ExplorePreview(moment,loadImage,Modifier.weight(1f).aspectRatio(0.8f).clip(MaterialTheme.shapes.small)
+                        .semantics {contentDescription=momentLabel(card.couple,moment,index,card.visiblePreviews.size)}
                         .clickable(role=Role.Button,onClickLabel="Open Moment from ${card.couple.label}") {onMoment(card.couple.id,moment.id)},null)
                 }
                 // Empty slots are not duplicated media. Available previews keep their intended proportions.
@@ -277,6 +282,9 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+private fun momentLabel(couple:ExploreCouple,moment:MomentPreview,index:Int,count:Int):String =
+    "Moment ${index+1} of $count from ${couple.label}" + moment.caption.takeIf {it.isNotBlank()}?.let {": ${it.take(120)}"}.orEmpty()
 
 @Composable internal fun ExplorePreview(moment:MomentPreview,loadImage:suspend(String)->ByteArray?,modifier:Modifier,description:String?) {
     val colors=MaterialTheme.colorScheme

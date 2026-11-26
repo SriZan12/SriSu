@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "request_count": 74,
+  "video_verified": true,
+  "checks": [
+    "JWT authentication",
+    "Global query/filter/pagination",
+    "private Faves",
+    "explicit individual follow and conditional duplicates",
+    "member-only followers",
+    "selected Moment pagination",
+    "private media/identity",
+    "appreciation permissions",
+    "Go private media/cookie withdrawal",
+    "no automatic republication"
+  ]
+}
