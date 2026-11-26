@@ -1,0 +1,9 @@
+// Opt-in native keyboard QA only. Normal builds do not include this controller.
+allprojects { project ->
+    afterEvaluate {
+        if (project.name == 'composeApp') {
+            project.kotlin.sourceSets.getByName('iosMain').kotlin.srcDir(
+                new File(project.rootDir, 'tools/qa/explore'))
+        }
+    }
+}

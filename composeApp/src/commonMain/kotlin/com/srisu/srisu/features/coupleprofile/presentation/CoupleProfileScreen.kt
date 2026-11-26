@@ -38,7 +38,7 @@ import srisu.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onPlans: (() -> Unit)? = null, nicknameContent: @Composable (Long) -> Unit = {}) {
+fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileViewModel = koinViewModel(), initialPage: String? = null, planId: Long? = null, onOpenCouple: ((Long) -> Unit)? = null, onPlans: (() -> Unit)? = null, nicknameContent: @Composable (Long) -> Unit = {}, onMoments: ((Long) -> Unit)? = null, followContent: (@Composable (Long) -> Unit)? = null) {
     val state by vm.state.collectAsState()
     com.srisu.srisu.features.notifications.ReportNotificationScreen(state.profile?.id?.let { id ->
         com.srisu.srisu.features.coupleprofile.navigation.CoupleSection.entries.firstOrNull { it.name == state.page.name }?.let { section ->
@@ -135,7 +135,7 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
                     ProfilePage.DISCOVER -> Unit
                     ProfilePage.PREVIEW -> ProfileOverview(state, vm, accentMotion, preview = true, onPlans = onPlans)
                     ProfilePage.PROFILE, ProfilePage.ANSWER -> ProfileOverview(state, vm, accentMotion, onPlans = onPlans,
-                        nicknameContent = if (state.page == ProfilePage.PROFILE) nicknameContent else null)
+                        nicknameContent = if (state.page == ProfilePage.PROFILE) nicknameContent else null, onMoments = onMoments, followContent = followContent)
                     ProfilePage.STORY -> StoryRead(state, vm)
                     ProfilePage.STORY_EDIT -> StoryEditor(state, vm)
                     ProfilePage.SONG -> SongEditor(state, vm)
@@ -356,7 +356,12 @@ fun CoupleProfileScreen(coupleId: Long?, onBack: () -> Unit, vm: CoupleProfileVi
     Text(stringResource(when { sharing?.validProposal==true && sharing.approvedBy.size==2 -> Res.string.cp_published; sharing?.validProposal==true -> Res.string.cp_awaiting; sharing?.proposal.isNullOrEmpty() -> Res.string.cp_private_owner; else -> Res.string.cp_proposal_changed }),style=MaterialTheme.typography.bodySmall)
     SriSuButton(stringResource(Res.string.cp_propose),{vm.save(sharingAction="propose")},enabled=!state.saving,modifier=Modifier.fillMaxWidth())
     if(sharing?.validProposal==true && sharing.proposal.isNotEmpty() && vm.accountId !in sharing.approvedBy) SriSuButton(stringResource(Res.string.cp_approve),{vm.save(sharingAction="approve")},enabled=!state.saving && state.draft?.dirty!=true,modifier=Modifier.fillMaxWidth())
-    TextButton(onClick={vm.save(sharingAction="revoke")},enabled=!state.saving) { Text(stringResource(Res.string.cp_revoke),color=MaterialTheme.colorScheme.error) }
+    var confirmPrivate by remember { mutableStateOf(false) }
+    TextButton(onClick={confirmPrivate=true},enabled=!state.saving) { Text("Go private",color=MaterialTheme.colorScheme.error) }
+    if(confirmPrivate) AlertDialog(onDismissRequest={confirmPrivate=false},title={Text("Go private?")},
+        text={Text("Your shared profile details and existing public Moments will stop being visible to other couples. Public follows to and from your couple will be removed. Private Faves stay saved. Making your profile public later won’t republish these Moments or follows.")},
+        confirmButton={TextButton(onClick={confirmPrivate=false;vm.save(sharingAction="revoke")}) {Text("Go private",color=MaterialTheme.colorScheme.error)}},
+        dismissButton={TextButton(onClick={confirmPrivate=false}) {Text("Keep sharing")}})
 }
 @OptIn(ExperimentalLayoutApi::class)
 @Composable private fun PlansScreen(state: CoupleProfileState,vm: CoupleProfileViewModel) {

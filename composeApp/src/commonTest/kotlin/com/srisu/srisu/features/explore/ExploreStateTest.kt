@@ -22,14 +22,14 @@ open class FakeExplore : ExploreSource {
     val feeds=mutableListOf<String>()
     var checks=0
     var page=ExplorePage(listOf(card(10)),serverTime=MomentFixtures.NOW)
-    override suspend fun feed(section:String,scope:String,cursor:String?):ExploreResult<ExplorePage> {
+    override suspend fun feed(section:String,scope:String,cursor:String?,query:String,interestId:Int?):ExploreResult<ExplorePage> {
         feeds+=section
         return NetworkAPIResult.Success(response(section))
     }
     private fun response(section:String) = page.copy(
         results=page.results.filter {section=="global" || it.couple.id in savedIds}.map {it.copy(isFaved=it.couple.id in savedIds)},
         emptyReason=if(section=="faves" && savedIds.isEmpty()) "no_faves" else null,faveVersion=version)
-    override suspend fun validate(ids:List<Long>,section:String):ExploreResult<ExplorePage> {
+    override suspend fun validate(ids:List<Long>,section:String,query:String,interestId:Int?):ExploreResult<ExplorePage> {
         checks++
         return response(section).let {NetworkAPIResult.Success(it.copy(results=it.results.filter {row->row.couple.id in ids}))}
     }
@@ -41,6 +41,9 @@ open class FakeExplore : ExploreSource {
         if(desired) savedIds+=id else savedIds-=id
         return NetworkAPIResult.Success(null)
     }
+    override suspend fun followState(id:Long):ExploreResult<PublicFollowSnapshot> = NetworkAPIResult.Success(PublicFollowSnapshot(id,canFollow=true))
+    override suspend fun setFollow(id:Long,desired:Boolean,version:Long,shareIdentity:Boolean):ExploreResult<PublicFollowSnapshot> = NetworkAPIResult.Success(PublicFollowSnapshot(id,isFollowing=desired,canFollow=true,version=version+1))
+    override suspend fun followers(cursor:String?):ExploreResult<PublicFollowersPage> = NetworkAPIResult.Success(PublicFollowersPage())
     override suspend fun image(url:String):ByteArray?=MomentFixtures.image
     companion object {
         fun card(id:Long)=ExploreCard(ExploreCouple(id,"Alex & Sam"),MomentPreview(id,"A little adventure",expiresAt="2026-10-23T06:00:00Z"),hasUnopened=true)
@@ -101,7 +104,7 @@ class ExploreStateTest {
     @Test fun accountChangeRejectsUncooperativeOldMutationAndFeed()=runTest(dispatcher) {
         val gate=CompletableDeferred<Unit>()
         val source=object:FakeExplore() {
-            override suspend fun feed(section:String,scope:String,cursor:String?):ExploreResult<ExplorePage> = withContext(NonCancellable) {gate.await();super.feed(section,scope,cursor)}
+            override suspend fun feed(section:String,scope:String,cursor:String?,query:String,interestId:Int?):ExploreResult<ExplorePage> = withContext(NonCancellable) {gate.await();super.feed(section,scope,cursor,query,interestId)}
             override suspend fun faveState(id:Long):ExploreResult<FaveSnapshot> = withContext(NonCancellable) {gate.await();super.faveState(id)}
         }
         val h=Harness(source)
@@ -128,9 +131,9 @@ class ExploreStateTest {
     @Test fun mutationCancelsObsoleteFavesLoadAndLoadsNewMembership()=runTest(dispatcher) {
         val gate=CompletableDeferred<Unit>();var first=true
         val source=object:FakeExplore() {
-            override suspend fun feed(section:String,scope:String,cursor:String?):ExploreResult<ExplorePage> {
+            override suspend fun feed(section:String,scope:String,cursor:String?,query:String,interestId:Int?):ExploreResult<ExplorePage> {
                 if(section=="faves" && first) {first=false;gate.await();return NetworkAPIResult.Success(page.copy(results=emptyList()))}
-                return super.feed(section,scope,cursor)
+                return super.feed(section,scope,cursor,query,interestId)
             }
         }
         val h=Harness(source)
@@ -192,7 +195,7 @@ class ExploreStateTest {
                 requests+=cursor
                 if(cursor!=null && failure) return MomentFixtures.failed()
                 return NetworkAPIResult.Success(SavedPage(savedIds.map {SavedCouple(it,available=true)},
-                    next="https://example.invalid/?cursor=next",faveVersion=version))
+                    next=if(cursor==null && savedIds.isNotEmpty()) "https://example.invalid/?cursor=next" else null,faveVersion=version))
             }
         }.apply {savedIds+=10}
         val h=Harness(source)
@@ -204,6 +207,7 @@ class ExploreStateTest {
             assertEquals(listOf(null,"next",null),source.requests)
             h.vm.manage(false);source.savedIds.clear();source.version++
             h.vm.manage(true);runCurrent();assertTrue(h.vm.state.value.library.rows.isEmpty())
+            assertTrue(h.vm.state.value.library.loaded);assertNull(h.vm.state.value.library.error)
         } finally {h.close()}
     }
     @Test fun savedPaginationRestartsWhenAnotherDeviceChangedMembership()=runTest(dispatcher) {
@@ -223,7 +227,7 @@ class ExploreStateTest {
     @Test fun lateCancelledLocalRequestCannotReplaceBroaderResults()=runTest(dispatcher) {
         val gate=CompletableDeferred<Unit>()
         val source=object:FakeExplore() {
-            override suspend fun feed(section:String,scope:String,cursor:String?):ExploreResult<ExplorePage> {
+            override suspend fun feed(section:String,scope:String,cursor:String?,query:String,interestId:Int?):ExploreResult<ExplorePage> {
                 if(scope=="local") return withContext(NonCancellable) {gate.await();NetworkAPIResult.Success(page)}
                 return NetworkAPIResult.Success(page.copy(results=listOf(FakeExplore.card(12))))
             }

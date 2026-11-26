@@ -87,10 +87,14 @@ class ApiRouteContractTest {
             expected = "couple-profile-cover-read"; couple.image(environment.baseUrl + "api/social/profiles/1/cover/")
             expected = "couple-profile-member-photo"; couple.image(environment.baseUrl + "api/social/profiles/1/members/1/photo/")
             val explore = com.srisu.srisu.features.explore.data.ExploreRepository(client,environment,couple)
-            check("explore-feed") {ResultHandler(explore.feed("global","local",null))}
-            check("explore-visible") {ResultHandler(explore.validate(listOf(1),"global"))}
+            check("explore-feed") {ResultHandler(explore.feed("global","local",null,"Alex",1))}
+            check("explore-visible") {ResultHandler(explore.validate(listOf(1),"global","Alex",1))}
             check("fave-library") {ResultHandler(explore.saved(null))}
             check("fave-state") {ResultHandler(explore.faveState(1))}
+            check("explore-follow-state") {ResultHandler(explore.followState(1))}
+            check("explore-follow-add") {ResultHandler(explore.setFollow(1,true,1,true))}
+            check("explore-follow-remove") {ResultHandler(explore.setFollow(1,false,1,false))}
+            check("explore-followers") {ResultHandler(explore.followers("synthetic-cursor"))}
             val moments = com.srisu.srisu.features.moments.data.MomentRepository(client,environment,couple)
             check("moment-home") {ResultHandler(moments.home())}
             check("moment-get") {ResultHandler(moments.get(1))}

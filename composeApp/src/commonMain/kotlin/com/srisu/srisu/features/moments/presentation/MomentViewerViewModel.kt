@@ -30,15 +30,18 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
     private var creator: Long?=null
     private var sequence=emptyList<Long>()
     private var cursor: String?=null
+    private var sequenceStarted=false
+    private var sequenceWork: Job?=null
     private var work: Job?=null
     private var expiry: Job?=null
+    private var publicAccess: Job?=null
     private var notePage=1
     private var active=false
     private var started=false
     private val viewed=mutableSetOf<Long>()
     private var viewRequest: Long?=null
     init { viewModelScope.launch { sessions.state.collect { if(it!=stamp) {
-        generation++; work?.cancel(); expiry?.cancel(); mutable.value=MomentViewerState(loading=false,unavailable="unavailable")
+        generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); expiry?.cancel(); mutable.value=MomentViewerState(loading=false,unavailable="unavailable")
     } } } }
     fun open(momentId: Long?, coupleId: Long?, creatorId: Long?) {
         if(started) return
@@ -49,12 +52,12 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         if(active==value) return
         active=value
         if(value && started) refresh()
-        else if(!value) { generation++; work?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,fresh=false,imageLoading=false,notes=null,notesLoading=false,busy=false) } }
+        else if(!value) { generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,fresh=false,imageLoading=false,notes=null,notesLoading=false,busy=false) } }
     }
     private fun current(own: Int): Boolean = generation==own && sessions.stamp()==stamp && active
     fun refresh() {
         if(!active || sessions.stamp()!=stamp) return
-        work?.cancel(); val own=++generation
+        work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); val own=++generation
         work=viewModelScope.launch {
             mutable.update { it.copy(loading=true,busy=false,error=null,unavailable=null,fresh=false,bytes=null,playback=null,videoReady=false) }
             if(currentId==null && couple!=null) {
@@ -62,7 +65,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
                 if(!current(own)) return@launch
                 val page=(result as? NetworkAPIResult.Success)?.response
                 if(page==null) { failure(result as? NetworkAPIResult.Error); return@launch }
-                sequence=page.results.map { it.id }.distinct(); cursor=momentCursor(page.next)
+                sequence=page.results.map { it.id }.distinct(); cursor=momentCursor(page.next);sequenceStarted=true
                 currentId=page.results.firstOrNull { !it.hasOpened }?.id ?: sequence.firstOrNull()
             }
             val id=currentId
@@ -78,9 +81,75 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
             val photo=if(state.value.moment?.id==id) state.value.photo.coerceAtMost((moment.photos.size-1).coerceAtLeast(0)) else 0
             mutable.update { it.copy(moment=moment,photo=photo,loading=false,fresh=true,imageLoading=true,
                 hasPrevious=photo>0 || sequence.indexOf(id)>0,
-                hasNext=photo<moment.photos.lastIndex || sequence.indexOf(id) in 0 until sequence.lastIndex || cursor!=null) }
+                hasNext=photo<moment.photos.lastIndex || sequence.indexOf(id) in 0 until sequence.lastIndex || (id in sequence && cursor!=null)) }
             expiry?.cancel(); expiry=viewModelScope.launch { delay(remaining); if(currentId==id && sessions.stamp()==stamp) expired() }
             loadImage(moment,photo,own)
+            if(current(own)) {loadSelectedSequence(id,own);watchPublicAccess(moment)}
+        }
+    }
+    /** Public access can be withdrawn while a visitor keeps the viewer open. Check
+     * every 30 seconds without recording a view or restarting unchanged playback. */
+    private fun watchPublicAccess(moment:Moment) {
+        publicAccess?.cancel()
+        if(moment.visibility!="public" || moment.canEdit || moment.canReply) return
+        publicAccess=viewModelScope.launch {
+            while(isActive && active && sessions.stamp()==stamp && currentId==moment.id && state.value.fresh) {
+                delay(30_000)
+                val result=source.get(moment.id)
+                currentCoroutineContext().ensureActive()
+                if(!active || sessions.stamp()!=stamp || currentId!=moment.id) return@launch
+                val fresh=(result as? NetworkAPIResult.Success)?.response?.takeIf {it.id==moment.id && it.couple==moment.couple}
+                if(fresh==null) {
+                    generation++;work?.cancel();sequenceWork?.cancel();expiry?.cancel()
+                    mutable.update {it.copy(notes=null,notesLoading=false,noteReplyId=null,noteReplyDraft="")}
+                    failure(result as? NetworkAPIResult.Error)
+                    return@launch
+                }
+                if(runCatching {Instant.parse(fresh.expiresAt)<=Instant.parse(fresh.serverTime)}.getOrDefault(true)) {expired();return@launch}
+                val prior=state.value.moment ?: return@launch
+                if(prior.revision!=fresh.revision || prior.photos!=fresh.photos) {refresh();return@launch}
+                mutable.update {it.copy(moment=fresh)}
+                if(fresh.visibility!="public" || fresh.canEdit || fresh.canReply) return@launch
+            }
+        }
+    }
+    /** A selected discovery thumbnail stays visible while we locate its place in the
+     * existing chronological sequence. Sequence metadata never records a view. */
+    private fun loadSelectedSequence(id:Long,own:Int) {
+        val coupleId=couple ?: return
+        if(id in sequence || (sequenceStarted && cursor==null)) return
+        sequenceWork=viewModelScope.launch {
+            val visited=mutableSetOf<String?>()
+            repeat(20) {
+                val requestCursor=if(sequenceStarted) cursor else null
+                if(!visited.add(requestCursor)) {
+                    if(current(own)) mutable.update {it.copy(error="Couldn’t load nearby Moments. Please retry.")}
+                    return@launch
+                }
+                val result=source.sequence(coupleId,creator,requestCursor)
+                currentCoroutineContext().ensureActive();if(!current(own)) return@launch
+                val page=(result as? NetworkAPIResult.Success)?.response
+                if(page==null) {
+                    val error=(result as? NetworkAPIResult.Error)?.failure
+                    if(error?.status in listOf(401,403,404,410)) failure(result as? NetworkAPIResult.Error)
+                    else mutable.update {it.copy(error=error?.message ?: "Couldn’t load nearby Moments. Please retry.")}
+                    return@launch
+                }
+                sequence=(sequence+page.results.filter {it.couple==coupleId && (creator==null || it.createdBy==creator)}.map {it.id}).distinct()
+                sequenceStarted=true;cursor=momentCursor(page.next)
+                if(id in sequence) {
+                    mutable.update {state->state.copy(hasPrevious=state.photo>0 || sequence.indexOf(id)>0,
+                        hasNext=state.photo<(state.moment?.photos?.lastIndex ?: -1) || sequence.indexOf(id)<sequence.lastIndex || cursor!=null)}
+                    return@launch
+                }
+                if(cursor==null) {
+                    // A direct, authorized Moment may not belong to this sequence any
+                    // more. Do not silently jump to a different couple/date's content.
+                    sequence=listOf(id)
+                    return@launch
+                }
+            }
+            if(current(own)) mutable.update {it.copy(error="More Moments are still loading. Retry to continue.")}
         }
     }
     private suspend fun loadImage(moment: Moment, index: Int, own: Int) {
@@ -98,7 +167,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         }
     }
     private fun expired() {
-        generation++; work?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,moment=null,notes=null,loading=false,imageLoading=false,fresh=false,unavailable="expired",busy=false) }
+        generation++; work?.cancel();sequenceWork?.cancel();publicAccess?.cancel(); mutable.update { it.copy(bytes=null,playback=null,videoReady=false,moment=null,notes=null,loading=false,imageLoading=false,fresh=false,unavailable="expired",busy=false) }
         source.changed()
     }
     private fun failure(error: NetworkAPIResult.Error<*>?) {
@@ -112,13 +181,15 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         val moment=state.value.moment ?: return
         val index=state.value.photo+direction
         if(index in moment.photos.indices) {
-            work?.cancel(); val own=++generation
+            work?.cancel();sequenceWork?.cancel(); val own=++generation
             mutable.update { it.copy(photo=index,bytes=null,playback=null,videoReady=false,imageLoading=true,error=null,
                 hasPrevious=index>0 || sequence.indexOf(moment.id)>0,
-                hasNext=index<moment.photos.lastIndex || sequence.indexOf(moment.id) in 0 until sequence.lastIndex || cursor!=null) }
-            work=viewModelScope.launch { loadImage(moment,index,own) }; return
+                hasNext=index<moment.photos.lastIndex || sequence.indexOf(moment.id) in 0 until sequence.lastIndex || (moment.id in sequence && cursor!=null)) }
+            work=viewModelScope.launch { loadImage(moment,index,own);if(current(own)) loadSelectedSequence(moment.id,own) }; return
         }
-        val next=sequence.indexOf(moment.id)+direction
+        val currentIndex=sequence.indexOf(moment.id)
+        if(currentIndex<0) return
+        val next=currentIndex+direction
         if(next in sequence.indices) { currentId=sequence[next]; mutable.update { it.copy(photo=0,captionDraft=null,note="",noteSent=false,notes=null) }; refresh() }
         else if(direction>0 && cursor!=null && couple!=null) {
             work=viewModelScope.launch {

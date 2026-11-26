@@ -116,10 +116,12 @@ class ExploreRenderTest {
         compose.waitForIdle()
         compose.runOnIdle {scope.launch {saved.scrollToItem(3)}}
         compose.waitForIdle()
+        val savedIndex=saved.firstVisibleItemIndex;val savedOffset=saved.firstVisibleItemScrollOffset
         compose.runOnIdle {state=state.copy(section="global")}
         compose.waitForIdle()
         org.junit.Assert.assertEquals(index,global.firstVisibleItemIndex)
         org.junit.Assert.assertEquals(offset,global.firstVisibleItemScrollOffset)
-        org.junit.Assert.assertEquals(3,saved.firstVisibleItemIndex)
+        org.junit.Assert.assertEquals(savedIndex,saved.firstVisibleItemIndex)
+        org.junit.Assert.assertEquals(savedOffset,saved.firstVisibleItemScrollOffset)
     }
 }

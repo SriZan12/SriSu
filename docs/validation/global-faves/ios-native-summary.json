@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-26",
+  "result": "Passed",
+  "passed_tests": 3,
+  "failed_tests": 0,
+  "skipped_tests": 0,
+  "device": {
+    "name": "iPhone 17 Pro",
+    "platform": "iOS Simulator",
+    "os_version": "26.5",
+    "architecture": "arm64",
+    "logical_screen_points": [
+      402,
+      874
+    ]
+  },
+  "tests": [
+    "GlobalFavesUITests/testLandscapeSearchAndKeyboardBack()",
+    "GlobalFavesUITests/testLargeDarkAppreciationRetryPreservesDraftAndDismissesKeyboard()",
+    "GlobalFavesUITests/testSearchTypingClearSubmitAndBack()"
+  ],
+  "fixture": "Separate com.srisu.explore.qa app with real production Compose screens and synthetic state; no account or backend connection.",
+  "coverage": [
+    "Portrait search typing, clear, keyboard Search submission, Back dismissal",
+    "Landscape dark search typing and Back dismissal",
+    "Appreciation bulk sentence input verified before sending",
+    "Failed send preserves complete draft; editing on retry accepts a new character without losing the original text",
+    "Actual visible UIKit keyboard and Send bounds checked after first/retry editing",
+    "Successful retry closes editor and keyboard"
+  ],
+  "large_text": {
+    "setting": "UIContentSizeCategory.accessibilityExtraExtraLarge",
+    "scope": "Native UIKit preferred content size applies to the main screen and modal",
+    "main_content_width_points": 320,
+    "modal_window_width_points": 402
+  },
+  "production_fix": "Reuse DraftOutlinedTextField to preserve UIKit selection/composition; previous String editor placed characters before the existing text.",
+  "keyboard_limit": "Headless Simulator initially exposes an offscreen hardware-focused keyboard. XCTest typing opens the real software keyboard; on-screen bounds and screenshots are required after first/retry typing. Touch-only activation on a physical phone was not tested. The temporary ConnectHardwareKeyboard preference was restored to its original unset state.",
+  "retry_screenshot_note": "An exclamation mark is deliberately inserted at the tapped caret position after failure to verify editing preserves the entire original draft.",
+  "separate_coverage": "Authenticated HTTP/Ktor integration is recorded separately; this native fixture simulates one failure then success. Physical devices, VoiceOver traversal, WAN latency, and native network video playback are not covered.",
+  "reproduce": "See tools/verify_explore_ios.py and tools/qa/explore.init.gradle. Final raw report: build/reports/global-faves/ios-native/20261126-071134/",
+  "landscape_capture_verification": "Landscape test separately re-passed 1/1 using XCUIScreen capture to avoid stale portrait app bounds; report build/reports/global-faves/ios-native/20261126-071344/."
+}

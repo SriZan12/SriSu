@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--test', action='append', help='Fully qualified integration test class; defaults to the core and Moment checks')
     parser.add_argument('--moment-video', action='store_true', help='Include synthetic video upload, worker and partner playback checks; requires FFmpeg')
     parser.add_argument('--moment-video-file', type=Path, help='Use a synthetic emulator camera recording for the client upload check')
+    parser.add_argument('--explore', action='store_true', help='Seed public couples and run discovery, Faves, follow, Moment and withdrawal transport checks')
     args = parser.parse_args()
     if args.moment_video_file and (not args.moment_video or not args.moment_video_file.is_file()):
         parser.error('--moment-video-file requires --moment-video and an existing synthetic recording')
@@ -29,7 +30,7 @@ def main():
             sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
         # Server logs remain local; never print the fixture/token.
         with (Path(tmp) / 'server.log').open('w') as log:
-            server = subprocess.Popen([str(backend / '.venv/bin/python'), 'tools/core_integration_server.py', '--fixture', str(fixture), '--port', str(port), *(['--moment-video'] if args.moment_video else [])], cwd=backend, stdout=log, stderr=log, env={**os.environ, 'TMPDIR': tmp})
+            server = subprocess.Popen([str(backend / '.venv/bin/python'), 'tools/core_integration_server.py', '--fixture', str(fixture), '--port', str(port), *(['--moment-video'] if args.moment_video else []), *(['--explore'] if args.explore else [])], cwd=backend, stdout=log, stderr=log, env={**os.environ, 'TMPDIR': tmp})
             try:
                 ready = False
                 for _ in range(600):
@@ -47,7 +48,12 @@ def main():
                     payload['video_path'] = str(captured)
                     fixture.write_text(json.dumps(payload))
                 env = {**os.environ, 'SRISU_CORE_INTEGRATION_FILE': str(fixture)}
-                result = subprocess.run(['./gradlew', ':composeApp:testDebugUnitTest', *[arg for name in (args.test or ['com.srisu.srisu.core.CoreLocalTransportIntegrationTest', 'com.srisu.srisu.features.moments.MomentCropTransportIntegrationTest', *(['com.srisu.srisu.features.moments.MomentVideoTransportIntegrationTest'] if args.moment_video else [])]) for arg in ['--tests', name]], '-Psrisu.coreIntegrationRun=' + str(port), '--console=plain'], cwd=ROOT, env=env)
+                default_tests = ['com.srisu.srisu.features.explore.ExploreTransportIntegrationTest'] if args.explore else [
+                    'com.srisu.srisu.core.CoreLocalTransportIntegrationTest',
+                    'com.srisu.srisu.features.moments.MomentCropTransportIntegrationTest',
+                    *(['com.srisu.srisu.features.moments.MomentVideoTransportIntegrationTest'] if args.moment_video else []),
+                ]
+                result = subprocess.run(['./gradlew', ':composeApp:testDebugUnitTest', *[arg for name in (args.test or default_tests) for arg in ['--tests', name]], '-Psrisu.coreIntegrationRun=' + str(port), '--console=plain'], cwd=ROOT, env=env)
                 if result.returncode:
                     report = ROOT / 'build/reports/core-integration-server.log'
                     report.parent.mkdir(parents=True, exist_ok=True)

@@ -29,6 +29,7 @@ fun NavGraphBuilder.momentGraph(controller: NavController) {
         val route=entry.toRoute<MomentViewerDestination>();val nav=AppNavigator(controller,entry)
         if((route.momentId==null && route.coupleId==null) || listOfNotNull(route.momentId,route.coupleId,route.creatorId).any {it<=0}) com.srisu.srisu.navigation.NavigationUnavailable(nav::back)
         else MomentViewerScreen(route.momentId,route.coupleId,route.creatorId,nav::back,
-            {ref->nav.open(ChatNav.CoupleConversation(origin="moment",momentId=ref.id,momentCoupleId=ref.couple))})
+            {ref->nav.open(ChatNav.CoupleConversation(origin="moment",momentId=ref.id,momentCoupleId=ref.couple))},
+            onProfile={nav.open(com.srisu.srisu.features.coupleprofile.navigation.CoupleProfileDestination(it))})
     }
 }

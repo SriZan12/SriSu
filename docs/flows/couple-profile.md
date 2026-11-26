@@ -1,5 +1,11 @@
 # Couple Profile implementation record
 
+Current follow-up: [Discover, public following and Go private](#discover-public-following-and-go-private--25-november-2026)
+extends the visitor entry points and explicitly withdraws public Moments when
+either partner revokes sharing. See the separate
+[verification record](../validation/global-faves/README.md); earlier validation
+results in this document do not establish coverage for this follow-up.
+
 25 November follow-up: [partner nickname editing](partner-nicknames.md) is now
 available below the identity/date area in the owner's overview. It reuses the
 Settings editor and save flow, is excluded from visitor/public preview, and
@@ -288,3 +294,76 @@ See that guide for contract compatibility, backend-first rollout and verificatio
 ## Home integration — 9 November 2026
 
 The Home couple title and Day connector open the existing profile path. Private 24-hour Home statuses do not change published profile mood or consent. See [Home couple space](home-couple-space.md).
+
+## Discover, public following and Go private — 25 November 2026
+
+This follow-up is local on `codex/global-faves-figma` in both repositories, based
+on frontend `e4acb680b137116c5b4e8dd6db09ecd7e49198a5` and backend
+`d3a7cc04a1ac61760a2d06b3ec8d765f1bb81c7d` from `dev-core-architecture`.
+The user authorized implementation and verification, with no push or merge.
+Earlier integration-branch and validation notes above are historical records.
+
+The visual reference is [Together, 1:7](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=1-7),
+including [Discover, 311:8955](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=311-8955),
+[Faves, 311:9758](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=311-9758),
+and [Go private, 311:13549](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=311-13549).
+Browser inspection established visible composition and wording. Figma API quota
+prevented design-context retrieval, so exact component metadata/prototype wiring
+and pixel-perfect matching are not claimed.
+
+### Visitor entry and public-follow consent
+
+Discover cards and public Moment viewers open the existing typed Couple Profile
+destination. Visitor projection remains the currently approved subset, with protected
+photos and real empty states. Public Moment creator labels/photos now follow the
+same identity approval boundary; absent approval uses an anonymous member label.
+Private phone/email, plans, history, nicknames and partner chat are not visitor data.
+
+The user explicitly chose public following as a separate opt-in rather than exposing
+private Faves. `couple-follows/{id}/` manages the authenticated individual’s choice;
+`couple-followers/` is the incoming list for their current couple only. There is no
+API to inspect a stranger’s follower list. Both current partners must have approved
+the source public identity, and the individual must explicitly confirm sharing it
+with the target couple. Their partner is not recorded as a follower on their behalf.
+An unlinked or unapproved identity cannot follow publicly, but eligible private
+Faves remain available. No historic private save is converted or disclosed.
+
+Conditional follow writes use a separate version barrier. Identity version, original
+source membership and target membership audience prevent stale/relinked disclosure.
+The frontend uses the existing account-scoped Ktor/session pattern and a distinct
+confirmation. A visitor still cannot open or send to another couple’s private chat.
+
+### Go private is a real withdrawal
+
+The user chose the reference’s stronger behavior: either current partner’s sharing
+revoke withdraws existing public Moments as well as profile publication. The server
+changes those Moments to private, advances revisions, and removes associated public
+follow edges in the same transaction under the existing couple lock. Original couple
+content is retained; this is withdrawal, not deletion. The rule also applies to
+previously public expired/archived rows so later restoration cannot republish them.
+
+Later profile approval does not automatically republish those Moments or recreate
+follow edges. New public sharing remains an explicit supported publication action.
+Protected photos, video playback/segments, discovery and sequence requests reapply
+current eligibility. Previously delivered media cannot be recalled from another
+device’s memory, screenshots or exports; do not describe withdrawal as erasing copies.
+
+### Compatibility, rollout and evidence
+
+Apply additive backend migration `social.0026_public_couple_follows` and deploy the
+server before this client. The migration introduces independent follow/version rows,
+not a replacement Faves table, and performs no historical consent backfill. The revoke
+endpoint’s stricter behavior is intentional for old clients too; it restricts existing
+publication rather than widening access. Synchronize the backend-owned core route
+contract before final client verification.
+
+The [Global/Faves validation record](../validation/global-faves/README.md) tracks
+current isolated checks, final correction passes, Android/iOS builds and actual
+device evidence separately. Historical profile renders above do not verify this
+feature. Existing Home / Questions / Chat / Profile navigation remains; “You two”
+returns to Home rather than replacing a root tab.
+
+There is no supported user-facing block/report workflow in this scope. Existing
+bilateral block rows are honored, but that does not close the public-release gap.
+Do not advertise a complete public community or render successful Report/Block
+actions until real server handling and user access are implemented.
