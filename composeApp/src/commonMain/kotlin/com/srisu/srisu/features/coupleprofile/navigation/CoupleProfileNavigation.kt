@@ -64,6 +64,8 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
         }
         CoupleProfileScreen(route.coupleId, onBack = nav::back, initialPage = route.section.name, planId = route.planId,
             nicknameContent = { CoupleProfileNickname(it) },
+            followContent = { com.srisu.srisu.features.explore.presentation.ExplorePublicFollow(it) },
+            onMoments = { nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(coupleId=it)) },
             onPlans = { nav.open(com.srisu.srisu.features.plans.navigation.PlansDestination()) },
             onOpenCouple = { nav.open(CoupleProfileDestination(it)) })
     }
@@ -73,6 +75,8 @@ fun NavGraphBuilder.coupleProfileGraph(controller: NavController) {
             onBack = nav::back,
             onPreferences = { nav.open(com.srisu.srisu.navigation.graph.ProfileNav.EditProfileDetails) },
             onMoment = { couple -> nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(coupleId=couple)) },
-            onProfile = { nav.open(CoupleProfileDestination(it)) })
+            onProfile = { nav.open(CoupleProfileDestination(it)) },
+            onOpenMoment = { couple, moment -> nav.open(com.srisu.srisu.features.moments.navigation.MomentViewerDestination(momentId=moment,coupleId=couple)) },
+            onYouTwo = { nav.switchTab(HomeNavigation.Home) })
     }
 }

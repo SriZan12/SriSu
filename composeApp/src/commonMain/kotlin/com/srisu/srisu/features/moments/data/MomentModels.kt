@@ -45,7 +45,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class MomentNotePage(val results: List<MomentNote> = emptyList(), val next: String? = null)
 @Serializable data class MomentDiscoveryCouple(val id: Long)
 @Serializable data class MomentPreview(val id: Long, val caption: String = "", val photos: List<MomentPhoto> = emptyList(),
-    @SerialName("expires_at") val expiresAt: String)
+    @SerialName("expires_at") val expiresAt: String, @SerialName("media_kind") val mediaKind: String? = null,
+    @SerialName("poster_url") val posterUrl: String? = null, @SerialName("created_at") val createdAt: String? = null)
 @Serializable data class MomentDiscoveryCard(val couple: MomentDiscoveryCouple, val preview: MomentPreview,
     @SerialName("is_faved") val isFaved: Boolean = false, @SerialName("has_unopened") val hasUnopened: Boolean = false)
 @Serializable data class MomentDiscoveryPage(@SerialName("server_time") val serverTime: String, val results: List<MomentDiscoveryCard> = emptyList(), val next: String? = null)

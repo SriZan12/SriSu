@@ -98,7 +98,7 @@ import srisu.composeapp.generated.resources.*
     }
 }
 
-@Composable internal fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, accentMotion: ProfileAccentMotion, preview: Boolean = false, onPlans: (() -> Unit)? = null, nicknameContent: (@Composable (Long) -> Unit)? = null) {
+@Composable internal fun ProfileOverview(state: CoupleProfileState, vm: CoupleProfileViewModel, accentMotion: ProfileAccentMotion, preview: Boolean = false, onPlans: (() -> Unit)? = null, nicknameContent: (@Composable (Long) -> Unit)? = null, onMoments: ((Long) -> Unit)? = null, followContent: (@Composable (Long) -> Unit)? = null) {
     val profile = state.profile ?: return
     val editable = profile.canEdit && !preview
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)) {
@@ -112,6 +112,9 @@ import srisu.composeapp.generated.resources.*
             }
             if (profile.canFave) SriSuButton(if(state.favePending) "Saving…" else stringResource(if (profile.isFaved) Res.string.cp_unfave else Res.string.cp_fave), vm::fave,
                 enabled = !state.saving && !state.favePending, modifier = Modifier.fillMaxWidth(), variant = SriSuButtonVariant.Outline)
+            if (!preview && profile.canViewMoments && onMoments != null) SriSuButton("View Moments", {onMoments(profile.id)},
+                modifier = Modifier.fillMaxWidth(), variant = SriSuButtonVariant.Outline)
+            if (!preview && !profile.canEdit && profile.canFave) followContent?.invoke(profile.id)
             state.faveError?.let { com.srisu.srisu.features.moments.presentation.MomentError(it,vm::retryFave) }
             ProfileMetrics(profile, accentMotion, motionEnabled = state.page != ProfilePage.ANSWER)
         }

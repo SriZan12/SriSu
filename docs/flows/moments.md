@@ -1,5 +1,10 @@
 # Home foundation and Moments — implementation record
 
+Current follow-up: [Global, Faves and Discover](#global-faves-and-discover--25-november-2026)
+adds consent-aware search, richer public previews and separate public following.
+Its [verification record](../validation/global-faves/README.md) distinguishes the
+current checks from the historical implementation evidence below.
+
 Work started 2026-10-22. Frontend `dev-core-architecture` starts at
 `98f17e769bf4d0a43b444919f6f81aac91b76b3b`; backend
 `codex/couple-chat-rebuild` at `2a7d1f7d502bbaf3fb11b2330835a0d64bbe3ea5`.
@@ -948,3 +953,96 @@ is run separately. Backend review/verification and initial `social.0024` rollout
 requirements are documented in the companion PR. Physical iPhone recording
 remains unverified. Publication uses frontend PR #36 and backend PR #45, both
 into `dev-core-architecture`, with unrelated Xcode/environment/media work excluded.
+
+## Global, Faves and Discover — 25 November 2026
+
+This follow-up uses `codex/global-faves-figma` in both original project folders,
+starting at frontend `e4acb680b137116c5b4e8dd6db09ecd7e49198a5` and backend
+`d3a7cc04a1ac61760a2d06b3ec8d765f1bb81c7d` on `dev-core-architecture`.
+These are baseline commits. The user subsequently authorized publication in
+[frontend PR #41](https://github.com/SriZan12/SriSu/pull/41) and
+[backend PR #50](https://github.com/SrizanKhadka/SriSu/pull/50), both targeting
+`dev-core-architecture`. They remain unmerged; merging is not authorized.
+
+### Design source and preserved navigation
+
+[Together, page 1:7](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=1-7),
+[Discover, 311:8955](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=311-8955),
+and [Faves, 311:9758](https://www.figma.com/design/LztysD1YvINX7RwZpnhhTt/Srisu?node-id=311-9758)
+were inspected visually in the browser. Design-context API calls were quota-limited;
+the implementation derives sizes/controls from existing SriSu tokens and accessible
+touch targets. Exact Figma component properties and pixel fidelity are unverified.
+
+Discover keeps the approved root navigation: Home, Questions, Chat and Profile.
+“You two” returns to Home; a Moments tab does not replace Chat. A thumbnail opens
+the existing typed Moment route with both couple and Moment IDs. “Their page” opens
+the existing visitor Couple Profile, and Back returns through the navigation stack.
+Public visitors use private appreciation notes; no action opens another couple’s
+private Matrix conversation. The approved partner chat and upload flows are retained.
+At large text sizes the two appreciation actions wrap instead of competing for
+one row. Filmstrip and discovery previews expose distinct numbered, captioned
+accessibility labels; the filmstrip also exposes its selected state.
+
+Appreciation-list requests are cancelled on dismissal, refresh, navigation and
+session changes. Late replies cannot reopen a closed sheet. A failed continuation
+retains its retry action and existing rows. Authorization failures recheck the
+parent Moment before allowing retained media or notes to remain visible; deleting
+one note is not treated as proof that its whole Moment has expired.
+
+### Data, privacy and interaction
+
+- Discover uses the existing local-first Global recommendation feed. Broader
+  discovery remains an explicit existing scope; it is not GPS proximity or a
+  complete worldwide directory. “Public today” presents currently active public
+  Moments from that feed, whose lifetime is 24 hours from publication rather than
+  a separate calendar-day endpoint.
+- Search and interest chips are server filters, not filtering of a loaded page.
+  `q` is normalized and limited to 80 code points; `interest_id` refers to the
+  existing catalogue. Only current mutually approved public identity and shared
+  interests are searchable. Private aliases, captions and phone numbers are not.
+- Cards retain legacy `preview` and add up to three distinct `previews`, with
+  `media_kind` and protected `poster_url`. Missing slots are not duplicate media.
+  Pair names/photos and `shared_interests` require their respective current
+  consent. Every preview carries its own expiry; fetching never records a view.
+- Feed cursors freeze query, interest and scope. Stale/expired cursors require a
+  refresh. Visible-card revalidation and account/lifecycle guards prevent treating
+  retained cards as freshly authorized data. Photo/video playback still uses the
+  existing protected endpoints and presentation-based viewed action.
+- Faves are private individual saves, with an authoritative own-list `total_count`.
+  The active Faves feed and saved library are different: saved couples can have no
+  active Moments or become unavailable. Global content never fills an empty Faves
+  feed automatically.
+- The user selected a **separate public-follow opt-in**, preserving private Faves.
+  Following requires explicit disclosure of the follower’s consented identity.
+  Only the followed couple’s current partners can read their incoming list. No
+  historical Faves become follows; no sample “Faved you128” count is implemented.
+- The user selected Go private to withdraw existing public Moments when profile
+  sharing is revoked. This is server-enforced and does not automatically undo
+  itself when the profile is later approved for publication. See the
+  [Couple Profile follow-up](couple-profile.md#discover-public-following-and-go-private--25-november-2026).
+
+### Contracts, rollout and QA
+
+Frontend implementation lives in `features/explore/{data,presentation}` and the
+shared Moments viewer/navigation. Backend additions use `couple_views.py`,
+`couple_feed_service.py`, `couple_repository.py`, `discovery_identity.py`, the
+existing preview serializer and separate public-follow services. No alternate
+chat, media player, upload system or public profile store is introduced.
+
+Deploy backend support and additive `social.0026_public_couple_follows` before
+the client. The migration creates separate follow/version tables without converting
+Faves. Existing feed fields remain compatible. Update the frontend snapshot from
+backend-owned `contracts/core-1` after the final route changes, then verify the pair.
+No user database migration or production deployment is performed by local tests.
+
+The [current validation record](../validation/global-faves/README.md) holds exact
+test counts and outstanding device checks. Earlier screenshots/build results above
+are historical and are not evidence for this follow-up. Query-count regression tests
+cover mixed video previews; public search still needs growing-directory latency
+measurement, and full protected-photo downloads need device/network profiling.
+
+User-facing block/unblock and report/moderation remain a public-release gap. Existing
+block records are enforced, but retired dating routes do not provide a usable block
+action. The appreciation throttle is not a substitute for either capability.
+Previously delivered pixels cannot be recalled; do not promise instantaneous
+erasure from another device after revocation.

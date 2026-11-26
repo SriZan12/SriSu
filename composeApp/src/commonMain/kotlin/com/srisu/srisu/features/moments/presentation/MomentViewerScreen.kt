@@ -44,7 +44,7 @@ import srisu.composeapp.generated.resources.*
 import kotlin.time.Instant
 
 @Composable fun MomentViewerScreen(momentId: Long?,coupleId: Long?,creatorId: Long?,onBack: ()->Unit,
-    onReply: (MomentReference)->Unit, vm: MomentViewerViewModel=koinViewModel()) {
+    onReply: (MomentReference)->Unit, vm: MomentViewerViewModel=koinViewModel(), onProfile: ((Long)->Unit)?=null) {
     val state by vm.state.collectAsStateWithLifecycle()
     val notificationOwner=remember { Any() }
     DisposableEffect(state.moment?.id) {
@@ -54,7 +54,11 @@ import kotlin.time.Instant
     }
     LaunchedEffect(momentId,coupleId,creatorId) { vm.open(momentId,coupleId,creatorId) }
     MomentLifecycle(vm::active)
-    MomentViewerContent(state,onBack,vm::refresh,vm::move,vm::presented,vm::react,vm::editCaption,vm::saveCaption,vm::delete,
+    if(state.moment?.let {it.visibility=="public" && !it.canReply && !it.canEdit}==true && onProfile!=null) {
+        PublicMomentViewerContent(state,onBack,vm::refresh,vm::move,vm::presented,vm::videoPresented,
+            vm::note,vm::sendNote,vm::loadNotes,vm::closeNotes,onProfile,vm::image,
+            actions={ com.srisu.srisu.features.explore.presentation.PublicMomentActions(it) })
+    } else MomentViewerContent(state,onBack,vm::refresh,vm::move,vm::presented,vm::react,vm::editCaption,vm::saveCaption,vm::delete,
         vm::note,vm::sendNote,onReply, onNotes=vm::loadNotes,onCloseNotes=vm::closeNotes,onNoteReply=vm::replyToNote,
         onSendNoteReply=vm::sendNoteReply,avatar=vm::image,onVideoPresented=vm::videoPresented)
 }
