@@ -53,7 +53,7 @@ rules supply derived values; dark appearance uses the approved neutral roles.
 | Check | Actual result | Coverage limit |
 | --- | --- | --- |
 | Full backend CI-equivalent checks | 534 tests: 493 passed, 41 skipped; dependencies, Django, contracts and migrations passed | Maintained isolated SQLite suites; PostgreSQL and other explicitly conditional tests skipped |
-| Full Android CI-equivalent checks | 764 tests: 756 passed, 8 opt-in transport skips; app and instrumented-test compilation passed | Live Global/Faves transport ran separately and passed |
+| Full Android CI-equivalent checks | Final regression: 767 tests, 759 passed, 8 opt-in transport skips; app and instrumented-test compilation passed earlier | Live Global/Faves transport ran separately and passed; final shared logic also compiled for iOS |
 | Final isolated SQLite selected suites | 133 tests: 120 passed, 13 PostgreSQL-only skips | Synthetic disposable database, not a running app |
 | Final disposable PostgreSQL: feed, public follows, couple profile and Moment publication | 128 passed, no skips | Includes competing follow/revoke writes, guarded media withdrawal, and bounded-query photo/video sequences; cluster stopped afterward |
 | Backend migration drift / core contracts / diff | No changes detected; schema and 14 shared fixtures validated; clean diff | No user database migrated |
@@ -170,6 +170,21 @@ successful retry. The full Android unit suite and real Android IME regression
 were rerun after this production fix and passed. Native keyboard assertions also
 check screen intersection, because a hidden UIKit keyboard can remain in the
 accessibility tree; existence alone is insufficient evidence of a visible IME.
+
+Final review added three regression tests which failed before repair. Moving
+between Moments now resets drafts, note replies and sent feedback consistently,
+including across pagination. Public-access polling starts before cancellable
+media loading: quickly skipping a still-loading photo no longer disables later
+withdrawal checks. The full Android suite then passed (759 passed, 8 opt-in skips),
+and iOS compilation passed; log `/tmp/srisu-explore-final-regressions.log`.
+Native keyboard checks above preceded these shared navigation/lifecycle fixes;
+they did not change the input component or screen layout.
+
+Backend review also reproduced a PostgreSQL follow/disconnect deadlock. The
+repair takes the actor lock first and uses nonblocking couple locks, mapping only
+lock contention to the existing retryable 409 response. Source/target disconnect,
+profile-interest writes, same-version follows and Go private were verified in
+153 PostgreSQL tests with no skips. This adds no migration beyond `0026`.
 
 Intentional differences from Figma: private saves are not presented as followers;
 “Faved you” becomes a separate opted-in **Followers** list. Existing root tabs are

@@ -83,8 +83,11 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
                 hasPrevious=photo>0 || sequence.indexOf(id)>0,
                 hasNext=photo<moment.photos.lastIndex || sequence.indexOf(id) in 0 until sequence.lastIndex || (id in sequence && cursor!=null)) }
             expiry?.cancel(); expiry=viewModelScope.launch { delay(remaining); if(currentId==id && sessions.stamp()==stamp) expired() }
+            // Photo navigation can cancel this media job. Authorization must
+            // already be running independently before that can happen.
+            watchPublicAccess(moment)
             loadImage(moment,photo,own)
-            if(current(own)) {loadSelectedSequence(id,own);watchPublicAccess(moment)}
+            if(current(own)) loadSelectedSequence(id,own)
         }
     }
     /** Public access can be withdrawn while a visitor keeps the viewer open. Check
@@ -190,7 +193,7 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
         val currentIndex=sequence.indexOf(moment.id)
         if(currentIndex<0) return
         val next=currentIndex+direction
-        if(next in sequence.indices) { currentId=sequence[next]; mutable.update { it.copy(photo=0,captionDraft=null,note="",noteSent=false,notes=null) }; refresh() }
+        if(next in sequence.indices) selectMoment(sequence[next])
         else if(direction>0 && cursor!=null && couple!=null) {
             work=viewModelScope.launch {
                 val own=generation
@@ -202,10 +205,18 @@ class MomentViewerViewModel(private val source: MomentSource, private val sessio
                 val extra=page.results.map { it.id }.filterNot { it in sequence }
                 sequence=(sequence+extra).distinct(); cursor=momentCursor(page.next)
                 mutable.update { it.copy(loading=false) }
-                if(extra.isNotEmpty()) { currentId=extra.first(); refresh() }
+                if(extra.isNotEmpty()) selectMoment(extra.first())
                 else mutable.update { it.copy(hasNext=cursor!=null) }
             }
         }
+    }
+    private fun selectMoment(id: Long) {
+        currentId=id
+        notePage=1
+        // Drafts, replies and sent feedback belong to one Moment, including when
+        // navigation crosses a sequence-page boundary.
+        mutable.value=MomentViewerState()
+        refresh()
     }
     /** Called only after pixels (or a legacy text-only Moment) are actually presented. */
     fun videoPresented(photoId:Long) {
